@@ -1,0 +1,228 @@
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+    Finished `test` profile [optimized + debuginfo] target(s) in 3.60s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_backends-1999e03fda54f797)
+
+running 148 tests
+test config::tests::a_configured_timeout_is_clamped_before_it_becomes_a_duration ... ok
+test config::tests::a_missing_key_names_the_env_var_and_the_dotenv_path ... ok
+test config::tests::an_empty_model_override_is_no_override ... ok
+test config::tests::an_unknown_provider_is_a_configuration_error_and_has_no_model ... ok
+test config::tests::fake_mode_declares_every_capability ... ok
+test config::tests::moonshot_is_the_default_provider_with_its_default_model ... ok
+test config::tests::capabilities_probe_keys_and_worker_scripts_without_the_network ... ok
+test config::tests::provider_names_are_trimmed_and_lowercased ... ok
+test config::tests::the_content_parts_flag_and_timeout_come_from_the_environment ... ok
+test config::tests::dotenv_variables_are_handed_to_the_worker_children ... ok
+test config::tests::the_realtime_commit_gate_ignores_zero_and_nonsense ... ok
+test config::tests::real_environment_variables_win_over_the_dotenv_file ... ok
+test config::tests::the_speech_settings_come_from_the_documented_environment ... ok
+test config::tests::the_stream_grace_has_a_floor ... ok
+test config::tests::moonshot_falls_back_to_the_legacy_key_file ... ok
+test config::tests::the_tts_selection_falls_back_to_off_with_a_reason ... ok
+test config::tests::the_turn_delay_defaults_to_one_second ... ok
+test events::tests::completions_travel_the_channel_and_survive_a_closed_receiver ... ok
+test events::tests::speech_outcomes_round_trip_through_the_event_enum ... ok
+test fake::tests::a_recording_transcribes_to_the_canned_line ... ok
+test fake::tests::cloud_synthesis_produces_a_readable_silent_wav ... ok
+test fake::tests::local_synthesis_streams_one_chunk_and_a_stream_end ... ok
+test fake::tests::the_off_backend_refuses_and_reports_itself_unavailable ... ok
+test fake::tests::the_sample_count_formula_matches_python ... ok
+test llm::tests::a_model_that_has_billed_no_input_has_no_cache_hit_rate ... ok
+test llm::tests::a_retry_after_beyond_a_durations_range_clamps_instead_of_panicking ... ok
+test llm::tests::a_misconfigured_client_fails_on_the_channel_instead_of_at_startup ... ok
+test llm::tests::a_panicking_completion_task_still_frees_its_lane ... ok
+test llm::tests::an_unpriced_model_makes_the_run_cost_unknown ... ok
+test llm::tests::retry_after_parsing_is_clamped_and_forgiving ... ok
+test llm::tests::a_finished_completion_task_reports_once ... ok
+test llm::tests::a_400_is_not_retried ... ok
+test llm::tests::the_provider_table_matches_llm_client_py ... ok
+test llm::tests::a_reply_without_text_content_is_an_error ... ok
+test llm::tests::a_second_request_while_one_is_in_flight_is_refused ... ok
+test llm::tests::a_significance_budget_is_sent_as_max_completion_tokens ... ok
+test llm::tests::the_openai_body_sends_no_extras ... ok
+test prompt_log::tests::a_write_failure_never_reaches_the_turn_loop ... ok
+test prompt_log::tests::a_scheduler_event_is_archived_and_other_events_are_ignored ... ok
+test llm::tests::usage_is_tallied_across_calls_and_priced ... ok
+test prompt_log::tests::a_failed_exchange_keeps_the_prompt_and_records_the_error ... ok
+test prompt_log::tests::the_sanitizer_matches_pythons_regex ... ok
+test prompt_log::tests::the_stamp_and_iso_forms_agree_with_python ... ok
+test prompt_log::tests::without_a_directory_the_log_is_disabled ... ok
+test prompt_log::tests::hostile_name_components_are_sanitized ... ok
+test runtime::tests::dropping_the_runtime_does_not_wait_for_a_hung_task ... ok
+test prompt_log::tests::a_whole_duration_keeps_its_decimal_point ... ok
+test prompt_log::tests::a_missing_model_prints_pythons_none ... ok
+test runtime::tests::blocking_work_runs_off_the_async_workers ... ok
+test runtime::tests::spawned_tasks_run_and_block_on_returns_their_value ... ok
+test llm::tests::a_429_is_retried_once_and_honors_retry_after ... ok
+test session_dir::tests::session_ids_are_unique ... ok
+test prompt_log::tests::the_json_keeps_python_key_order_and_raw_utf8 ... ok
+test prompt_log::tests::same_second_exchanges_get_increasing_suffixes ... ok
+test prompt_log::tests::the_md_and_json_pair_uses_the_schema_name ... ok
+test session_dir::tests::creating_the_same_directory_twice_is_an_error ... ok
+test session_dir::tests::the_directory_is_private_and_disappears_with_its_handle ... ok
+test prompt_log::tests::the_archive_is_byte_identical_to_python ... ok
+test stt_cloud::tests::a_missing_or_non_wav_file_is_rejected_before_the_request ... ok
+test stt_local::tests::the_dotenv_reaches_the_child_without_displacing_the_model_we_chose ... ok
+test stt_local::tests::a_missing_recording_never_reaches_the_worker ... ok
+test stt_cloud::tests::a_missing_key_is_unavailable_without_touching_the_network ... ok
+test stt_cloud::tests::the_model_is_configurable ... ok
+test stt_realtime::tests::a_configured_language_reaches_the_session_config ... ok
+test stt_local::tests::the_model_id_is_passed_in_the_child_environment ... ok
+test llm::tests::a_parts_array_reply_is_joined_into_text ... ok
+test stt_cloud::tests::a_recording_is_uploaded_as_a_wav_named_multipart_part ... ok
+test stt_cloud::tests::a_reply_without_text_is_a_failure ... ok
+test llm::tests::the_moonshot_body_carries_temperature_and_a_top_level_thinking_flag ... ok
+test llm::tests::an_http_failure_keeps_its_status_and_body_for_the_archive ... ok
+test llm::tests::an_absurd_configured_timeout_still_completes_the_request ... ok
+test llm::tests::request_ids_increase_and_match_their_completion ... ok
+test llm::tests::the_fallback_flag_sends_plain_string_content ... ok
+test llm::tests::the_night_lane_and_the_turn_stream_never_refuse_each_other ... ok
+test llm::tests::cached_input_tokens_are_tallied_however_the_provider_spells_them ... ok
+test stt_realtime::tests::the_in_flight_cap_refuses_the_newest_commit ... ok
+test tests::a_fake_handle_reports_every_capability_and_speaks_offline ... ok
+test tests::an_unconfigured_provider_still_yields_a_cognition_that_fails_per_request ... ok
+test stt_realtime::tests::a_connect_failure_backs_off_instead_of_retrying_in_a_storm ... ok
+test tests::the_prompt_log_model_is_fake_in_fake_mode_and_the_real_model_otherwise ... ok
+test llm::tests::a_parts_array_with_no_text_is_not_an_empty_reply ... ok
+test stt_local::tests::a_failed_transcription_keeps_the_worker_and_surfaces_its_message ... ok
+test transcription::tests::an_unavailable_backend_is_refused_synchronously ... ok
+test transcription::tests::a_basename_resolves_into_the_session_directory_and_cannot_escape_it ... ok
+test transcription::tests::a_cloud_recording_is_transcribed_and_then_deleted ... ok
+test transcription::tests::the_batch_queue_refuses_a_fifth_recording ... ok
+test transcription::tests::the_router_can_measure_and_discard_a_recording_it_never_submitted ... ok
+test transcription::tests::a_header_beyond_the_probe_window_still_measures ... ok
+test tts::tests::an_unavailable_backend_refuses_before_it_queues_anything ... ok
+test tts::tests::text_validation_is_the_python_predicate ... ok
+test tts::tests::submit_refuses_synchronously_when_the_queue_is_full ... ok
+test tts::tests::the_same_event_cannot_be_synthesized_twice_at_once ... ok
+test stt_realtime::tests::clearing_an_utterance_forgets_it_and_blocks_its_commit ... ok
+test tts::tests::voice_resolution_prefers_the_qualified_override_and_rejects_hostile_names ... ok
+test stt_realtime::tests::closing_is_bounded_even_with_a_wedged_provider ... ok
+test stt_realtime::tests::the_api_key_never_appears_in_a_status ... ok
+test stt_realtime::tests::connecting_sends_the_documented_transcription_session_config ... ok
+test tts_cloud::tests::provider_pcm_is_decoded_before_the_complete_wav_arrives ... ok
+test tts_cloud::tests::provider_stereo_is_downmixed_before_it_reaches_the_mono_game_source ... ok
+test tts_cloud::tests::hostile_text_and_voices_never_reach_the_provider ... ok
+test tts_cloud::tests::audio_the_game_could_not_play_is_refused_here ... ok
+test stt_realtime::tests::a_dead_socket_does_not_fail_a_cleared_commit ... ok
+test tts_cloud::tests::synthesis_asks_for_wav_in_the_voice_the_character_was_cast_with ... ok
+test tts_cloud::tests::the_streaming_wav_the_provider_actually_sends_becomes_pcm_chunks ... ok
+test tts_local::tests::the_dotenv_keys_the_worker_reads_itself_reach_the_child ... ok
+test tts_cloud::tests::a_configured_voice_overrides_the_default ... ok
+test wav::tests::a_basename_may_only_ever_name_a_file_inside_the_runtime_directory ... ok
+test wav::tests::a_malformed_recording_has_no_duration_and_no_error ... ok
+test tts_local::tests::invalid_text_and_voices_never_reach_the_worker ... ok
+test wav::tests::a_plain_mono_wav_passes_the_synthesis_gate ... ok
+test wav::tests::the_streamed_provider_header_is_repaired_instead_of_refused ... ok
+test wav::tests::the_duration_walk_reads_the_float32_recordings_hound_rejects ... ok
+test wav::tests::the_synthesis_gate_refuses_what_the_audio_sink_cannot_play ... ok
+test wav::tests::transcription_input_must_be_an_existing_wav ... ok
+test worker::tests::a_dead_worker_is_a_safe_failure_and_the_next_request_restarts_it ... ok
+test stt_local::tests::a_torch_index_override_lands_right_before_the_script ... ok
+test stt_local::tests::the_worker_is_lazy_reused_and_launched_the_documented_way ... ok
+test worker::tests::a_missing_script_or_uv_binary_is_unavailable_without_a_spawn ... ok
+test worker::tests::a_mismatched_request_id_kills_the_child ... ok
+test worker::tests::an_unstartable_uv_binary_is_a_presentable_failure ... ok
+test worker::tests::a_line_that_is_not_a_json_object_is_an_invalid_response ... ok
+test tts_local::tests::a_malformed_chunk_kills_the_worker ... ok
+test worker::tests::a_worker_that_fails_to_load_reports_its_own_error ... ok
+test stt_realtime::tests::a_dead_socket_fails_its_keys_once_and_the_next_utterance_reconnects ... ok
+test transcription::tests::a_local_recording_goes_to_the_canary_worker ... ok
+test tts::tests::a_local_utterance_streams_pcm_chunks_and_a_stream_end ... ok
+test tts_local::tests::a_malformed_completion_fails_only_the_utterance ... ok
+test tts_local::tests::a_synthesis_with_no_audio_is_a_failure ... ok
+test tts_local::tests::the_worker_streams_chunks_and_is_reused ... ok
+test worker::tests::install_progress_on_stderr_becomes_a_loading_status ... ok
+test worker::tests::one_lazily_started_child_serves_every_request ... ok
+test worker::tests::the_child_inherits_the_parent_environment_plus_the_extras ... ok
+test worker::tests::a_forgotten_child_leaves_no_zombie ... ok
+test world_data::tests::no_authored_said_bakes_a_cast_name ... ok
+test world_data::tests::developer_knowledge_mode_still_knows_everybody ... ok
+test world_data::tests::shipped_world_loads_all_lore_characters ... ok
+test world_data::tests::authored_spawns_cover_the_city_without_crowding ... ok
+test world_data::tests::full_roster_prompts_and_public_snapshot_remain_bounded ... ok
+test stt_realtime::tests::commit_acknowledgements_bind_item_ids_and_late_completions_still_resolve ... ok
+test stt_realtime::tests::clearing_a_committed_utterance_keeps_later_acks_bound_to_their_own_keys ... ok
+test tts::tests::a_cloud_utterance_streams_pcm_chunks_on_the_channel ... ok
+test stt_realtime::tests::an_idle_session_closes_quietly_and_reconnects_on_the_next_utterance ... ok
+test llm::tests::a_500_is_retried_once_and_then_gives_up ... ok
+test stt_cloud::tests::a_server_error_is_retried_once_and_then_degrades ... ok
+test tts_cloud::tests::a_missing_key_is_unavailable_and_a_provider_error_degrades ... ok
+test tts::tests::a_failed_utterance_reports_a_failure_the_floor_can_release ... ok
+test worker::tests::close_kills_a_worker_that_ignores_sigterm ... ok
+test stt_cloud::tests::a_provider_that_never_answers_times_out ... ok
+
+test result: ok. 148 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.11s
+
+     Running unittests src/bin/cathedral_headless.rs (target/debug/deps/cathedral_headless-21c040bf31cf4561)
+
+running 7 tests
+test tests::status_flag_parses_name_kind_and_bounded_value ... ok
+test tests::repr_escapes_the_way_cpython_does ... ok
+test tests::the_cost_footer_switches_precision_at_half_a_cent ... ok
+test tests::the_final_state_block_prints_python_literals ... ok
+test tests::the_shipped_assets_load ... ok
+test tests::a_turn_parked_by_the_floor_does_not_wait_on_the_provider ... ok
+test tests::corrected_authored_starts_are_clear_of_residents_and_keep_outward_lanthorn_work ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+
+     Running tests/curiosity_walk.rs (target/debug/deps/curiosity_walk-bde278a67275bdf1)
+
+running 2 tests
+test one_person_in_five_speaks_first_when_you_walk_past_the_whole_city ... ok
+test without_curiosity_the_whole_city_thinks_about_you ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+
+     Running tests/knowledge_consequences.rs (target/debug/deps/knowledge_consequences-4d6f02fea0aa09e6)
+
+running 2 tests
+test the_shipped_ears_are_the_sizes_the_table_claims ... ok
+test shipped_affinity_player_and_household_precedence_match_the_table ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/knowledge_provider_probe.rs (target/debug/deps/knowledge_provider_probe-a2d7d418912e795b)
+
+running 2 tests
+test prepare_m3_provider_sheets ... ignored, writes the explicitly requested live-provider evidence sheets
+test prepare_m4_provider_sheets ... ignored, writes the explicitly requested live-provider evidence sheets
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/place_estimates_evidence.rs (target/debug/deps/place_estimates_evidence-14fd72ee15032083)
+
+running 1 test
+test prepare_colm_replay_and_measure_cache ... ignored, manual evidence: writes replay prompts and measures rendering/cache costs
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/pollen_cadence.rs (target/debug/deps/pollen_cadence-65260d004f6937b5)
+
+running 16 tests
+test the_store_stays_bounded_at_twenty_thousand ... ignored, 20,000 generated citizens; run it by hand with --ignored
+test the_standing_wards_are_lopsided ... ok
+test the_measured_curiosity_mean ... ok
+test the_cadence_pack_seeds_four_off_affinity_mouths ... ok
+test the_subject_pool_holds_only_the_authored_cast ... ok
+test the_roll_count_is_invariant_under_the_time_scale ... ok
+test the_fast_end_crosses_a_ward_within_one_office ... ok
+test a_cold_scandal_out_travels_a_fresh_squabble_across_the_city ... ok
+test pollen_flat_reproduces_the_no_salience_run ... ok
+test the_slow_end_is_still_confined_at_nightfall ... ok
+test the_same_trade_ear_is_reported ... ok
+test the_fast_end_reaches_every_ward_inside_a_game_day ... ok
+test the_slow_end_may_never_leave_its_ward ... ok
+test the_household_hears_it_after_the_city ... ok
+test the_crossing_tally_does_not_count_the_mill ... ok
+test a_standing_fact_is_answerable_and_never_loud ... ok
+
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 57.47s
+
+   Doc-tests cathedral_backends
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

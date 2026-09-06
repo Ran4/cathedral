@@ -461,6 +461,8 @@ struct Sheet<'a> {
     /// entirely when the round never enrolled this actor.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     your_round: Vec<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    local_routine: Option<String>,
     /// What this actor's ward is saying tonight — the mood the Night Office's
     /// ward batch returned (movement M6, `05_the_llm_seam.md` §4). Carried by
     /// the [`Minor`](crate::lore::Significance::Minor) cast only: it is *their*
@@ -778,7 +780,7 @@ fn render_prompt_with_seated(
     let sheet = build_sheet(world, actor, since, &env.strings);
     // The your_round explainer paragraph renders only when the sheet carries a
     // round — round-less worlds (the golden fixtures) keep their exact bytes.
-    let has_round = !sheet.your_round.is_empty();
+    let has_round = !sheet.your_round.is_empty() && sheet.local_routine.is_none();
     // Likewise the ward-notice explainer tracks its section, and the
     // `raise_notice` verb (with its law paragraph) is listed only for the law
     // cast (`law_and_order.md` M3) — every other sheet keeps its exact bytes.
@@ -1354,6 +1356,7 @@ fn build_sheet<'a>(
         you_are_held: held_line(world, actor.id()),
         you_have_in_charge: in_charge_lines(world, actor),
         your_round: actor.state.daily_round.iter().map(String::as_str).collect(),
+        local_routine: actor.state.resident.as_ref().map(|r| r.description()),
         the_ward_says: actor
             .lore()
             .filter(|profile| profile.significance == crate::lore::Significance::Minor)
@@ -1769,7 +1772,16 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         ));
     }
 
-    if !sheet.your_round.is_empty() {
+    if let Some(routine) = &sheet.local_routine {
+        sections.push(format!("**local_routine** — {routine}"));
+    }
+    if sheet.local_routine.is_some() {
+        sections.push(bullet_section(
+            "**your_routine**",
+            sheet.your_round.iter().map(|line| line.to_string()),
+            "",
+        ));
+    } else if !sheet.your_round.is_empty() {
         // Numbered from 1, because `set_round` names a leg by its number and
         // the sheet is the only place the model can read one off (M6). The
         // number is structure, like the section labels, so it lives here.
@@ -2455,6 +2467,7 @@ same quarter or the same afternoon, you still do not know."#.into(),
             you_are_held: None,
             you_have_in_charge: Vec::new(),
             your_round: Vec::new(),
+            local_routine: None,
             the_ward_says: None,
             places_you_know: Vec::new(),
             you_hold: Vec::new(),

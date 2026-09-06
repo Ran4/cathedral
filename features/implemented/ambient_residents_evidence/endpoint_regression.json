@@ -1,0 +1,8 @@
+{
+  "command": "target/debug/cathedral-headless --fake --stage --curiosity --weather clear --extra-ambient 1000 --start-day 2 --start-office dayspring --seconds-per-day 3600 --watch-clock 0.003611111111111111 --trace-motion --census-per-day 3600",
+  "final_elapsed": 13.00000000000005,
+  "stationary": 156,
+  "actual_walkers": 844,
+  "positive_speed": 844,
+  "final_binary_sha256": "e9f3fb5c560c1a330c54c5adf1a4d18d13d36907c316a0510917d1a6b5f582f5"
+}

@@ -876,6 +876,13 @@ impl World {
                             false,
                         )
                     };
+                    if !nav.segment_walkable_exact(start, tentative) {
+                        // A displaced/changed local path fails in place. The
+                        // resident owner releases its target and starts backoff.
+                        movement.path.clear();
+                        movement.speed = 0.0;
+                        continue;
+                    }
                     if distance > 1e-9 {
                         let dir = to / distance;
                         // yaw 0 faces -Z, matching the rest of the codebase.
@@ -925,7 +932,9 @@ impl World {
                             // (the goal is *in* the choke) keeps them waiting —
                             // the claim clears the moment its holder is through.
                             movement.choke_wait = 0.0;
-                            if let Some((needle_node, _)) = needle
+                            if movement.exact_local {
+                                movement.path.clear();
+                            } else if let Some((needle_node, _)) = needle
                                 && let Some(&goal) = movement.path.last()
                                 && let (Some(start_node), Some(goal_node)) = (
                                     nav.nearest_node(start.x, start.z),
@@ -937,23 +946,23 @@ impl World {
                                     Some(needle_node),
                                 )
                             {
-                                let trim = route
-                                    .points
-                                    .first()
-                                    .is_some_and(|point| planar_close(*point, start));
                                 let mut points = nav.offset_route(&route, lane_fraction(id));
-                                if trim {
-                                    points.remove(0);
-                                }
-                                // Keep the exact original destination as the
-                                // tail when it stands off the graph.
-                                if !points
-                                    .last()
-                                    .is_some_and(|point| planar_close(*point, goal))
+                                if let (Some(&first), Some(&last)) = (points.first(), points.last())
+                                    && let Some(head) = nav.local_route(
+                                        start,
+                                        first,
+                                        crate::nav::LocalPathBudget::VISIT,
+                                    )
+                                    && let Some(tail) = nav.local_route(
+                                        last,
+                                        goal,
+                                        crate::nav::LocalPathBudget::VISIT,
+                                    )
                                 {
-                                    points.push(goal);
+                                    points.splice(0..1, head.points.into_iter().skip(1));
+                                    points.extend(tail.points.into_iter().skip(1));
+                                    movement.path = points;
                                 }
-                                movement.path = points;
                             }
                         }
                     } else {
@@ -1007,7 +1016,17 @@ impl World {
                     }
                     let shove = push.clamp_length_max(AVOID_PUSH_MPS * dt);
                     let candidate = new_pos + Vec3::new(shove.x, 0.0, shove.z);
-                    if nav.is_walkable(candidate.x, candidate.z) {
+                    let safe = if let Some(movement) = character.state.movement.as_ref() {
+                        nav.segment_walkable_exact(start, candidate)
+                            && nav.segment_walkable_exact(new_pos, candidate)
+                            && movement
+                                .path
+                                .first()
+                                .is_none_or(|&next| nav.segment_walkable_exact(candidate, next))
+                    } else {
+                        nav.segment_walkable_exact(new_pos, candidate)
+                    };
+                    if safe {
                         new_pos = candidate;
                     }
                 }
@@ -1046,6 +1065,7 @@ impl World {
                     format!("a stranger (id {})", actor.id())
                 };
                 ActorSnapshot {
+                    resident: actor.state.resident.clone(),
                     id: actor.id().clone(),
                     name_for_player,
                     control: actor.control(),
@@ -1747,6 +1767,7 @@ mod tests {
                 b: "b".into(),
                 heading_to_b: true,
             }),
+            exact_local: false,
             choke_wait: 0.0,
         });
         character
@@ -1873,6 +1894,90 @@ mod tests {
         );
     }
 
+    #[test]
+    fn exact_local_arrival_settles_after_separation_without_recall() {
+        use crate::nav::{
+            LocalPathBudget,
+            residents::{SPOT_ARRIVAL_M, StandingSpot},
+        };
+        let (mut world, nav, id) = walker_world();
+        let start = world.characters[&id].position_m();
+        let goal = Vec3::new(3.23, WALK_Y, 0.21);
+        let route = nav
+            .local_route(start, goal, LocalPathBudget::CHANGE_SPOT)
+            .unwrap();
+        world.characters.get_mut(&id).unwrap().state.movement = Some(route.into_movement(0.0));
+        let mut neighbour = character("neighbour", 0.0);
+        neighbour.state.position_m = goal + Vec3::new(0.0, 0.0, 0.5);
+        world.add_character(neighbour);
+        let mut previous = start;
+        for _ in 0..300 {
+            world.step_movement(TICK, &nav, Some(goal));
+            let actor = &world.characters[&id];
+            assert!(nav.segment_walkable_exact(previous, actor.position_m()));
+            previous = actor.position_m();
+            if !actor.is_walking() {
+                break;
+            }
+        }
+        let actor = &world.characters[&id];
+        assert!(!actor.is_walking());
+        assert!(
+            actor.position_m().distance(goal) > 0.0,
+            "exercise actual separation"
+        );
+        assert!(actor.position_m().distance(goal) < SPOT_ARRIVAL_M);
+        let spot = StandingSpot {
+            id: "test".into(),
+            xz: [goal.x, goal.z],
+            facing_yaw: 0.0,
+        };
+        assert!(spot.contains(actor.position_m()));
+        let arrived = actor.position_m();
+        for _ in 0..100 {
+            world.step_movement(TICK, &nav, Some(goal));
+        }
+        assert_eq!(world.characters[&id].position_m(), arrived);
+        assert_eq!(world.characters[&id].speed(), 0.0);
+    }
+
+    #[test]
+    fn exact_local_mover_preserves_wall_corner_safety_under_separation() {
+        use crate::nav::{LocalPathBudget, local_tests::surface};
+        let blocked: Vec<_> = (0..12).map(|r| (r, 16)).collect();
+        let nav = surface(&blocked);
+        let start = Vec3::new(2.13, WALK_Y, 1.13);
+        let goal = Vec3::new(5.71, WALK_Y, 1.19);
+        let route = nav
+            .local_route(start, goal, LocalPathBudget::CHANGE_SPOT)
+            .unwrap();
+        let mut actor = character("walker", 0.0);
+        actor.state.position_m = start;
+        actor.state.movement = Some(route.into_movement(0.0));
+        let mut neighbour = character("neighbour", 0.0);
+        // Above the left corner: its avoidance push points toward the wall.
+        neighbour.state.position_m = Vec3::new(3.625, WALK_Y, 3.4);
+        let mut world = World::new();
+        world.add_character(actor);
+        world.add_character(neighbour);
+        let id = ActorId::from_raw("walker");
+        let mut previous = start;
+        for _ in 0..500 {
+            world.step_movement(TICK, &nav, Some(start));
+            let actor = &world.characters[&id];
+            assert!(nav.segment_walkable_exact(previous, actor.position_m()));
+            if let Some(&next) = actor.state.movement.as_ref().unwrap().path.first() {
+                assert!(nav.segment_walkable_exact(actor.position_m(), next));
+            }
+            previous = actor.position_m();
+            if !actor.is_walking() {
+                break;
+            }
+        }
+        assert!(!world.characters[&id].is_walking());
+        assert!(previous.distance(goal) <= crate::nav::residents::SPOT_ARRIVAL_M);
+    }
+
     // ------------------------------------------------------- M7: the crowd
 
     /// A mover with a hand-laid path (no patrol, no lane shift), for the
@@ -1885,6 +1990,7 @@ mod tests {
             speed: WALK_SPEED_MPS,
             gait_phase: 0.0,
             patrol: None,
+            exact_local: false,
             choke_wait: 0.0,
         });
         character
@@ -1993,7 +2099,7 @@ mod tests {
         let json = format!(
             r#"{{
               "schema_version": 1,
-              "grid": {{"x0": -5.0, "z0": -5.0, "cell_m": 1.0, "w": {w}, "h": {h},
+              "grid": {{"x0": -10.0, "z0": -5.0, "cell_m": 1.0, "w": {w}, "h": {h},
                         "agent_radius_m": 0.35, "bitset_file": "x.bin",
                         "bitset_bits": {bits}, "bitset_sha256": ""}},
               "nodes": [[0.0, 0.0], [30.0, 0.0], [50.0, 0.0], [30.0, 30.0]],

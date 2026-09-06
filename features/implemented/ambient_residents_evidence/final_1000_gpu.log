@@ -1,0 +1,1247 @@
+[2m2026-09-06T17:30:59.278078Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Linux (Ubuntu 22.04)", kernel: "6.8.0-138-generic", cpu: "13th Gen Intel(R) Core(TM) i5-13600KF", core_count: "14", memory: "31.2 GiB" }
+[2m2026-09-06T17:30:59.283646Z[0m [33m WARN[0m [2mwinit::platform_impl::linux::x11::xdisplay[0m[2m:[0m error setting XSETTINGS; Xft options won't reload automatically
+[2m2026-09-06T17:30:59.939335Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "NVIDIA GeForce RTX 4070", vendor: 4318, device: 10118, device_type: DiscreteGpu, device_pci_bus_id: "0000:01:00.0", driver: "NVIDIA", driver_info: "535.309.01", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: false }
+[2m2026-09-06T17:31:00.692515Z[0m [32m INFO[0m [2mcathedralbevy::screenshot[0m[2m:[0m Cathedral session 812: logging to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59
+[2m2026-09-06T17:31:00.777048Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [smart actors] crowd: requested 1000, placed 1000, unplaced 0; 756 housed residents, 244 hardship backgrounds, 0 explicit workers (door cap 1)
+[drive] script has 143 action(s); watchdog aborts after 22000s
+[2m2026-09-06T17:31:00.787237Z[0m [32m INFO[0m [2mbevy_pbr::cluster[0m[2m:[0m GPU clustering is supported on this device.
+[2m2026-09-06T17:31:00.787274Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+[2m2026-09-06T17:31:00.787720Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window The Cathedral of Impossible Light (66v0)
+[2m2026-09-06T17:31:00.792328Z[0m [32m INFO[0m [2mwinit::platform_impl::linux::x11::window[0m[2m:[0m Guessed window scale factor: 1.1666666666666667
+[2m2026-09-06T17:31:00.793739Z[0m [31mERROR[0m [2mbevy_winit::winit_windows[0m[2m:[0m Unable to grab cursor: os error at /home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.30.13/src/platform_impl/linux/x11/window.rs:1561: Cursor could not be confined: confine location not viewable
+[2m2026-09-06T17:31:01.147979Z[0m [32m INFO[0m [2mcathedralbevy::city[0m[2m:[0m lit 251 of 1230 chimneys with drifting smoke
+[2m2026-09-06T17:31:01.154272Z[0m [32m INFO[0m [2mcathedralbevy::city[0m[2m:[0m spanned 22 street galleries
+[2m2026-09-06T17:31:01.155787Z[0m [32m INFO[0m [2mcathedralbevy::city[0m[2m:[0m raised 9 arcade strips on the squares
+[2m2026-09-06T17:31:01.159497Z[0m [32m INFO[0m [2mcathedralbevy::city[0m[2m:[0m raised 66 yard stairs
+[2m2026-09-06T17:31:01.160605Z[0m [32m INFO[0m [2mcathedralbevy::city[0m[2m:[0m hung 14 open balconies
+[2m2026-09-06T17:31:01.176326Z[0m [32m INFO[0m [2mcathedralbevy::city[0m[2m:[0m scattered 1026 doorway prop clusters
+[2m2026-09-06T17:31:01.176691Z[0m [32m INFO[0m [2mcathedralbevy::city[0m[2m:[0m stretched 59 shopfront awnings
+[2m2026-09-06T17:31:01.243475Z[0m [32m INFO[0m [2mcathedralbevy::city[0m[2m:[0m strung 147 laundry lines
+[2m2026-09-06T17:31:01.247674Z[0m [32m INFO[0m [2mcathedralbevy::city[0m[2m:[0m rigged 48 hoist gantries
+[2m2026-09-06T17:31:01.301645Z[0m [32m INFO[0m [2mcathedralbevy::city::vermin[0m[2m:[0m [vermin] 50 rats settled across 8 colonies, and 100 more waiting on a boil
+[2m2026-09-06T17:31:01.320125Z[0m [31mERROR[0m [2mbevy_asset::server[0m[2m:[0m Could not find an asset loader matching: Asset Type: Some(TypeId(0xbb30f5f362e04c6013b60067be062a35)); Path: "sounds/well_trough.wav";
+[2m2026-09-06T17:31:01.320126Z[0m [31mERROR[0m [2mbevy_asset::server[0m[2m:[0m Could not find an asset loader matching: Asset Type: Some(TypeId(0xbb30f5f362e04c6013b60067be062a35)); Path: "sounds/chain_draw.wav";
+[2m2026-09-06T17:31:01.320149Z[0m [31mERROR[0m [2mbevy_asset::server[0m[2m:[0m Could not find an asset loader matching: Asset Type: Some(TypeId(0xbb30f5f362e04c6013b60067be062a35)); Path: "sounds/cistern_drip.wav";
+[2m2026-09-06T17:31:01.360634Z[0m [31mERROR[0m [2mbevy_winit::winit_windows[0m[2m:[0m Unable to grab cursor: os error at /home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.30.13/src/platform_impl/linux/x11/window.rs:1561: Cursor could not be confined: confine location not viewable
+[2m2026-09-06T17:31:01.360654Z[0m [33m WARN[0m [2mbevy_winit::system[0m[2m:[0m Could not set cursor grab mode for window The Cathedral of Impossible Light: os error at /home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.30.13/src/platform_impl/linux/x11/window.rs:1561: Cursor could not be confined: confine location not viewable
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 1514 enrolled (9 well keepers), 1169 housed, 69 water drawers
+[smart actors] wayfinding: 1247 places in the registry (1169 homes)
+[smart actors] round: 13 food stalls, 12 staffed on day 2 (Highmarket)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[drive] 0.8s key KeyV
+[drive] 1.3s wait-online
+[drive] 1.3s online
+[drive] 1.8s weather clear
+[weather] day 2 07:01 clear -> clear, wind 0.9 m/s south, visibility 350 m
+[drive] 2.3s sleep-sim 30
+[2m2026-09-06T17:31:11.844989Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2132 us, max 16364 us over 508 frames
+[2m2026-09-06T17:31:11.845175Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 46 us, max 2084 us over 508 frames
+[2m2026-09-06T17:31:11.846721Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 448 us over 508 frames (tier A 5, tier B 90)
+[2m2026-09-06T17:31:16.852670Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1664 us, max 11785 us over 571 frames
+[2m2026-09-06T17:31:16.852773Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 32 us, max 588 us over 571 frames
+[2m2026-09-06T17:31:16.853709Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 124 us, max 445 us over 571 frames (tier A 5, tier B 92)
+[2m2026-09-06T17:31:21.866064Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1772 us, max 20307 us over 565 frames
+[2m2026-09-06T17:31:21.866133Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 40 us, max 2918 us over 565 frames
+[2m2026-09-06T17:31:21.866666Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 120 us, max 462 us over 565 frames (tier A 4, tier B 91)
+[2m2026-09-06T17:31:26.867364Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2169 us, max 21509 us over 484 frames
+[2m2026-09-06T17:31:26.867526Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 45 us, max 404 us over 484 frames
+[2m2026-09-06T17:31:26.868791Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 136 us, max 490 us over 484 frames (tier A 4, tier B 94)
+[2m2026-09-06T17:31:31.871321Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1426 us, max 14869 us over 635 frames
+[2m2026-09-06T17:31:31.871519Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 26 us, max 439 us over 635 frames
+[2m2026-09-06T17:31:31.873359Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 106 us, max 453 us over 635 frames (tier A 3, tier B 94)
+[drive] 32.3s simulation wait completed at 31.819s
+[drive] 32.3s tp -17.375 1.7 268.375 0 0
+[drive] 32.9s shot final_wickmarket_ground_stage30
+[2m2026-09-06T17:31:34.217484Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_ground_stage30.png
+[drive] 33.4s tp -17.375 26 285.375 0 -35
+[drive] 33.9s shot final_wickmarket_elevated_stage30
+[2m2026-09-06T17:31:35.260836Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_elevated_stage30.png
+[drive] 34.4s tp 124.625 1.7 196.125 -30.6 0
+[drive] 35.0s shot final_tenterhook_lane_ground_stage30
+[2m2026-09-06T17:31:36.307793Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_ground_stage30.png
+[drive] 35.5s tp 124.625 22 211.125 0 -55
+[2m2026-09-06T17:31:36.875682Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1814 us, max 17707 us over 556 frames
+[2m2026-09-06T17:31:36.875851Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 32 us, max 470 us over 556 frames
+[2m2026-09-06T17:31:36.877177Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 129 us, max 469 us over 556 frames (tier A 14, tier B 93)
+[drive] 36.0s shot final_tenterhook_lane_elevated_stage30
+[2m2026-09-06T17:31:37.356434Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_elevated_stage30.png
+[drive] 36.5s tp -123.375 1.7 166.375 152.6 0
+[drive] 37.1s shot final_burnt_court_ground_stage30
+[2m2026-09-06T17:31:38.410402Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_ground_stage30.png
+[drive] 37.6s tp -123.375 24 191.375 0 -45
+[drive] 38.1s shot final_burnt_court_elevated_stage30
+[2m2026-09-06T17:31:39.461239Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_elevated_stage30.png
+[drive] 38.7s tp -113.375 1.7 161.125 41.9 0
+[drive] 39.2s shot final_needle_ground_stage30
+[2m2026-09-06T17:31:40.526398Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_ground_stage30.png
+[drive] 39.7s tp -113.375 22 183.125 0 -45
+[drive] 40.2s shot final_needle_elevated_stage30
+[2m2026-09-06T17:31:41.611000Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_elevated_stage30.png
+[2m2026-09-06T17:31:41.888353Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1991 us, max 14159 us over 513 frames
+[2m2026-09-06T17:31:41.888484Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 31 us, max 381 us over 513 frames
+[2m2026-09-06T17:31:41.889242Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 135 us, max 553 us over 513 frames (tier A 13, tier B 118)
+[drive] 40.8s tp -17.375 1.7 268.375 180 0
+[drive] 41.3s shot final_wickmarket_frontages_stage30
+[2m2026-09-06T17:31:42.651403Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_frontages_stage30.png
+[drive] 41.8s tp 9.125 1.7 269.125 180 0
+[drive] 42.3s shot final_wickmarket_east_frontage_stage30
+[2m2026-09-06T17:31:43.714704Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_east_frontage_stage30.png
+[drive] 42.9s tp -113.375 22 183.125 0 -45
+[drive] 43.4s sleep-sim 150
+[2m2026-09-06T17:31:46.901803Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2601 us, max 21108 us over 436 frames
+[2m2026-09-06T17:31:46.902081Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 43 us, max 2188 us over 436 frames
+[2m2026-09-06T17:31:46.902846Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 137 us, max 505 us over 436 frames (tier A 13, tier B 116)
+[2m2026-09-06T17:31:51.913661Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2875 us, max 30072 us over 398 frames
+[2m2026-09-06T17:31:51.913844Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 47 us, max 491 us over 398 frames
+[2m2026-09-06T17:31:51.915205Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 146 us, max 583 us over 398 frames (tier A 14, tier B 112)
+[2m2026-09-06T17:31:56.937015Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3542 us, max 21993 us over 347 frames
+[2m2026-09-06T17:31:56.937097Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 61 us, max 3931 us over 347 frames
+[2m2026-09-06T17:31:56.938120Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 156 us, max 564 us over 347 frames (tier A 14, tier B 109)
+[2m2026-09-06T17:32:01.953684Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3639 us, max 21988 us over 341 frames
+[2m2026-09-06T17:32:01.953987Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 69 us, max 2250 us over 341 frames
+[2m2026-09-06T17:32:01.955667Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 149 us, max 505 us over 341 frames (tier A 13, tier B 107)
+[2m2026-09-06T17:32:06.958846Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2856 us, max 20056 us over 387 frames
+[2m2026-09-06T17:32:06.959098Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 46 us, max 418 us over 387 frames
+[2m2026-09-06T17:32:06.960471Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 147 us, max 515 us over 387 frames (tier A 14, tier B 106)
+[2m2026-09-06T17:32:11.952606Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3113 us, max 19219 us over 370 frames
+[2m2026-09-06T17:32:11.952723Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 56 us, max 2247 us over 370 frames
+[2m2026-09-06T17:32:11.953646Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 153 us, max 571 us over 370 frames (tier A 13, tier B 104)
+[2m2026-09-06T17:32:16.955922Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3071 us, max 23734 us over 389 frames
+[2m2026-09-06T17:32:16.956070Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 50 us, max 1541 us over 389 frames
+[2m2026-09-06T17:32:16.957283Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 142 us, max 540 us over 389 frames (tier A 12, tier B 107)
+[2m2026-09-06T17:32:21.966612Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2332 us, max 16527 us over 449 frames
+[2m2026-09-06T17:32:21.966789Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 46 us, max 2282 us over 449 frames
+[2m2026-09-06T17:32:21.968126Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 138 us, max 536 us over 449 frames (tier A 12, tier B 106)
+[2m2026-09-06T17:32:26.960768Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2689 us, max 20056 us over 415 frames
+[2m2026-09-06T17:32:26.960957Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 42 us, max 410 us over 415 frames
+[2m2026-09-06T17:32:26.962691Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 139 us, max 517 us over 415 frames (tier A 12, tier B 107)
+[2m2026-09-06T17:32:31.959805Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2184 us, max 20029 us over 470 frames
+[2m2026-09-06T17:32:31.959856Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 40 us, max 1457 us over 470 frames
+[2m2026-09-06T17:32:31.960651Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 519 us over 470 frames (tier A 12, tier B 105)
+[2m2026-09-06T17:32:36.985697Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2335 us, max 19038 us over 442 frames
+[2m2026-09-06T17:32:36.985893Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 47 us, max 2412 us over 442 frames
+[2m2026-09-06T17:32:36.987119Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 135 us, max 529 us over 442 frames (tier A 12, tier B 105)
+[2m2026-09-06T17:32:42.002084Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2666 us, max 23517 us over 413 frames
+[2m2026-09-06T17:32:42.002203Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 53 us, max 2527 us over 413 frames
+[2m2026-09-06T17:32:42.003463Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 138 us, max 527 us over 413 frames (tier A 11, tier B 103)
+[2m2026-09-06T17:32:47.000475Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3278 us, max 24011 us over 368 frames
+[2m2026-09-06T17:32:47.000634Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 57 us, max 1767 us over 368 frames
+[2m2026-09-06T17:32:47.003674Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 509 us over 368 frames (tier A 11, tier B 105)
+[2m2026-09-06T17:32:52.017966Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3837 us, max 19654 us over 317 frames
+[2m2026-09-06T17:32:52.018267Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 64 us, max 394 us over 317 frames
+[2m2026-09-06T17:32:52.019992Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 495 us over 317 frames (tier A 11, tier B 102)
+[2m2026-09-06T17:32:57.031203Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2935 us, max 20937 us over 386 frames
+[2m2026-09-06T17:32:57.031387Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 60 us, max 2324 us over 386 frames
+[2m2026-09-06T17:32:57.033396Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 146 us, max 3003 us over 386 frames (tier A 11, tier B 106)
+[2m2026-09-06T17:33:02.033045Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2377 us, max 20717 us over 449 frames
+[2m2026-09-06T17:33:02.033310Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 45 us, max 2331 us over 449 frames
+[2m2026-09-06T17:33:02.034769Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 497 us over 449 frames (tier A 11, tier B 102)
+[2m2026-09-06T17:33:07.059933Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2450 us, max 18007 us over 439 frames
+[2m2026-09-06T17:33:07.060178Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 53 us, max 2619 us over 439 frames
+[2m2026-09-06T17:33:07.064266Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 127 us, max 448 us over 439 frames (tier A 11, tier B 104)
+[2m2026-09-06T17:33:12.057950Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2683 us, max 18088 us over 407 frames
+[2m2026-09-06T17:33:12.058084Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 50 us, max 1414 us over 407 frames
+[2m2026-09-06T17:33:12.059585Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 136 us, max 535 us over 407 frames (tier A 11, tier B 106)
+[2m2026-09-06T17:33:17.079797Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3433 us, max 20762 us over 346 frames
+[2m2026-09-06T17:33:17.080023Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 73 us, max 3966 us over 346 frames
+[2m2026-09-06T17:33:17.080767Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 489 us over 346 frames (tier A 11, tier B 105)
+[2m2026-09-06T17:33:22.092843Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2805 us, max 28510 us over 409 frames
+[2m2026-09-06T17:33:22.092927Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 66 us, max 3651 us over 409 frames
+[2m2026-09-06T17:33:22.097183Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 544 us over 409 frames (tier A 11, tier B 100)
+[2m2026-09-06T17:33:27.105571Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2956 us, max 42634 us over 397 frames
+[2m2026-09-06T17:33:27.105686Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 55 us, max 1661 us over 397 frames
+[2m2026-09-06T17:33:27.106220Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 124 us, max 506 us over 397 frames (tier A 11, tier B 100)
+[2m2026-09-06T17:33:32.093046Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2678 us, max 29487 us over 423 frames
+[2m2026-09-06T17:33:32.093410Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 58 us, max 2457 us over 423 frames
+[2m2026-09-06T17:33:32.094910Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 122 us, max 493 us over 423 frames (tier A 11, tier B 97)
+[2m2026-09-06T17:33:37.096196Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2412 us, max 28267 us over 442 frames
+[2m2026-09-06T17:33:37.096402Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 48 us, max 2426 us over 442 frames
+[2m2026-09-06T17:33:37.098508Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 117 us, max 471 us over 442 frames (tier A 11, tier B 100)
+[2m2026-09-06T17:33:42.108283Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3136 us, max 37251 us over 373 frames
+[2m2026-09-06T17:33:42.108461Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 67 us, max 2506 us over 373 frames
+[2m2026-09-06T17:33:42.109041Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 135 us, max 493 us over 373 frames (tier A 11, tier B 96)
+[2m2026-09-06T17:33:47.114635Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2264 us, max 25861 us over 464 frames
+[2m2026-09-06T17:33:47.114701Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 42 us, max 2742 us over 464 frames
+[2m2026-09-06T17:33:47.115344Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 118 us, max 491 us over 464 frames (tier A 11, tier B 94)
+[2m2026-09-06T17:33:52.106935Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1653 us, max 29441 us over 553 frames
+[2m2026-09-06T17:33:52.106995Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 39 us, max 2429 us over 553 frames
+[2m2026-09-06T17:33:52.107493Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 110 us, max 421 us over 553 frames (tier A 11, tier B 96)
+[2m2026-09-06T17:33:57.111916Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1268 us, max 9482 us over 634 frames
+[2m2026-09-06T17:33:57.111985Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 21 us, max 1434 us over 634 frames
+[2m2026-09-06T17:33:57.112575Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 89 us, max 219 us over 634 frames (tier A 11, tier B 93)
+[2m2026-09-06T17:34:02.116826Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1352 us, max 10296 us over 625 frames
+[2m2026-09-06T17:34:02.116885Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 22 us, max 2275 us over 625 frames
+[2m2026-09-06T17:34:02.117770Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 88 us, max 224 us over 625 frames (tier A 11, tier B 92)
+[2m2026-09-06T17:34:07.131311Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1535 us, max 12209 us over 575 frames
+[2m2026-09-06T17:34:07.131385Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 25 us, max 2679 us over 575 frames
+[2m2026-09-06T17:34:07.134604Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 96 us, max 215 us over 575 frames (tier A 11, tier B 92)
+[2m2026-09-06T17:34:12.160230Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2693 us, max 26617 us over 372 frames
+[2m2026-09-06T17:34:12.160498Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 41 us, max 2860 us over 372 frames
+[2m2026-09-06T17:34:12.165451Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 107 us, max 1147 us over 372 frames (tier A 11, tier B 94)
+[drive] 193.4s simulation wait completed at 192.879s
+[drive] 193.4s tp -17.375 1.7 268.375 0 0
+[drive] 193.9s shot final_wickmarket_ground_stage180
+[2m2026-09-06T17:34:15.266792Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_ground_stage180.png
+[drive] 194.5s tp -17.375 26 285.375 0 -35
+[drive] 195.0s shot final_wickmarket_elevated_stage180
+[2m2026-09-06T17:34:16.298924Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_elevated_stage180.png
+[drive] 195.5s tp 124.625 1.7 196.125 -30.6 0
+[2m2026-09-06T17:34:17.132640Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2006 us, max 31980 us over 473 frames
+[2m2026-09-06T17:34:17.132698Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 43 us, max 3441 us over 473 frames
+[2m2026-09-06T17:34:17.133674Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 105 us, max 322 us over 473 frames (tier A 21, tier B 95)
+[drive] 196.0s shot final_tenterhook_lane_ground_stage180
+[2m2026-09-06T17:34:17.337869Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_ground_stage180.png
+[drive] 196.5s tp 124.625 22 211.125 0 -55
+[drive] 197.0s shot final_tenterhook_lane_elevated_stage180
+[2m2026-09-06T17:34:18.395937Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_elevated_stage180.png
+[drive] 197.6s tp -123.375 1.7 166.375 152.6 0
+[drive] 198.1s shot final_burnt_court_ground_stage180
+[2m2026-09-06T17:34:19.501729Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_ground_stage180.png
+[drive] 198.7s tp -123.375 24 191.375 0 -45
+[drive] 199.2s shot final_burnt_court_elevated_stage180
+[2m2026-09-06T17:34:20.572171Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_elevated_stage180.png
+[drive] 199.8s tp -113.375 1.7 161.125 41.9 0
+[drive] 200.3s shot final_needle_ground_stage180
+[2m2026-09-06T17:34:21.659083Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_ground_stage180.png
+[2m2026-09-06T17:34:22.137430Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2725 us, max 20891 us over 430 frames
+[2m2026-09-06T17:34:22.137494Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 49 us, max 2808 us over 430 frames
+[2m2026-09-06T17:34:22.138245Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 534 us over 430 frames (tier A 12, tier B 87)
+[drive] 200.8s tp -113.375 22 183.125 0 -45
+[drive] 201.4s shot final_needle_elevated_stage180
+[2m2026-09-06T17:34:22.707125Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_elevated_stage180.png
+[drive] 201.9s tp -17.375 1.7 268.375 180 0
+[drive] 202.4s shot final_wickmarket_frontages_stage180
+[2m2026-09-06T17:34:23.761116Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_frontages_stage180.png
+[drive] 202.9s tp 9.125 1.7 269.125 180 0
+[drive] 203.5s shot final_wickmarket_east_frontage_stage180
+[2m2026-09-06T17:34:24.835509Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_east_frontage_stage180.png
+[drive] 204.0s tp -113.375 22 183.125 0 -45
+[drive] 204.5s sleep-sim 420
+[2m2026-09-06T17:34:27.180898Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2267 us, max 16815 us over 435 frames
+[2m2026-09-06T17:34:27.181062Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 38 us, max 1588 us over 435 frames
+[2m2026-09-06T17:34:27.181792Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 568 us over 435 frames (tier A 11, tier B 94)
+[2m2026-09-06T17:34:32.210012Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2191 us, max 31947 us over 473 frames
+[2m2026-09-06T17:34:32.210184Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 32 us, max 400 us over 473 frames
+[2m2026-09-06T17:34:32.210811Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 112 us, max 488 us over 473 frames (tier A 11, tier B 96)
+[2m2026-09-06T17:34:37.221504Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2566 us, max 19942 us over 425 frames
+[2m2026-09-06T17:34:37.221776Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 51 us, max 2548 us over 425 frames
+[2m2026-09-06T17:34:37.222980Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 129 us, max 575 us over 425 frames (tier A 10, tier B 98)
+[2m2026-09-06T17:34:42.227543Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2338 us, max 34685 us over 455 frames
+[2m2026-09-06T17:34:42.227592Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 50 us, max 2651 us over 455 frames
+[2m2026-09-06T17:34:42.228873Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 121 us, max 464 us over 455 frames (tier A 10, tier B 101)
+[2m2026-09-06T17:34:47.255748Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2860 us, max 21495 us over 399 frames
+[2m2026-09-06T17:34:47.255868Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 55 us, max 3009 us over 399 frames
+[2m2026-09-06T17:34:47.257627Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 496 us over 399 frames (tier A 10, tier B 108)
+[2m2026-09-06T17:34:52.244268Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3107 us, max 20573 us over 375 frames
+[2m2026-09-06T17:34:52.244443Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 63 us, max 2474 us over 375 frames
+[2m2026-09-06T17:34:52.245659Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 499 us over 375 frames (tier A 10, tier B 111)
+[2m2026-09-06T17:34:57.269842Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2719 us, max 19691 us over 418 frames
+[2m2026-09-06T17:34:57.270001Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 46 us, max 1597 us over 418 frames
+[2m2026-09-06T17:34:57.273108Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 438 us over 418 frames (tier A 10, tier B 110)
+[2m2026-09-06T17:35:02.261895Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2696 us, max 30814 us over 411 frames
+[2m2026-09-06T17:35:02.262062Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 56 us, max 2327 us over 411 frames
+[2m2026-09-06T17:35:02.263993Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 531 us over 411 frames (tier A 10, tier B 108)
+[2m2026-09-06T17:35:07.277586Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2931 us, max 22268 us over 395 frames
+[2m2026-09-06T17:35:07.278121Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 49 us, max 1951 us over 395 frames
+[2m2026-09-06T17:35:07.280278Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 139 us, max 923 us over 395 frames (tier A 10, tier B 108)
+[2m2026-09-06T17:35:12.262591Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2945 us, max 21558 us over 389 frames
+[2m2026-09-06T17:35:12.262670Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 52 us, max 3040 us over 389 frames
+[2m2026-09-06T17:35:12.263673Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 460 us over 389 frames (tier A 10, tier B 104)
+[2m2026-09-06T17:35:17.263161Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2685 us, max 28037 us over 420 frames
+[2m2026-09-06T17:35:17.263205Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 47 us, max 2168 us over 420 frames
+[2m2026-09-06T17:35:17.263997Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 501 us over 420 frames (tier A 10, tier B 106)
+[2m2026-09-06T17:35:22.280917Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2866 us, max 30561 us over 404 frames
+[2m2026-09-06T17:35:22.281074Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 57 us, max 2420 us over 404 frames
+[2m2026-09-06T17:35:22.282664Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 132 us, max 388 us over 404 frames (tier A 10, tier B 109)
+[2m2026-09-06T17:35:27.279195Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3122 us, max 38178 us over 386 frames
+[2m2026-09-06T17:35:27.279272Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 53 us, max 2405 us over 386 frames
+[2m2026-09-06T17:35:27.280149Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 400 us over 386 frames (tier A 10, tier B 118)
+[2m2026-09-06T17:35:32.291068Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2565 us, max 30976 us over 442 frames
+[2m2026-09-06T17:35:32.291145Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 55 us, max 2682 us over 442 frames
+[2m2026-09-06T17:35:32.296133Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 484 us over 442 frames (tier A 10, tier B 121)
+[2m2026-09-06T17:35:37.297329Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2609 us, max 35604 us over 430 frames
+[2m2026-09-06T17:35:37.297399Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 64 us, max 2445 us over 430 frames
+[2m2026-09-06T17:35:37.299316Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 480 us over 430 frames (tier A 10, tier B 116)
+[2m2026-09-06T17:35:42.290653Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2544 us, max 31790 us over 435 frames
+[2m2026-09-06T17:35:42.290710Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 69 us, max 4078 us over 435 frames
+[2m2026-09-06T17:35:42.292008Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 526 us over 435 frames (tier A 10, tier B 115)
+[2m2026-09-06T17:35:47.308500Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2191 us, max 29468 us over 477 frames
+[2m2026-09-06T17:35:47.308621Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 45 us, max 2757 us over 477 frames
+[2m2026-09-06T17:35:47.309196Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 123 us, max 462 us over 477 frames (tier A 10, tier B 114)
+[2m2026-09-06T17:35:52.307727Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2968 us, max 22857 us over 386 frames
+[2m2026-09-06T17:35:52.307913Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 59 us, max 2510 us over 386 frames
+[2m2026-09-06T17:35:52.309088Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 141 us, max 516 us over 386 frames (tier A 10, tier B 118)
+[2m2026-09-06T17:35:57.320332Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2532 us, max 19393 us over 425 frames
+[2m2026-09-06T17:35:57.320546Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 45 us, max 2844 us over 425 frames
+[2m2026-09-06T17:35:57.321391Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 137 us, max 564 us over 425 frames (tier A 10, tier B 118)
+[2m2026-09-06T17:36:02.330303Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3023 us, max 29209 us over 386 frames
+[2m2026-09-06T17:36:02.330512Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 49 us, max 2003 us over 386 frames
+[2m2026-09-06T17:36:02.332373Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 478 us over 386 frames (tier A 10, tier B 123)
+[2m2026-09-06T17:36:07.323504Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1499 us, max 12518 us over 582 frames
+[2m2026-09-06T17:36:07.323566Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 29 us, max 2336 us over 582 frames
+[2m2026-09-06T17:36:07.324790Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 109 us, max 425 us over 582 frames (tier A 10, tier B 127)
+[2m2026-09-06T17:36:12.330257Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1406 us, max 29139 us over 610 frames
+[2m2026-09-06T17:36:12.330303Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 25 us, max 2025 us over 610 frames
+[2m2026-09-06T17:36:12.331105Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 104 us, max 295 us over 610 frames (tier A 10, tier B 130)
+[2m2026-09-06T17:36:17.380690Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3228 us, max 25884 us over 325 frames
+[2m2026-09-06T17:36:17.380834Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 51 us, max 2025 us over 325 frames
+[2m2026-09-06T17:36:17.383561Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 118 us, max 212 us over 325 frames (tier A 10, tier B 132)
+[2m2026-09-06T17:36:22.371564Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1684 us, max 27478 us over 548 frames
+[2m2026-09-06T17:36:22.371634Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 42 us, max 2691 us over 548 frames
+[2m2026-09-06T17:36:22.372560Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 107 us, max 296 us over 548 frames (tier A 10, tier B 131)
+[2m2026-09-06T17:36:27.374136Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1779 us, max 15007 us over 519 frames
+[2m2026-09-06T17:36:27.374189Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 40 us, max 2356 us over 519 frames
+[2m2026-09-06T17:36:27.375333Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 110 us, max 516 us over 519 frames (tier A 10, tier B 132)
+[2m2026-09-06T17:36:32.748940Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2941 us, max 26967 us over 394 frames
+[2m2026-09-06T17:36:32.749060Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 45 us, max 2257 us over 394 frames
+[2m2026-09-06T17:36:32.755025Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 152 us, max 761 us over 394 frames (tier A 10, tier B 130)
+[2m2026-09-06T17:36:37.734380Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2605 us, max 21805 us over 423 frames
+[2m2026-09-06T17:36:37.734561Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 47 us, max 3087 us over 423 frames
+[2m2026-09-06T17:36:37.735722Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 147 us, max 566 us over 423 frames (tier A 11, tier B 132)
+[2m2026-09-06T17:36:43.442297Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2568 us, max 20895 us over 430 frames
+[2m2026-09-06T17:36:43.442592Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 38 us, max 363 us over 430 frames
+[2m2026-09-06T17:36:43.443653Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 549 us over 430 frames (tier A 11, tier B 137)
+[2m2026-09-06T17:36:48.441187Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2047 us, max 17891 us over 491 frames
+[2m2026-09-06T17:36:48.441312Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 29 us, max 304 us over 491 frames
+[2m2026-09-06T17:36:48.442102Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 570 us over 491 frames (tier A 13, tier B 133)
+[2m2026-09-06T17:36:53.442186Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1711 us, max 27495 us over 561 frames
+[2m2026-09-06T17:36:53.538359Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 32 us, max 2155 us over 561 frames
+[2m2026-09-06T17:36:53.541020Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 123 us, max 523 us over 561 frames (tier A 14, tier B 133)
+[2m2026-09-06T17:36:58.474651Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1541 us, max 26893 us over 581 frames
+[2m2026-09-06T17:36:58.474712Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 31 us, max 2474 us over 581 frames
+[2m2026-09-06T17:36:58.475659Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 115 us, max 366 us over 581 frames (tier A 16, tier B 131)
+[2m2026-09-06T17:37:03.481370Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1398 us, max 10602 us over 631 frames
+[2m2026-09-06T17:37:03.481419Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 24 us, max 2570 us over 631 frames
+[2m2026-09-06T17:37:03.482318Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 107 us, max 258 us over 631 frames (tier A 14, tier B 132)
+[2m2026-09-06T17:37:08.492811Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1439 us, max 27485 us over 624 frames
+[2m2026-09-06T17:37:08.492863Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 35 us, max 2510 us over 624 frames
+[2m2026-09-06T17:37:08.494218Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 106 us, max 369 us over 624 frames (tier A 13, tier B 134)
+[2m2026-09-06T17:37:13.497238Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1360 us, max 28185 us over 634 frames
+[2m2026-09-06T17:37:13.497298Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 25 us, max 2436 us over 634 frames
+[2m2026-09-06T17:37:13.497886Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 105 us, max 334 us over 634 frames (tier A 12, tier B 137)
+[2m2026-09-06T17:37:18.503899Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1622 us, max 11179 us over 569 frames
+[2m2026-09-06T17:37:18.503962Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 26 us, max 2592 us over 569 frames
+[2m2026-09-06T17:37:18.504849Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 114 us, max 201 us over 569 frames (tier A 12, tier B 138)
+[2m2026-09-06T17:37:23.509116Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2758 us, max 15152 us over 411 frames
+[2m2026-09-06T17:37:23.509184Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 40 us, max 2981 us over 411 frames
+[2m2026-09-06T17:37:23.510208Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 139 us, max 299 us over 411 frames (tier A 13, tier B 139)
+[2m2026-09-06T17:37:28.519010Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1922 us, max 15743 us over 516 frames
+[2m2026-09-06T17:37:28.519170Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 26 us, max 2722 us over 516 frames
+[2m2026-09-06T17:37:28.519771Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 124 us, max 273 us over 516 frames (tier A 14, tier B 133)
+[2m2026-09-06T17:37:33.524501Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1689 us, max 12688 us over 546 frames
+[2m2026-09-06T17:37:33.524666Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 29 us, max 2483 us over 546 frames
+[2m2026-09-06T17:37:33.525292Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 118 us, max 235 us over 546 frames (tier A 13, tier B 134)
+[2m2026-09-06T17:37:38.566412Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 7156 us, max 29682 us over 170 frames
+[2m2026-09-06T17:37:38.566783Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 85 us, max 2856 us over 170 frames
+[2m2026-09-06T17:37:38.573649Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 135 us, max 1443 us over 170 frames (tier A 12, tier B 136)
+[2m2026-09-06T17:37:43.648143Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 10714 us, max 67995 us over 124 frames
+[2m2026-09-06T17:37:43.648397Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 103 us, max 3008 us over 124 frames
+[2m2026-09-06T17:37:43.654045Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 152 us, max 1488 us over 124 frames (tier A 12, tier B 133)
+[2m2026-09-06T17:37:48.614744Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4469 us, max 50708 us over 265 frames
+[2m2026-09-06T17:37:48.614878Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 70 us, max 3127 us over 265 frames
+[2m2026-09-06T17:37:48.615378Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 4070 us over 265 frames (tier A 13, tier B 134)
+[2m2026-09-06T17:37:53.625269Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1612 us, max 15780 us over 566 frames
+[2m2026-09-06T17:37:53.625322Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 33 us, max 2669 us over 566 frames
+[2m2026-09-06T17:37:53.627088Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 107 us, max 559 us over 566 frames (tier A 12, tier B 130)
+[2m2026-09-06T17:37:58.626906Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2183 us, max 19350 us over 465 frames
+[2m2026-09-06T17:37:58.627101Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 36 us, max 1907 us over 465 frames
+[2m2026-09-06T17:37:58.628083Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 550 us over 465 frames (tier A 13, tier B 129)
+[2m2026-09-06T17:38:03.639299Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2984 us, max 22032 us over 380 frames
+[2m2026-09-06T17:38:03.639378Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 42 us, max 2959 us over 380 frames
+[2m2026-09-06T17:38:03.640088Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 151 us, max 520 us over 380 frames (tier A 12, tier B 131)
+[2m2026-09-06T17:38:08.660831Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2962 us, max 20123 us over 380 frames
+[2m2026-09-06T17:38:08.660906Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 34 us, max 286 us over 380 frames
+[2m2026-09-06T17:38:08.664415Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 147 us, max 609 us over 380 frames (tier A 11, tier B 133)
+[2m2026-09-06T17:38:13.667752Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2598 us, max 22400 us over 419 frames
+[2m2026-09-06T17:38:13.667892Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 36 us, max 2308 us over 419 frames
+[2m2026-09-06T17:38:13.668959Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 548 us over 419 frames (tier A 11, tier B 133)
+[2m2026-09-06T17:38:18.680572Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2406 us, max 17556 us over 455 frames
+[2m2026-09-06T17:38:18.680773Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 48 us, max 6479 us over 455 frames
+[2m2026-09-06T17:38:18.683258Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 136 us, max 535 us over 455 frames (tier A 11, tier B 138)
+[2m2026-09-06T17:38:23.841072Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3127 us, max 24113 us over 377 frames
+[2m2026-09-06T17:38:23.841149Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 43 us, max 2338 us over 377 frames
+[2m2026-09-06T17:38:23.841886Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 563 us over 377 frames (tier A 11, tier B 138)
+[2m2026-09-06T17:38:28.875926Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2275 us, max 17815 us over 469 frames
+[2m2026-09-06T17:38:28.876049Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 43 us, max 4921 us over 469 frames
+[2m2026-09-06T17:38:28.879241Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 137 us, max 549 us over 469 frames (tier A 12, tier B 140)
+[2m2026-09-06T17:38:33.925891Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2737 us, max 24669 us over 421 frames
+[2m2026-09-06T17:38:33.925983Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 39 us, max 2795 us over 421 frames
+[2m2026-09-06T17:38:33.927578Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 142 us, max 548 us over 421 frames (tier A 11, tier B 138)
+[2m2026-09-06T17:38:39.233948Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2185 us, max 22357 us over 475 frames
+[2m2026-09-06T17:38:39.270551Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 26 us, max 301 us over 475 frames
+[2m2026-09-06T17:38:39.272530Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 558 us over 475 frames (tier A 11, tier B 139)
+[2m2026-09-06T17:38:44.256708Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2293 us, max 21672 us over 457 frames
+[2m2026-09-06T17:38:44.256883Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 47 us, max 3275 us over 457 frames
+[2m2026-09-06T17:38:44.258498Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 538 us over 457 frames (tier A 12, tier B 140)
+[2m2026-09-06T17:38:49.247697Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2457 us, max 30670 us over 438 frames
+[2m2026-09-06T17:38:49.247864Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 35 us, max 2348 us over 438 frames
+[2m2026-09-06T17:38:49.248971Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 548 us over 438 frames (tier A 12, tier B 142)
+[2m2026-09-06T17:38:54.245916Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2759 us, max 19664 us over 414 frames
+[2m2026-09-06T17:38:54.245975Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 40 us, max 3571 us over 414 frames
+[2m2026-09-06T17:38:54.247523Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 135 us, max 479 us over 414 frames (tier A 12, tier B 138)
+[2m2026-09-06T17:38:59.259069Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2469 us, max 19088 us over 451 frames
+[2m2026-09-06T17:38:59.259196Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 42 us, max 2323 us over 451 frames
+[2m2026-09-06T17:38:59.262622Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 142 us, max 680 us over 451 frames (tier A 11, tier B 139)
+[2m2026-09-06T17:39:04.272673Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2125 us, max 19039 us over 488 frames
+[2m2026-09-06T17:39:04.272815Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 26 us, max 285 us over 488 frames
+[2m2026-09-06T17:39:04.276113Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 531 us over 488 frames (tier A 11, tier B 139)
+[2m2026-09-06T17:39:09.271231Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3034 us, max 18390 us over 382 frames
+[2m2026-09-06T17:39:09.271288Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 42 us, max 2174 us over 382 frames
+[2m2026-09-06T17:39:09.272066Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 151 us, max 546 us over 382 frames (tier A 12, tier B 136)
+[2m2026-09-06T17:39:14.273187Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1851 us, max 17970 us over 522 frames
+[2m2026-09-06T17:39:14.273255Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 27 us, max 2404 us over 522 frames
+[2m2026-09-06T17:39:14.276645Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 497 us over 522 frames (tier A 11, tier B 145)
+[2m2026-09-06T17:39:19.269402Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1338 us, max 9454 us over 652 frames
+[2m2026-09-06T17:39:19.269442Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 15 us, max 1497 us over 652 frames
+[2m2026-09-06T17:39:19.270065Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 98 us, max 232 us over 652 frames (tier A 12, tier B 145)
+[2m2026-09-06T17:39:24.278398Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1563 us, max 13545 us over 582 frames
+[2m2026-09-06T17:39:24.278603Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 22 us, max 2267 us over 582 frames
+[2m2026-09-06T17:39:24.279942Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 116 us, max 435 us over 582 frames (tier A 12, tier B 143)
+[2m2026-09-06T17:39:29.286681Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2150 us, max 19789 us over 489 frames
+[2m2026-09-06T17:39:29.286818Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 25 us, max 256 us over 489 frames
+[2m2026-09-06T17:39:29.288176Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 428 us over 489 frames (tier A 11, tier B 144)
+[2m2026-09-06T17:39:34.282160Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2985 us, max 21277 us over 384 frames
+[2m2026-09-06T17:39:34.282225Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 55 us, max 4520 us over 384 frames
+[2m2026-09-06T17:39:34.283730Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 150 us, max 520 us over 384 frames (tier A 11, tier B 145)
+[2m2026-09-06T17:39:39.293426Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2463 us, max 19066 us over 441 frames
+[2m2026-09-06T17:39:39.293487Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 33 us, max 1701 us over 441 frames
+[2m2026-09-06T17:39:39.295970Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 146 us, max 531 us over 441 frames (tier A 11, tier B 145)
+[2m2026-09-06T17:39:44.294733Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2147 us, max 17483 us over 489 frames
+[2m2026-09-06T17:39:44.294936Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 32 us, max 2302 us over 489 frames
+[2m2026-09-06T17:39:44.296307Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 543 us over 489 frames (tier A 11, tier B 141)
+[2m2026-09-06T17:39:49.342445Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3009 us, max 24122 us over 402 frames
+[2m2026-09-06T17:39:49.342605Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 37 us, max 1506 us over 402 frames
+[2m2026-09-06T17:39:49.345162Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 148 us, max 515 us over 402 frames (tier A 11, tier B 142)
+[2m2026-09-06T17:39:54.331527Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2332 us, max 20674 us over 459 frames
+[2m2026-09-06T17:39:54.331598Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 39 us, max 3283 us over 459 frames
+[2m2026-09-06T17:39:54.332583Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 531 us over 459 frames (tier A 11, tier B 143)
+[2m2026-09-06T17:39:59.360409Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1897 us, max 17892 us over 525 frames
+[2m2026-09-06T17:39:59.360755Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 23 us, max 236 us over 525 frames
+[2m2026-09-06T17:39:59.361987Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 470 us over 525 frames (tier A 11, tier B 146)
+[2m2026-09-06T17:40:04.378156Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2726 us, max 29705 us over 424 frames
+[2m2026-09-06T17:40:04.378341Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 39 us, max 2456 us over 424 frames
+[2m2026-09-06T17:40:04.379306Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 149 us, max 511 us over 424 frames (tier A 11, tier B 147)
+[2m2026-09-06T17:40:09.360368Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1593 us, max 18528 us over 572 frames
+[2m2026-09-06T17:40:09.360557Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 23 us, max 2208 us over 572 frames
+[2m2026-09-06T17:40:09.361714Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 119 us, max 428 us over 572 frames (tier A 11, tier B 149)
+[2m2026-09-06T17:40:14.367517Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2854 us, max 32813 us over 368 frames
+[2m2026-09-06T17:40:14.367606Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 46 us, max 2676 us over 368 frames
+[2m2026-09-06T17:40:14.369362Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 137 us, max 850 us over 368 frames (tier A 12, tier B 151)
+[2m2026-09-06T17:40:19.367516Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2733 us, max 22734 us over 366 frames
+[2m2026-09-06T17:40:19.367651Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 29 us, max 1407 us over 366 frames
+[2m2026-09-06T17:40:19.369336Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 513 us over 366 frames (tier A 11, tier B 155)
+[2m2026-09-06T17:40:24.369486Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2067 us, max 28779 us over 468 frames
+[2m2026-09-06T17:40:24.369622Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 20 us, max 206 us over 468 frames
+[2m2026-09-06T17:40:24.371376Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 124 us, max 527 us over 468 frames (tier A 12, tier B 151)
+[2m2026-09-06T17:40:29.388577Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3511 us, max 29447 us over 350 frames
+[2m2026-09-06T17:40:29.388657Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 46 us, max 2490 us over 350 frames
+[2m2026-09-06T17:40:29.391802Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 157 us, max 662 us over 350 frames (tier A 12, tier B 153)
+[2m2026-09-06T17:40:34.390434Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3425 us, max 27292 us over 353 frames
+[2m2026-09-06T17:40:34.390534Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 48 us, max 2710 us over 353 frames
+[2m2026-09-06T17:40:34.391975Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 163 us, max 675 us over 353 frames (tier A 12, tier B 149)
+[2m2026-09-06T17:40:39.387780Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3460 us, max 26015 us over 365 frames
+[2m2026-09-06T17:40:39.387823Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 36 us, max 1456 us over 365 frames
+[2m2026-09-06T17:40:39.388315Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 541 us over 365 frames (tier A 12, tier B 148)
+[2m2026-09-06T17:40:44.390937Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1732 us, max 19620 us over 560 frames
+[2m2026-09-06T17:40:44.391115Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 24 us, max 2397 us over 560 frames
+[2m2026-09-06T17:40:44.392526Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 121 us, max 509 us over 560 frames (tier A 12, tier B 149)
+[2m2026-09-06T17:40:49.395476Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2114 us, max 19201 us over 509 frames
+[2m2026-09-06T17:40:49.395542Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 32 us, max 2572 us over 509 frames
+[2m2026-09-06T17:40:49.396411Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 524 us over 509 frames (tier A 14, tier B 147)
+[2m2026-09-06T17:40:54.448034Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2710 us, max 25629 us over 447 frames
+[2m2026-09-06T17:40:54.448174Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 40 us, max 3280 us over 447 frames
+[2m2026-09-06T17:40:54.451436Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 514 us over 447 frames (tier A 13, tier B 145)
+[2m2026-09-06T17:40:59.448413Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2260 us, max 24164 us over 483 frames
+[2m2026-09-06T17:40:59.448475Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 24 us, max 270 us over 483 frames
+[2m2026-09-06T17:40:59.450965Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 505 us over 483 frames (tier A 12, tier B 143)
+[2m2026-09-06T17:41:04.436799Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2522 us, max 21591 us over 459 frames
+[2m2026-09-06T17:41:04.436855Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 31 us, max 2753 us over 459 frames
+[2m2026-09-06T17:41:04.438096Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 509 us over 459 frames (tier A 12, tier B 145)
+[2m2026-09-06T17:41:09.487953Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2133 us, max 32551 us over 517 frames
+[2m2026-09-06T17:41:09.490401Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 47 us, max 3198 us over 517 frames
+[2m2026-09-06T17:41:09.493040Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 121 us, max 531 us over 517 frames (tier A 12, tier B 147)
+[2m2026-09-06T17:41:14.454093Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3377 us, max 40490 us over 374 frames
+[2m2026-09-06T17:41:14.454363Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 48 us, max 2955 us over 374 frames
+[2m2026-09-06T17:41:14.455434Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 137 us, max 500 us over 374 frames (tier A 12, tier B 147)
+[2m2026-09-06T17:41:19.457174Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1707 us, max 34941 us over 577 frames
+[2m2026-09-06T17:41:19.457248Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 29 us, max 2363 us over 577 frames
+[2m2026-09-06T17:41:19.458074Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 113 us, max 454 us over 577 frames (tier A 12, tier B 147)
+[2m2026-09-06T17:41:24.459377Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2276 us, max 31112 us over 474 frames
+[2m2026-09-06T17:41:24.459426Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 33 us, max 2455 us over 474 frames
+[2m2026-09-06T17:41:24.459935Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 505 us over 474 frames (tier A 12, tier B 144)
+[drive] 626.2s simulation wait completed at 623.986s
+[drive] 626.2s tp -17.375 1.7 268.375 0 0
+[drive] 626.7s shot final_wickmarket_ground_stage600
+[2m2026-09-06T17:41:28.036489Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_ground_stage600.png
+[drive] 627.2s tp -17.375 26 285.375 0 -35
+[drive] 627.7s shot final_wickmarket_elevated_stage600
+[2m2026-09-06T17:41:29.090139Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_elevated_stage600.png
+[2m2026-09-06T17:41:29.475757Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1995 us, max 28237 us over 533 frames
+[2m2026-09-06T17:41:29.475819Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 32 us, max 3257 us over 533 frames
+[2m2026-09-06T17:41:29.476832Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 124 us, max 573 us over 533 frames (tier A 10, tier B 112)
+[drive] 628.3s tp 124.625 1.7 196.125 -30.6 0
+[drive] 628.8s shot final_tenterhook_lane_ground_stage600
+[2m2026-09-06T17:41:30.185839Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_ground_stage600.png
+[drive] 629.4s tp 124.625 22 211.125 0 -55
+[drive] 629.9s shot final_tenterhook_lane_elevated_stage600
+[2m2026-09-06T17:41:31.230476Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_elevated_stage600.png
+[drive] 630.4s tp -123.375 1.7 166.375 152.6 0
+[drive] 630.9s shot final_burnt_court_ground_stage600
+[2m2026-09-06T17:41:32.320409Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_ground_stage600.png
+[drive] 631.5s tp -123.375 24 191.375 0 -45
+[drive] 632.0s shot final_burnt_court_elevated_stage600
+[2m2026-09-06T17:41:33.396725Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_elevated_stage600.png
+[drive] 632.6s tp -113.375 1.7 161.125 41.9 0
+[drive] 633.1s shot final_needle_ground_stage600
+[2m2026-09-06T17:41:34.499997Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_ground_stage600.png
+[2m2026-09-06T17:41:34.507232Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2301 us, max 31885 us over 519 frames
+[2m2026-09-06T17:41:34.507279Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 46 us, max 3288 us over 519 frames
+[2m2026-09-06T17:41:34.508111Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 116 us, max 360 us over 519 frames (tier A 33, tier B 100)
+[drive] 633.7s tp -113.375 22 183.125 0 -45
+[drive] 634.2s shot final_needle_elevated_stage600
+[2m2026-09-06T17:41:35.539895Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_elevated_stage600.png
+[drive] 634.7s tp -17.375 1.7 268.375 180 0
+[drive] 635.2s shot final_wickmarket_frontages_stage600
+[2m2026-09-06T17:41:36.612968Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_frontages_stage600.png
+[drive] 635.8s tp 9.125 1.7 269.125 180 0
+[drive] 636.3s shot final_wickmarket_east_frontage_stage600
+[2m2026-09-06T17:41:37.652782Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_east_frontage_stage600.png
+[drive] 636.8s frame @resident-lingering 4 0
+[drive] 636.8s framed actor x00412
+[drive] 637.3s shot final_resident_lingering
+[2m2026-09-06T17:41:38.713604Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_resident_lingering.png
+[drive] 637.9s key KeyB
+[2m2026-09-06T17:41:39.502096Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2756 us, max 26636 us over 444 frames
+[2m2026-09-06T17:41:39.502247Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 59 us, max 3420 us over 444 frames
+[2m2026-09-06T17:41:39.503093Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 616 us over 444 frames (tier A 14, tier B 118)
+[drive] 638.4s shot final_resident_lingering_debug
+[2m2026-09-06T17:41:39.784740Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_resident_lingering_debug.png
+[drive] 639.0s key KeyB
+[drive] 639.5s frame @resident-moving 4 0
+[drive] 639.5s framed actor x00590
+[drive] 640.0s shot final_resident_moving
+[2m2026-09-06T17:41:41.393690Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_resident_moving.png
+[drive] 640.6s key KeyB
+[drive] 641.1s shot final_resident_moving_debug
+[2m2026-09-06T17:41:42.440037Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_resident_moving_debug.png
+[drive] 641.6s sleep-sim 15
+[2m2026-09-06T17:41:44.513193Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2396 us, max 42853 us over 483 frames
+[2m2026-09-06T17:41:44.513548Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 34 us, max 2383 us over 483 frames
+[2m2026-09-06T17:41:44.515222Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 125 us, max 441 us over 483 frames (tier A 11, tier B 165)
+[2m2026-09-06T17:41:49.507124Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1486 us, max 27247 us over 640 frames
+[2m2026-09-06T17:41:49.507294Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 33 us, max 2382 us over 640 frames
+[2m2026-09-06T17:41:49.508352Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 107 us, max 456 us over 640 frames (tier A 12, tier B 162)
+[2m2026-09-06T17:41:54.539539Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2867 us, max 33931 us over 436 frames
+[2m2026-09-06T17:41:54.539622Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 42 us, max 2378 us over 436 frames
+[2m2026-09-06T17:41:54.542406Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 540 us over 436 frames (tier A 12, tier B 162)
+[drive] 656.6s simulation wait completed at 654.443s
+[drive] 656.6s shot final_resident_arrival_debug
+[2m2026-09-06T17:41:58.036730Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_resident_arrival_debug.png
+[drive] 657.2s key KeyB
+[drive] 657.7s frame @last 4 0
+[drive] 657.7s framed actor x00590
+[drive] 658.2s shot final_resident_arrival
+[2m2026-09-06T17:41:59.546784Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2691 us, max 31722 us over 442 frames
+[2m2026-09-06T17:41:59.546827Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 60 us, max 3616 us over 442 frames
+[2m2026-09-06T17:41:59.547829Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 548 us over 442 frames (tier A 11, tier B 163)
+[2m2026-09-06T17:41:59.593184Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_resident_arrival.png
+[drive] 658.8s sleep-sim 60
+[2m2026-09-06T17:42:04.545402Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3058 us, max 30474 us over 421 frames
+[2m2026-09-06T17:42:04.545576Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 75 us, max 3199 us over 421 frames
+[2m2026-09-06T17:42:04.547454Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 136 us, max 535 us over 421 frames (tier A 10, tier B 165)
+[2m2026-09-06T17:42:09.552464Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2819 us, max 27632 us over 437 frames
+[2m2026-09-06T17:42:09.552853Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 41 us, max 2345 us over 437 frames
+[2m2026-09-06T17:42:09.555128Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 135 us, max 486 us over 437 frames (tier A 10, tier B 165)
+[2m2026-09-06T17:42:14.552953Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1896 us, max 28199 us over 558 frames
+[2m2026-09-06T17:42:14.553007Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 45 us, max 2380 us over 558 frames
+[2m2026-09-06T17:42:14.553791Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 116 us, max 438 us over 558 frames (tier A 11, tier B 165)
+[2m2026-09-06T17:42:19.564047Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1656 us, max 20513 us over 614 frames
+[2m2026-09-06T17:42:19.564161Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 25 us, max 2696 us over 614 frames
+[2m2026-09-06T17:42:19.565534Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 109 us, max 511 us over 614 frames (tier A 12, tier B 164)
+[2m2026-09-06T17:42:24.568974Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1679 us, max 18531 us over 610 frames
+[2m2026-09-06T17:42:24.569057Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 32 us, max 3942 us over 610 frames
+[2m2026-09-06T17:42:24.569809Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 110 us, max 445 us over 610 frames (tier A 12, tier B 163)
+[2m2026-09-06T17:42:29.582816Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2300 us, max 17317 us over 494 frames
+[2m2026-09-06T17:42:29.582986Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 25 us, max 1645 us over 494 frames
+[2m2026-09-06T17:42:29.584678Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 493 us over 494 frames (tier A 12, tier B 165)
+[2m2026-09-06T17:42:34.582276Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2210 us, max 39900 us over 513 frames
+[2m2026-09-06T17:42:34.582343Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 37 us, max 2727 us over 513 frames
+[2m2026-09-06T17:42:34.583275Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 123 us, max 518 us over 513 frames (tier A 12, tier B 166)
+[2m2026-09-06T17:42:39.620847Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2267 us, max 25703 us over 503 frames
+[2m2026-09-06T17:42:39.620992Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 31 us, max 4205 us over 503 frames
+[2m2026-09-06T17:42:39.623267Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 514 us over 503 frames (tier A 11, tier B 168)
+[2m2026-09-06T17:42:44.590319Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2254 us, max 23558 us over 487 frames
+[2m2026-09-06T17:42:44.590394Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 45 us, max 4126 us over 487 frames
+[2m2026-09-06T17:42:44.592178Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 528 us over 487 frames (tier A 12, tier B 163)
+[2m2026-09-06T17:42:49.604823Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2294 us, max 41959 us over 505 frames
+[2m2026-09-06T17:42:49.605001Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 28 us, max 2323 us over 505 frames
+[2m2026-09-06T17:42:49.606771Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 129 us, max 509 us over 505 frames (tier A 12, tier B 163)
+[2m2026-09-06T17:42:54.605747Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1954 us, max 22524 us over 569 frames
+[2m2026-09-06T17:42:54.605807Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 38 us, max 5063 us over 569 frames
+[2m2026-09-06T17:42:54.606661Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 115 us, max 521 us over 569 frames (tier A 13, tier B 162)
+[2m2026-09-06T17:42:59.619437Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1925 us, max 27538 us over 572 frames
+[2m2026-09-06T17:42:59.619762Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 27 us, max 3478 us over 572 frames
+[2m2026-09-06T17:42:59.621243Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 115 us, max 466 us over 572 frames (tier A 13, tier B 162)
+[drive] 718.8s simulation wait completed at 716.594s
+[drive] 718.8s frame @last 4 0
+[drive] 718.8s framed actor x00590
+[drive] 719.3s shot final_resident_later
+[2m2026-09-06T17:43:00.671051Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_resident_later.png
+[drive] 719.9s key KeyB
+[drive] 720.4s shot final_resident_later_debug
+[2m2026-09-06T17:43:01.723960Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_resident_later_debug.png
+[drive] 720.9s key KeyB
+[drive] 721.4s tp -17.375 1.7 268.375 180 0
+[drive] 721.9s weather rain 0.9
+[weather] day 2 11:48 clear -> rain, wind 3.5 m/s south, visibility 170 m
+[drive] 722.5s sleep-sim 60
+[2m2026-09-06T17:43:04.704997Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4634 us, max 75433 us over 424 frames
+[2m2026-09-06T17:43:04.705120Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 48 us, max 4116 us over 424 frames
+[2m2026-09-06T17:43:04.707616Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 125 us, max 522 us over 424 frames (tier A 53, tier B 77)
+[2m2026-09-06T17:43:09.728892Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 19029 us, max 74163 us over 193 frames
+[2m2026-09-06T17:43:09.729037Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 82 us, max 2401 us over 193 frames
+[2m2026-09-06T17:43:09.730068Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 114 us, max 316 us over 193 frames (tier A 53, tier B 78)
+[2m2026-09-06T17:43:14.735015Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 17581 us, max 58551 us over 204 frames
+[2m2026-09-06T17:43:14.735123Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 101 us, max 2376 us over 204 frames
+[2m2026-09-06T17:43:14.735707Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 119 us, max 280 us over 204 frames (tier A 51, tier B 79)
+[2m2026-09-06T17:43:19.744628Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 15705 us, max 53261 us over 224 frames
+[2m2026-09-06T17:43:19.744749Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 80 us, max 2371 us over 224 frames
+[2m2026-09-06T17:43:19.745689Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 115 us, max 388 us over 224 frames (tier A 51, tier B 80)
+[2m2026-09-06T17:43:24.740158Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 14826 us, max 55719 us over 233 frames
+[2m2026-09-06T17:43:24.740244Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 40 us, max 1728 us over 233 frames
+[2m2026-09-06T17:43:24.740951Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 112 us, max 276 us over 233 frames (tier A 50, tier B 80)
+[2m2026-09-06T17:43:29.775005Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 14089 us, max 59471 us over 242 frames
+[2m2026-09-06T17:43:29.775157Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 63 us, max 2223 us over 242 frames
+[2m2026-09-06T17:43:29.776090Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 111 us, max 230 us over 242 frames (tier A 50, tier B 80)
+[2m2026-09-06T17:43:33.510590Z[0m [31mERROR[0m [2mbevy_asset::server[0m[2m:[0m Could not find an asset loader matching: Asset Type: Some(TypeId(0xbb30f5f362e04c6013b60067be062a35)); Path: "sounds/town_bell.mp3";
+[2m2026-09-06T17:43:34.778082Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 12055 us, max 69320 us over 268 frames
+[2m2026-09-06T17:43:34.778139Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 62 us, max 2468 us over 268 frames
+[2m2026-09-06T17:43:34.779123Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 118 us, max 412 us over 268 frames (tier A 50, tier B 80)
+[2m2026-09-06T17:43:39.862159Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 9736 us, max 59259 us over 313 frames
+[2m2026-09-06T17:43:39.862337Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 103 us, max 2476 us over 313 frames
+[2m2026-09-06T17:43:39.865876Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 114 us, max 366 us over 313 frames (tier A 47, tier B 83)
+[2m2026-09-06T17:43:44.851512Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 9373 us, max 54366 us over 310 frames
+[2m2026-09-06T17:43:44.851666Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 78 us, max 2962 us over 310 frames
+[2m2026-09-06T17:43:44.852412Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 121 us, max 362 us over 310 frames (tier A 47, tier B 85)
+[2m2026-09-06T17:43:49.877107Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 7679 us, max 48073 us over 351 frames
+[2m2026-09-06T17:43:49.877312Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 61 us, max 2525 us over 351 frames
+[2m2026-09-06T17:43:49.878196Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 117 us, max 384 us over 351 frames (tier A 39, tier B 95)
+[2m2026-09-06T17:43:54.887210Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4927 us, max 38715 us over 432 frames
+[2m2026-09-06T17:43:54.887310Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 47 us, max 2337 us over 432 frames
+[2m2026-09-06T17:43:54.888639Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 125 us, max 495 us over 432 frames (tier A 40, tier B 94)
+[2m2026-09-06T17:43:59.918817Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 5683 us, max 51117 us over 394 frames
+[2m2026-09-06T17:43:59.919000Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 84 us, max 5321 us over 394 frames
+[2m2026-09-06T17:43:59.921435Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 600 us over 394 frames (tier A 40, tier B 94)
+[drive] 782.5s simulation wait completed at 780.299s
+[drive] 782.5s tp -17.375 1.7 268.375 0 0
+[drive] 783.0s shot final_wickmarket_ground_rain60
+[2m2026-09-06T17:44:04.358755Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_ground_rain60.png
+[drive] 783.5s tp -17.375 26 285.375 0 -35
+[2m2026-09-06T17:44:04.927971Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4453 us, max 40572 us over 450 frames
+[2m2026-09-06T17:44:04.928038Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 37 us, max 2224 us over 450 frames
+[2m2026-09-06T17:44:04.928699Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 127 us, max 513 us over 450 frames (tier A 22, tier B 100)
+[drive] 784.0s shot final_wickmarket_elevated_rain60
+[2m2026-09-06T17:44:05.444293Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_elevated_rain60.png
+[drive] 784.6s tp 124.625 1.7 196.125 -30.6 0
+[drive] 785.1s shot final_tenterhook_lane_ground_rain60
+[2m2026-09-06T17:44:06.524161Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_ground_rain60.png
+[drive] 785.7s tp 124.625 22 211.125 0 -55
+[drive] 786.3s shot final_tenterhook_lane_elevated_rain60
+[2m2026-09-06T17:44:07.666238Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_elevated_rain60.png
+[drive] 786.9s tp -123.375 1.7 166.375 152.6 0
+[drive] 787.4s shot final_burnt_court_ground_rain60
+[2m2026-09-06T17:44:08.787493Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_ground_rain60.png
+[drive] 788.0s tp -123.375 24 191.375 0 -45
+[drive] 788.5s shot final_burnt_court_elevated_rain60
+[2m2026-09-06T17:44:09.862467Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_elevated_rain60.png
+[2m2026-09-06T17:44:09.915882Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 5364 us, max 57961 us over 392 frames
+[2m2026-09-06T17:44:09.915949Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 71 us, max 3452 us over 392 frames
+[2m2026-09-06T17:44:09.917418Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 122 us, max 427 us over 392 frames (tier A 12, tier B 108)
+[drive] 789.1s tp -113.375 1.7 161.125 41.9 0
+[drive] 789.6s shot final_needle_ground_rain60
+[2m2026-09-06T17:44:10.928398Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_ground_rain60.png
+[drive] 790.1s tp -113.375 22 183.125 0 -45
+[drive] 790.6s shot final_needle_elevated_rain60
+[2m2026-09-06T17:44:11.993386Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_elevated_rain60.png
+[drive] 791.2s tp -17.375 1.7 268.375 180 0
+[drive] 791.7s shot final_wickmarket_frontages_rain60
+[2m2026-09-06T17:44:13.087202Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_frontages_rain60.png
+[drive] 792.3s tp 9.125 1.7 269.125 180 0
+[drive] 792.8s shot final_wickmarket_east_frontage_rain60
+[2m2026-09-06T17:44:14.156486Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_east_frontage_rain60.png
+[drive] 793.4s frame @resident-sheltered 4 0
+[drive] 793.4s framed actor x00153
+[2m2026-09-06T17:44:14.921007Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 5822 us, max 46970 us over 366 frames
+[2m2026-09-06T17:44:14.921083Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 73 us, max 2427 us over 366 frames
+[2m2026-09-06T17:44:14.922545Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 123 us, max 466 us over 366 frames (tier A 24, tier B 64)
+[drive] 793.9s shot final_sheltered
+[2m2026-09-06T17:44:15.208708Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_sheltered.png
+[drive] 794.4s key KeyB
+[drive] 794.9s shot final_sheltered_debug
+[2m2026-09-06T17:44:16.319589Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_sheltered_debug.png
+[drive] 795.5s key KeyB
+[drive] 796.0s sleep-sim 60
+[2m2026-09-06T17:44:19.921164Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4778 us, max 38673 us over 440 frames
+[2m2026-09-06T17:44:19.921220Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 53 us, max 2452 us over 440 frames
+[2m2026-09-06T17:44:19.922102Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 106 us, max 429 us over 440 frames (tier A 18, tier B 71)
+[2m2026-09-06T17:44:24.926354Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 5291 us, max 41010 us over 424 frames
+[2m2026-09-06T17:44:24.926483Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 48 us, max 2518 us over 424 frames
+[2m2026-09-06T17:44:24.928056Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 108 us, max 388 us over 424 frames (tier A 18, tier B 70)
+[2m2026-09-06T17:44:29.930163Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4689 us, max 36020 us over 442 frames
+[2m2026-09-06T17:44:29.930212Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 52 us, max 2887 us over 442 frames
+[2m2026-09-06T17:44:29.931601Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 114 us, max 415 us over 442 frames (tier A 17, tier B 73)
+[2m2026-09-06T17:44:34.950926Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4623 us, max 41646 us over 446 frames
+[2m2026-09-06T17:44:34.951123Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 67 us, max 2566 us over 446 frames
+[2m2026-09-06T17:44:34.952828Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 109 us, max 400 us over 446 frames (tier A 17, tier B 73)
+[2m2026-09-06T17:44:39.949944Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4278 us, max 41405 us over 471 frames
+[2m2026-09-06T17:44:39.950067Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 36 us, max 2545 us over 471 frames
+[2m2026-09-06T17:44:39.950910Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 110 us, max 466 us over 471 frames (tier A 17, tier B 73)
+[2m2026-09-06T17:44:44.964587Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4262 us, max 35163 us over 465 frames
+[2m2026-09-06T17:44:44.964723Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 54 us, max 4361 us over 465 frames
+[2m2026-09-06T17:44:44.966734Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 110 us, max 401 us over 465 frames (tier A 18, tier B 70)
+[2m2026-09-06T17:44:49.970755Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4076 us, max 53137 us over 490 frames
+[2m2026-09-06T17:44:49.970885Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 37 us, max 2567 us over 490 frames
+[2m2026-09-06T17:44:49.973069Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 108 us, max 392 us over 490 frames (tier A 18, tier B 72)
+[2m2026-09-06T17:44:54.959850Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4354 us, max 35574 us over 466 frames
+[2m2026-09-06T17:44:54.959953Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 60 us, max 3320 us over 466 frames
+[2m2026-09-06T17:44:54.960788Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 114 us, max 424 us over 466 frames (tier A 18, tier B 72)
+[2m2026-09-06T17:44:59.980224Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4004 us, max 38317 us over 497 frames
+[2m2026-09-06T17:44:59.980275Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 31 us, max 1776 us over 497 frames
+[2m2026-09-06T17:44:59.981422Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 103 us, max 282 us over 497 frames (tier A 19, tier B 67)
+[2m2026-09-06T17:45:04.986248Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4852 us, max 37763 us over 436 frames
+[2m2026-09-06T17:45:04.986315Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 42 us, max 2644 us over 436 frames
+[2m2026-09-06T17:45:04.987120Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 112 us, max 418 us over 436 frames (tier A 19, tier B 63)
+[2m2026-09-06T17:45:09.976257Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4419 us, max 42088 us over 451 frames
+[2m2026-09-06T17:45:09.978679Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 45 us, max 2526 us over 451 frames
+[2m2026-09-06T17:45:09.980620Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 114 us, max 457 us over 451 frames (tier A 20, tier B 61)
+[2m2026-09-06T17:45:14.991261Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4694 us, max 44979 us over 433 frames
+[2m2026-09-06T17:45:14.991323Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 51 us, max 2987 us over 433 frames
+[2m2026-09-06T17:45:14.992137Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 112 us, max 463 us over 433 frames (tier A 19, tier B 65)
+[drive] 856.0s simulation wait completed at 853.825s
+[drive] 856.0s frame @last 4 0
+[drive] 856.0s framed actor x00153
+[drive] 856.5s shot final_sheltered_later
+[2m2026-09-06T17:45:17.935172Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_sheltered_later.png
+[drive] 857.1s weather clear
+[weather] day 2 12:42 rain -> clear, wind 0.9 m/s south, visibility 350 m
+[drive] 857.6s tp -17.375 1.7 268.375 0 0
+[drive] 858.2s sleep-sim 750
+[2m2026-09-06T17:45:19.986013Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3880 us, max 49439 us over 465 frames
+[2m2026-09-06T17:45:19.986124Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 40 us, max 2603 us over 465 frames
+[2m2026-09-06T17:45:19.987465Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 113 us, max 435 us over 465 frames (tier A 24, tier B 88)
+[2m2026-09-06T17:45:24.990323Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1998 us, max 18969 us over 568 frames
+[2m2026-09-06T17:45:24.990396Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 51 us, max 2739 us over 568 frames
+[2m2026-09-06T17:45:24.991887Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 122 us, max 491 us over 568 frames (tier A 26, tier B 89)
+[2m2026-09-06T17:45:29.993092Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2546 us, max 20250 us over 489 frames
+[2m2026-09-06T17:45:29.993137Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 65 us, max 3648 us over 489 frames
+[2m2026-09-06T17:45:29.993882Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 520 us over 489 frames (tier A 26, tier B 92)
+[2m2026-09-06T17:45:35.004776Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2545 us, max 35638 us over 484 frames
+[2m2026-09-06T17:45:35.005009Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 62 us, max 5157 us over 484 frames
+[2m2026-09-06T17:45:35.006113Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 141 us, max 550 us over 484 frames (tier A 25, tier B 94)
+[2m2026-09-06T17:45:40.011439Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1912 us, max 13754 us over 578 frames
+[2m2026-09-06T17:45:40.011566Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 38 us, max 2541 us over 578 frames
+[2m2026-09-06T17:45:40.013255Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 546 us over 578 frames (tier A 25, tier B 94)
+[2m2026-09-06T17:45:45.004932Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1973 us, max 17355 us over 575 frames
+[2m2026-09-06T17:45:45.005247Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 43 us, max 2381 us over 575 frames
+[2m2026-09-06T17:45:45.006464Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 542 us over 575 frames (tier A 26, tier B 97)
+[2m2026-09-06T17:45:50.010440Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2718 us, max 19330 us over 465 frames
+[2m2026-09-06T17:45:50.010523Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 77 us, max 3068 us over 465 frames
+[2m2026-09-06T17:45:50.012242Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 610 us over 465 frames (tier A 28, tier B 97)
+[2m2026-09-06T17:45:55.025656Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2424 us, max 29194 us over 509 frames
+[2m2026-09-06T17:45:55.030196Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 64 us, max 4467 us over 509 frames
+[2m2026-09-06T17:45:55.034134Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 135 us, max 569 us over 509 frames (tier A 27, tier B 98)
+[2m2026-09-06T17:46:00.022623Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2538 us, max 27083 us over 485 frames
+[2m2026-09-06T17:46:00.022686Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 48 us, max 2366 us over 485 frames
+[2m2026-09-06T17:46:00.023399Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 142 us, max 577 us over 485 frames (tier A 29, tier B 94)
+[2m2026-09-06T17:46:05.060250Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2009 us, max 18293 us over 569 frames
+[2m2026-09-06T17:46:05.060338Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 39 us, max 2281 us over 569 frames
+[2m2026-09-06T17:46:05.063801Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 132 us, max 592 us over 569 frames (tier A 29, tier B 91)
+[2m2026-09-06T17:46:10.045260Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2621 us, max 21464 us over 483 frames
+[2m2026-09-06T17:46:10.045304Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 73 us, max 4188 us over 483 frames
+[2m2026-09-06T17:46:10.045888Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 138 us, max 534 us over 483 frames (tier A 30, tier B 89)
+[2m2026-09-06T17:46:15.059749Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2221 us, max 44613 us over 529 frames
+[2m2026-09-06T17:46:15.059905Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 61 us, max 3782 us over 529 frames
+[2m2026-09-06T17:46:15.060800Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 507 us over 529 frames (tier A 32, tier B 90)
+[2m2026-09-06T17:46:20.073791Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2922 us, max 30149 us over 452 frames
+[2m2026-09-06T17:46:20.073849Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 68 us, max 3097 us over 452 frames
+[2m2026-09-06T17:46:20.074585Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 148 us, max 605 us over 452 frames (tier A 34, tier B 85)
+[2m2026-09-06T17:46:25.068362Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2012 us, max 19748 us over 553 frames
+[2m2026-09-06T17:46:25.068423Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 48 us, max 3051 us over 553 frames
+[2m2026-09-06T17:46:25.069186Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 134 us, max 551 us over 553 frames (tier A 35, tier B 83)
+[2m2026-09-06T17:46:30.072859Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2794 us, max 25102 us over 452 frames
+[2m2026-09-06T17:46:30.072923Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 77 us, max 2624 us over 452 frames
+[2m2026-09-06T17:46:30.074682Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 510 us over 452 frames (tier A 39, tier B 79)
+[2m2026-09-06T17:46:35.078678Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3300 us, max 30571 us over 402 frames
+[2m2026-09-06T17:46:35.078730Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 91 us, max 6209 us over 402 frames
+[2m2026-09-06T17:46:35.079429Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 157 us, max 559 us over 402 frames (tier A 41, tier B 77)
+[2m2026-09-06T17:46:40.107440Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3016 us, max 28193 us over 431 frames
+[2m2026-09-06T17:46:40.107500Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 94 us, max 6971 us over 431 frames
+[2m2026-09-06T17:46:40.109838Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 150 us, max 581 us over 431 frames (tier A 41, tier B 77)
+[2m2026-09-06T17:46:45.090437Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3139 us, max 23329 us over 414 frames
+[2m2026-09-06T17:46:45.090508Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 97 us, max 5096 us over 414 frames
+[2m2026-09-06T17:46:45.091855Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 162 us, max 588 us over 414 frames (tier A 41, tier B 77)
+[2m2026-09-06T17:46:50.111146Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2835 us, max 23744 us over 446 frames
+[2m2026-09-06T17:46:50.111259Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 95 us, max 6469 us over 446 frames
+[2m2026-09-06T17:46:50.115435Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 153 us, max 605 us over 446 frames (tier A 40, tier B 79)
+[2m2026-09-06T17:46:55.113966Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2377 us, max 40237 us over 504 frames
+[2m2026-09-06T17:46:55.114177Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 63 us, max 3205 us over 504 frames
+[2m2026-09-06T17:46:55.116696Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 576 us over 504 frames (tier A 35, tier B 83)
+[2m2026-09-06T17:47:00.109367Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2318 us, max 23187 us over 503 frames
+[2m2026-09-06T17:47:00.109412Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 66 us, max 3535 us over 503 frames
+[2m2026-09-06T17:47:00.110756Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 422 us over 503 frames (tier A 34, tier B 84)
+[2m2026-09-06T17:47:05.115856Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3070 us, max 27140 us over 420 frames
+[2m2026-09-06T17:47:05.116032Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 89 us, max 6750 us over 420 frames
+[2m2026-09-06T17:47:05.117426Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 155 us, max 580 us over 420 frames (tier A 35, tier B 83)
+[2m2026-09-06T17:47:10.119065Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2130 us, max 35354 us over 545 frames
+[2m2026-09-06T17:47:10.119400Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 77 us, max 3284 us over 545 frames
+[2m2026-09-06T17:47:10.120684Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 571 us over 545 frames (tier A 33, tier B 88)
+[2m2026-09-06T17:47:15.125349Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2796 us, max 29226 us over 449 frames
+[2m2026-09-06T17:47:15.125409Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 80 us, max 4519 us over 449 frames
+[2m2026-09-06T17:47:15.127424Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 148 us, max 401 us over 449 frames (tier A 30, tier B 89)
+[2m2026-09-06T17:47:20.123845Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3167 us, max 39495 us over 411 frames
+[2m2026-09-06T17:47:20.123968Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 86 us, max 3171 us over 411 frames
+[2m2026-09-06T17:47:20.125210Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 155 us, max 586 us over 411 frames (tier A 29, tier B 93)
+[2m2026-09-06T17:47:25.127288Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2459 us, max 21745 us over 491 frames
+[2m2026-09-06T17:47:25.127347Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 77 us, max 3205 us over 491 frames
+[2m2026-09-06T17:47:25.128511Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 151 us, max 553 us over 491 frames (tier A 28, tier B 94)
+[2m2026-09-06T17:47:30.138018Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2804 us, max 21561 us over 449 frames
+[2m2026-09-06T17:47:30.138239Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 95 us, max 8406 us over 449 frames
+[2m2026-09-06T17:47:30.139775Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 161 us, max 581 us over 449 frames (tier A 27, tier B 95)
+[2m2026-09-06T17:47:35.146560Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2187 us, max 16599 us over 531 frames
+[2m2026-09-06T17:47:35.146644Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 45 us, max 2549 us over 531 frames
+[2m2026-09-06T17:47:35.148747Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 538 us over 531 frames (tier A 26, tier B 94)
+[2m2026-09-06T17:47:40.144108Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3349 us, max 20352 us over 389 frames
+[2m2026-09-06T17:47:40.144265Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 76 us, max 3056 us over 389 frames
+[2m2026-09-06T17:47:40.145783Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 167 us, max 606 us over 389 frames (tier A 28, tier B 90)
+[2m2026-09-06T17:47:45.154550Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2859 us, max 22126 us over 454 frames
+[2m2026-09-06T17:47:45.154769Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 72 us, max 3207 us over 454 frames
+[2m2026-09-06T17:47:45.156088Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 147 us, max 465 us over 454 frames (tier A 28, tier B 91)
+[2m2026-09-06T17:47:50.172745Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 4124 us, max 35399 us over 354 frames
+[2m2026-09-06T17:47:50.172900Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 122 us, max 3757 us over 354 frames
+[2m2026-09-06T17:47:50.176333Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 170 us, max 625 us over 354 frames (tier A 28, tier B 93)
+[2m2026-09-06T17:47:55.161011Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2321 us, max 34197 us over 505 frames
+[2m2026-09-06T17:47:55.161064Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 58 us, max 4032 us over 505 frames
+[2m2026-09-06T17:47:55.161992Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 557 us over 505 frames (tier A 29, tier B 91)
+[2m2026-09-06T17:48:00.172006Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2115 us, max 32689 us over 558 frames
+[2m2026-09-06T17:48:00.172060Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 60 us, max 5192 us over 558 frames
+[2m2026-09-06T17:48:00.172645Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 566 us over 558 frames (tier A 29, tier B 90)
+[2m2026-09-06T17:48:05.221687Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3417 us, max 31415 us over 409 frames
+[2m2026-09-06T17:48:05.221787Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 107 us, max 4785 us over 409 frames
+[2m2026-09-06T17:48:05.227049Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 152 us, max 566 us over 409 frames (tier A 34, tier B 83)
+[2m2026-09-06T17:48:10.225610Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3688 us, max 41390 us over 382 frames
+[2m2026-09-06T17:48:10.225810Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 123 us, max 6157 us over 382 frames
+[2m2026-09-06T17:48:10.227001Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 163 us, max 665 us over 382 frames (tier A 34, tier B 82)
+[2m2026-09-06T17:48:15.235394Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2907 us, max 30348 us over 448 frames
+[2m2026-09-06T17:48:15.237130Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 71 us, max 2459 us over 448 frames
+[2m2026-09-06T17:48:15.239379Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 564 us over 448 frames (tier A 35, tier B 79)
+[2m2026-09-06T17:48:20.249567Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3309 us, max 35362 us over 414 frames
+[2m2026-09-06T17:48:20.249635Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 91 us, max 7597 us over 414 frames
+[2m2026-09-06T17:48:20.253478Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 153 us, max 597 us over 414 frames (tier A 34, tier B 80)
+[2m2026-09-06T17:48:25.275341Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3496 us, max 30073 us over 394 frames
+[2m2026-09-06T17:48:25.275550Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 135 us, max 5316 us over 394 frames
+[2m2026-09-06T17:48:25.279321Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 152 us, max 568 us over 394 frames (tier A 31, tier B 84)
+[2m2026-09-06T17:48:30.245056Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2518 us, max 30295 us over 494 frames
+[2m2026-09-06T17:48:30.245103Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 71 us, max 2677 us over 494 frames
+[2m2026-09-06T17:48:30.245954Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 585 us over 494 frames (tier A 30, tier B 87)
+[2m2026-09-06T17:48:35.263418Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3630 us, max 55224 us over 381 frames
+[2m2026-09-06T17:48:35.263825Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 94 us, max 2612 us over 381 frames
+[2m2026-09-06T17:48:35.264675Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 158 us, max 600 us over 381 frames (tier A 29, tier B 88)
+[2m2026-09-06T17:48:40.256267Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3371 us, max 33750 us over 413 frames
+[2m2026-09-06T17:48:40.256318Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 91 us, max 4570 us over 413 frames
+[2m2026-09-06T17:48:40.257173Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 147 us, max 683 us over 413 frames (tier A 28, tier B 90)
+[2m2026-09-06T17:48:45.307700Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3319 us, max 28263 us over 419 frames
+[2m2026-09-06T17:48:45.307841Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 141 us, max 6007 us over 419 frames
+[2m2026-09-06T17:48:45.309856Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 152 us, max 617 us over 419 frames (tier A 27, tier B 91)
+[2m2026-09-06T17:48:50.300870Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2379 us, max 33304 us over 518 frames
+[2m2026-09-06T17:48:50.301065Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 62 us, max 4097 us over 518 frames
+[2m2026-09-06T17:48:50.303383Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 613 us over 518 frames (tier A 29, tier B 88)
+[2m2026-09-06T17:48:55.311492Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2615 us, max 32181 us over 486 frames
+[2m2026-09-06T17:48:55.311609Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 84 us, max 3222 us over 486 frames
+[2m2026-09-06T17:48:55.312253Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 540 us over 486 frames (tier A 29, tier B 89)
+[2m2026-09-06T17:49:00.325078Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2448 us, max 31533 us over 507 frames
+[2m2026-09-06T17:49:00.325332Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 62 us, max 2826 us over 507 frames
+[2m2026-09-06T17:49:00.327091Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 132 us, max 573 us over 507 frames (tier A 31, tier B 86)
+[2m2026-09-06T17:49:05.324686Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2688 us, max 31091 us over 467 frames
+[2m2026-09-06T17:49:05.324740Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 110 us, max 4712 us over 467 frames
+[2m2026-09-06T17:49:05.325360Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 502 us over 467 frames (tier A 33, tier B 81)
+[2m2026-09-06T17:49:10.337963Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2996 us, max 42722 us over 433 frames
+[2m2026-09-06T17:49:10.338158Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 65 us, max 3095 us over 433 frames
+[2m2026-09-06T17:49:10.340326Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 150 us, max 572 us over 433 frames (tier A 29, tier B 83)
+[2m2026-09-06T17:49:15.336164Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2183 us, max 27386 us over 559 frames
+[2m2026-09-06T17:49:15.336208Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 58 us, max 2979 us over 559 frames
+[2m2026-09-06T17:49:15.336883Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 123 us, max 490 us over 559 frames (tier A 28, tier B 84)
+[2m2026-09-06T17:49:20.348566Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2373 us, max 28029 us over 515 frames
+[2m2026-09-06T17:49:20.348627Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 69 us, max 3715 us over 515 frames
+[2m2026-09-06T17:49:20.349642Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 132 us, max 480 us over 515 frames (tier A 29, tier B 85)
+[2m2026-09-06T17:49:25.348298Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1580 us, max 27959 us over 652 frames
+[2m2026-09-06T17:49:25.348350Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 59 us, max 2782 us over 652 frames
+[2m2026-09-06T17:49:25.349032Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 119 us, max 422 us over 652 frames (tier A 26, tier B 87)
+[2m2026-09-06T17:49:30.378251Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2174 us, max 28406 us over 547 frames
+[2m2026-09-06T17:49:30.378435Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 59 us, max 2360 us over 547 frames
+[2m2026-09-06T17:49:30.382238Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 129 us, max 576 us over 547 frames (tier A 25, tier B 86)
+[2m2026-09-06T17:49:35.365540Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1960 us, max 28696 us over 563 frames
+[2m2026-09-06T17:49:35.365675Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 43 us, max 2669 us over 563 frames
+[2m2026-09-06T17:49:35.366767Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 449 us over 563 frames (tier A 24, tier B 85)
+[2m2026-09-06T17:49:40.392146Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2858 us, max 31145 us over 453 frames
+[2m2026-09-06T17:49:40.392594Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 118 us, max 4809 us over 453 frames
+[2m2026-09-06T17:49:40.395328Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 139 us, max 570 us over 453 frames (tier A 24, tier B 83)
+[2m2026-09-06T17:49:45.375983Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2928 us, max 20628 us over 435 frames
+[2m2026-09-06T17:49:45.376049Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 74 us, max 3014 us over 435 frames
+[2m2026-09-06T17:49:45.378553Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 534 us over 435 frames (tier A 23, tier B 84)
+[2m2026-09-06T17:49:50.384248Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3802 us, max 24813 us over 370 frames
+[2m2026-09-06T17:49:50.384391Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 80 us, max 3489 us over 370 frames
+[2m2026-09-06T17:49:50.386638Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 151 us, max 541 us over 370 frames (tier A 22, tier B 84)
+[2m2026-09-06T17:49:55.409592Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3275 us, max 21218 us over 413 frames
+[2m2026-09-06T17:49:55.409752Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 60 us, max 4150 us over 413 frames
+[2m2026-09-06T17:49:55.411912Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 537 us over 413 frames (tier A 22, tier B 82)
+[2m2026-09-06T17:50:00.397561Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2747 us, max 22183 us over 460 frames
+[2m2026-09-06T17:50:00.397749Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 105 us, max 6281 us over 460 frames
+[2m2026-09-06T17:50:00.399656Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 501 us over 460 frames (tier A 20, tier B 84)
+[2m2026-09-06T17:50:05.392935Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3964 us, max 25336 us over 351 frames
+[2m2026-09-06T17:50:05.393054Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 123 us, max 4510 us over 351 frames
+[2m2026-09-06T17:50:05.394194Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 158 us, max 543 us over 351 frames (tier A 21, tier B 84)
+[2m2026-09-06T17:50:10.413512Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3029 us, max 19744 us over 431 frames
+[2m2026-09-06T17:50:10.413630Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 66 us, max 3235 us over 431 frames
+[2m2026-09-06T17:50:10.414161Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 521 us over 431 frames (tier A 22, tier B 83)
+[2m2026-09-06T17:50:15.421918Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3548 us, max 37138 us over 390 frames
+[2m2026-09-06T17:50:15.422124Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 68 us, max 2737 us over 390 frames
+[2m2026-09-06T17:50:15.423525Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 551 us over 390 frames (tier A 22, tier B 83)
+[2m2026-09-06T17:50:20.413939Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3005 us, max 27378 us over 434 frames
+[2m2026-09-06T17:50:20.414124Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 131 us, max 7482 us over 434 frames
+[2m2026-09-06T17:50:20.415119Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 137 us, max 519 us over 434 frames (tier A 24, tier B 79)
+[2m2026-09-06T17:50:41.720345Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3477 us, max 43260 us over 338 frames
+[2m2026-09-06T17:50:41.720509Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 99 us, max 3260 us over 338 frames
+[2m2026-09-06T17:50:41.723540Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 533 us over 338 frames (tier A 25, tier B 80)
+[2m2026-09-06T17:51:31.730860Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 18653 us, max 41271 us over 50 frames
+[2m2026-09-06T17:51:31.731322Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 498 us, max 3298 us over 50 frames
+[2m2026-09-06T17:51:31.741011Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 125 us, max 257 us over 50 frames (tier A 27, tier B 81)
+[2m2026-09-06T17:52:21.697344Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 21844 us, max 51504 us over 50 frames
+[2m2026-09-06T17:52:21.697457Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 459 us, max 3100 us over 50 frames
+[2m2026-09-06T17:52:21.698066Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 155 us, max 383 us over 50 frames (tier A 26, tier B 83)
+[2m2026-09-06T17:53:11.725250Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 19403 us, max 30449 us over 50 frames
+[2m2026-09-06T17:53:11.725663Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 610 us, max 3412 us over 50 frames
+[2m2026-09-06T17:53:11.732102Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 151 us, max 347 us over 50 frames (tier A 25, tier B 85)
+[2m2026-09-06T17:54:01.721761Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 14201 us, max 34844 us over 50 frames
+[2m2026-09-06T17:54:01.942611Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 533 us, max 4867 us over 50 frames
+[2m2026-09-06T17:54:01.950425Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 124 us, max 474 us over 50 frames (tier A 22, tier B 86)
+[2m2026-09-06T17:54:51.728056Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 20253 us, max 51623 us over 50 frames
+[2m2026-09-06T17:54:51.728266Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 330 us, max 1942 us over 50 frames
+[2m2026-09-06T17:54:51.733454Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 146 us, max 380 us over 50 frames (tier A 23, tier B 84)
+[2m2026-09-06T17:55:11.181254Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1953 us, max 32508 us over 452 frames
+[2m2026-09-06T17:55:11.181307Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 71 us, max 2572 us over 452 frames
+[2m2026-09-06T17:55:11.182072Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 108 us, max 401 us over 452 frames (tier A 23, tier B 84)
+[2m2026-09-06T17:55:16.183320Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1358 us, max 27791 us over 730 frames
+[2m2026-09-06T17:55:16.183377Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 41 us, max 2456 us over 730 frames
+[2m2026-09-06T17:55:16.185405Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 102 us, max 261 us over 730 frames (tier A 24, tier B 83)
+[2m2026-09-06T17:55:21.188755Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1462 us, max 29497 us over 686 frames
+[2m2026-09-06T17:55:21.188851Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 41 us, max 2854 us over 686 frames
+[2m2026-09-06T17:55:21.189894Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 103 us, max 296 us over 686 frames (tier A 23, tier B 85)
+[2m2026-09-06T17:55:26.185063Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1692 us, max 15689 us over 630 frames
+[2m2026-09-06T17:55:26.185208Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 30 us, max 2051 us over 630 frames
+[2m2026-09-06T17:55:26.186130Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 113 us, max 308 us over 630 frames (tier A 23, tier B 89)
+[2m2026-09-06T17:55:31.248335Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3853 us, max 33197 us over 301 frames
+[2m2026-09-06T17:55:31.248665Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 140 us, max 4600 us over 301 frames
+[2m2026-09-06T17:55:31.259323Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 123 us, max 1233 us over 301 frames (tier A 23, tier B 90)
+[2m2026-09-06T17:55:36.222667Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1539 us, max 17046 us over 625 frames
+[2m2026-09-06T17:55:36.222810Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 42 us, max 2547 us over 625 frames
+[2m2026-09-06T17:55:36.224659Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 113 us, max 338 us over 625 frames (tier A 24, tier B 90)
+[2m2026-09-06T17:55:41.229537Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1978 us, max 27863 us over 561 frames
+[2m2026-09-06T17:55:41.229585Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 70 us, max 4172 us over 561 frames
+[2m2026-09-06T17:55:41.230550Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 117 us, max 465 us over 561 frames (tier A 26, tier B 87)
+[2m2026-09-06T17:55:46.250765Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2737 us, max 28676 us over 459 frames
+[2m2026-09-06T17:55:46.250969Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 66 us, max 4081 us over 459 frames
+[2m2026-09-06T17:55:46.252047Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 611 us over 459 frames (tier A 26, tier B 88)
+[2m2026-09-06T17:55:51.248386Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3326 us, max 21013 us over 405 frames
+[2m2026-09-06T17:55:51.248937Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 133 us, max 5833 us over 405 frames
+[2m2026-09-06T17:55:51.251200Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 525 us over 405 frames (tier A 25, tier B 90)
+[2m2026-09-06T17:55:56.261116Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3662 us, max 32956 us over 385 frames
+[2m2026-09-06T17:55:56.261316Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 117 us, max 5325 us over 385 frames
+[2m2026-09-06T17:55:56.263593Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 148 us, max 613 us over 385 frames (tier A 24, tier B 94)
+[2m2026-09-06T17:56:01.275534Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3236 us, max 25972 us over 419 frames
+[2m2026-09-06T17:56:01.275859Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 96 us, max 3666 us over 419 frames
+[2m2026-09-06T17:56:01.277970Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 146 us, max 515 us over 419 frames (tier A 23, tier B 93)
+[2m2026-09-06T17:56:06.266383Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2181 us, max 36238 us over 536 frames
+[2m2026-09-06T17:56:06.266443Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 44 us, max 2626 us over 536 frames
+[2m2026-09-06T17:56:06.267442Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 124 us, max 584 us over 536 frames (tier A 23, tier B 93)
+[2m2026-09-06T17:56:11.263171Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1449 us, max 12101 us over 675 frames
+[2m2026-09-06T17:56:11.263226Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 47 us, max 2658 us over 675 frames
+[2m2026-09-06T17:56:11.264110Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 108 us, max 275 us over 675 frames (tier A 25, tier B 89)
+[2m2026-09-06T17:56:16.273176Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1477 us, max 32336 us over 690 frames
+[2m2026-09-06T17:56:16.273231Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 53 us, max 2949 us over 690 frames
+[2m2026-09-06T17:56:16.274252Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 110 us, max 352 us over 690 frames (tier A 27, tier B 89)
+[2m2026-09-06T17:56:21.270173Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1419 us, max 31168 us over 693 frames
+[2m2026-09-06T17:56:21.270213Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 46 us, max 2644 us over 693 frames
+[2m2026-09-06T17:56:21.270849Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 111 us, max 285 us over 693 frames (tier A 27, tier B 91)
+[2m2026-09-06T17:56:26.273168Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1522 us, max 14081 us over 657 frames
+[2m2026-09-06T17:56:26.273235Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 58 us, max 2789 us over 657 frames
+[2m2026-09-06T17:56:26.274141Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 115 us, max 239 us over 657 frames (tier A 29, tier B 89)
+[2m2026-09-06T17:56:31.281426Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2616 us, max 30929 us over 455 frames
+[2m2026-09-06T17:56:31.281493Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 92 us, max 3439 us over 455 frames
+[2m2026-09-06T17:56:31.282596Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 142 us, max 409 us over 455 frames (tier A 28, tier B 91)
+[2m2026-09-06T17:56:36.420515Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2060 us, max 16293 us over 536 frames
+[2m2026-09-06T17:56:36.420569Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 70 us, max 3788 us over 536 frames
+[2m2026-09-06T17:56:36.421494Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 137 us, max 326 us over 536 frames (tier A 28, tier B 88)
+[2m2026-09-06T17:56:41.421674Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1767 us, max 13854 us over 612 frames
+[2m2026-09-06T17:56:41.421732Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 48 us, max 3161 us over 612 frames
+[2m2026-09-06T17:56:41.422539Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 125 us, max 236 us over 612 frames (tier A 28, tier B 87)
+[2m2026-09-06T17:56:46.431742Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2423 us, max 23580 us over 501 frames
+[2m2026-09-06T17:56:46.431889Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 97 us, max 5233 us over 501 frames
+[2m2026-09-06T17:56:46.432873Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 594 us over 501 frames (tier A 30, tier B 88)
+[2m2026-09-06T17:56:51.491705Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 6725 us, max 28796 us over 167 frames
+[2m2026-09-06T17:56:51.491953Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 203 us, max 3278 us over 167 frames
+[2m2026-09-06T17:56:51.493584Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 156 us, max 2145 us over 167 frames (tier A 30, tier B 87)
+[2m2026-09-06T17:56:56.491233Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 9755 us, max 38444 us over 124 frames
+[2m2026-09-06T17:56:56.491532Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 387 us, max 8563 us over 124 frames
+[2m2026-09-06T17:56:56.501456Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 152 us, max 777 us over 124 frames (tier A 30, tier B 85)
+[2m2026-09-06T17:57:01.454800Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 5117 us, max 32277 us over 235 frames
+[2m2026-09-06T17:57:01.454870Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 179 us, max 6476 us over 235 frames
+[2m2026-09-06T17:57:01.455859Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 138 us, max 2607 us over 235 frames (tier A 31, tier B 85)
+[2m2026-09-06T17:57:06.590767Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2008 us, max 31725 us over 564 frames
+[2m2026-09-06T17:57:06.590918Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 69 us, max 3619 us over 564 frames
+[2m2026-09-06T17:57:06.592346Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 122 us, max 557 us over 564 frames (tier A 31, tier B 85)
+[2m2026-09-06T17:57:11.594231Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3496 us, max 31743 us over 393 frames
+[2m2026-09-06T17:57:11.594334Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 94 us, max 4018 us over 393 frames
+[2m2026-09-06T17:57:11.595663Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 155 us, max 574 us over 393 frames (tier A 29, tier B 89)
+[2m2026-09-06T17:57:16.604811Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2893 us, max 64630 us over 456 frames
+[2m2026-09-06T17:57:16.604918Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 87 us, max 2940 us over 456 frames
+[2m2026-09-06T17:57:16.607260Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 584 us over 456 frames (tier A 29, tier B 88)
+[2m2026-09-06T17:57:22.971168Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3262 us, max 29823 us over 393 frames
+[2m2026-09-06T17:57:22.971278Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 94 us, max 2722 us over 393 frames
+[2m2026-09-06T17:57:22.972240Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 434 us over 393 frames (tier A 29, tier B 90)
+[2m2026-09-06T17:57:29.373328Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3161 us, max 28454 us over 422 frames
+[2m2026-09-06T17:57:29.373506Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 104 us, max 3904 us over 422 frames
+[2m2026-09-06T17:57:29.376551Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 592 us over 422 frames (tier A 29, tier B 91)
+[2m2026-09-06T17:57:35.424565Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2860 us, max 31118 us over 443 frames
+[2m2026-09-06T17:57:35.424701Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 120 us, max 3218 us over 443 frames
+[2m2026-09-06T17:57:35.425411Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 135 us, max 590 us over 443 frames (tier A 29, tier B 92)
+[2m2026-09-06T17:57:40.678055Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2866 us, max 37765 us over 437 frames
+[2m2026-09-06T17:57:40.678130Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 85 us, max 2751 us over 437 frames
+[2m2026-09-06T17:57:40.679459Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 152 us, max 607 us over 437 frames (tier A 28, tier B 93)
+[2m2026-09-06T17:57:45.683353Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3780 us, max 30068 us over 376 frames
+[2m2026-09-06T17:57:45.683453Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 140 us, max 3801 us over 376 frames
+[2m2026-09-06T17:57:45.684942Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 157 us, max 527 us over 376 frames (tier A 24, tier B 96)
+[2m2026-09-06T17:57:50.694725Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2721 us, max 28682 us over 471 frames
+[2m2026-09-06T17:57:50.694768Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 100 us, max 5466 us over 471 frames
+[2m2026-09-06T17:57:50.696424Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 144 us, max 572 us over 471 frames (tier A 26, tier B 98)
+[2m2026-09-06T17:57:55.690870Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2743 us, max 24457 us over 458 frames
+[2m2026-09-06T17:57:55.690917Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 73 us, max 3160 us over 458 frames
+[2m2026-09-06T17:57:55.692455Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 596 us over 458 frames (tier A 24, tier B 99)
+[2m2026-09-06T17:58:00.696969Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2887 us, max 35695 us over 450 frames
+[2m2026-09-06T17:58:00.697026Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 102 us, max 6739 us over 450 frames
+[2m2026-09-06T17:58:00.697913Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 596 us over 450 frames (tier A 24, tier B 98)
+[2m2026-09-06T17:58:05.696579Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1776 us, max 22709 us over 604 frames
+[2m2026-09-06T17:58:05.696635Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 60 us, max 3411 us over 604 frames
+[2m2026-09-06T17:58:05.697673Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 121 us, max 542 us over 604 frames (tier A 25, tier B 93)
+[2m2026-09-06T17:58:10.698551Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1568 us, max 19086 us over 669 frames
+[2m2026-09-06T17:58:10.698601Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 56 us, max 2812 us over 669 frames
+[2m2026-09-06T17:58:10.699702Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 111 us, max 270 us over 669 frames (tier A 26, tier B 92)
+[2m2026-09-06T17:58:15.699508Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1982 us, max 13978 us over 569 frames
+[2m2026-09-06T17:58:15.699638Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 59 us, max 2898 us over 569 frames
+[2m2026-09-06T17:58:15.700234Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 501 us over 569 frames (tier A 28, tier B 90)
+[2m2026-09-06T17:58:20.716084Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2591 us, max 19177 us over 486 frames
+[2m2026-09-06T17:58:20.716213Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 90 us, max 5651 us over 486 frames
+[2m2026-09-06T17:58:20.717128Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 142 us, max 592 us over 486 frames (tier A 28, tier B 92)
+[2m2026-09-06T17:58:25.710811Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2062 us, max 15576 us over 554 frames
+[2m2026-09-06T17:58:25.710943Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 67 us, max 3057 us over 554 frames
+[2m2026-09-06T17:58:25.712088Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 146 us, max 592 us over 554 frames (tier A 28, tier B 89)
+[2m2026-09-06T17:58:30.713508Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2323 us, max 28640 us over 509 frames
+[2m2026-09-06T17:58:30.713578Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 77 us, max 3852 us over 509 frames
+[2m2026-09-06T17:58:30.714378Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 147 us, max 588 us over 509 frames (tier A 26, tier B 88)
+[2m2026-09-06T17:58:35.724839Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2722 us, max 21338 us over 482 frames
+[2m2026-09-06T17:58:35.725022Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 94 us, max 3031 us over 482 frames
+[2m2026-09-06T17:58:35.726397Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 143 us, max 632 us over 482 frames (tier A 26, tier B 86)
+[2m2026-09-06T17:58:40.721382Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2122 us, max 16199 us over 544 frames
+[2m2026-09-06T17:58:40.721546Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 68 us, max 2648 us over 544 frames
+[2m2026-09-06T17:58:40.723166Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 135 us, max 570 us over 544 frames (tier A 26, tier B 84)
+[2m2026-09-06T17:58:45.723357Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1968 us, max 15774 us over 577 frames
+[2m2026-09-06T17:58:45.724945Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 58 us, max 2594 us over 577 frames
+[2m2026-09-06T17:58:45.727099Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 508 us over 577 frames (tier A 26, tier B 83)
+[2m2026-09-06T17:58:50.725985Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 1849 us, max 33872 us over 591 frames
+[2m2026-09-06T17:58:50.726031Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 70 us, max 6335 us over 591 frames
+[2m2026-09-06T17:58:50.726670Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 116 us, max 412 us over 591 frames (tier A 24, tier B 84)
+[2m2026-09-06T17:58:55.731919Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2258 us, max 22108 us over 472 frames
+[2m2026-09-06T17:58:55.732082Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 75 us, max 2965 us over 472 frames
+[2m2026-09-06T17:58:55.735516Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 132 us, max 566 us over 472 frames (tier A 23, tier B 86)
+[2m2026-09-06T17:59:00.726637Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2485 us, max 20382 us over 417 frames
+[2m2026-09-06T17:59:00.726696Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 80 us, max 2672 us over 417 frames
+[2m2026-09-06T17:59:00.727764Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 132 us, max 430 us over 417 frames (tier A 23, tier B 85)
+[2m2026-09-06T17:59:05.729625Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2957 us, max 23451 us over 373 frames
+[2m2026-09-06T17:59:05.729709Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 106 us, max 3364 us over 373 frames
+[2m2026-09-06T17:59:05.731134Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 133 us, max 556 us over 373 frames (tier A 24, tier B 84)
+[2m2026-09-06T17:59:10.730179Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2254 us, max 29325 us over 507 frames
+[2m2026-09-06T17:59:10.730334Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 67 us, max 2792 us over 507 frames
+[2m2026-09-06T17:59:10.732337Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 125 us, max 592 us over 507 frames (tier A 24, tier B 84)
+[2m2026-09-06T17:59:15.736924Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2770 us, max 40799 us over 398 frames
+[2m2026-09-06T17:59:15.737000Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 79 us, max 2683 us over 398 frames
+[2m2026-09-06T17:59:15.738984Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 130 us, max 519 us over 398 frames (tier A 24, tier B 84)
+[2m2026-09-06T17:59:20.742109Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2816 us, max 19926 us over 401 frames
+[2m2026-09-06T17:59:20.742227Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 92 us, max 4680 us over 401 frames
+[2m2026-09-06T17:59:20.743616Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 134 us, max 593 us over 401 frames (tier A 22, tier B 87)
+[2m2026-09-06T17:59:25.750456Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2800 us, max 25477 us over 404 frames
+[2m2026-09-06T17:59:25.750514Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 112 us, max 3457 us over 404 frames
+[2m2026-09-06T17:59:25.753215Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 129 us, max 545 us over 404 frames (tier A 21, tier B 89)
+[2m2026-09-06T17:59:30.746197Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2620 us, max 26684 us over 411 frames
+[2m2026-09-06T17:59:30.746253Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 85 us, max 4958 us over 411 frames
+[2m2026-09-06T17:59:30.747281Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 121 us, max 539 us over 411 frames (tier A 20, tier B 87)
+[2m2026-09-06T17:59:35.759473Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2185 us, max 28509 us over 506 frames
+[2m2026-09-06T17:59:35.759816Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 79 us, max 2696 us over 506 frames
+[2m2026-09-06T17:59:35.761998Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 119 us, max 562 us over 506 frames (tier A 19, tier B 90)
+[2m2026-09-06T17:59:40.780620Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2573 us, max 28931 us over 430 frames
+[2m2026-09-06T17:59:40.780702Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 83 us, max 3439 us over 430 frames
+[2m2026-09-06T17:59:40.781593Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 123 us, max 491 us over 430 frames (tier A 19, tier B 88)
+[2m2026-09-06T17:59:45.779358Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2854 us, max 40377 us over 395 frames
+[2m2026-09-06T17:59:45.779407Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 94 us, max 2974 us over 395 frames
+[2m2026-09-06T17:59:45.780186Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 129 us, max 563 us over 395 frames (tier A 21, tier B 86)
+[2m2026-09-06T17:59:50.796927Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2834 us, max 21976 us over 391 frames
+[2m2026-09-06T17:59:50.796993Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 93 us, max 10702 us over 391 frames
+[2m2026-09-06T17:59:50.798041Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 132 us, max 718 us over 391 frames (tier A 20, tier B 89)
+[2m2026-09-06T17:59:55.808110Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2930 us, max 27105 us over 405 frames
+[2m2026-09-06T17:59:55.808326Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 112 us, max 6090 us over 405 frames
+[2m2026-09-06T17:59:55.809484Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 560 us over 405 frames (tier A 19, tier B 89)
+[2m2026-09-06T18:00:00.818595Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2930 us, max 23912 us over 380 frames
+[2m2026-09-06T18:00:00.821285Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 91 us, max 3754 us over 380 frames
+[2m2026-09-06T18:00:00.824495Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 125 us, max 552 us over 380 frames (tier A 19, tier B 86)
+[2m2026-09-06T18:00:05.821670Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2620 us, max 27100 us over 406 frames
+[2m2026-09-06T18:00:05.821801Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 80 us, max 3449 us over 406 frames
+[2m2026-09-06T18:00:05.823441Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 503 us over 406 frames (tier A 19, tier B 88)
+[2m2026-09-06T18:00:10.832929Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2953 us, max 23196 us over 380 frames
+[2m2026-09-06T18:00:10.833005Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 85 us, max 2344 us over 380 frames
+[2m2026-09-06T18:00:10.833741Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 129 us, max 507 us over 380 frames (tier A 22, tier B 85)
+[2m2026-09-06T18:00:15.834354Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2734 us, max 17901 us over 397 frames
+[2m2026-09-06T18:00:15.834450Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 87 us, max 3273 us over 397 frames
+[2m2026-09-06T18:00:15.835725Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 567 us over 397 frames (tier A 22, tier B 85)
+[2m2026-09-06T18:00:20.848008Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2855 us, max 28398 us over 390 frames
+[2m2026-09-06T18:00:20.848143Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 90 us, max 2574 us over 390 frames
+[2m2026-09-06T18:00:20.849566Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 517 us over 390 frames (tier A 21, tier B 87)
+[2m2026-09-06T18:00:25.849534Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2393 us, max 29420 us over 417 frames
+[2m2026-09-06T18:00:25.849696Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 94 us, max 2730 us over 417 frames
+[2m2026-09-06T18:00:25.850687Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 120 us, max 545 us over 417 frames (tier A 22, tier B 87)
+[2m2026-09-06T18:00:30.850436Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2819 us, max 34656 us over 368 frames
+[2m2026-09-06T18:00:30.850667Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 100 us, max 2969 us over 368 frames
+[2m2026-09-06T18:00:30.852399Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 580 us over 368 frames (tier A 21, tier B 88)
+[2m2026-09-06T18:00:35.857324Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2856 us, max 26233 us over 377 frames
+[2m2026-09-06T18:00:35.857471Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 90 us, max 2670 us over 377 frames
+[2m2026-09-06T18:00:35.858268Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 138 us, max 485 us over 377 frames (tier A 23, tier B 87)
+[2m2026-09-06T18:00:40.850894Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2510 us, max 19089 us over 410 frames
+[2m2026-09-06T18:00:40.851054Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 92 us, max 2682 us over 410 frames
+[2m2026-09-06T18:00:40.851924Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 483 us over 410 frames (tier A 24, tier B 86)
+[2m2026-09-06T18:00:45.856236Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2666 us, max 21113 us over 399 frames
+[2m2026-09-06T18:00:45.856499Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 78 us, max 2803 us over 399 frames
+[2m2026-09-06T18:00:45.857729Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 137 us, max 577 us over 399 frames (tier A 25, tier B 86)
+[2m2026-09-06T18:00:50.875053Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2591 us, max 29585 us over 406 frames
+[2m2026-09-06T18:00:50.877554Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 96 us, max 2717 us over 406 frames
+[2m2026-09-06T18:00:50.880388Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 131 us, max 561 us over 406 frames (tier A 24, tier B 89)
+[2m2026-09-06T18:00:55.884831Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3004 us, max 23254 us over 386 frames
+[2m2026-09-06T18:00:55.884916Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 100 us, max 5336 us over 386 frames
+[2m2026-09-06T18:00:55.886537Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 566 us over 386 frames (tier A 23, tier B 90)
+[2m2026-09-06T18:01:00.890672Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2410 us, max 17288 us over 417 frames
+[2m2026-09-06T18:01:00.890772Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 88 us, max 2817 us over 417 frames
+[2m2026-09-06T18:01:00.892343Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 122 us, max 512 us over 417 frames (tier A 23, tier B 89)
+[2m2026-09-06T18:01:05.894084Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2024 us, max 27809 us over 527 frames
+[2m2026-09-06T18:01:05.894206Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 54 us, max 3634 us over 527 frames
+[2m2026-09-06T18:01:05.895519Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 119 us, max 542 us over 527 frames (tier A 22, tier B 88)
+[2m2026-09-06T18:01:10.906871Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2709 us, max 24347 us over 412 frames
+[2m2026-09-06T18:01:10.907147Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 104 us, max 3102 us over 412 frames
+[2m2026-09-06T18:01:10.908372Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 126 us, max 457 us over 412 frames (tier A 23, tier B 87)
+[2m2026-09-06T18:01:15.913443Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2738 us, max 35112 us over 418 frames
+[2m2026-09-06T18:01:15.913532Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 93 us, max 5249 us over 418 frames
+[2m2026-09-06T18:01:15.914830Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 127 us, max 447 us over 418 frames (tier A 24, tier B 87)
+[2m2026-09-06T18:01:20.918955Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2996 us, max 19923 us over 385 frames
+[2m2026-09-06T18:01:20.919023Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 97 us, max 3494 us over 385 frames
+[2m2026-09-06T18:01:20.919957Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 137 us, max 607 us over 385 frames (tier A 23, tier B 87)
+[2m2026-09-06T18:01:25.919391Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3178 us, max 37132 us over 386 frames
+[2m2026-09-06T18:01:25.919453Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 91 us, max 3568 us over 386 frames
+[2m2026-09-06T18:01:25.920273Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 138 us, max 556 us over 386 frames (tier A 22, tier B 91)
+[2m2026-09-06T18:01:30.931494Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2952 us, max 18519 us over 398 frames
+[2m2026-09-06T18:01:30.931772Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 89 us, max 2840 us over 398 frames
+[2m2026-09-06T18:01:30.933333Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 140 us, max 761 us over 398 frames (tier A 26, tier B 86)
+[2m2026-09-06T18:01:35.937544Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3068 us, max 24509 us over 379 frames
+[2m2026-09-06T18:01:35.937610Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 90 us, max 2991 us over 379 frames
+[2m2026-09-06T18:01:35.939764Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 136 us, max 593 us over 379 frames (tier A 27, tier B 87)
+[2m2026-09-06T18:01:40.932795Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2399 us, max 23182 us over 421 frames
+[2m2026-09-06T18:01:40.932963Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 69 us, max 2695 us over 421 frames
+[2m2026-09-06T18:01:40.933986Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 136 us, max 514 us over 421 frames (tier A 26, tier B 87)
+[2m2026-09-06T18:01:45.941362Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2343 us, max 33204 us over 431 frames
+[2m2026-09-06T18:01:45.941433Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 73 us, max 2749 us over 431 frames
+[2m2026-09-06T18:01:45.944826Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 532 us over 431 frames (tier A 25, tier B 89)
+[2m2026-09-06T18:01:50.953426Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2650 us, max 35452 us over 419 frames
+[2m2026-09-06T18:01:50.953496Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 76 us, max 3228 us over 419 frames
+[2m2026-09-06T18:01:50.955171Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 434 us over 419 frames (tier A 26, tier B 86)
+[2m2026-09-06T18:01:55.954417Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 3068 us, max 32533 us over 379 frames
+[2m2026-09-06T18:01:55.954559Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 114 us, max 3693 us over 379 frames
+[2m2026-09-06T18:01:55.955637Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 145 us, max 599 us over 379 frames (tier A 25, tier B 87)
+[2m2026-09-06T18:02:00.971673Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2405 us, max 29944 us over 416 frames
+[2m2026-09-06T18:02:00.971824Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 94 us, max 3355 us over 416 frames
+[2m2026-09-06T18:02:00.972472Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 132 us, max 555 us over 416 frames (tier A 26, tier B 88)
+[2m2026-09-06T18:02:05.997368Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2675 us, max 37012 us over 394 frames
+[2m2026-09-06T18:02:05.997438Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 73 us, max 2945 us over 394 frames
+[2m2026-09-06T18:02:06.000502Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 136 us, max 563 us over 394 frames (tier A 26, tier B 86)
+[drive] 1868.2s simulation wait completed at 1605.990s
+[drive] 1868.2s tp -17.375 1.7 268.375 0 0
+[drive] 1868.7s shot final_wickmarket_ground_evening
+[2m2026-09-06T18:02:10.111357Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_ground_evening.png
+[drive] 1869.3s tp -17.375 26 285.375 0 -35
+[2m2026-09-06T18:02:11.000240Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2691 us, max 30018 us over 402 frames
+[2m2026-09-06T18:02:11.000303Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 79 us, max 3305 us over 402 frames
+[2m2026-09-06T18:02:11.002619Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 492 us over 402 frames (tier A 9, tier B 88)
+[drive] 1869.8s shot final_wickmarket_elevated_evening
+[2m2026-09-06T18:02:11.173488Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_elevated_evening.png
+[drive] 1870.4s tp 124.625 1.7 196.125 -30.6 0
+[drive] 1870.9s shot final_tenterhook_lane_ground_evening
+[2m2026-09-06T18:02:12.267744Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_ground_evening.png
+[drive] 1871.5s tp 124.625 22 211.125 0 -55
+[drive] 1872.0s shot final_tenterhook_lane_elevated_evening
+[2m2026-09-06T18:02:13.329633Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_tenterhook_lane_elevated_evening.png
+[drive] 1872.5s tp -123.375 1.7 166.375 152.6 0
+[drive] 1873.0s shot final_burnt_court_ground_evening
+[2m2026-09-06T18:02:14.394592Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_ground_evening.png
+[drive] 1873.6s tp -123.375 24 191.375 0 -45
+[drive] 1874.1s shot final_burnt_court_elevated_evening
+[2m2026-09-06T18:02:15.440705Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_burnt_court_elevated_evening.png
+[drive] 1874.6s tp -113.375 1.7 161.125 41.9 0
+[2m2026-09-06T18:02:16.002057Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::local_engine[0m[2m:[0m [engine pump] avg 2993 us, max 30384 us over 402 frames
+[2m2026-09-06T18:02:16.002302Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors[0m[2m:[0m [bridge drain] avg 112 us, max 3469 us over 402 frames
+[2m2026-09-06T18:02:16.003589Z[0m [32m INFO[0m [2mcathedralbevy::smart_actors::body[0m[2m:[0m [body pose] avg 128 us, max 608 us over 402 frames (tier A 27, tier B 115)
+[drive] 1875.1s shot final_needle_ground_evening
+[2m2026-09-06T18:02:16.525601Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_ground_evening.png
+[drive] 1875.7s tp -113.375 22 183.125 0 -45
+[drive] 1876.2s shot final_needle_elevated_evening
+[2m2026-09-06T18:02:17.601507Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_needle_elevated_evening.png
+[drive] 1876.8s tp -17.375 1.7 268.375 180 0
+[drive] 1877.3s shot final_wickmarket_frontages_evening
+[2m2026-09-06T18:02:18.700160Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_frontages_evening.png
+[drive] 1877.9s tp 9.125 1.7 269.125 180 0
+[drive] 1878.4s shot final_wickmarket_east_frontage_evening
+[2m2026-09-06T18:02:19.804972Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to /home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59/screenshots/final_wickmarket_east_frontage_evening.png
+[drive] 1879.0s quit

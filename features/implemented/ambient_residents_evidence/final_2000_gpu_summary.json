@@ -1,0 +1,3771 @@
+{
+  "session": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28",
+  "online_drive_wall_seconds": 1.6,
+  "timing_caveat": "Rounded frame-delta integration with 100ms virtual clamp; confirm displayed HUD time. Frames above 500ms flag suspected pacing, not automatically excluded crowd spikes.",
+  "screenshots": [
+    {
+      "name": "final_wickmarket_ground_stage30",
+      "drive_wall_s": 33.1,
+      "estimated_virtual_seconds_since_online": 31.52
+    },
+    {
+      "name": "final_wickmarket_elevated_stage30",
+      "drive_wall_s": 34.2,
+      "estimated_virtual_seconds_since_online": 32.61
+    },
+    {
+      "name": "final_tenterhook_lane_ground_stage30",
+      "drive_wall_s": 35.2,
+      "estimated_virtual_seconds_since_online": 33.61
+    },
+    {
+      "name": "final_tenterhook_lane_elevated_stage30",
+      "drive_wall_s": 36.3,
+      "estimated_virtual_seconds_since_online": 34.71
+    },
+    {
+      "name": "final_burnt_court_ground_stage30",
+      "drive_wall_s": 37.4,
+      "estimated_virtual_seconds_since_online": 35.82
+    },
+    {
+      "name": "final_burnt_court_elevated_stage30",
+      "drive_wall_s": 38.5,
+      "estimated_virtual_seconds_since_online": 36.89
+    },
+    {
+      "name": "final_needle_ground_stage30",
+      "drive_wall_s": 39.5,
+      "estimated_virtual_seconds_since_online": 37.9
+    },
+    {
+      "name": "final_needle_elevated_stage30",
+      "drive_wall_s": 40.6,
+      "estimated_virtual_seconds_since_online": 39.01
+    },
+    {
+      "name": "final_wickmarket_frontages_stage30",
+      "drive_wall_s": 41.7,
+      "estimated_virtual_seconds_since_online": 40.12
+    },
+    {
+      "name": "final_wickmarket_east_frontage_stage30",
+      "drive_wall_s": 42.7,
+      "estimated_virtual_seconds_since_online": 41.12
+    },
+    {
+      "name": "final_wickmarket_ground_stage180",
+      "drive_wall_s": 194.4,
+      "estimated_virtual_seconds_since_online": 192.79
+    },
+    {
+      "name": "final_wickmarket_elevated_stage180",
+      "drive_wall_s": 195.4,
+      "estimated_virtual_seconds_since_online": 193.81
+    },
+    {
+      "name": "final_tenterhook_lane_ground_stage180",
+      "drive_wall_s": 196.5,
+      "estimated_virtual_seconds_since_online": 194.92
+    },
+    {
+      "name": "final_tenterhook_lane_elevated_stage180",
+      "drive_wall_s": 197.6,
+      "estimated_virtual_seconds_since_online": 196.01
+    },
+    {
+      "name": "final_burnt_court_ground_stage180",
+      "drive_wall_s": 198.7,
+      "estimated_virtual_seconds_since_online": 197.11
+    },
+    {
+      "name": "final_burnt_court_elevated_stage180",
+      "drive_wall_s": 199.7,
+      "estimated_virtual_seconds_since_online": 198.11
+    },
+    {
+      "name": "final_needle_ground_stage180",
+      "drive_wall_s": 200.8,
+      "estimated_virtual_seconds_since_online": 199.21
+    },
+    {
+      "name": "final_needle_elevated_stage180",
+      "drive_wall_s": 201.9,
+      "estimated_virtual_seconds_since_online": 200.31
+    },
+    {
+      "name": "final_wickmarket_frontages_stage180",
+      "drive_wall_s": 203.0,
+      "estimated_virtual_seconds_since_online": 201.41
+    },
+    {
+      "name": "final_wickmarket_east_frontage_stage180",
+      "drive_wall_s": 204.0,
+      "estimated_virtual_seconds_since_online": 202.42
+    },
+    {
+      "name": "final_wickmarket_ground_stage600",
+      "drive_wall_s": 627.9,
+      "estimated_virtual_seconds_since_online": 624.04
+    },
+    {
+      "name": "final_wickmarket_elevated_stage600",
+      "drive_wall_s": 629.0,
+      "estimated_virtual_seconds_since_online": 625.14
+    },
+    {
+      "name": "final_tenterhook_lane_ground_stage600",
+      "drive_wall_s": 630.0,
+      "estimated_virtual_seconds_since_online": 626.14
+    },
+    {
+      "name": "final_tenterhook_lane_elevated_stage600",
+      "drive_wall_s": 631.1,
+      "estimated_virtual_seconds_since_online": 627.22
+    },
+    {
+      "name": "final_burnt_court_ground_stage600",
+      "drive_wall_s": 632.2,
+      "estimated_virtual_seconds_since_online": 628.33
+    },
+    {
+      "name": "final_burnt_court_elevated_stage600",
+      "drive_wall_s": 633.3,
+      "estimated_virtual_seconds_since_online": 629.43
+    },
+    {
+      "name": "final_needle_ground_stage600",
+      "drive_wall_s": 634.3,
+      "estimated_virtual_seconds_since_online": 630.44
+    },
+    {
+      "name": "final_needle_elevated_stage600",
+      "drive_wall_s": 635.4,
+      "estimated_virtual_seconds_since_online": 631.53
+    },
+    {
+      "name": "final_wickmarket_frontages_stage600",
+      "drive_wall_s": 636.5,
+      "estimated_virtual_seconds_since_online": 632.63
+    },
+    {
+      "name": "final_wickmarket_east_frontage_stage600",
+      "drive_wall_s": 637.5,
+      "estimated_virtual_seconds_since_online": 633.64
+    },
+    {
+      "name": "final_resident_lingering",
+      "drive_wall_s": 638.6,
+      "estimated_virtual_seconds_since_online": 634.72
+    },
+    {
+      "name": "final_resident_lingering_debug",
+      "drive_wall_s": 639.7,
+      "estimated_virtual_seconds_since_online": 635.83
+    },
+    {
+      "name": "final_resident_moving",
+      "drive_wall_s": 641.2,
+      "estimated_virtual_seconds_since_online": 637.3
+    },
+    {
+      "name": "final_resident_moving_debug",
+      "drive_wall_s": 642.4,
+      "estimated_virtual_seconds_since_online": 638.53
+    },
+    {
+      "name": "final_resident_arrival_debug",
+      "drive_wall_s": 657.9,
+      "estimated_virtual_seconds_since_online": 654.01
+    },
+    {
+      "name": "final_resident_arrival",
+      "drive_wall_s": 659.5,
+      "estimated_virtual_seconds_since_online": 655.62
+    },
+    {
+      "name": "final_resident_later",
+      "drive_wall_s": 723.2,
+      "estimated_virtual_seconds_since_online": 716.73
+    },
+    {
+      "name": "final_resident_later_debug",
+      "drive_wall_s": 724.3,
+      "estimated_virtual_seconds_since_online": 717.83
+    },
+    {
+      "name": "final_wickmarket_ground_rain60",
+      "drive_wall_s": 796.6,
+      "estimated_virtual_seconds_since_online": 780.46
+    },
+    {
+      "name": "final_wickmarket_elevated_rain60",
+      "drive_wall_s": 797.8,
+      "estimated_virtual_seconds_since_online": 781.63
+    },
+    {
+      "name": "final_tenterhook_lane_ground_rain60",
+      "drive_wall_s": 798.9,
+      "estimated_virtual_seconds_since_online": 782.73
+    },
+    {
+      "name": "final_tenterhook_lane_elevated_rain60",
+      "drive_wall_s": 800.7,
+      "estimated_virtual_seconds_since_online": 783.97
+    },
+    {
+      "name": "final_burnt_court_ground_rain60",
+      "drive_wall_s": 801.8,
+      "estimated_virtual_seconds_since_online": 785.05
+    },
+    {
+      "name": "final_burnt_court_elevated_rain60",
+      "drive_wall_s": 803.0,
+      "estimated_virtual_seconds_since_online": 786.28
+    },
+    {
+      "name": "final_needle_ground_rain60",
+      "drive_wall_s": 804.1,
+      "estimated_virtual_seconds_since_online": 787.37
+    },
+    {
+      "name": "final_needle_elevated_rain60",
+      "drive_wall_s": 805.3,
+      "estimated_virtual_seconds_since_online": 788.57
+    },
+    {
+      "name": "final_wickmarket_frontages_rain60",
+      "drive_wall_s": 806.4,
+      "estimated_virtual_seconds_since_online": 789.68
+    },
+    {
+      "name": "final_wickmarket_east_frontage_rain60",
+      "drive_wall_s": 807.6,
+      "estimated_virtual_seconds_since_online": 790.84
+    },
+    {
+      "name": "final_sheltered",
+      "drive_wall_s": 808.7,
+      "estimated_virtual_seconds_since_online": 791.98
+    },
+    {
+      "name": "final_sheltered_debug",
+      "drive_wall_s": 809.9,
+      "estimated_virtual_seconds_since_online": 793.17
+    },
+    {
+      "name": "final_sheltered_later",
+      "drive_wall_s": 874.6,
+      "estimated_virtual_seconds_since_online": 854.75
+    },
+    {
+      "name": "final_wickmarket_ground_evening",
+      "drive_wall_s": 1626.9,
+      "estimated_virtual_seconds_since_online": 1606.88
+    },
+    {
+      "name": "final_wickmarket_elevated_evening",
+      "drive_wall_s": 1628.0,
+      "estimated_virtual_seconds_since_online": 1608.0
+    },
+    {
+      "name": "final_tenterhook_lane_ground_evening",
+      "drive_wall_s": 1629.0,
+      "estimated_virtual_seconds_since_online": 1608.99
+    },
+    {
+      "name": "final_tenterhook_lane_elevated_evening",
+      "drive_wall_s": 1630.1,
+      "estimated_virtual_seconds_since_online": 1610.09
+    },
+    {
+      "name": "final_burnt_court_ground_evening",
+      "drive_wall_s": 1631.2,
+      "estimated_virtual_seconds_since_online": 1611.19
+    },
+    {
+      "name": "final_burnt_court_elevated_evening",
+      "drive_wall_s": 1632.3,
+      "estimated_virtual_seconds_since_online": 1612.3
+    },
+    {
+      "name": "final_needle_ground_evening",
+      "drive_wall_s": 1633.4,
+      "estimated_virtual_seconds_since_online": 1613.36
+    },
+    {
+      "name": "final_needle_elevated_evening",
+      "drive_wall_s": 1634.5,
+      "estimated_virtual_seconds_since_online": 1614.5
+    },
+    {
+      "name": "final_wickmarket_frontages_evening",
+      "drive_wall_s": 1635.6,
+      "estimated_virtual_seconds_since_online": 1615.59
+    },
+    {
+      "name": "final_wickmarket_east_frontage_evening",
+      "drive_wall_s": 1636.6,
+      "estimated_virtual_seconds_since_online": 1616.52
+    }
+  ],
+  "minute_intervals": [
+    {
+      "wall_seconds": [
+        60,
+        120
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [],
+      "frames": 4624,
+      "estimated_virtual_seconds_since_online": [
+        58.41,
+        118.41
+      ],
+      "frame_mean_ms": 12.977,
+      "frame_p50_ms": 9.7,
+      "frame_p95_ms": 26.51,
+      "frame_max_ms": 69.67,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        120,
+        180
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [],
+      "frames": 4628,
+      "estimated_virtual_seconds_since_online": [
+        118.41,
+        178.42
+      ],
+      "frame_mean_ms": 12.965,
+      "frame_p50_ms": 9.57,
+      "frame_p95_ms": 26.81,
+      "frame_max_ms": 78.71,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        180,
+        240
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [
+        "tp -17.375 1.7 268.375 0 0",
+        "tp -17.375 26 285.375 0 -35",
+        "tp 124.625 1.7 196.125 -30.6 0",
+        "tp 124.625 22 211.125 0 -55",
+        "tp -123.375 1.7 166.375 152.6 0",
+        "tp -123.375 24 191.375 0 -45",
+        "tp -113.375 1.7 161.125 41.9 0",
+        "tp -113.375 22 183.125 0 -45",
+        "tp -17.375 1.7 268.375 180 0",
+        "tp 9.125 1.7 269.125 180 0",
+        "tp -113.375 22 183.125 0 -45"
+      ],
+      "frames": 4737,
+      "estimated_virtual_seconds_since_online": [
+        178.42,
+        238.41
+      ],
+      "frame_mean_ms": 12.665,
+      "frame_p50_ms": 9.21,
+      "frame_p95_ms": 26.13,
+      "frame_max_ms": 73.91,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        240,
+        300
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [],
+      "frames": 4526,
+      "estimated_virtual_seconds_since_online": [
+        238.41,
+        298.41
+      ],
+      "frame_mean_ms": 13.258,
+      "frame_p50_ms": 9.785,
+      "frame_p95_ms": 27.19,
+      "frame_max_ms": 81.58,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        300,
+        360
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [],
+      "frames": 4464,
+      "estimated_virtual_seconds_since_online": [
+        298.41,
+        358.41
+      ],
+      "frame_mean_ms": 13.44,
+      "frame_p50_ms": 10.1,
+      "frame_p95_ms": 26.88,
+      "frame_max_ms": 80.87,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        360,
+        420
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [],
+      "frames": 4837,
+      "estimated_virtual_seconds_since_online": [
+        358.41,
+        418.42
+      ],
+      "frame_mean_ms": 12.405,
+      "frame_p50_ms": 9.08,
+      "frame_p95_ms": 25.91,
+      "frame_max_ms": 72.01,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        420,
+        480
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [],
+      "frames": 4588,
+      "estimated_virtual_seconds_since_online": [
+        418.42,
+        478.42
+      ],
+      "frame_mean_ms": 13.078,
+      "frame_p50_ms": 9.75,
+      "frame_p95_ms": 26.65,
+      "frame_max_ms": 56.67,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        480,
+        540
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [],
+      "frames": 4459,
+      "estimated_virtual_seconds_since_online": [
+        478.42,
+        536.13
+      ],
+      "frame_mean_ms": 13.454,
+      "frame_p50_ms": 8.83,
+      "frame_p95_ms": 26.59,
+      "frame_max_ms": 681.62,
+      "frames_above_500ms": 1
+    },
+    {
+      "wall_seconds": [
+        540,
+        600
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [],
+      "frames": 5025,
+      "estimated_virtual_seconds_since_online": [
+        536.13,
+        596.14
+      ],
+      "frame_mean_ms": 11.943,
+      "frame_p50_ms": 8.6,
+      "frame_p95_ms": 24.89,
+      "frame_max_ms": 70.56,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        600,
+        660
+      ],
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "camera_changes": [
+        "tp -17.375 1.7 268.375 0 0",
+        "tp -17.375 26 285.375 0 -35",
+        "tp 124.625 1.7 196.125 -30.6 0",
+        "tp 124.625 22 211.125 0 -55",
+        "tp -123.375 1.7 166.375 152.6 0",
+        "tp -123.375 24 191.375 0 -45",
+        "tp -113.375 1.7 161.125 41.9 0",
+        "tp -113.375 22 183.125 0 -45",
+        "tp -17.375 1.7 268.375 180 0",
+        "tp 9.125 1.7 269.125 180 0",
+        "frame @resident-lingering 4 0",
+        "frame @resident-moving 4 0",
+        "frame @last 4 0"
+      ],
+      "frames": 5060,
+      "estimated_virtual_seconds_since_online": [
+        596.14,
+        656.14
+      ],
+      "frame_mean_ms": 11.857,
+      "frame_p50_ms": 8.265,
+      "frame_p95_ms": 25.21,
+      "frame_max_ms": 99.12,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        660,
+        720
+      ],
+      "camera": "frame @last 4 0",
+      "camera_changes": [],
+      "frames": 4410,
+      "estimated_virtual_seconds_since_online": [
+        656.14,
+        713.52
+      ],
+      "frame_mean_ms": 13.605,
+      "frame_p50_ms": 9.37,
+      "frame_p95_ms": 27.21,
+      "frame_max_ms": 793.1,
+      "frames_above_500ms": 3
+    },
+    {
+      "wall_seconds": [
+        720,
+        780
+      ],
+      "camera": "frame @last 4 0",
+      "camera_changes": [
+        "frame @last 4 0",
+        "tp -17.375 1.7 268.375 180 0"
+      ],
+      "frames": 1465,
+      "estimated_virtual_seconds_since_online": [
+        713.52,
+        764.43
+      ],
+      "frame_mean_ms": 40.957,
+      "frame_p50_ms": 10.2,
+      "frame_p95_ms": 139.0,
+      "frame_max_ms": 468.92,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        780,
+        840
+      ],
+      "camera": "tp -17.375 1.7 268.375 180 0",
+      "camera_changes": [
+        "tp -17.375 1.7 268.375 0 0",
+        "tp -17.375 26 285.375 0 -35",
+        "tp 124.625 1.7 196.125 -30.6 0",
+        "tp 124.625 22 211.125 0 -55",
+        "tp -123.375 1.7 166.375 152.6 0",
+        "tp -123.375 24 191.375 0 -45",
+        "tp -113.375 1.7 161.125 41.9 0",
+        "tp -113.375 22 183.125 0 -45",
+        "tp -17.375 1.7 268.375 180 0",
+        "tp 9.125 1.7 269.125 180 0",
+        "frame @resident-sheltered 4 0"
+      ],
+      "frames": 2655,
+      "estimated_virtual_seconds_since_online": [
+        764.43,
+        821.26
+      ],
+      "frame_mean_ms": 22.58,
+      "frame_p50_ms": 9.57,
+      "frame_p95_ms": 54.92,
+      "frame_max_ms": 1455.85,
+      "frames_above_500ms": 4
+    },
+    {
+      "wall_seconds": [
+        840,
+        900
+      ],
+      "camera": "frame @resident-sheltered 4 0",
+      "camera_changes": [
+        "frame @last 4 0",
+        "tp -17.375 1.7 268.375 0 0"
+      ],
+      "frames": 3556,
+      "estimated_virtual_seconds_since_online": [
+        821.26,
+        880.0
+      ],
+      "frame_mean_ms": 16.888,
+      "frame_p50_ms": 9.39,
+      "frame_p95_ms": 44.79,
+      "frame_max_ms": 715.9,
+      "frames_above_500ms": 2
+    },
+    {
+      "wall_seconds": [
+        900,
+        960
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 4375,
+      "estimated_virtual_seconds_since_online": [
+        880.0,
+        940.0
+      ],
+      "frame_mean_ms": 13.713,
+      "frame_p50_ms": 10.07,
+      "frame_p95_ms": 28.57,
+      "frame_max_ms": 71.44,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        960,
+        1020
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 4676,
+      "estimated_virtual_seconds_since_online": [
+        940.0,
+        1000.0
+      ],
+      "frame_mean_ms": 12.832,
+      "frame_p50_ms": 9.22,
+      "frame_p95_ms": 26.49,
+      "frame_max_ms": 74.8,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1020,
+        1080
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 4248,
+      "estimated_virtual_seconds_since_online": [
+        1000.0,
+        1059.98
+      ],
+      "frame_mean_ms": 14.12,
+      "frame_p50_ms": 10.49,
+      "frame_p95_ms": 28.43,
+      "frame_max_ms": 78.07,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1080,
+        1140
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 3421,
+      "estimated_virtual_seconds_since_online": [
+        1059.98,
+        1119.99
+      ],
+      "frame_mean_ms": 17.54,
+      "frame_p50_ms": 15.33,
+      "frame_p95_ms": 34.28,
+      "frame_max_ms": 88.78,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1140,
+        1200
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 3508,
+      "estimated_virtual_seconds_since_online": [
+        1119.99,
+        1179.99
+      ],
+      "frame_mean_ms": 17.104,
+      "frame_p50_ms": 14.695,
+      "frame_p95_ms": 32.38,
+      "frame_max_ms": 86.77,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1200,
+        1260
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 3528,
+      "estimated_virtual_seconds_since_online": [
+        1179.99,
+        1239.99
+      ],
+      "frame_mean_ms": 17.008,
+      "frame_p50_ms": 14.64,
+      "frame_p95_ms": 32.69,
+      "frame_max_ms": 85.92,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1260,
+        1320
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 3402,
+      "estimated_virtual_seconds_since_online": [
+        1239.99,
+        1299.99
+      ],
+      "frame_mean_ms": 17.635,
+      "frame_p50_ms": 15.475,
+      "frame_p95_ms": 33.97,
+      "frame_max_ms": 81.18,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1320,
+        1380
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 3328,
+      "estimated_virtual_seconds_since_online": [
+        1299.99,
+        1359.98
+      ],
+      "frame_mean_ms": 18.029,
+      "frame_p50_ms": 15.95,
+      "frame_p95_ms": 35.53,
+      "frame_max_ms": 89.41,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1380,
+        1440
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 3706,
+      "estimated_virtual_seconds_since_online": [
+        1359.98,
+        1420.0
+      ],
+      "frame_mean_ms": 16.193,
+      "frame_p50_ms": 13.675,
+      "frame_p95_ms": 32.08,
+      "frame_max_ms": 79.67,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1440,
+        1500
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 4297,
+      "estimated_virtual_seconds_since_online": [
+        1420.0,
+        1479.99
+      ],
+      "frame_mean_ms": 13.961,
+      "frame_p50_ms": 10.43,
+      "frame_p95_ms": 28.02,
+      "frame_max_ms": 75.79,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1500,
+        1560
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 4176,
+      "estimated_virtual_seconds_since_online": [
+        1479.99,
+        1539.98
+      ],
+      "frame_mean_ms": 14.367,
+      "frame_p50_ms": 11.0,
+      "frame_p95_ms": 29.14,
+      "frame_max_ms": 72.66,
+      "frames_above_500ms": 0
+    },
+    {
+      "wall_seconds": [
+        1560,
+        1620
+      ],
+      "camera": "tp -17.375 1.7 268.375 0 0",
+      "camera_changes": [],
+      "frames": 3964,
+      "estimated_virtual_seconds_since_online": [
+        1539.98,
+        1600.0
+      ],
+      "frame_mean_ms": 15.141,
+      "frame_p50_ms": 12.0,
+      "frame_p95_ms": 30.47,
+      "frame_max_ms": 79.73,
+      "frames_above_500ms": 0
+    }
+  ],
+  "authoritative_capture_records": [
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:13 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 31.939,
+      "virtual_seconds": 31.946113514,
+      "wall_seconds": 33.104746246,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:13 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 33.014,
+      "virtual_seconds": 33.023221009,
+      "wall_seconds": 34.181853741,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:14 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 34.058,
+      "virtual_seconds": 34.085689813,
+      "wall_seconds": 35.244322545,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:14 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 35.169,
+      "virtual_seconds": 35.177047427,
+      "wall_seconds": 36.335680159,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:14 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 36.229,
+      "virtual_seconds": 36.238959488,
+      "wall_seconds": 37.39759222,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:15 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 37.29,
+      "virtual_seconds": 37.299547151,
+      "wall_seconds": 38.458179883,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:15 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 38.359,
+      "virtual_seconds": 38.381300008,
+      "wall_seconds": 39.53993274,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:16 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 39.453,
+      "virtual_seconds": 39.45974153,
+      "wall_seconds": 40.618374262,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:16 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 40.493,
+      "virtual_seconds": 40.512488511,
+      "wall_seconds": 41.671121243,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_stage30.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_stage30.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 07:17 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 41.556,
+      "virtual_seconds": 41.579262147,
+      "wall_seconds": 42.737894879,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 2000
+      },
+      "optional_claims": 0,
+      "positive_speed": 0,
+      "pending_path": 0,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:17 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 193.132,
+      "virtual_seconds": 193.205334733,
+      "wall_seconds": 194.363967465,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1983,
+        "moving_locally": 17
+      },
+      "optional_claims": 17,
+      "positive_speed": 15,
+      "pending_path": 17,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:18 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 194.261,
+      "virtual_seconds": 194.289706154,
+      "wall_seconds": 195.448338886,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1975,
+        "moving_locally": 25
+      },
+      "optional_claims": 25,
+      "positive_speed": 24,
+      "pending_path": 25,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:18 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 195.352,
+      "virtual_seconds": 195.372268543,
+      "wall_seconds": 196.530901275,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1980,
+        "moving_locally": 20
+      },
+      "optional_claims": 20,
+      "positive_speed": 20,
+      "pending_path": 20,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:19 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 196.407,
+      "virtual_seconds": 196.435188183,
+      "wall_seconds": 197.593820915,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1978,
+        "moving_locally": 22
+      },
+      "optional_claims": 22,
+      "positive_speed": 22,
+      "pending_path": 22,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:19 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 197.494,
+      "virtual_seconds": 197.503934544,
+      "wall_seconds": 198.662567276,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1986,
+        "moving_locally": 14
+      },
+      "optional_claims": 14,
+      "positive_speed": 14,
+      "pending_path": 14,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:19 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 198.547,
+      "virtual_seconds": 198.568162683,
+      "wall_seconds": 199.726795415,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1982,
+        "moving_locally": 18
+      },
+      "optional_claims": 18,
+      "positive_speed": 17,
+      "pending_path": 18,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:20 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 199.634,
+      "virtual_seconds": 199.642321653,
+      "wall_seconds": 200.800954385,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1986,
+        "moving_locally": 14
+      },
+      "optional_claims": 14,
+      "positive_speed": 14,
+      "pending_path": 13,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:20 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 200.714,
+      "virtual_seconds": 200.723622052,
+      "wall_seconds": 201.882254784,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1983,
+        "moving_locally": 17
+      },
+      "optional_claims": 17,
+      "positive_speed": 17,
+      "pending_path": 17,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:21 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 201.795,
+      "virtual_seconds": 201.802705277,
+      "wall_seconds": 202.961338009,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1978,
+        "moving_locally": 22
+      },
+      "optional_claims": 22,
+      "positive_speed": 22,
+      "pending_path": 22,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_stage180.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_stage180.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 08:21 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 202.853,
+      "virtual_seconds": 202.874917201,
+      "wall_seconds": 204.033549933,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1978,
+        "moving_locally": 22
+      },
+      "optional_claims": 22,
+      "positive_speed": 22,
+      "pending_path": 21,
+      "sheltered": 1,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01490",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:10 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 624.43,
+      "virtual_seconds": 624.451470522,
+      "wall_seconds": 627.88928562,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1986,
+        "moving_locally": 14
+      },
+      "optional_claims": 14,
+      "positive_speed": 14,
+      "pending_path": 14,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:10 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 625.516,
+      "virtual_seconds": 625.524235866,
+      "wall_seconds": 628.962050964,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1982,
+        "moving_locally": 18
+      },
+      "optional_claims": 18,
+      "positive_speed": 18,
+      "pending_path": 18,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:11 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 626.581,
+      "virtual_seconds": 626.60200942,
+      "wall_seconds": 630.039824518,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1978,
+        "moving_locally": 22
+      },
+      "optional_claims": 22,
+      "positive_speed": 21,
+      "pending_path": 22,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:11 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 627.644,
+      "virtual_seconds": 627.669080686,
+      "wall_seconds": 631.106895784,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1974,
+        "moving_locally": 26
+      },
+      "optional_claims": 26,
+      "positive_speed": 26,
+      "pending_path": 26,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:12 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 628.752,
+      "virtual_seconds": 628.772206928,
+      "wall_seconds": 632.210022026,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1980,
+        "moving_locally": 20
+      },
+      "optional_claims": 20,
+      "positive_speed": 20,
+      "pending_path": 20,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:12 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 629.823,
+      "virtual_seconds": 629.843657351,
+      "wall_seconds": 633.281472449,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1977,
+        "moving_locally": 23
+      },
+      "optional_claims": 23,
+      "positive_speed": 22,
+      "pending_path": 23,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:12 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 630.884,
+      "virtual_seconds": 630.908940362,
+      "wall_seconds": 634.34675546,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1982,
+        "moving_locally": 18
+      },
+      "optional_claims": 18,
+      "positive_speed": 18,
+      "pending_path": 18,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:13 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 631.951,
+      "virtual_seconds": 631.971991911,
+      "wall_seconds": 635.409807009,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1982,
+        "moving_locally": 18
+      },
+      "optional_claims": 18,
+      "positive_speed": 18,
+      "pending_path": 18,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:13 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 633.01,
+      "virtual_seconds": 633.030272841,
+      "wall_seconds": 636.468087939,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1983,
+        "moving_locally": 17
+      },
+      "optional_claims": 17,
+      "positive_speed": 17,
+      "pending_path": 17,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_stage600.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_stage600.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:14 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 634.08,
+      "virtual_seconds": 634.098683138,
+      "wall_seconds": 637.536498236,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1970,
+        "moving_locally": 30
+      },
+      "optional_claims": 30,
+      "positive_speed": 29,
+      "pending_path": 30,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_lingering.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_lingering.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:14 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 635.135,
+      "virtual_seconds": 635.140586984,
+      "wall_seconds": 638.578402082,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1974,
+        "moving_locally": 26
+      },
+      "optional_claims": 26,
+      "positive_speed": 26,
+      "pending_path": 26,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 155.55423353804866,
+        "id": "x00412",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          9.125,
+          0.91,
+          277.125
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 25.10807012641908,
+          "movement_cause": "wander",
+          "optional_walk": false,
+          "patch": "rp_omb_f0218_e0_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "lingering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": false,
+          "spot": "rp_omb_f0218_e0_c0_s0"
+        },
+        "speed": 0.0
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_lingering_debug.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_lingering_debug.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:14 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 636.194,
+      "virtual_seconds": 636.213819929,
+      "wall_seconds": 639.651635027,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1980,
+        "moving_locally": 20
+      },
+      "optional_claims": 20,
+      "positive_speed": 20,
+      "pending_path": 20,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 155.3705695134985,
+        "id": "x00412",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          9.125,
+          0.91,
+          277.125
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 24.02769351141899,
+          "movement_cause": "wander",
+          "optional_walk": false,
+          "patch": "rp_omb_f0218_e0_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "lingering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": false,
+          "spot": "rp_omb_f0218_e0_c0_s0"
+        },
+        "speed": 0.0
+      },
+      "framed_displacement_from_previous_observation": {
+        "previous_screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_lingering.png",
+        "metres": 0.0,
+        "virtual_seconds": 1.0732329449999725,
+        "scope": "Endpoint displacement between two authoritative observations; not an integrated path length or proof of continuous movement."
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_moving.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_moving.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:15 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 637.726,
+      "virtual_seconds": 637.792929099,
+      "wall_seconds": 641.230744197,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1980,
+        "moving_locally": 20
+      },
+      "optional_claims": 20,
+      "positive_speed": 20,
+      "pending_path": 20,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 155.11102988704866,
+        "id": "x01193",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          39.125,
+          0.91,
+          197.375
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 87.506923607202,
+          "movement_cause": "wander",
+          "optional_walk": false,
+          "patch": "rp_omb_i0018_e1_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "lingering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": false,
+          "spot": "rp_omb_i0018_e1_c0_s1"
+        },
+        "speed": 0.0
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_moving_debug.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_moving_debug.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:16 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 638.912,
+      "virtual_seconds": 638.932677454,
+      "wall_seconds": 642.370492552,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1982,
+        "moving_locally": 18
+      },
+      "optional_claims": 18,
+      "positive_speed": 18,
+      "pending_path": 18,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 154.9085163940787,
+        "id": "x01193",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          39.125,
+          0.91,
+          197.375
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 86.31566776620195,
+          "movement_cause": "wander",
+          "optional_walk": false,
+          "patch": "rp_omb_i0018_e1_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "lingering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": false,
+          "spot": "rp_omb_i0018_e1_c0_s1"
+        },
+        "speed": 0.0
+      },
+      "framed_displacement_from_previous_observation": {
+        "previous_screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_moving.png",
+        "metres": 0.0,
+        "virtual_seconds": 1.1397483549999379,
+        "scope": "Endpoint displacement between two authoritative observations; not an integrated path length or proof of continuous movement."
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_arrival_debug.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_arrival_debug.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:22 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 654.432,
+      "virtual_seconds": 654.500442017,
+      "wall_seconds": 657.938257115,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1979,
+        "moving_locally": 21
+      },
+      "optional_claims": 21,
+      "positive_speed": 21,
+      "pending_path": 21,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 152.27031494863866,
+        "id": "x01193",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          39.125,
+          0.91,
+          197.375
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 70.79683573420198,
+          "movement_cause": "wander",
+          "optional_walk": false,
+          "patch": "rp_omb_i0018_e1_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "lingering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": false,
+          "spot": "rp_omb_i0018_e1_c0_s1"
+        },
+        "speed": 0.0
+      },
+      "framed_displacement_from_previous_observation": {
+        "previous_screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_moving_debug.png",
+        "metres": 0.0,
+        "virtual_seconds": 15.567764562999969,
+        "scope": "Endpoint displacement between two authoritative observations; not an integrated path length or proof of continuous movement."
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_arrival.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_arrival.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:22 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 656.079,
+      "virtual_seconds": 656.101415828,
+      "wall_seconds": 659.539230926,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1985,
+        "moving_locally": 15
+      },
+      "optional_claims": 15,
+      "positive_speed": 15,
+      "pending_path": 15,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 151.99174972067854,
+        "id": "x01193",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          39.125,
+          0.91,
+          197.375
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 69.1582167462019,
+          "movement_cause": "wander",
+          "optional_walk": false,
+          "patch": "rp_omb_i0018_e1_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "lingering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": false,
+          "spot": "rp_omb_i0018_e1_c0_s1"
+        },
+        "speed": 0.0
+      },
+      "framed_displacement_from_previous_observation": {
+        "previous_screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_arrival_debug.png",
+        "metres": 0.0,
+        "virtual_seconds": 1.6009738110000171,
+        "scope": "Endpoint displacement between two authoritative observations; not an integrated path length or proof of continuous movement."
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_later.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_later.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:47 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 717.174,
+      "virtual_seconds": 717.182055751,
+      "wall_seconds": 723.228930669,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1985,
+        "moving_locally": 15
+      },
+      "optional_claims": 15,
+      "positive_speed": 14,
+      "pending_path": 15,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 141.60281135007907,
+        "id": "x01193",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          39.125,
+          0.91,
+          197.375
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 8.046814566201988,
+          "movement_cause": "wander",
+          "optional_walk": false,
+          "patch": "rp_omb_i0018_e1_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "lingering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": false,
+          "spot": "rp_omb_i0018_e1_c0_s1"
+        },
+        "speed": 0.0
+      },
+      "framed_displacement_from_previous_observation": {
+        "previous_screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_arrival.png",
+        "metres": 0.0,
+        "virtual_seconds": 61.080639923000035,
+        "scope": "Endpoint displacement between two authoritative observations; not an integrated path length or proof of continuous movement."
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_later_debug.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_later_debug.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 11:47 Dayspring 1x",
+      "elapsed_simulation_seconds_from_clock": 718.266,
+      "virtual_seconds": 718.274937026,
+      "wall_seconds": 724.321811944,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1983,
+        "moving_locally": 17
+      },
+      "optional_claims": 17,
+      "positive_speed": 17,
+      "pending_path": 17,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 141.42450325627894,
+        "id": "x01193",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          39.125,
+          0.91,
+          197.375
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 6.997943426201914,
+          "movement_cause": "wander",
+          "optional_walk": false,
+          "patch": "rp_omb_i0018_e1_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "lingering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": false,
+          "spot": "rp_omb_i0018_e1_c0_s1"
+        },
+        "speed": 0.0
+      },
+      "framed_displacement_from_previous_observation": {
+        "previous_screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_resident_later.png",
+        "metres": 0.0,
+        "virtual_seconds": 1.092881274999968,
+        "scope": "Endpoint displacement between two authoritative observations; not an integrated path length or proof of continuous movement."
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:12 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 780.899,
+      "virtual_seconds": 780.905247389,
+      "wall_seconds": 796.617835654,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1938,
+        "sheltering": 43,
+        "moving_locally": 19
+      },
+      "optional_claims": 19,
+      "positive_speed": 18,
+      "pending_path": 19,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733",
+          "x01984"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:13 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 782.031,
+      "virtual_seconds": 782.042887176,
+      "wall_seconds": 797.755475441,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1943,
+        "sheltering": 43,
+        "moving_locally": 14
+      },
+      "optional_claims": 14,
+      "positive_speed": 14,
+      "pending_path": 13,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:13 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 783.148,
+      "virtual_seconds": 783.201448929,
+      "wall_seconds": 798.914037194,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1949,
+        "sheltering": 43,
+        "moving_locally": 8
+      },
+      "optional_claims": 8,
+      "positive_speed": 7,
+      "pending_path": 8,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:14 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 784.358,
+      "virtual_seconds": 784.385325499,
+      "wall_seconds": 800.680952689,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1947,
+        "sheltering": 43,
+        "moving_locally": 10
+      },
+      "optional_claims": 10,
+      "positive_speed": 10,
+      "pending_path": 10,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:14 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 785.526,
+      "virtual_seconds": 785.536660999,
+      "wall_seconds": 801.832288189,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1941,
+        "sheltering": 43,
+        "moving_locally": 16
+      },
+      "optional_claims": 16,
+      "positive_speed": 15,
+      "pending_path": 16,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:15 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 786.658,
+      "virtual_seconds": 786.701118154,
+      "wall_seconds": 802.996745344,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1945,
+        "sheltering": 43,
+        "moving_locally": 12
+      },
+      "optional_claims": 12,
+      "positive_speed": 11,
+      "pending_path": 12,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:15 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 787.789,
+      "virtual_seconds": 787.838398798,
+      "wall_seconds": 804.134025988,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1938,
+        "moving_locally": 19,
+        "sheltering": 43
+      },
+      "optional_claims": 19,
+      "positive_speed": 15,
+      "pending_path": 19,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:16 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 788.912,
+      "virtual_seconds": 788.988580707,
+      "wall_seconds": 805.284207897,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1940,
+        "moving_locally": 17,
+        "sheltering": 43
+      },
+      "optional_claims": 17,
+      "positive_speed": 17,
+      "pending_path": 17,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:16 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 790.108,
+      "virtual_seconds": 790.146358842,
+      "wall_seconds": 806.441986032,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1944,
+        "moving_locally": 13,
+        "sheltering": 43
+      },
+      "optional_claims": 13,
+      "positive_speed": 13,
+      "pending_path": 13,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_rain60.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_rain60.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:17 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 791.261,
+      "virtual_seconds": 791.305652421,
+      "wall_seconds": 807.601279611,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1942,
+        "sheltering": 43,
+        "moving_locally": 15
+      },
+      "optional_claims": 15,
+      "positive_speed": 14,
+      "pending_path": 15,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_sheltered.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_sheltered.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:17 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 792.402,
+      "virtual_seconds": 792.446855516,
+      "wall_seconds": 808.742482706,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1943,
+        "sheltering": 43,
+        "moving_locally": 14
+      },
+      "optional_claims": 14,
+      "positive_speed": 14,
+      "pending_path": 13,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 128.8154868375594,
+        "id": "x00446",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          -31.375,
+          0.91,
+          326.625
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 0.0,
+          "movement_cause": "weather",
+          "optional_walk": false,
+          "patch": "rp_omb_i0541_e0_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "sheltering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": true,
+          "spot": "rs_wool_gate_vault_163_-16"
+        },
+        "speed": 0.0
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_sheltered_debug.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_sheltered_debug.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:17 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 793.556,
+      "virtual_seconds": 793.584230202,
+      "wall_seconds": 809.879857392,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1938,
+        "moving_locally": 19,
+        "sheltering": 43
+      },
+      "optional_claims": 19,
+      "positive_speed": 19,
+      "pending_path": 18,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 128.61893189422946,
+        "id": "x00446",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          -31.375,
+          0.91,
+          326.625
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 0.0,
+          "movement_cause": "weather",
+          "optional_walk": false,
+          "patch": "rp_omb_i0541_e0_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "sheltering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": true,
+          "spot": "rs_wool_gate_vault_163_-16"
+        },
+        "speed": 0.0
+      },
+      "framed_displacement_from_previous_observation": {
+        "previous_screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_sheltered.png",
+        "metres": 0.0,
+        "virtual_seconds": 1.13737468599993,
+        "scope": "Endpoint displacement between two authoritative observations; not an integrated path length or proof of continuous movement."
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_sheltered_later.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_sheltered_later.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 12:42 High Wick 1x",
+      "elapsed_simulation_seconds_from_clock": 855.155,
+      "virtual_seconds": 855.17154804,
+      "wall_seconds": 874.57008548,
+      "weather": "rain",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1930,
+        "sheltering": 43,
+        "moving_locally": 27
+      },
+      "optional_claims": 27,
+      "positive_speed": 27,
+      "pending_path": 27,
+      "sheltered": 44,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01145",
+          "x01573",
+          "x01664"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502"
+        ],
+        "needle": []
+      },
+      "framed_actor": {
+        "hunger": 118.14605033321929,
+        "id": "x00446",
+        "path": null,
+        "pending_waypoints": 0,
+        "position": [
+          -31.375,
+          0.91,
+          326.625
+        ],
+        "presence": "in_city",
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 0.0,
+          "movement_cause": "weather",
+          "optional_walk": false,
+          "patch": "rp_omb_i0541_e0_c0",
+          "patch_description": "beside a frontage in Wick Ward",
+          "phase": "sheltering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": true,
+          "spot": "rs_wool_gate_vault_163_-16"
+        },
+        "speed": 0.0
+      },
+      "framed_displacement_from_previous_observation": {
+        "previous_screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_sheltered_debug.png",
+        "metres": 0.0,
+        "virtual_seconds": 61.58731783799999,
+        "scope": "Endpoint displacement between two authoritative observations; not an integrated path length or proof of continuous movement."
+      }
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_ground_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:43 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1607.298,
+      "virtual_seconds": 1607.307900554,
+      "wall_seconds": 1626.881858908,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1978,
+        "moving_locally": 22
+      },
+      "optional_claims": 22,
+      "positive_speed": 21,
+      "pending_path": 22,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_elevated_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:43 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1608.361,
+      "virtual_seconds": 1608.3766943,
+      "wall_seconds": 1627.950652654,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1973,
+        "moving_locally": 27
+      },
+      "optional_claims": 27,
+      "positive_speed": 26,
+      "pending_path": 27,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_ground_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:44 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1609.462,
+      "virtual_seconds": 1609.471579328,
+      "wall_seconds": 1629.045537682,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1980,
+        "moving_locally": 20
+      },
+      "optional_claims": 20,
+      "positive_speed": 20,
+      "pending_path": 19,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_tenterhook_lane_elevated_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:44 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1610.511,
+      "virtual_seconds": 1610.530044633,
+      "wall_seconds": 1630.104002987,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1978,
+        "moving_locally": 22
+      },
+      "optional_claims": 22,
+      "positive_speed": 21,
+      "pending_path": 22,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_ground_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:45 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1611.584,
+      "virtual_seconds": 1611.59258524,
+      "wall_seconds": 1631.166543594,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1983,
+        "moving_locally": 17
+      },
+      "optional_claims": 17,
+      "positive_speed": 15,
+      "pending_path": 17,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_burnt_court_elevated_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:45 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1612.673,
+      "virtual_seconds": 1612.6950699,
+      "wall_seconds": 1632.269028254,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1981,
+        "moving_locally": 19
+      },
+      "optional_claims": 19,
+      "positive_speed": 19,
+      "pending_path": 19,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_ground_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:46 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1613.756,
+      "virtual_seconds": 1613.779180096,
+      "wall_seconds": 1633.35313845,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1984,
+        "moving_locally": 16
+      },
+      "optional_claims": 16,
+      "positive_speed": 16,
+      "pending_path": 14,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_needle_elevated_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:46 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1614.862,
+      "virtual_seconds": 1614.885147393,
+      "wall_seconds": 1634.459105747,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1986,
+        "moving_locally": 14
+      },
+      "optional_claims": 14,
+      "positive_speed": 14,
+      "pending_path": 14,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_frontages_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:46 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1615.963,
+      "virtual_seconds": 1615.982299262,
+      "wall_seconds": 1635.556257616,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1977,
+        "moving_locally": 23
+      },
+      "optional_claims": 23,
+      "positive_speed": 23,
+      "pending_path": 23,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    },
+    {
+      "screenshot": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_evening.png",
+      "sidecar": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28/screenshots/final_wickmarket_east_frontage_evening.json",
+      "dimensions": [
+        1493,
+        840
+      ],
+      "clock": "Day 2 17:47 the Waning 1x",
+      "elapsed_simulation_seconds_from_clock": 1617.036,
+      "virtual_seconds": 1617.044756865,
+      "wall_seconds": 1636.618715219,
+      "weather": "clear",
+      "generated_present": 2000,
+      "phases": {
+        "lingering": 1985,
+        "moving_locally": 15
+      },
+      "optional_claims": 15,
+      "positive_speed": 15,
+      "pending_path": 14,
+      "sheltered": 2,
+      "scene_residents": {
+        "wickmarket": [
+          "x00306",
+          "x00412",
+          "x01130",
+          "x01573",
+          "x01664",
+          "x01682"
+        ],
+        "tenterhook_lane": [
+          "x00140",
+          "x00445",
+          "x00733"
+        ],
+        "burnt_court": [
+          "x01132",
+          "x01502",
+          "x01671"
+        ],
+        "needle": []
+      },
+      "framed_actor": null
+    }
+  ],
+  "capture_timing_note": "Sibling state is read at screenshot request; the asynchronous PNG follows. HUD values are visually checked. Speed and pending path counts are not displacement measurements.",
+  "initial_clock_hour": 7.0
+}

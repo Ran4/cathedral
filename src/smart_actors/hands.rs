@@ -872,6 +872,7 @@ mod tests {
 
     fn actor(id: &str, holds: &[&str]) -> ActorSnapshot {
         ActorSnapshot {
+            resident: None,
             id: ActorId(id.into()),
             name_for_player: id.into(),
             control: ActorControl::Llm,

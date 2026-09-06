@@ -947,6 +947,7 @@ mod tests {
         items: Vec<ItemSnapshot>,
     ) -> WorldMirror {
         let player = ActorSnapshot {
+            resident: None,
             id: ActorId(PLAYER_ID.into()),
             name_for_player: "You".into(),
             control: ActorControl::Player,

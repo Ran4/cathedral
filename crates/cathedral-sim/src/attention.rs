@@ -825,6 +825,7 @@ mod tests {
                 b: "b".into(),
                 heading_to_b: true,
             }),
+            exact_local: false,
             choke_wait: 0.0,
         }
     }
@@ -1272,6 +1273,7 @@ mod tests {
             extended_character_description: String::new(),
             curiosity: None,
             generated: false,
+            generated_routine: None,
         }
     }
 

@@ -155,6 +155,9 @@ pub struct Patrol {
 /// ever sets it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Movement {
+    /// Exact bounded local route: preserve swept safety after avoidance and never
+    /// replace it with an unbounded street detour. Existing walks leave this false.
+    pub exact_local: bool,
     /// Remaining waypoints; the next target is `path[0]`. Empty means arrived.
     pub path: Vec<Vec3>,
     /// Current speed in m/s — 0 when arrived or idle.
@@ -474,6 +477,9 @@ pub struct CharacterState {
     /// section. Empty for anyone the round never enrolled — the section is
     /// then omitted, keeping the frozen golden fixtures byte-identical.
     pub daily_round: Vec<String>,
+    /// Projected by the resident controller; descriptions are private routine
+    /// context, and internal spot handles are never registered public places.
+    pub resident: Option<crate::round::residents::ResidentStatus>,
     /// A `set_round` edit waiting for the round to apply it (movement M6).
     ///
     /// The verb lives in [`crate::actions`], which only ever holds a
@@ -535,6 +541,7 @@ impl CharacterState {
             places_known: BTreeSet::new(),
             intent: None,
             daily_round: Vec::new(),
+            resident: None,
             round_edit: None,
             you_sell: Vec::new(),
             active_gesture: None,

@@ -172,7 +172,7 @@ impl LocalEngine {
     /// view of the authoritative sim, never a copy. `None` until the engine is
     /// live — the seed alone has no characters — so the sheet simply shows
     /// nothing before the cast comes online.
-    pub(super) fn world(&self) -> Option<&cathedral_sim::World> {
+    pub(crate) fn world(&self) -> Option<&cathedral_sim::World> {
         self.engine.as_ref().map(|engine| engine.world())
     }
 
@@ -292,13 +292,19 @@ fn with_extra_ambient(
         warn!("extra_ambient_npcs is {count}, but the navigation graph did not load; no crowd");
         return Ok(seed);
     };
-    let points = cathedral_sim::spread_over_walkable(nav, count as usize);
-    let sheets = cathedral_sim::extra_ambient_sheets(nav, &points, 0);
+    let occupied: Vec<_> = seed.characters.iter().map(|c| c.position_m).collect();
+    let crowd = cathedral_sim::generate_ambient(nav, count as usize, 0, &occupied, &[])?;
     info!(
-        "[smart actors] crowd: {} generated ambient citizens over {} nav nodes",
-        sheets.len(),
-        nav.node_count()
+        "[smart actors] crowd: requested {}, placed {}, unplaced {}; {} housed residents, {} hardship backgrounds, {} explicit workers (door cap {})",
+        crowd.placement.requested,
+        crowd.placement.placed,
+        crowd.placement.unplaced,
+        crowd.placement.housed,
+        crowd.placement.hardship,
+        crowd.placement.workers,
+        crowd.placement.door_cap
     );
+    let sheets = crowd.sheets;
     seed.with_extra_ambient(sheets)
         .map_err(|error| format!("invalid generated crowd: {error}"))
 }
@@ -1129,6 +1135,14 @@ mod tests {
         fn send(&self, command: BridgeCommand) {
             self.handle.try_send(command).expect("queue has room");
         }
+
+        /// Approach the actual body before a transfer. Lane geometry may move
+        /// a speaker within hearing range but outside the stricter 4 m reach.
+        fn beside(&self, actor: &str) -> Position {
+            let p =
+                self.engine.world().unwrap().characters[&SimActorId::from_raw(actor)].position_m();
+            Position::new(p.x as f32, p.y as f32, (p.z - 2.0) as f32).unwrap()
+        }
     }
 
     fn snapshot_of(message: &EngineMessage) -> Option<WorldSnapshot> {
@@ -1195,12 +1209,13 @@ mod tests {
         });
 
         // …and offers the coin when asked, without giving it away.
+        let coin_position = harness.beside("k0fb1");
         harness.send(BridgeCommand::DebugPlayerSay {
             request_id: "ask-coin".into(),
             text: "Please offer me your coin".into(),
             target_id: None,
-            position_m: player_position(),
-            spatial_seq: 1,
+            position_m: coin_position,
+            spatial_seq: 2,
         });
         harness.run_until("Ilse's coin offer", |message| {
             snapshot_of(message).is_some_and(|snapshot| {
@@ -1216,8 +1231,8 @@ mod tests {
         harness.send(BridgeCommand::PlayerAccept {
             request_id: "accept-coin".into(),
             item_id: ItemId("c0prs".into()),
-            position_m: player_position(),
-            spatial_seq: 1,
+            position_m: coin_position,
+            spatial_seq: 2,
         });
         harness.run_until("the coin transfer", |message| {
             snapshot_of(message).is_some_and(|snapshot| {
@@ -1236,13 +1251,14 @@ mod tests {
 
         // Re-offering it to Conny creates a pending offer — an offer is not a
         // transfer.
+        let conny_position = harness.beside("cb947");
         harness.send(BridgeCommand::PlayerOffer {
             request_id: "offer-conny".into(),
             target_id: ActorId("cb947".into()),
             item_id: ItemId("c0prs".into()),
             quantity: None,
-            position_m: player_position(),
-            spatial_seq: 1,
+            position_m: conny_position,
+            spatial_seq: 3,
         });
         harness.run_until("the pending re-offer", |message| {
             snapshot_of(message).is_some_and(|snapshot| {

@@ -1,0 +1,140 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 30.45s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-b98a18a0538eb07c)
+
+running 15 tests
+test round::residents::tests::meal_accounting_has_no_phantom_breakfast_at_a_dayspring_session_start ... ok
+test round::residents::tests::explicit_worker_uses_the_named_workplace_and_ordinary_archetype ... ok
+test round::residents::tests::lightning_and_curfew_preempt_resident_feet_without_optional_recall ... ok
+test round::residents::tests::removing_a_nonmoving_patchmate_preserves_the_active_departure_claim ... ok
+test round::residents::tests::resident_projection_is_truthful_without_advertising_internal_spots ... ok
+test round::residents::tests::absence_removal_custody_and_release_do_not_leak_claims_or_erase_new_owner_feet ... ok
+test round::residents::tests::retained_origin_can_be_recovered_when_every_other_spot_is_taken ... ok
+test round::residents::tests::fresh_explicit_travel_owns_replaced_feet_then_returns_once_without_teleport ... ok
+test round::residents::tests::conversation_interruption_releases_the_optional_target ... ok
+test round::residents::tests::arrival_and_failed_routes_each_start_one_dwell_without_recall_or_catchup ... ok
+test round::residents::tests::home_rest_proxy_is_an_outdoor_reserved_spot_and_dawn_staggers ... ok
+test round::residents::tests::conversation_releases_target_immediately_and_settled_talkers_keep_meals ... ok
+local weather seekers after 60s: 30
+resident_two_days min_hunger=51.000
+test round::residents::tests::support_uses_game_time_does_not_mint_food_and_recovers_after_a_missed_meal ... ok
+resident600s count=200 unique_optional_walkers=198 peak_optional=9
+test round::residents::tests::residents_have_no_jobs_queues_or_legs_and_keep_their_frontage_claims ... ok
+test round::residents::tests::weather_uses_distinct_local_claims_and_never_calls_the_global_shelter_ladder ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 557 filtered out; finished in 9.18s
+
+     Running tests/attention_tests.rs (target/debug/deps/attention_tests-e7fc509ba4acee8f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.00s
+
+     Running tests/custody_tests.rs (target/debug/deps/custody_tests-89002165f56aa4ca)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+     Running tests/dogs_tests.rs (target/debug/deps/dogs_tests-306f4f972c4343ce)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/e2e_fake.rs (target/debug/deps/e2e_fake-7387af9587f92aa6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/engine_tests.rs (target/debug/deps/engine_tests-d0c4416a29059b74)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 64 filtered out; finished in 0.00s
+
+     Running tests/floor_tests.rs (target/debug/deps/floor_tests-5edc0827d61c9ee1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.00s
+
+     Running tests/golden_prompts.rs (target/debug/deps/golden_prompts-9c6050c412035489)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/knowledge_tests.rs (target/debug/deps/knowledge_tests-01afe6ef84e65950)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 103 filtered out; finished in 0.00s
+
+     Running tests/marks_tests.rs (target/debug/deps/marks_tests-a62c1e169450399e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.00s
+
+     Running tests/parse_tests.rs (target/debug/deps/parse_tests-d67d8e0f9ab1b969)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+     Running tests/place_estimates.rs (target/debug/deps/place_estimates-ef3db491d25ef61f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/prompt_quirks.rs (target/debug/deps/prompt_quirks-f8cf9b7bf3277ad1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running tests/prompt_tests.rs (target/debug/deps/prompt_tests-e353dfcce7847d1a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 30 filtered out; finished in 0.00s
+
+     Running tests/scheduler_tests.rs (target/debug/deps/scheduler_tests-a5da14104a17b3a0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.00s
+
+     Running tests/seed_tests.rs (target/debug/deps/seed_tests-fb4145d25eb54eb3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+     Running tests/sim_tests.rs (target/debug/deps/sim_tests-85e3bd6477cfd3aa)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 41 filtered out; finished in 0.00s
+
+     Running tests/sounds_tests.rs (target/debug/deps/sounds_tests-2a8916857a28b8d1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 19 filtered out; finished in 0.00s
+
+     Running tests/speech_router_tests.rs (target/debug/deps/speech_router_tests-0268a3294f8b9b8b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 45 filtered out; finished in 0.00s
+
+     Running tests/supply_chain_tests.rs (target/debug/deps/supply_chain_tests-451e1a23dc8a9e1c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+

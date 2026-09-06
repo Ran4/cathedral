@@ -147,6 +147,21 @@ impl AppearanceSnapshot {
         }
     }
 
+    /// Ordinary resident clothes reuse civilian assets without manufacturing
+    /// an occupation. Authored null-occupation presentation stays unchanged.
+    pub fn resident(id: &ActorId, gender: &str, hardship: bool) -> Self {
+        let mut body = Self::compose(id, gender, None, None, &[]);
+        if !hardship {
+            body.outfit = match body.palette_seed % 3 {
+                0 => OutfitClass::Laborer,
+                1 => OutfitClass::Craftsman,
+                _ => OutfitClass::Merchant,
+            };
+            body.headgear = headgear_of(body.outfit, body.palette_seed);
+        }
+        body
+    }
+
     /// Attach (or clear) the bespoke-look override of a named major.
     pub fn with_bespoke(mut self, bespoke: Option<String>) -> Self {
         self.bespoke = bespoke;
@@ -185,10 +200,28 @@ fn outfit_class_of(occupation_id: &str) -> OutfitClass {
         "draper" | "fish_trader" | "food_provisioner" | "freight_broker" | "grocer_and_spicer"
         | "market_seller" | "merchant" | "money_dealer" | "salt_trader" => OutfitClass::Merchant,
         // People whose work is making.
-        "baker" | "bellfounder" | "brewer" | "butcher" | "carpenter_and_builder"
-        | "cartwright_and_wheelwright" | "chandler" | "cloth_worker" | "cook" | "cooper"
-        | "fine_metalworker" | "garment_worker" | "glazier" | "healer" | "instrument_maker"
-        | "leather_worker" | "mason" | "miller" | "painter" | "potter" | "roper" | "shoemaker"
+        "baker"
+        | "bellfounder"
+        | "brewer"
+        | "butcher"
+        | "carpenter_and_builder"
+        | "cartwright_and_wheelwright"
+        | "chandler"
+        | "cloth_worker"
+        | "cook"
+        | "cooper"
+        | "fine_metalworker"
+        | "garment_worker"
+        | "glazier"
+        | "healer"
+        | "instrument_maker"
+        | "leather_worker"
+        | "mason"
+        | "miller"
+        | "painter"
+        | "potter"
+        | "roper"
+        | "shoemaker"
         | "smith" => OutfitClass::Craftsman,
         // Everyone else who carries, hauls, serves, guides or scrubs — and the
         // fallback for an occupation coined after this table.
@@ -257,10 +290,7 @@ mod tests {
         assert_eq!(first.palette_seed, palette_seed_of(&id("sv3n1")));
         // Different ids draw different tints (spot-checked, not universal —
         // a 32-bit hash may collide, just not on the shipped trio).
-        assert_ne!(
-            palette_seed_of(&id("sv3n1")),
-            palette_seed_of(&id("cb947"))
-        );
+        assert_ne!(palette_seed_of(&id("sv3n1")), palette_seed_of(&id("cb947")));
     }
 
     #[test]
@@ -279,7 +309,10 @@ mod tests {
         assert_eq!(watch.outfit, OutfitClass::Watch);
         assert_eq!(watch.headgear, Headgear::KettleHelm);
 
-        assert_eq!(compose("m", Some("smith"), None).outfit, OutfitClass::Craftsman);
+        assert_eq!(
+            compose("m", Some("smith"), None).outfit,
+            OutfitClass::Craftsman
+        );
         assert_eq!(
             compose("m", Some("fish_trader"), None).outfit,
             OutfitClass::Merchant

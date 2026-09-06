@@ -1,0 +1,2577 @@
+[
+  {
+    "label": "trace",
+    "extra": {},
+    "session": "/home/ran/src/rust/cathedralbevy/logs/session_806_2026-09-06_16_32_47",
+    "elapsed_s": 28.769958010991104,
+    "all": {
+      "frames": 23,
+      "max_ms": 1299.011474609375,
+      "mean_ms": 967.64990234375,
+      "over_16_7ms": 23,
+      "over_33ms": 23,
+      "p50_ms": 999.8778686523438,
+      "p95_ms": 1115.2139892578125,
+      "p99_ms": 1299.011474609375
+    },
+    "checks": 82,
+    "all_unmapped": true,
+    "never_focused": true,
+    "window_observations": [
+      {
+        "elapsed_s": 4.67,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.95,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.26,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.52,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.12,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.39,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.65,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.91,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.22,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.49,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.78,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.08,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.35,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.65,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.94,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.23,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.52,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.79,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.05,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.35,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.64,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.93,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.23,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.51,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.8,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.1,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.4,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.69,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.98,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.28,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.57,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.84,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.14,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.43,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.73,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.03,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.33,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.63,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.93,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.22,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.48,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.77,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.04,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.32,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.62,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.89,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.19,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.49,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.8,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.09,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.36,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.67,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.97,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.24,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.54,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.83,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.12,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.41,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.71,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.01,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.31,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.61,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.88,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.18,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.48,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.77,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.07,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.37,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.67,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.98,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 25.28,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 25.58,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 25.85,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 26.15,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 26.42,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 26.7,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 27.0,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 27.3,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 27.6,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 27.86,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 28.16,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 28.46,
+        "pid": 781064,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      }
+    ]
+  },
+  {
+    "label": "stack",
+    "extra": {},
+    "session": "/home/ran/src/rust/cathedralbevy/logs/session_807_2026-09-06_16_33_56",
+    "elapsed_s": 25.48473990894854,
+    "all": {
+      "frames": 19,
+      "max_ms": 1020.9095458984375,
+      "mean_ms": 921.9476928710938,
+      "over_16_7ms": 19,
+      "over_33ms": 19,
+      "p50_ms": 1001.9794921875,
+      "p95_ms": 1011.9655151367188,
+      "p99_ms": 1020.9095458984375
+    },
+    "checks": 88,
+    "all_unmapped": true,
+    "never_focused": true,
+    "window_observations": [
+      {
+        "elapsed_s": 0.53,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 0.83,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.09,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.36,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.62,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.89,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.18,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.46,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.74,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.02,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.31,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.59,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.86,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.13,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.41,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.7,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.99,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.29,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.58,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.87,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.14,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.41,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.69,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.96,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.25,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.51,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.77,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.04,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.3,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.56,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.83,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.1,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.36,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.64,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.91,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.18,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.47,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.74,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.03,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.31,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.58,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.86,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.13,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.41,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.67,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.94,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.2,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.47,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.73,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.0,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.27,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.53,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.83,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.11,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.4,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.68,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.94,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.23,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.52,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.8,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.06,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.34,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.64,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.92,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.21,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.48,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.76,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.04,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.33,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.63,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.9,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.2,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.5,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.81,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.09,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.38,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.64,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.91,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.18,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.48,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.76,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.03,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.31,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.59,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.87,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.14,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.43,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.7,
+        "pid": 785215,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      }
+    ]
+  },
+  {
+    "label": "nosync",
+    "extra": {
+      "__GL_SYNC_TO_VBLANK": "0",
+      "__GL_GSYNC_ALLOWED": "0",
+      "__GL_VRR_ALLOWED": "0"
+    },
+    "session": "/home/ran/src/rust/cathedralbevy/logs/session_808_2026-09-06_16_35_09",
+    "elapsed_s": 25.42603826901177,
+    "all": {
+      "frames": 24,
+      "max_ms": 1018.021240234375,
+      "mean_ms": 932.0496215820312,
+      "over_16_7ms": 24,
+      "over_33ms": 24,
+      "p50_ms": 999.8403930664062,
+      "p95_ms": 1000.9871826171875,
+      "p99_ms": 1018.021240234375
+    },
+    "checks": 93,
+    "all_unmapped": true,
+    "never_focused": true,
+    "window_observations": [
+      {
+        "elapsed_s": 0.26,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 0.52,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 0.78,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.03,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.29,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.55,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.81,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.09,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.37,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.69,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.97,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.25,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.54,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.79,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.07,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.36,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.62,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.9,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.17,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.46,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.75,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.03,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.31,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.58,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.86,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.14,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.42,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.69,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.96,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.24,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.49,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.78,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.06,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.34,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.62,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.9,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.17,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.45,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.74,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.02,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.3,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.58,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.87,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.13,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.41,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.69,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.97,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.23,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.49,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.75,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.01,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.27,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.53,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.79,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.05,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.31,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.57,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.83,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.09,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.34,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.6,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.86,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.12,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.4,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.66,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.92,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.18,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.44,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.7,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.96,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.22,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.48,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.74,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.0,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.25,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.51,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.77,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.03,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.29,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.57,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.85,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.12,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.38,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.65,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.93,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.21,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.49,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.77,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.05,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.33,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.61,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 24.89,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 25.17,
+        "pid": 791036,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      }
+    ]
+  },
+  {
+    "label": "vsync",
+    "extra": {
+      "CATHEDRAL_PERF": "vsync"
+    },
+    "session": "/home/ran/src/rust/cathedralbevy/logs/session_809_2026-09-06_16_35_53",
+    "elapsed_s": 24.187615365022793,
+    "all": {
+      "frames": 23,
+      "max_ms": 1009.1253662109375,
+      "mean_ms": 928.7655639648438,
+      "over_16_7ms": 23,
+      "over_33ms": 23,
+      "p50_ms": 999.9349365234375,
+      "p95_ms": 1001.7281494140625,
+      "p99_ms": 1009.1253662109375
+    },
+    "checks": 92,
+    "all_unmapped": true,
+    "never_focused": true,
+    "window_observations": [
+      {
+        "elapsed_s": 0.26,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 0.52,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 0.78,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.04,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.3,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.56,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 1.82,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.08,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.34,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.6,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 2.85,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.11,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.37,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.63,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 3.89,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.15,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.41,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.67,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 4.93,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.19,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.45,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.71,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 5.97,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.23,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.49,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 6.75,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.01,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.27,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.53,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 7.79,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.04,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.3,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.56,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 8.82,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.08,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.34,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.6,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 9.86,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.11,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.38,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.63,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 10.89,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.15,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.41,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.67,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 11.93,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.19,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.45,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.71,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 12.97,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.23,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.49,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 13.74,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.0,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.26,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.52,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 14.78,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.04,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.3,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.56,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 15.82,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.08,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.34,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.6,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 16.86,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.12,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.38,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.64,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 17.9,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.16,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.42,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.68,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 18.93,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.19,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.45,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.71,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 19.97,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.23,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.49,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 20.75,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.01,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.27,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.53,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 21.79,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.05,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.31,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.57,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 22.83,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.09,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.35,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.62,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      },
+      {
+        "elapsed_s": 23.9,
+        "pid": 793946,
+        "window": "62914564",
+        "unmapped": true,
+        "focused": false
+      }
+    ]
+  }
+]

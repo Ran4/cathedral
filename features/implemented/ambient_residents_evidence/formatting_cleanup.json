@@ -1,0 +1,114 @@
+{
+  "method": "Restore HEAD only for files whose original and current source produce identical rustfmt output. Initial user changes AGENTS.md and docs/codex_gdd/ were untouched. No semantic changes removed.",
+  "files": [
+    {
+      "path": "crates/cathedral-backends/src/stt_realtime.rs",
+      "canonical_sha256": "d21dea4c49ff13a6a9c85fe658375dee6acdf7fc30afbf2e285140b308ee6a90"
+    },
+    {
+      "path": "crates/cathedral-backends/src/transcription.rs",
+      "canonical_sha256": "41cc5802d799466a72176d7bf507dd540de8f43850601f35b6acff4921e5c1a5"
+    },
+    {
+      "path": "crates/cathedral-sim/src/areas.rs",
+      "canonical_sha256": "7a4b038247113b84a4dd5e86853e2433f2e96b2f1a22b3f73b53951aa2f860b9"
+    },
+    {
+      "path": "crates/cathedral-sim/src/clock.rs",
+      "canonical_sha256": "0664ceac2f9e9e1120cc96eaec5f7d7ec82c80ee8a52f29d66af5466c8f8a0ed"
+    },
+    {
+      "path": "crates/cathedral-sim/src/custody.rs",
+      "canonical_sha256": "1b7368013bf3945b9f798121b9d46c5ed567a676b800631f6b18db349089074e"
+    },
+    {
+      "path": "crates/cathedral-sim/src/item.rs",
+      "canonical_sha256": "209bfdafae89b0667c0374ef4636acf0d9938d0dd04d66c4d25b17449554fbef"
+    },
+    {
+      "path": "crates/cathedral-sim/src/marks.rs",
+      "canonical_sha256": "732a4ba92e7fab6b05966b13f742be6f48061c89b88f5bfe2d6aa3cc0178db9f"
+    },
+    {
+      "path": "crates/cathedral-sim/src/nav/navigation_tests.rs",
+      "canonical_sha256": "27c0c179bd812d121cc0adc0659b64d560b248580507e96ab131e37d5985c0c5"
+    },
+    {
+      "path": "crates/cathedral-sim/src/seed.rs",
+      "canonical_sha256": "5202c436e2b25f591880e1df909b56083da8ddf51de76d94c11be6b65e318a36"
+    },
+    {
+      "path": "crates/cathedral-sim/tests/attention_tests.rs",
+      "canonical_sha256": "7c643365cad1113495f49942ef422f2343731bc535bfff9859ffba32e3b24343"
+    },
+    {
+      "path": "crates/cathedral-sim/tests/prompt_quirks.rs",
+      "canonical_sha256": "3e6f7f456833818bb3f9b7c06e2097ca8692b8bb281cbc572d0ea54136b60766"
+    },
+    {
+      "path": "crates/cathedral-sim/tests/scheduler_tests.rs",
+      "canonical_sha256": "86ed6c32db8dc7fcdfacbb3d307e6ac921889f05a1396ebed1a48a526dbf3f9b"
+    },
+    {
+      "path": "crates/cathedral-sim/tests/seed_tests.rs",
+      "canonical_sha256": "8602fb30b363324678acb3d7eab3e7112332bff5fe00ce78b5a4d135eb5ecf0f"
+    },
+    {
+      "path": "crates/cathedral-sim/tests/sim_tests.rs",
+      "canonical_sha256": "a451d5054d34122ccab986151a278845660523ceedd23d7d7397185be5e8c133"
+    },
+    {
+      "path": "src/city/mod.rs",
+      "canonical_sha256": "dbe8b78d3ce5046e1699ad0220264309b68a95c62e377d66034161e2441a695b"
+    },
+    {
+      "path": "src/city/plan.rs",
+      "canonical_sha256": "e58857285ca3dbfc5a5ea7046efb069f007adacfa3f9a0886fa0775125cf4ae5"
+    },
+    {
+      "path": "src/city/smoke.rs",
+      "canonical_sha256": "10f753b9c5a2e7e7695e8bafbb811f78f1362ef0262557e5f31bf9af10acab25"
+    },
+    {
+      "path": "src/city/vermin.rs",
+      "canonical_sha256": "5238d6b6612334bd002cc22c29ca2c9dfa72315bad03aa56b7a1c4f7a46c157e"
+    },
+    {
+      "path": "src/nav_overlay.rs",
+      "canonical_sha256": "3fbbf551f15a0a03ab6df263043d44bf99c16c465f11e913d53ec99cc8a517a7"
+    },
+    {
+      "path": "src/perf.rs",
+      "canonical_sha256": "3f7f7725393037a7afe2c9969b2b95d1fd07ee29cac3ef5692c0e88f6e9cfd57"
+    },
+    {
+      "path": "src/scene.rs",
+      "canonical_sha256": "7f490fbf73da784c83eee96306b93511be81dacb2106c5881f75f00c6392dc30"
+    },
+    {
+      "path": "src/smart_actors/area_debug.rs",
+      "canonical_sha256": "5f3bef35d84e142d3e3e1fbd22b235b2fbbb8ab6c5c3d2ca93ca621a95c1599e"
+    },
+    {
+      "path": "src/smart_actors/speech.rs",
+      "canonical_sha256": "d24e546cbbeec41aeff00f94e1f71535fe099c83c6827ff1b05ee36a0d7c5162"
+    }
+  ],
+  "minimal_field_edits": [
+    {
+      "path": "src/smart_actors/actors.rs",
+      "method": "Preserve HEAD formatting, adding only required resident: None fields to existing ActorSnapshot fixtures. Result canonicalizes identically to tested source.",
+      "canonical_sha256": "17475bd7469b7cfb25bca1af5a26531d4e5702ba7e81451100cb697f46046fe8"
+    },
+    {
+      "path": "src/smart_actors/body.rs",
+      "method": "Preserve HEAD formatting, adding only required resident: None fields to existing ActorSnapshot fixtures. Result canonicalizes identically to tested source.",
+      "canonical_sha256": "d9a9cc395e51b39ee64aeb783e0a90e574c8226c233e159e507efb8bd2b8e033"
+    },
+    {
+      "path": "src/smart_actors/hands.rs",
+      "method": "Preserve HEAD formatting, adding only required resident: None fields to existing ActorSnapshot fixtures. Result canonicalizes identically to tested source.",
+      "canonical_sha256": "c270b9677edd1e204e0c536f427613f0e78064eb6a69d53b565183a50f8befb6"
+    }
+  ]
+}

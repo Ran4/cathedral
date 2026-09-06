@@ -203,6 +203,8 @@ pub enum ActorControl {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ActorSnapshot {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resident: Option<cathedral_sim::round::residents::ResidentStatus>,
     pub id: ActorId,
     pub name_for_player: String,
     pub control: ActorControl,
@@ -371,6 +373,7 @@ impl From<&cathedral_sim::PublicSnapshot> for WorldSnapshot {
                 .actors
                 .iter()
                 .map(|actor| ActorSnapshot {
+                    resident: actor.resident.clone(),
                     id: actor_id_from_sim(&actor.id),
                     name_for_player: actor.name_for_player.clone(),
                     control: actor.control.into(),
@@ -683,6 +686,18 @@ impl WorldMirror {
         self.actor_indices
             .get(id)
             .and_then(|index| self.actors.get(*index))
+    }
+
+    /// A local routine transition changes no actor identity, inventory or pose.
+    /// Ignore already-removed actors; the next full snapshot remains complete.
+    pub fn update_resident(
+        &mut self,
+        id: &ActorId,
+        status: cathedral_sim::round::residents::ResidentStatus,
+    ) {
+        if let Some(&index) = self.actor_indices.get(id) {
+            self.actors[index].resident = Some(status);
+        }
     }
 
     pub fn item(&self, id: &ItemId) -> Option<&ItemSnapshot> {
@@ -1101,6 +1116,7 @@ mod tests {
 
     fn actor(id: &str, control: ActorControl, holds: &[&str]) -> ActorSnapshot {
         ActorSnapshot {
+            resident: None,
             id: ActorId(id.into()),
             name_for_player: id.into(),
             control,
@@ -1156,6 +1172,42 @@ mod tests {
             serde_json::from_str::<ItemId>(r#""fish""#).unwrap(),
             ItemId("fish".into())
         );
+    }
+
+    #[test]
+    fn sparse_resident_state_keeps_inventory_pose_and_revision_and_ignores_removal() {
+        use cathedral_sim::round::{
+            motion::MotionCause,
+            residents::{ResidentPhase, ResidentStatus},
+        };
+        let mut mirror = WorldMirror::default();
+        mirror.replace_snapshot(snapshot(7)).unwrap();
+        let id = ActorId("npc".into());
+        let before = mirror.actor(&id).unwrap().clone();
+        let status = ResidentStatus {
+            phase: ResidentPhase::Resting,
+            patch: "frontage".into(),
+            patch_description: "beside the court".into(),
+            spot: Some("spot".into()),
+            destination_spot: None,
+            dwell_remaining_seconds: 90.0,
+            resting_at_household_frontage: true,
+            resting_without_home: false,
+            optional_walk: false,
+            movement_cause: MotionCause::Domestic,
+            sheltered: false,
+        };
+        mirror.update_resident(&id, status.clone());
+        let current = mirror.actor(&id).unwrap();
+        assert_eq!(current.resident.as_ref(), Some(&status));
+        assert_eq!(current.position_m, before.position_m);
+        assert_eq!(current.holds, before.holds);
+        assert_eq!(mirror.revision(), Some(7));
+        mirror.update_resident(&ActorId("removed".into()), status);
+        assert_eq!(mirror.actors().len(), 2);
+        // A later cold snapshot is still complete and authoritative.
+        mirror.replace_snapshot(snapshot(8)).unwrap();
+        assert!(mirror.actor(&id).unwrap().resident.is_none());
     }
 
     #[test]
@@ -1266,7 +1318,9 @@ mod tests {
 
         let mut arrived = snapshot(2);
         // Sorted by id, "carter" lands ahead of both "npc" and "player".
-        arrived.actors.insert(0, actor("carter", ActorControl::Llm, &["cart"]));
+        arrived
+            .actors
+            .insert(0, actor("carter", ActorControl::Llm, &["cart"]));
         arrived.items.insert(0, item("cart"));
         mirror.replace_snapshot(arrived).unwrap();
 
@@ -1290,12 +1344,16 @@ mod tests {
     fn a_reordered_roster_of_the_same_length_is_reindexed() {
         let mut mirror = WorldMirror::default();
         let mut first = snapshot(1);
-        first.actors.insert(0, actor("carter", ActorControl::Llm, &["cart"]));
+        first
+            .actors
+            .insert(0, actor("carter", ActorControl::Llm, &["cart"]));
         first.items.insert(0, item("cart"));
         mirror.replace_snapshot(first).unwrap();
 
         let mut swapped = snapshot(2);
-        swapped.actors.insert(0, actor("carter", ActorControl::Llm, &["cart"]));
+        swapped
+            .actors
+            .insert(0, actor("carter", ActorControl::Llm, &["cart"]));
         // Carter and the fishmonger trade places, and so do their stacks.
         swapped.actors.swap(0, 1);
         swapped.items.insert(0, item("cart"));

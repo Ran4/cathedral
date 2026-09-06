@@ -4700,6 +4700,7 @@ mod tests {
                 player_id: ActorId("player".into()),
                 actors: vec![
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("talker".into()),
                         name_for_player: "Talker".into(),
                         control: ActorControl::Llm,
@@ -4712,6 +4713,7 @@ mod tests {
                         pockets: Vec::new(),
                     },
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("player".into()),
                         name_for_player: "You".into(),
                         control: ActorControl::Player,
@@ -4831,6 +4833,7 @@ mod tests {
             player_id: ActorId("player".into()),
             actors: vec![
                 ActorSnapshot {
+                    resident: None,
                     id: ActorId("dancer".into()),
                     name_for_player: "Dancer".into(),
                     control: ActorControl::Llm,
@@ -4843,6 +4846,7 @@ mod tests {
                     pockets: Vec::new(),
                 },
                 ActorSnapshot {
+                    resident: None,
                     id: ActorId("player".into()),
                     name_for_player: "You".into(),
                     control: ActorControl::Player,
@@ -4955,6 +4959,7 @@ mod tests {
         };
 
         let actor = |id: &str, x: f32| ActorSnapshot {
+            resident: None,
             id: ActorId(id.into()),
             name_for_player: id.into(),
             control: ActorControl::Llm,
@@ -4975,6 +4980,7 @@ mod tests {
                     actor("walker", 0.0),
                     actor("idler", 2.0),
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("player".into()),
                         name_for_player: "You".into(),
                         control: ActorControl::Player,
@@ -5104,6 +5110,7 @@ mod tests {
                 player_id: ActorId("player".into()),
                 actors: vec![
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("walker".into()),
                         name_for_player: "walker".into(),
                         control: ActorControl::Llm,
@@ -5116,6 +5123,7 @@ mod tests {
                         pockets: Vec::new(),
                     },
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("player".into()),
                         name_for_player: "You".into(),
                         control: ActorControl::Player,
@@ -5251,6 +5259,7 @@ mod tests {
                     45.0 + (index - 100) as f32 * 1.4
                 };
                 ActorSnapshot {
+                    resident: None,
                     id: ActorId(format!("actor-{index:03}")),
                     name_for_player: format!("actor-{index:03}"),
                     control: ActorControl::Llm,
@@ -5270,6 +5279,7 @@ mod tests {
             })
             .collect();
         actors.push(ActorSnapshot {
+            resident: None,
             id: ActorId("player".into()),
             name_for_player: "You".into(),
             control: ActorControl::Player,

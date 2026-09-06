@@ -537,6 +537,18 @@ fn real_nav() -> std::sync::Arc<NavData> {
     std::sync::Arc::new(NavData::from_parts(NAV_JSON, NAV_BIN).expect("the committed nav loads"))
 }
 
+/// Clock tests need a genuinely clear straight leg. (0,0) in the city asset
+/// is inside the blocked cathedral, so it is not a valid timing fixture once
+/// every movement slice checks its swept segment.
+fn timing_nav() -> std::sync::Arc<NavData> {
+    let doc = serde_json::json!({"schema_version":1,
+        "grid":{"x0":-5.0,"z0":-5.0,"cell_m":1.0,"w":1020,"h":12,
+          "agent_radius_m":0.35,"bitset_file":"fixture.bin","bitset_bits":12240,"bitset_sha256":""},
+        "nodes":[[0.0,0.0],[1000.0,0.0]],"edges":[[0,1,2.0]],
+        "places":[],"sites":[],"doors":[],"reference":{"forecourt":0}});
+    std::sync::Arc::new(NavData::from_parts(&doc.to_string(), &vec![255; 1530]).unwrap())
+}
+
 /// Movement rides the HOT channel: polling across time advances a mover's
 /// `position_m` in fixed 20 Hz slices and republishes it as
 /// `EngineMessage::Movement`, and — the whole point of the hot/cold split —
@@ -546,7 +558,7 @@ fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
     // No cognition, so nothing but movement and the clock can move the world.
     let mut engine = Engine::new(
         EngineConfig {
-            nav: Some(real_nav()),
+            nav: Some(timing_nav()),
             ..EngineConfig::default()
         },
         &seed(),
@@ -583,6 +595,7 @@ fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
                 b: "there".into(),
                 heading_to_b: true,
             }),
+            exact_local: false,
             choke_wait: 0.0,
         });
     }
@@ -653,7 +666,7 @@ fn a_long_gap_poll_caps_the_catch_up_and_snaps_the_clock_forward() {
 
     let mut engine = Engine::new(
         EngineConfig {
-            nav: Some(real_nav()),
+            nav: Some(timing_nav()),
             ..EngineConfig::default()
         },
         &seed(),
@@ -688,6 +701,7 @@ fn a_long_gap_poll_caps_the_catch_up_and_snaps_the_clock_forward() {
                 b: "there".into(),
                 heading_to_b: true,
             }),
+            exact_local: false,
             choke_wait: 0.0,
         });
     }
@@ -1363,6 +1377,7 @@ fn a_transfer_from_the_accused_hands_the_acceptor_the_priority_slot() {
         extended_character_description: String::new(),
         curiosity: None,
         generated: false,
+        generated_routine: None,
     });
     harness.engine.world_mut().notices.raise(
         "a fisherman in a wet apron".into(),

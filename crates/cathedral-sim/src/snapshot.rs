@@ -78,6 +78,8 @@ pub struct PublicMark {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ActorSnapshot {
     pub id: ActorId,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resident: Option<crate::round::residents::ResidentStatus>,
     /// `"You"`, the real name if the player knows them, else
     /// `"a stranger (id {id})"`.
     pub name_for_player: String,

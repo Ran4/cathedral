@@ -890,6 +890,7 @@ mod tests {
     #[test]
     fn stranger_nameplates_hide_the_actor_id() {
         let actor = ActorSnapshot {
+            resident: None,
             id: ActorId("pv3k4b".into()),
             name_for_player: "a stranger (id pv3k4b)".into(),
             control: ActorControl::Llm,
@@ -936,6 +937,7 @@ mod tests {
 
         let mut mirror = WorldMirror::default();
         let actor = |id: &str, appearance: AppearanceSnapshot| ActorSnapshot {
+            resident: None,
             id: ActorId(id.into()),
             name_for_player: id.into(),
             control: ActorControl::Llm,
@@ -975,6 +977,7 @@ mod tests {
                         },
                     ),
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("player".into()),
                         name_for_player: "You".into(),
                         control: ActorControl::Player,
@@ -1075,6 +1078,7 @@ mod tests {
     fn stationary_actor_projection_reasserts_authoritative_spawn_positions() {
         let mut mirror = WorldMirror::default();
         let actor = |id: &str, name: &str, position_m: Position| ActorSnapshot {
+            resident: None,
             id: ActorId(id.into()),
             name_for_player: name.into(),
             control: ActorControl::Llm,
@@ -1095,6 +1099,7 @@ mod tests {
                     actor("sv3n1", "Sven", Position::new(-1.8, 0.91, 114.0).unwrap()),
                     actor("k0fb1", "Ilse", Position::new(1.8, 0.91, 114.0).unwrap()),
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("player".into()),
                         name_for_player: "You".into(),
                         control: ActorControl::Player,
@@ -1178,6 +1183,7 @@ mod tests {
     #[test]
     fn actor_labels_hang_from_two_shared_layers_rather_than_a_root_each() {
         let actor = |id: &str, z: f32| ActorSnapshot {
+            resident: None,
             id: ActorId(id.into()),
             name_for_player: id.into(),
             control: ActorControl::Llm,
@@ -1194,6 +1200,7 @@ mod tests {
         // exactly as the sibling tests above do.
         let snapshot = |world_revision: u64, mut actors: Vec<ActorSnapshot>| {
             actors.push(ActorSnapshot {
+                resident: None,
                 id: ActorId("player".into()),
                 name_for_player: "You".into(),
                 control: ActorControl::Player,

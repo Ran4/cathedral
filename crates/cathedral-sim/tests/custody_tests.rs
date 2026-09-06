@@ -62,6 +62,7 @@ fn person(id: &str, name: &str, x: f64, occupation: Option<&str>) -> Character {
         extended_character_description: String::new(),
         curiosity: None,
         generated: false,
+        generated_routine: None,
     });
     Character::from_sheet(CharacterSheet {
         pockets: Vec::new(),
@@ -149,7 +150,12 @@ fn law_world() -> World {
     world.nav = Some(nav);
     // Ashe holds hard (`bailiff_and_gaoler`), Trask does not (`revenue_worker`);
     // `break_free_chance` reads exactly that difference off their sheets.
-    world.add_character(person("srgnt", "Havise Ashe", 0.0, Some("bailiff_and_gaoler")));
+    world.add_character(person(
+        "srgnt",
+        "Havise Ashe",
+        0.0,
+        Some("bailiff_and_gaoler"),
+    ));
     world.add_character(person("wrdn", "Odo Trask", 0.5, Some("revenue_worker")));
     world.add_character(person("tamrd", "Tam Rud", 1.0, None));
     world.add_character(person("gossp", "Ulla Brant", 2.0, Some("baker")));
@@ -240,7 +246,9 @@ fn a_seizure_needs_the_law_four_metres_and_a_word_in_the_same_turn() {
     let error = say_and_seize(&mut world, "gossp", "tamrd").unwrap_err();
     assert_eq!(error.code, ActionErrorCode::InvalidAction);
     assert!(
-        error.message.contains("only those who serve the city's law"),
+        error
+            .message
+            .contains("only those who serve the city's law"),
         "{error}"
     );
 
@@ -452,7 +460,11 @@ fn seize_is_refused_past_the_confinement_cap_and_the_authored_inmates_never_coun
         world.add_character(inmate);
         world.custody.seed_inmate(id, stone_house.clone());
     }
-    assert_eq!(world.custody.arrest_count(), 0, "the authored are not arrests");
+    assert_eq!(
+        world.custody.arrest_count(),
+        0,
+        "the authored are not arrests"
+    );
     raise_word(&mut world, "srgnt", "tamrd");
     say_and_seize(&mut world, "srgnt", "tamrd").expect("a full gaol of authored inmates is room");
     assert_eq!(world.custody.arrest_count(), 1);
@@ -474,7 +486,9 @@ fn seize_is_refused_past_the_confinement_cap_and_the_authored_inmates_never_coun
     let error = say_and_seize(&mut world, "srgnt", "tamrd").unwrap_err();
     assert_eq!(error.code, ActionErrorCode::CustodyFull);
     assert!(
-        error.message.contains("see one released before you take another"),
+        error
+            .message
+            .contains("see one released before you take another"),
         "the refusal names the way out: {error}"
     );
 
@@ -532,7 +546,10 @@ fn custody_adds_one_sheet_section_and_a_verb_and_removes_both_on_release() {
     world.custody.grab(&prisoner, officer.clone());
     let held = render_prompt(&world, &prisoner, None, &env).unwrap();
     assert!(held.contains("a hand is on your arm"));
-    assert!(held.contains("struggle {}"), "the verb arrives with the grip");
+    assert!(
+        held.contains("struggle {}"),
+        "the verb arrives with the grip"
+    );
     assert!(
         held.contains("You are in the law's hands"),
         "and the paragraph that explains it: {held}"
@@ -551,7 +568,10 @@ fn custody_adds_one_sheet_section_and_a_verb_and_removes_both_on_release() {
         escort.contains(prisoner.as_str()),
         "and it names the prisoner by id"
     );
-    assert!(!escort.contains("**you_are_held**"), "the officer is not held");
+    assert!(
+        !escort.contains("**you_are_held**"),
+        "the officer is not held"
+    );
 
     // The bystander two doors down never moves a byte.
     assert_eq!(
@@ -561,7 +581,10 @@ fn custody_adds_one_sheet_section_and_a_verb_and_removes_both_on_release() {
 
     // And released, the prisoner's own sheet is byte-identical to before.
     world.custody.release(&prisoner);
-    assert_eq!(render_prompt(&world, &prisoner, None, &env).unwrap(), before);
+    assert_eq!(
+        render_prompt(&world, &prisoner, None, &env).unwrap(),
+        before
+    );
 }
 
 /// M4e: *"gaol fees are fixed publicly; inventing a fee is extortion"*
@@ -655,11 +678,19 @@ fn only_the_law_within_hearing_opens_the_door() {
     world.custody.seed_inmate(actor("tamrd"), stone_house());
 
     // A baker standing right there is not the law, whatever she thinks.
-    let error = apply_action(&mut world, &actor("gossp"), "release", &json!({"person": "tamrd"}))
-        .unwrap_err();
+    let error = apply_action(
+        &mut world,
+        &actor("gossp"),
+        "release",
+        &json!({"person": "tamrd"}),
+    )
+    .unwrap_err();
     assert_eq!(error.code, ActionErrorCode::InvalidAction);
     assert!(error.message.contains("not yours to release"), "{error}");
-    assert!(world.custody.holds(&actor("tamrd")), "and she opened nothing");
+    assert!(
+        world.custody.holds(&actor("tamrd")),
+        "and she opened nothing"
+    );
 
     // The law standing over them is the keeper, though they took nobody and
     // hold nobody: this is the whole of "confined by a person, not a door".
@@ -667,13 +698,23 @@ fn only_the_law_within_hearing_opens_the_door() {
     // …but only while they are actually standing there.
     move_to(&mut world, "wrdn", 45.0);
     assert!(!custody::keeps(&world, &actor("wrdn"), &actor("tamrd")));
-    let error = apply_action(&mut world, &actor("wrdn"), "release", &json!({"person": "tamrd"}))
-        .unwrap_err();
+    let error = apply_action(
+        &mut world,
+        &actor("wrdn"),
+        "release",
+        &json!({"person": "tamrd"}),
+    )
+    .unwrap_err();
     assert_eq!(error.code, ActionErrorCode::InvalidAction);
 
     move_to(&mut world, "wrdn", 0.5);
-    apply_action(&mut world, &actor("wrdn"), "release", &json!({"person": "tamrd"}))
-        .expect("the keeper at the threshold opens it");
+    apply_action(
+        &mut world,
+        &actor("wrdn"),
+        "release",
+        &json!({"person": "tamrd"}),
+    )
+    .expect("the keeper at the threshold opens it");
     assert!(!world.custody.holds(&actor("tamrd")));
 }
 
@@ -913,7 +954,9 @@ fn struggle_answers_only_a_hand_on_the_arm() {
         "{in_charge}"
     );
     assert!(
-        in_charge.message.contains("you may simply walk away from it"),
+        in_charge
+            .message
+            .contains("you may simply walk away from it"),
         "the refusal says what to do instead: {in_charge}"
     );
 
@@ -952,7 +995,10 @@ fn one_hand_can_be_torn_free_of_and_two_cannot() {
     let one = custody::break_free_chance(&law_world(), &thief, &[trask.clone()]);
     let harder = custody::break_free_chance(&law_world(), &thief, &[ashe.clone()]);
     let two = custody::break_free_chance(&law_world(), &thief, &[trask.clone(), ashe.clone()]);
-    assert!(one > 0.5, "one ordinary hand is a coin-flip and a bit: {one}");
+    assert!(
+        one > 0.5,
+        "one ordinary hand is a coin-flip and a bit: {one}"
+    );
     assert!(harder < one, "the gaoler holds harder: {harder} < {one}");
     assert!(two < harder / 4.0, "two hands drag you: {two}");
 
@@ -963,7 +1009,10 @@ fn one_hand_can_be_torn_free_of_and_two_cannot() {
     world.custody.grab(&thief, trask.clone());
     let broke = apply_action(&mut world, &thief, "struggle", &json!({})).unwrap();
     assert!(broke.contains("tears free and runs"), "{broke}");
-    assert!(!world.custody.holds(&thief), "free is free, not merely loose");
+    assert!(
+        !world.custody.holds(&thief),
+        "free is free, not merely loose"
+    );
 
     // Two holders, the same thief, the same first attempt: held fast.
     let mut world = law_world();
@@ -1228,7 +1277,10 @@ fn a_summons_names_the_next_bell_and_only_settling_answers_it() {
         &json!({"notice_id": id}),
     )
     .unwrap_err();
-    assert!(again.message.contains("already carries a summons"), "{again}");
+    assert!(
+        again.message.contains("already carries a summons"),
+        "{again}"
+    );
 
     // Handing the officer a purse is not answering: the acceptor judges, and
     // until they say so the summons stands.
@@ -1250,7 +1302,10 @@ fn a_summons_names_the_next_bell_and_only_settling_answers_it() {
 
     // The bell rings on a word still standing.
     assert!(
-        world.notices.issue_warrants(at(400.0).game_days()).is_empty(),
+        world
+            .notices
+            .issue_warrants(at(400.0).game_days())
+            .is_empty(),
         "the Kindling has not rung yet"
     );
     assert_eq!(world.notices.issue_warrants(at(500.0).game_days()), [id]);
@@ -1307,7 +1362,10 @@ fn the_station_picker_takes_the_nearest_posting_and_never_the_stone_house() {
     assert_eq!(near_toll.name, "Tallage toll-house");
     assert!(!near_toll.stone_house);
     let near_gate = custody::nearest_station(&places, Vec3::new(45.0, 0.0, 0.0)).unwrap();
-    assert_eq!(near_gate.name, "The River Gate", "nearest, not first-listed");
+    assert_eq!(
+        near_gate.name, "The River Gate",
+        "nearest, not first-listed"
+    );
 
     // Standing on the Stone House's own doorstep still sends you up the street.
     let underfoot = custody::nearest_station(&places, Vec3::ZERO).unwrap();
@@ -1365,7 +1423,10 @@ fn a_held_actor_follows_their_escort_and_is_committed_at_the_station() {
     // must not fight the escort for the same position.
     let step = custody::follow_escorts(&mut world, 1.0);
     assert_eq!(step.moved, [actor("tamrd")]);
-    assert!(step.committed.is_empty(), "the station is ten metres off yet");
+    assert!(
+        step.committed.is_empty(),
+        "the station is ten metres off yet"
+    );
     let officer_at = world.characters[&actor("srgnt")].position_m();
     let shoulder = world.characters[&actor("tamrd")].position_m();
     assert!((shoulder.x - officer_at.x).abs() < 1e-9, "{shoulder:?}");
@@ -1443,8 +1504,14 @@ fn a_warrant_goes_to_the_gaol_and_every_lesser_word_to_the_nearest_arch() {
     world.current_time = Some(at(60.0));
     say_and_seize(&mut world, "srgnt", "tamrd").expect("your own eyes, within the hour");
     let record = world.custody.get(&actor("tamrd")).unwrap();
-    assert!(!record.station.stone_house, "a lesser word is not gaol business");
-    assert_eq!(record.station.name, "The River Gate", "the nearest arch to x 38");
+    assert!(
+        !record.station.stone_house,
+        "a lesser word is not gaol business"
+    );
+    assert_eq!(
+        record.station.name, "The River Gate",
+        "the nearest arch to x 38"
+    );
 
     // Door one — the warrant. Same street, same officer, same four metres; the
     // only thing that changed is what the ward is saying, and it is the gaol.
@@ -1452,8 +1519,13 @@ fn a_warrant_goes_to_the_gaol_and_every_lesser_word_to_the_nearest_arch() {
     move_to(&mut world, "tamrd", 38.0);
     move_to(&mut world, "srgnt", 38.0);
     let id = raise_word(&mut world, "wrdn", "tamrd");
-    apply_action(&mut world, &actor("wrdn"), "summon", &json!({"notice_id": id}))
-        .expect("the law may summon on its own word");
+    apply_action(
+        &mut world,
+        &actor("wrdn"),
+        "summon",
+        &json!({"notice_id": id}),
+    )
+    .expect("the law may summon on its own word");
     world.current_time = Some(at(500.0));
     assert_eq!(world.notices.issue_warrants(at(500.0).game_days()), [id]);
     say_and_seize(&mut world, "srgnt", "tamrd").expect("a warrant lets any of the law take them");
@@ -1472,7 +1544,11 @@ fn a_warrant_goes_to_the_gaol_and_every_lesser_word_to_the_nearest_arch() {
 #[test]
 fn a_visitor_at_the_grate_is_heard_by_the_whole_cell() {
     let mut world = law_world();
-    for (id, name) in [("in1", "Lise Skell"), ("in2", "Aldith Hobbe"), ("in3", "Sible Rud")] {
+    for (id, name) in [
+        ("in1", "Lise Skell"),
+        ("in2", "Aldith Hobbe"),
+        ("in3", "Sible Rud"),
+    ] {
         world.add_character(person(id, name, 1.5, None));
         world.custody.seed_inmate(actor(id), stone_house());
     }
@@ -1534,6 +1610,7 @@ fn a_committed_body_keeps_no_errand_and_no_path_for_a_mover_to_follow() {
             speed: cathedral_sim::WALK_SPEED_MPS,
             gait_phase: 0.0,
             patrol: None,
+            exact_local: false,
             choke_wait: 0.0,
         });
     }
@@ -1573,7 +1650,10 @@ fn a_confined_inmate_never_walks_out_by_standing_still() {
         f64::hypot(at.x, at.z) > custody::STATION_ARRIVE_RADIUS_M,
         "sitting against the back wall is further than arriving"
     );
-    assert!(f64::hypot(at.x, at.z) <= custody::COMMITTED_ROAM_M, "and is not leaving");
+    assert!(
+        f64::hypot(at.x, at.z) <= custody::COMMITTED_ROAM_M,
+        "and is not leaving"
+    );
 }
 
 // ---------------------------------------------------------- the departed escort

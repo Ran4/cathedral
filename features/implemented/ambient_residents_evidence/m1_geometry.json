@@ -1,0 +1,93 @@
+{
+  "patches": 2665,
+  "capacity": 9171,
+  "home_connected_capacity": 7093,
+  "home_connected_patches": 2155,
+  "home_connected_doors": 939,
+  "housed_capacity_by_door_cap": {
+    "1": 939,
+    "2": 1878,
+    "3": 2739,
+    "4": 3541,
+    "5": 4263
+  },
+  "patch_size_histogram": {
+    "2": 737,
+    "3": 686,
+    "4": 571,
+    "5": 671
+  },
+  "minimum_spot_spacing_m": 1.6007810593582121,
+  "minimum_door_distance_m": 2.1213203435596424,
+  "minimum_through_centreline_distance_m": 1.4797725505572166,
+  "minimum_physical_wall_distance_m": 0.5637364987108985,
+  "wards": {
+    "Bell Ward": 225,
+    "Bell and Sluice Wards": 3383,
+    "Cinder Ward": 575,
+    "City wall": 77,
+    "Cloth Ward": 880,
+    "Fabric Ward": 336,
+    "Outer wards": 1363,
+    "Parish reserve": 114,
+    "Reed Ward": 942,
+    "Sluice Ward": 37,
+    "Wallwright Ward": 345,
+    "Weigh Ward": 432,
+    "Wick Ward": 462
+  },
+  "probe_views": {
+    "wickmarket": {
+      "capacity": 15,
+      "example_spots": [
+        "rp_omb_f0057_e1_c0_s0",
+        "rp_omb_f0057_e1_c0_s1",
+        "rp_omb_f0057_e1_c0_s2",
+        "rp_omb_f0057_e1_c0_s3"
+      ]
+    },
+    "tenterhook_lane": {
+      "capacity": 14,
+      "example_spots": [
+        "rp_named_cloth_hall_4_e0_c2_s11",
+        "rp_named_cloth_hall_4_e0_c2_s12",
+        "rp_named_cloth_hall_4_e1_c0_s0",
+        "rp_named_cloth_hall_4_e1_c0_s1"
+      ]
+    },
+    "burnt_court": {
+      "capacity": 11,
+      "example_spots": [
+        "rp_omb_f0436_e2_c0_s1",
+        "rp_omb_f0436_e2_c0_s2",
+        "rp_omb_f0436_e2_c0_s3",
+        "rp_omb_f0436_e3_c0_s0"
+      ]
+    },
+    "needle": {
+      "capacity": 1,
+      "example_spots": [
+        "rp_omb_f0144_e3_c0_s4"
+      ]
+    }
+  },
+  "deterministic_rebake": true,
+  "request_capacity": [
+    {
+      "requested": 1000,
+      "placeable": 1000,
+      "unplaced": 0
+    },
+    {
+      "requested": 2000,
+      "placeable": 2000,
+      "unplaced": 0
+    },
+    {
+      "requested": 20000,
+      "placeable": 9171,
+      "unplaced": 10829
+    }
+  ],
+  "navigation_sha256": "813ab540f6139a6caf579efc43054f57f4b69a42dd140887bc17dd1a0ca244bd"
+}

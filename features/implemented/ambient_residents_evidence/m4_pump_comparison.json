@@ -1,0 +1,21 @@
+{
+  "window_simulation_seconds": 600,
+  "population": 1000,
+  "before": {
+    "pump_seconds": 68.79037165299998,
+    "polls": 12000,
+    "mean_pump_ms": 5.732530971083332
+  },
+  "after": {
+    "pump_seconds": 54.67544482199984,
+    "polls": 12000,
+    "snapshots": 220,
+    "resident_status_updates": 12717,
+    "mean_pump_ms": 4.556287068499986
+  },
+  "samples": 21,
+  "motion_censuses_identical": true,
+  "before_binary_sha256": "3a58039f04d0f42264432bb5673e1c73f95df7bdadf240ca3d8ad43ee36cb9ff",
+  "after_binary_sha256": "6154d1f26dfd6b59eaeac5f35597827bef66d8a8432e0e33668d671a1ff9ecd8",
+  "reduction_percent": 20.51875355783832
+}

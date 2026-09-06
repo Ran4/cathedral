@@ -72,7 +72,10 @@ pub use character::{
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
 };
-pub use crowd::{MAX_EXTRA_AMBIENT_NPCS, extra_ambient_sheets, spread_over_walkable};
+pub use crowd::{
+    CrowdPlacement, GeneratedCrowd, GeneratedRoutine, MAX_EXTRA_AMBIENT_NPCS, WorkerOverride,
+    extra_ambient_sheets, generate_ambient, spread_over_walkable,
+};
 pub use dogs::{DOG_SETTLED_MPS, DOG_TROT_MPS, Dog, DogCoat, DogView};
 pub use engine::{
     ActorMotion, Capabilities, CivicRope, Engine, EngineCommand, EngineConfig, EngineMessage,

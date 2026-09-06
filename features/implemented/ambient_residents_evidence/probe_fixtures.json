@@ -1,0 +1,61 @@
+{
+  "source_seed": 11810721,
+  "coordinates": "Current September 2026 city, X/Y/Z metres; yaw 0 looks -Z. These are observation fixtures, not valid standing-slot allocations.",
+  "repeat_elapsed_seconds": [30, 180, 600],
+  "clock": {"seconds_per_day": 3600, "start_day": 2, "start_office": "dayspring", "debug_scale": 1},
+  "weather": "clear",
+  "populations": [1000, 2000],
+  "views": [
+    {
+      "id": "wickmarket",
+      "kind": "open square",
+      "nav_node": 14,
+      "centre_xz": [-17.375, 248.375],
+      "observation_bounds_xz": [-45, 220, 15, 282],
+      "ground_tp": [-17.375, 1.7, 268.375, 0, 0],
+      "elevated_tp": [-17.375, 26, 285.375, 0, -35],
+      "route_edges": [[13, 14], [14, 15], [14, 602]],
+      "baseline_half_width_m": 0.6,
+      "check": "Watch the crossing procession and perimeter distribution; preserve access to stalls and the route through the square."
+    },
+    {
+      "id": "tenterhook_lane",
+      "kind": "residential frontage and door approach",
+      "nav_node": 511,
+      "centre_xz": [124.625, 196.125],
+      "observation_bounds_xz": [112, 179, 139, 208],
+      "ground_tp": [124.625, 1.7, 196.125, -30.6, 0],
+      "elevated_tp": [124.625, 22, 211.125, 0, -55],
+      "door": {"building": "omb_i0289", "edge": 0, "node": 3298, "point_xz": [119.625, 193.375]},
+      "route_edges": [[64, 511], [511, 3298]],
+      "baseline_half_width_m": 0.6,
+      "check": "Frontage must stay populated after startup without occupying the door's swept approach."
+    },
+    {
+      "id": "burnt_court",
+      "kind": "court and connecting corner",
+      "nav_node": 513,
+      "centre_xz": [-123.375, 166.375],
+      "observation_bounds_xz": [-142, 151, -112, 188],
+      "ground_tp": [-123.375, 1.7, 166.375, 152.6, 0],
+      "elevated_tp": [-123.375, 24, 191.375, 0, -45],
+      "route_edges": [[68, 513], [513, 2357]],
+      "baseline_half_width_m": 0.6,
+      "door": {"building": "omb_f0437", "edge": 2, "node": 2358, "point_xz": [-134.875, 180.125]},
+      "check": "Reach off-graph court spots; preserve the wall corner and entry, and avoid a single shared arrival point."
+    },
+    {
+      "id": "needle",
+      "kind": "narrow passage and junction",
+      "nav_node": 68,
+      "centre_xz": [-113.375, 161.125],
+      "observation_bounds_xz": [-130, 140, -97, 177],
+      "ground_tp": [-113.375, 1.7, 161.125, 41.9, 0],
+      "elevated_tp": [-113.375, 22, 183.125, 0, -45],
+      "route_edges": [[67, 68], [68, 69], [68, 311], [68, 513], [68, 1278]],
+      "baseline_half_width_m": 0.6,
+      "check": "Keep the choke walkable and the claim/queue honest. Inspect whole swept segments at corners, not only endpoints."
+    }
+  ],
+  "validation": "Place/node/door ids and edge widths read from current navigation.json; all ground-camera XZ points are walkable in navigation.bin. Camera framing is a deterministic starting plan, to be visually verified and adjusted in M4. Elevated XZ is observational, not a standing position."
+}

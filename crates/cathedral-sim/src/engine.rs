@@ -731,6 +731,11 @@ pub enum EngineMessage {
     Movement {
         moved: Vec<ActorMotion>,
     },
+    /// Local routine changes on the hot channel. Countdown alone is not a
+    /// publication; initial state and actor lifetime still use full snapshots.
+    ResidentStates {
+        residents: Vec<(ActorId, crate::round::residents::ResidentStatus)>,
+    },
     /// The squares' street lamps (M7) — the whole set, republished only when a
     /// lamp changes (the seed counts, so the host learns the positions before
     /// dusk). Like the clock, it never bumps `world_revision`: the host mirrors
@@ -1378,6 +1383,7 @@ impl Engine {
                 snapshot: self.snapshot(),
             });
             self.last_snapshot_revision = self.world.world_revision;
+            self.round.drain_resident_updates(&self.world);
             if !self.capabilities.llm {
                 // Said once, after ready, exactly as Python did
                 // (`server.py:856-859`) — the HUD shows the cast as offline
@@ -1935,6 +1941,21 @@ impl Engine {
     /// A behavioural census of the enrolled cast for `--census-by-area`.
     pub fn round_census(&self, now: f64) -> Census {
         self.round.census(&self.world, &self.clock, now)
+    }
+
+    /// Opt-in actual-motion evidence, sampled across one normal movement poll.
+    pub fn motion_positions(&self) -> round::motion::MotionPositions {
+        round::motion::positions(&self.world, &self.round)
+    }
+
+    /// Count a measured poll against its original positions and controllers.
+    pub fn motion_census(
+        &self,
+        probe: &mut round::motion::MotionProbe,
+        before: &round::motion::MotionPositions,
+        now: f64,
+    ) -> round::motion::MotionCensus {
+        probe.sample(&self.world, &self.round, &self.clock, now, before)
     }
 
     /// The pollen census for `--trace-pollen` — `round_census`'s idiom exactly: a
@@ -3684,9 +3705,12 @@ impl Engine {
                 EventType::Gesture => flush_gesture(&event, out),
             }
         }
+        let residents = self.round.drain_resident_updates(&self.world);
         if self.world.world_revision > self.last_snapshot_revision {
             out.push(EngineMessage::Snapshot(self.snapshot()));
             self.last_snapshot_revision = self.world.world_revision;
+        } else if !residents.is_empty() {
+            out.push(EngineMessage::ResidentStates { residents });
         }
     }
 

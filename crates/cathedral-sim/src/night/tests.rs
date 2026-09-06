@@ -78,6 +78,7 @@ fn character(id: &str, name: &str, significance: Significance, ward: PlanningWar
             extended_character_description: String::new(),
             curiosity: None,
             generated: false,
+            generated_routine: None,
         }),
         presence: crate::Presence::InCity,
         presence_epoch: 0,

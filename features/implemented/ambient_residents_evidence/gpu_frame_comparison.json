@@ -1,0 +1,299 @@
+{
+  "selection": "All complete 60-second intervals at exact fixed Needle camera, estimated virtual start>=90s and end<=600s. No per-frame exclusions or threshold-based removal of spikes.",
+  "settings": "RTX4070,Vulkan,1280x720logical,normal1x,3600s/day,clear. Current shots physically1493x840. Before geometry isM1; final geometry isM3.",
+  "causal_limit": "Descriptive observations only: before runs overlapped implementation activity and microphone was enabled. No controlled causal overall GPU speedup is established. Full minute summaries retain startup and late pacing outside these intervals.",
+  "records": [
+    {
+      "population": 1000,
+      "version": "before",
+      "session": "/home/ran/src/rust/cathedralbevy/logs/session_810_2026-09-06_16_48_02",
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "wall_intervals": [
+        [
+          480,
+          540
+        ],
+        [
+          540,
+          600
+        ],
+        [
+          600,
+          660
+        ],
+        [
+          660,
+          720
+        ],
+        [
+          780,
+          840
+        ],
+        [
+          840,
+          900
+        ],
+        [
+          900,
+          960
+        ]
+      ],
+      "estimated_virtual_intervals": [
+        [
+          92.48,
+          152.49
+        ],
+        [
+          152.49,
+          212.49
+        ],
+        [
+          212.49,
+          272.49
+        ],
+        [
+          272.49,
+          332.49
+        ],
+        [
+          392.49,
+          452.47
+        ],
+        [
+          452.47,
+          510.87
+        ],
+        [
+          510.87,
+          565.57
+        ]
+      ],
+      "frames": 29275,
+      "mean_ms": 14.34232656169406,
+      "p50_ms": 11.34000015258789,
+      "p95_ms": 26.969999313354492,
+      "max_ms": 1266.93994140625,
+      "frames_above_500ms": 6,
+      "perf_frames_sha256": "270d5d864cff9e8baa3bfe3e514b34212c7947a0aa40707269008f302be4cc56"
+    },
+    {
+      "population": 1000,
+      "version": "final",
+      "session": "/home/ran/src/rust/cathedralbevy/logs/session_812_2026-09-06_19_30_59",
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "wall_intervals": [
+        [
+          120,
+          180
+        ],
+        [
+          240,
+          300
+        ],
+        [
+          300,
+          360
+        ],
+        [
+          360,
+          420
+        ],
+        [
+          420,
+          480
+        ],
+        [
+          480,
+          540
+        ],
+        [
+          540,
+          600
+        ]
+      ],
+      "estimated_virtual_intervals": [
+        [
+          118.7,
+          178.7
+        ],
+        [
+          238.64,
+          298.64
+        ],
+        [
+          298.64,
+          357.57
+        ],
+        [
+          357.57,
+          417.57
+        ],
+        [
+          417.57,
+          477.02
+        ],
+        [
+          477.02,
+          537.04
+        ],
+        [
+          537.04,
+          597.03
+        ]
+      ],
+      "frames": 37895,
+      "mean_ms": 11.083290143408739,
+      "p50_ms": 8.539999961853027,
+      "p95_ms": 21.940000534057617,
+      "max_ms": 799.1699829101562,
+      "frames_above_500ms": 1,
+      "perf_frames_sha256": "d73f87126a2f7f2ca1a3b1434ce03f9327ee1314c57a7db01e4b1cd07f2b0e05"
+    },
+    {
+      "population": 2000,
+      "version": "before",
+      "session": "/home/ran/src/rust/cathedralbevy/logs/session_811_2026-09-06_17_29_55",
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "wall_intervals": [
+        [
+          780,
+          840
+        ],
+        [
+          840,
+          900
+        ],
+        [
+          900,
+          960
+        ],
+        [
+          960,
+          1020
+        ],
+        [
+          1020,
+          1080
+        ],
+        [
+          1080,
+          1140
+        ],
+        [
+          1140,
+          1200
+        ]
+      ],
+      "estimated_virtual_intervals": [
+        [
+          181.81,
+          241.81
+        ],
+        [
+          241.81,
+          301.78
+        ],
+        [
+          301.78,
+          359.27
+        ],
+        [
+          359.27,
+          419.15
+        ],
+        [
+          419.15,
+          479.15
+        ],
+        [
+          479.15,
+          539.15
+        ],
+        [
+          539.15,
+          599.14
+        ]
+      ],
+      "frames": 23377,
+      "mean_ms": 17.966204382424053,
+      "p50_ms": 16.420000076293945,
+      "p95_ms": 29.59000015258789,
+      "max_ms": 928.1099853515625,
+      "frames_above_500ms": 2,
+      "perf_frames_sha256": "4d161419b5a08ed2d558a9c4c386c94a09745f08e1ee953739abaa6fc183ecf3"
+    },
+    {
+      "population": 2000,
+      "version": "final",
+      "session": "/home/ran/src/rust/cathedralbevy/logs/session_813_2026-09-06_20_02_28",
+      "camera": "tp -113.375 22 183.125 0 -45",
+      "wall_intervals": [
+        [
+          120,
+          180
+        ],
+        [
+          240,
+          300
+        ],
+        [
+          300,
+          360
+        ],
+        [
+          360,
+          420
+        ],
+        [
+          420,
+          480
+        ],
+        [
+          480,
+          540
+        ],
+        [
+          540,
+          600
+        ]
+      ],
+      "estimated_virtual_intervals": [
+        [
+          118.41,
+          178.42
+        ],
+        [
+          238.41,
+          298.41
+        ],
+        [
+          298.41,
+          358.41
+        ],
+        [
+          358.41,
+          418.42
+        ],
+        [
+          418.42,
+          478.42
+        ],
+        [
+          478.42,
+          536.13
+        ],
+        [
+          536.13,
+          596.14
+        ]
+      ],
+      "frames": 32527,
+      "mean_ms": 12.912626433673756,
+      "p50_ms": 9.399999618530273,
+      "p95_ms": 26.489999771118164,
+      "max_ms": 681.6199951171875,
+      "frames_above_500ms": 1,
+      "perf_frames_sha256": "ea8a5980ba66a0e447edd9853189bf6eed894eca7b6d883de471eea597d98f01"
+    }
+  ]
+}

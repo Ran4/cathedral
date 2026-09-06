@@ -1341,6 +1341,7 @@ mod tests {
                 player_id: ActorId("player".into()),
                 actors: vec![
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("player".into()),
                         name_for_player: "You".into(),
                         control: ActorControl::Player,
@@ -1353,6 +1354,7 @@ mod tests {
                         pockets: Vec::new(),
                     },
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("ilse".into()),
                         name_for_player: "Ilse".into(),
                         control: ActorControl::Llm,
@@ -1427,6 +1429,7 @@ mod tests {
                 world_revision: 1,
                 player_id: ActorId("player".into()),
                 actors: vec![ActorSnapshot {
+                    resident: None,
                     id: ActorId("player".into()),
                     name_for_player: "You".into(),
                     control: ActorControl::Player,
@@ -1717,6 +1720,7 @@ mod tests {
                 player_id: ActorId("player".into()),
                 actors: vec![
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("player".into()),
                         name_for_player: "You".into(),
                         control: ActorControl::Player,
@@ -1729,6 +1733,7 @@ mod tests {
                         pockets: Vec::new(),
                     },
                     ActorSnapshot {
+                        resident: None,
                         id: ActorId("wyn".into()),
                         name_for_player: "Wyn".into(),
                         control: ActorControl::Llm,

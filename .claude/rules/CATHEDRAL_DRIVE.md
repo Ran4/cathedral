@@ -59,7 +59,18 @@ Actions (each fires ~0.5 s after the previous):
   (`;` cannot appear in the text).
 - `click <Name substring>` — case-insensitive match on a UI element's `Name`.
 - `shot <name>` — capture a PNG to `logs/latest_session/screenshots/<name>.png`.
-- `sleep <seconds>` — wait.
+- `sleep <seconds>` — wait on real elapsed time.
+- `sleep-sim <seconds>` — wait for that much existing virtual simulation time.
+  This does not advance, accelerate, or unpause the clock. Use it for timed
+  resident captures when hidden GPU frame pacing varies. Both waits require a
+  finite nonnegative duration. Set the existing drive timeout generously for
+  slow renders; a paused simulation intentionally leaves `sleep-sim` waiting.
+- For population verification, `CATHEDRAL_DRIVE_RESIDENT_EVIDENCE=1` writes a
+  sibling JSON at each `shot` request with authoritative generated positions,
+  presence, needs, resident status, speed/path state, and current virtual/game
+  clock. It reads live state without moving actors. Image completion is
+  asynchronous; these are request-time observations. A single speed/path/cause
+  record does not establish displacement; compare positions across observations.
 - `wait-online` — block until the actor engine is ready (30 s timeout).
 - `seed-fact <fact_id> [-> <ward>]` — tell the player an authored `facts.json`
   row so its receipt can be read without waiting for the city's next event.
@@ -172,6 +183,12 @@ Actions (each fires ~0.5 s after the previous):
   captures a body from every side without knowing which way it happens to be
   turned. The cast walks, so expect ~1 m of drift per action gap: shoot from
   4 m+ and skip the `sleep`. A handle matching nobody is logged and skipped.
+- `frame @resident-moving`, `frame @resident-lingering`,
+  `frame @resident-sheltered`, and `frame @resident-resting` select the nearest
+  present resident in that authoritative state; `frame @last` follows the actor last framed. These use
+  the same camera operation and log the selected id. They move only the player
+  camera. A moving selector means an admitted optional route, not a measured
+  displacement; inspect paired evidence for that claim.
 - `quit` — exit immediately.
 
 Without a trailing `quit` the game exits ~2 s after the last action; a watchdog

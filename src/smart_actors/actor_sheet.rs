@@ -22,8 +22,10 @@ use cathedral_sim::{
 
 use crate::fonts::CathedralFonts;
 
-use super::{area_debug::AreaDebugState, hud, local_engine::LocalEngine, model::ActorId,
-    targeting::ActorFocus};
+use super::{
+    area_debug::AreaDebugState, hud, local_engine::LocalEngine, model::ActorId,
+    targeting::ActorFocus,
+};
 
 /// Fraction of the viewport width the sheet occupies — "about 1/5".
 const SHEET_WIDTH_PERCENT: f32 = 20.0;
@@ -130,6 +132,7 @@ pub(super) struct CharacterDebug {
     /// A live `go_to` the feet are *not* currently walking (held by a
     /// conversation, or waiting for the next ladder decision), by name.
     pending_intent: Option<String>,
+    resident: Option<cathedral_sim::round::residents::ResidentStatus>,
     position: SimVec3,
     facing_yaw: f64,
     holds: Vec<String>,
@@ -205,6 +208,7 @@ impl CharacterDebug {
             heading,
             well_activity: well_activity(errand),
             pending_intent,
+            resident: character.state.resident.clone(),
             position: character.position_m(),
             facing_yaw: character.facing_yaw(),
             holds,
@@ -301,7 +305,11 @@ fn bar(fraction: f64, cells: usize) -> String {
 
 /// Resolve the live walk into a [`Heading`]: name the destination, measure the
 /// path left, and price it in real seconds. `None` when there is no walk.
-fn heading_of(world: &World, character: &Character, errand: Option<&ErrandDebug>) -> Option<Heading> {
+fn heading_of(
+    world: &World,
+    character: &Character,
+    errand: Option<&ErrandDebug>,
+) -> Option<Heading> {
     let movement = character.state.movement.as_ref()?;
     let final_point = *movement.path.last()?;
     let distance_m = path_length_m(character.position_m(), &movement.path);
@@ -310,11 +318,32 @@ fn heading_of(world: &World, character: &Character, errand: Option<&ErrandDebug>
     // assigned well, then whatever the walk's endpoint resolves to.
     let (destination, reason) = match errand {
         Some(errand) if errand.for_intent && character.state.intent.is_some() => {
-            let intent = character.state.intent.as_ref().expect("checked in the guard");
+            let intent = character
+                .state
+                .intent
+                .as_ref()
+                .expect("checked in the guard");
             (intent_target_name(world, &intent.target), Some("go_to"))
         }
+        _ if world.custody.holds(character.id()) || world.custody.is_escorting(character.id()) => {
+            (name_point(world, final_point), Some("custody"))
+        }
+        _ if character.state.resident.is_some() => {
+            let resident = character.state.resident.as_ref().unwrap();
+            (
+                resident.patch_description.clone(),
+                Some(match resident.movement_cause {
+                    cathedral_sim::round::motion::MotionCause::Weather => "local shelter",
+                    cathedral_sim::round::motion::MotionCause::Domestic => "returning to frontage",
+                    _ => "local change of spot",
+                }),
+            )
+        }
         Some(errand) if errand.phase == RoundPhase::Approaching => (
-            errand.well.clone().unwrap_or_else(|| "their well".to_string()),
+            errand
+                .well
+                .clone()
+                .unwrap_or_else(|| "their well".to_string()),
             Some("water round"),
         ),
         Some(errand) if errand.phase == RoundPhase::Returning => {
@@ -446,6 +475,34 @@ fn truncate(text: &str, max: usize) -> String {
     short
 }
 
+fn append_movement(out: &mut String, sheet: &CharacterDebug) {
+    use std::fmt::Write as _;
+    let movement = if sheet.resident.is_some() && matches!(sheet.movement, MoveState::Still) {
+        "Stationary (no active route)".to_string()
+    } else {
+        move_summary(&sheet.movement, sheet.well_activity.as_deref())
+    };
+    let _ = write!(out, "\n\nMOVEMENT\n  {movement}");
+    if let Some(heading) = &sheet.heading {
+        let _ = write!(out, "\n  {}", heading_line(heading));
+    }
+    if let Some(intent) = &sheet.pending_intent {
+        let _ = write!(out, "\n  go_to (pending) → {intent}");
+    }
+    if let Some(resident) = &sheet.resident {
+        let _ = write!(
+            out,
+            "\n  Dwell: {:.0}s · cause: {:?}\n  Patch: {}\n  Spot: {}\n  Target: {}\n  {}",
+            resident.dwell_remaining_seconds,
+            resident.movement_cause,
+            resident.patch,
+            resident.spot.as_deref().unwrap_or("unsettled"),
+            resident.destination_spot.as_deref().unwrap_or("none"),
+            resident.description()
+        );
+    }
+}
+
 /// Render the body block. The identity line is drawn in its own larger node, so
 /// this starts at the demographic line beneath it.
 fn format_body(sheet: &CharacterDebug) -> String {
@@ -467,11 +524,21 @@ fn format_body(sheet: &CharacterDebug) -> String {
         out,
         "{} · {} · {}",
         significance_label(sheet.significance),
-        if sheet.control_is_llm { "LLM" } else { "PLAYER" },
+        if sheet.control_is_llm {
+            "LLM"
+        } else {
+            "PLAYER"
+        },
         sheet.id,
     );
     if let Some(location) = &sheet.location {
         let _ = write!(out, "\n@ {location}");
+    }
+
+    // The local routine is the resident debug question. Keep it above long
+    // prose and need bars so patch/claims/dwell remain visible at 1280×720.
+    if sheet.resident.is_some() {
+        append_movement(&mut out, sheet);
     }
 
     let _ = write!(out, "\n\nGOAL\n  {}", sheet.goal);
@@ -495,16 +562,8 @@ fn format_body(sheet: &CharacterDebug) -> String {
         bar(sheet.hunger / HUNGER_MAX, GAUGE_CELLS),
     );
 
-    let _ = write!(
-        out,
-        "\n\nMOVEMENT\n  {}",
-        move_summary(&sheet.movement, sheet.well_activity.as_deref())
-    );
-    if let Some(heading) = &sheet.heading {
-        let _ = write!(out, "\n  {}", heading_line(heading));
-    }
-    if let Some(intent) = &sheet.pending_intent {
-        let _ = write!(out, "\n  go_to (pending) → {intent}");
+    if sheet.resident.is_none() {
+        append_movement(&mut out, sheet);
     }
 
     let _ = write!(
@@ -662,9 +721,7 @@ pub(super) fn update_actor_sheet(
         let sim_id = cathedral_sim::ActorId::from_raw(id.0.clone());
         engine.world().and_then(|world| {
             world.characters.get(&sim_id).map(|character| {
-                let errand = engine
-                    .round()
-                    .and_then(|round| round.errand_debug(&sim_id));
+                let errand = engine.round().and_then(|round| round.errand_debug(&sim_id));
                 CharacterDebug::from_world(world, character, errand.as_ref())
             })
         })
@@ -736,6 +793,7 @@ mod tests {
             }),
             well_activity: None,
             pending_intent: None,
+            resident: None,
             position: SimVec3::new(12.34, 0.0, -45.6),
             facing_yaw: std::f64::consts::FRAC_PI_2,
             holds: vec!["a clay jug".into()],
@@ -826,7 +884,7 @@ mod tests {
             "WEATHER\n  weather: steady rain; the streets are wet · wetness: wet",
             "STATUSES",
             "Thirst  40/255 · THIRSTY", // 40 is between PARCHED (38) and THIRSTY (178)
-            "░", // the gauge bar is present
+            "░",                        // the gauge bar is present
             "MOVEMENT\n  Walking · 1.2 m/s · 3 waypoint(s) left",
             "→ The Gradine · 47 m · ETA 26 s (go_to)",
             "POSE",
@@ -874,7 +932,10 @@ mod tests {
             distance_m: 12.4,
             eta_seconds: Some(6.9),
         };
-        assert_eq!(heading_line(&heading), "→ Chain Well · 12 m · ETA 7 s (water round)");
+        assert_eq!(
+            heading_line(&heading),
+            "→ Chain Well · 12 m · ETA 7 s (water round)"
+        );
         heading.eta_seconds = None;
         heading.reason = None;
         assert_eq!(heading_line(&heading), "→ Chain Well · 12 m");
@@ -888,7 +949,10 @@ mod tests {
         );
         assert_eq!(
             move_summary(
-                &MoveState::Walking { speed: 1.8, waypoints: 2 },
+                &MoveState::Walking {
+                    speed: 1.8,
+                    waypoints: 2
+                },
                 Some("Queued at Chain Well · 2 ahead"),
             ),
             "Walking · 1.8 m/s · 2 waypoint(s) left"

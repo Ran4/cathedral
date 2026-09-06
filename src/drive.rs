@@ -29,8 +29,10 @@ use cathedral_sim::{StatusKind, WeatherKind};
 use crate::controller::{EYE_OFFSET, PlayerController, TeleportPlayer};
 use crate::session_log;
 use crate::smart_actors::SmartActorRuntime;
+use crate::smart_actors::WorldClockState;
 use crate::smart_actors::actors::ActorView;
 use crate::smart_actors::bridge::{BridgeCommand, BridgeHandle};
+use crate::smart_actors::local_engine::LocalEngine;
 use crate::smart_actors::model::{ActorId, Position};
 use crate::soundscape::{BellPattern, SoundscapeCue};
 
@@ -143,6 +145,7 @@ impl Plugin for DrivePlugin {
         ));
         spawn_watchdog(self.timeout);
         app.insert_resource(DriveState {
+            last_framed: None,
             scheduler: Scheduler::new(self.actions.clone()),
             shot_saved: None,
             pressed_key: None,
@@ -195,6 +198,8 @@ enum Action {
     Click(String),
     Shot(String),
     Sleep(f64),
+    /// Wait on the existing virtual clock; never advance or unpause it.
+    SleepSim(f64),
     WaitOnline,
     /// Emit a catalog world sound at the player's position. The honest
     /// stand-in for world causes the sim does not model yet — nothing rings
@@ -292,6 +297,7 @@ impl Action {
             Self::Click(name) => format!("click {name}"),
             Self::Shot(name) => format!("shot {name}"),
             Self::Sleep(seconds) => format!("sleep {seconds}"),
+            Self::SleepSim(seconds) => format!("sleep-sim {seconds}"),
             Self::WaitOnline => "wait-online".into(),
             Self::Sound(sound_id) => format!("sound {sound_id}"),
             Self::Bell(BellPattern::ScoldCurfew) => "bell curfew".into(),
@@ -396,6 +402,12 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
         "sleep" => match argument.parse::<f64>() {
             Ok(seconds) if seconds.is_finite() && seconds >= 0.0 => Ok(Action::Sleep(seconds)),
             _ => Err(format!("bad sleep duration `{argument}` in `{statement}`")),
+        },
+        "sleep-sim" => match argument.parse::<f64>() {
+            Ok(seconds) if seconds.is_finite() && seconds >= 0.0 => Ok(Action::SleepSim(seconds)),
+            _ => Err(format!(
+                "bad simulation sleep duration `{argument}` in `{statement}`"
+            )),
         },
         "sound" => {
             if !argument.is_empty()
@@ -780,6 +792,7 @@ struct Scheduler {
     index: usize,
     next_at: f64,
     online_deadline: Option<f64>,
+    sim_deadline: Option<f64>,
     awaiting_shot: bool,
     auto_quit_at: Option<f64>,
     finished: bool,
@@ -794,6 +807,7 @@ impl Scheduler {
             // Give the window a beat to open before the first action.
             next_at: ACTION_SPACING,
             online_deadline: None,
+            sim_deadline: None,
             awaiting_shot: false,
             auto_quit_at: None,
             finished: false,
@@ -812,9 +826,27 @@ impl Scheduler {
     /// `online` is `None` when the smart-actor runtime does not exist (actors
     /// disabled in config), `Some(ready)` otherwise. `shot_saved` reports
     /// whether the most recently requested screenshot has reached disk.
+    #[cfg(test)]
     fn tick(&mut self, now: f64, online: Option<bool>, shot_saved: bool) -> Option<Directive> {
+        self.tick_clocks(now, now, online, shot_saved)
+    }
+
+    fn tick_clocks(
+        &mut self,
+        now: f64,
+        sim_now: f64,
+        online: Option<bool>,
+        shot_saved: bool,
+    ) -> Option<Directive> {
         if self.finished {
             return None;
+        }
+        if let Some(deadline) = self.sim_deadline {
+            if sim_now < deadline {
+                return None;
+            }
+            self.sim_deadline = None;
+            self.push_log(now, &format!("simulation wait completed at {sim_now:.3}s"));
         }
         if self.awaiting_shot {
             if !shot_saved {
@@ -867,6 +899,10 @@ impl Scheduler {
             }
             Action::Sleep(seconds) => {
                 self.next_at = now + seconds;
+                None
+            }
+            Action::SleepSim(seconds) => {
+                self.sim_deadline = Some(sim_now + seconds);
                 None
             }
             Action::WaitOnline => {
@@ -928,6 +964,7 @@ impl Scheduler {
 
 #[derive(Resource)]
 struct DriveState {
+    last_framed: Option<String>,
     scheduler: Scheduler,
     /// Set by the screenshot-captured observer once `save_to_disk` can no
     /// longer be outrun: both observers fire in the same trigger flush, a
@@ -941,15 +978,115 @@ struct DriveState {
     held_key: Option<(KeyCode, f64)>,
 }
 
+fn select_resident(world: &cathedral_sim::World, selector: &str, from: Vec3) -> Option<String> {
+    world
+        .characters
+        .values()
+        .filter(|c| c.state.presence == cathedral_sim::Presence::InCity)
+        .filter(|c| {
+            c.state.resident.as_ref().is_some_and(|r| match selector {
+                "@resident-moving" => r.optional_walk && c.is_walking(),
+                "@resident-sheltered" => {
+                    r.sheltered
+                        && !c.is_walking()
+                        && r.phase == cathedral_sim::round::residents::ResidentPhase::Sheltering
+                }
+                "@resident-lingering" => {
+                    r.phase == cathedral_sim::round::residents::ResidentPhase::Lingering
+                        && !c.is_walking()
+                }
+                "@resident-resting" => {
+                    (r.resting_at_household_frontage || r.resting_without_home) && !c.is_walking()
+                }
+                _ => false,
+            })
+        })
+        .min_by(|a, b| {
+            let distance = |c: &cathedral_sim::Character| {
+                let p = c.position_m();
+                (p.x - f64::from(from.x)).hypot(p.z - f64::from(from.z))
+            };
+            distance(a)
+                .total_cmp(&distance(b))
+                .then_with(|| a.id().cmp(b.id()))
+        })
+        .map(|c| c.id().as_str().to_owned())
+}
+
+/// A single authoritative observation, never a motion classifier. Pair positions
+/// across captures for displacement; a route/cause alone does not prove walking.
+fn resident_capture(world: &cathedral_sim::World) -> serde_json::Value {
+    let generated: Vec<_> = world
+        .characters
+        .values()
+        .filter(|c| c.lore().is_some_and(|l| l.generated))
+        .collect();
+    serde_json::json!({
+        "observation": "Authoritative state at screenshot request, before asynchronous image completion. Speed/path/cause are current state, not displacement measurements. All present residents, including outdoor rest, remain in the denominator.",
+        "generated_total": generated.len(),
+        "generated_present": generated.iter().filter(|c| c.state.presence == cathedral_sim::Presence::InCity).count(),
+        "indoors": null,
+        "weather": world.current_weather,
+        "residents": generated.into_iter().map(|c| serde_json::json!({
+            "id": c.id().as_str(), "position": [c.position_m().x, c.position_m().y, c.position_m().z],
+            "presence": c.state.presence, "hunger": c.needs().hunger,
+            "speed": c.state.movement.as_ref().map_or(0.0, |m| m.speed),
+            "pending_waypoints": c.state.movement.as_ref().map_or(0, |m| m.path.len()),
+            "path": c.state.movement.as_ref().map(|m| m.path.iter().map(|p| [p.x, p.y, p.z]).collect::<Vec<_>>()),
+            "resident": c.state.resident,
+        })).collect::<Vec<_>>(),
+    })
+}
+
+#[cfg(test)]
+#[test]
+fn resident_capture_reads_real_state_and_retains_the_present_denominator() {
+    use cathedral_sim::{Character, NavData, Office, Presence, Round, World, WorldClock};
+    let nav = NavData::from_parts(
+        include_str!("../assets/world/navigation.json"),
+        include_bytes!("../assets/world/navigation.bin"),
+    )
+    .unwrap();
+    let mut world = World::new();
+    let crowd = cathedral_sim::crowd::generate_ambient(&nav, 2, 0, &[], &[]).unwrap();
+    for sheet in crowd.sheets {
+        world.add_character(Character::from_sheet(sheet));
+    }
+    Round::new().seed(
+        &mut world,
+        &nav,
+        0.0,
+        &WorldClock::new(3600.0, Office::Dayspring, 2, 0.0),
+    );
+    let id = world.characters.keys().next().unwrap().clone();
+    world.characters.get_mut(&id).unwrap().state.presence = Presence::BeyondTheWalls;
+    let before = world.clone();
+    let record = resident_capture(&world);
+    assert_eq!(world, before);
+    assert_eq!(record["generated_total"], 2);
+    assert_eq!(record["generated_present"], 1);
+    assert!(record["indoors"].is_null());
+    assert_eq!(record["residents"][0]["resident"]["phase"], "lingering");
+    assert_eq!(record["residents"][0]["pending_waypoints"], 0);
+    assert!(serde_json::to_string(&record).is_ok());
+    assert!(select_resident(&world, "@resident-moving", Vec3::ZERO).is_none());
+    assert!(select_resident(&world, "@resident-sheltered", Vec3::ZERO).is_none());
+    assert!(select_resident(&world, "@resident-resting", Vec3::ZERO).is_none());
+    let selected = select_resident(&world, "@resident-lingering", Vec3::ZERO).unwrap();
+    assert_ne!(selected, id.as_str(), "absent residents are never selected");
+}
+
 #[allow(clippy::too_many_arguments)]
 fn run_drive_script(
     mut commands: Commands,
     time: Res<Time<Real>>,
+    sim_time: Res<Time<Virtual>>,
     mut state: ResMut<DriveState>,
     mut keys: ResMut<ButtonInput<KeyCode>>,
     mut keyboard_events: MessageWriter<KeyboardInput>,
     windows: Query<Entity, With<PrimaryWindow>>,
-    runtime: Option<Res<SmartActorRuntime>>,
+    runtime: (Option<Res<SmartActorRuntime>>, Option<Res<WorldClockState>>),
+    engine: Option<NonSend<LocalEngine>>,
     bridge: Option<Res<BridgeHandle>>,
     players: Query<&GlobalTransform, With<PlayerController>>,
     actors: Query<(&Name, &ActorId, &Transform), With<ActorView>>,
@@ -976,13 +1113,19 @@ fn run_drive_script(
             keys.press(key);
         }
     }
-    let online = runtime.map(|runtime| runtime.interactions_enabled());
+    let online = runtime
+        .0
+        .as_ref()
+        .map(|runtime| runtime.interactions_enabled());
     let shot_saved = state
         .shot_saved
         .as_ref()
         .is_none_or(|saved| saved.load(Ordering::Acquire));
 
-    let directive = state.scheduler.tick(now, online, shot_saved);
+    let directive =
+        state
+            .scheduler
+            .tick_clocks(now, sim_time.elapsed_secs_f64(), online, shot_saved);
     if !state.scheduler.awaiting_shot {
         state.shot_saved = None;
     }
@@ -1047,6 +1190,26 @@ fn run_drive_script(
                     ));
                 }
                 let path = session.screenshots.join(format!("{name}.png"));
+                if std::env::var_os("CATHEDRAL_DRIVE_RESIDENT_EVIDENCE").is_some()
+                    && let Some(world) = engine.as_ref().and_then(|engine| engine.world())
+                {
+                    let mut evidence = resident_capture(world);
+                    evidence["virtual_seconds"] = sim_time.elapsed_secs_f64().into();
+                    evidence["wall_seconds"] = now.into();
+                    if let Some(clock) = &runtime.1 {
+                        evidence["clock"] = serde_json::json!({
+                            "day": clock.day, "fraction": clock.fraction,
+                            "office": clock.office.label(), "scale": clock.scale,
+                            "seconds_per_day": clock.seconds_per_day,
+                        });
+                    }
+                    if let Err(error) = fs::write(path.with_extension("json"), evidence.to_string())
+                    {
+                        drive_log(&format!(
+                            "[drive] {now:.1}s resident evidence failed: {error}"
+                        ));
+                    }
+                }
                 let saved = Arc::new(AtomicBool::new(false));
                 state.shot_saved = Some(saved.clone());
                 commands
@@ -1227,13 +1390,28 @@ fn run_drive_script(
             distance,
             bearing_degrees,
         }) => {
-            let needle = handle.to_lowercase();
+            let selected = if handle == "@last" {
+                state.last_framed.clone()
+            } else if handle.starts_with("@resident-") {
+                engine
+                    .as_ref()
+                    .and_then(|engine| engine.world())
+                    .and_then(|world| {
+                        let from = players.single().map_or(Vec3::ZERO, |p| p.translation());
+                        select_resident(world, &handle, from)
+                    })
+            } else {
+                Some(handle.clone())
+            };
+            let needle = selected.unwrap_or_else(|| handle.clone()).to_lowercase();
             let found = actors.iter().find(|(name, actor_id, _)| {
                 name.as_str().to_lowercase().contains(&needle)
                     || actor_id.0.to_lowercase() == needle
             });
             match found {
-                Some((_, _, actor)) => {
+                Some((_, id, actor)) => {
+                    state.last_framed = Some(id.0.clone());
+                    drive_log(&format!("[drive] {now:.1}s framed actor {}", id.0));
                     let (position, yaw_degrees, pitch_degrees) =
                         frame_view(actor, distance, bearing_degrees);
                     teleports.write(TeleportPlayer {
@@ -1661,6 +1839,39 @@ mod tests {
         assert_eq!(scheduler.tick(0.5, None, true), None);
         assert_eq!(scheduler.tick(3.0, None, true), None);
         assert_eq!(scheduler.tick(3.5, None, true), Some(Directive::Quit));
+    }
+
+    #[test]
+    fn simulation_sleep_waits_through_pauses_and_variable_frame_pacing() {
+        let actions = parse_script("sleep-sim 3; quit").unwrap();
+        let mut scheduler = Scheduler::new(actions);
+        assert_eq!(scheduler.tick_clocks(0.5, 10.0, None, true), None);
+        assert_eq!(
+            scheduler.tick_clocks(100.0, 10.0, None, true),
+            None,
+            "paused virtual clock"
+        );
+        assert_eq!(
+            scheduler.tick_clocks(500.0, 12.99, None, true),
+            None,
+            "slow frames"
+        );
+        assert_eq!(
+            scheduler.tick_clocks(500.1, 13.0, None, true),
+            Some(Directive::Quit)
+        );
+        for script in [
+            "sleep-sim -1",
+            "sleep-sim NaN",
+            "sleep-sim inf",
+            "sleep-sim nope",
+        ] {
+            assert!(parse_script(script).is_err());
+        }
+        assert_eq!(
+            parse_script("sleep-sim 0").unwrap(),
+            vec![Action::SleepSim(0.0)]
+        );
     }
 
     #[test]

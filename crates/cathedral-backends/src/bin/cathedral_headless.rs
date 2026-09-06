@@ -213,6 +213,13 @@ struct Args {
     #[arg(long)]
     census_by_area: bool,
 
+    /// Measure actual displacement and movement causes separately for the
+    /// generated crowd and authored cast. Emits `[motion]` JSON at the census
+    /// cadence. Uses 0.05 s polls in watch-clock mode (normal movement/needs/
+    /// clock relationship); does not shorten the game day or enable debug scale.
+    #[arg(long)]
+    trace_motion: bool,
+
     /// how many `--census-by-area` samples a watched game day takes (default 16).
     ///
     /// Sixteen is one sample every 1.5 game hours, which reads a *day* well and
@@ -586,6 +593,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         trace_positions: args.trace_positions,
         trace_water: args.trace_water,
         census_by_area: args.census_by_area,
+        trace_motion: args.trace_motion,
         census_per_day: args.census_per_day,
         trace_food: args.trace_food,
         trace_pollen: args.trace_pollen,
@@ -736,6 +744,7 @@ struct Runner {
     trace_water: bool,
     /// `--census-by-area`: echo a behavioural census as each office rings.
     census_by_area: bool,
+    trace_motion: bool,
     /// `--census-per-day`: how many census samples a watched game day takes.
     census_per_day: f64,
     /// `--trace-food`: echo the M2 hunger census.
@@ -834,6 +843,9 @@ impl Runner {
         if self.trace_pollen {
             step = step.min(self.pollen_step);
         }
+        if self.trace_motion {
+            step = 0.05;
+        }
         println!(
             "== watching {game_days} game day(s): {real_seconds:.0} s at {seconds_per_day:.0} s/day =="
         );
@@ -863,15 +875,61 @@ impl Runner {
         if self.trace_pollen {
             self.print_pollen();
         }
+        let mut motion_probe = self
+            .trace_motion
+            .then(|| cathedral_sim::round::motion::MotionProbe::new(self.engine.world()));
+        let mut next_motion = self.now;
+        let mut pump_seconds = 0.0;
+        let mut pump_count = 0u64;
+        let mut snapshot_count = 0u64;
+        let mut resident_update_count = 0usize;
+        if self.trace_motion {
+            println!(
+                "[motion-config] {{\"step_seconds\":{step},\"seconds_per_day\":{seconds_per_day},\"debug_scale\":1,\"sample_interval_seconds\":{census_interval},\"spatial_reference\":\"initial positions, 20m XZ cells, and reserved resident patches\",\"indoors\":null}}"
+            );
+        }
         while self.now < end {
+            // Avoid a final floating-point remainder poll with no movement
+            // slice, which would misreport every active walker as stationary.
+            if self.trace_motion && end - self.now < 1e-6 {
+                break;
+            }
             self.now += step;
+            // Keep this exact increment, as the movement accumulator does.
+            // Clamping a 3600.000000004 endpoint back to 3600.0 suppresses its
+            // last 0.05 s movement slice and produces a false stationary sample.
             // Non-blocking, and normally empty: `--watch-clock` takes no turns.
             // But the Night Office does — its lane is driven by the bell, not by
             // the tick loop — so without this a watched night submits one
             // reflection and then waits forever for an answer nobody handed
             // back (M6).
             let commands = self.collect_completions(false)?;
-            self.pump(commands);
+            let before = (self.trace_motion
+                && (self.now + 1e-6 >= next_motion || self.now + 1e-6 >= end))
+                .then(|| self.engine.motion_positions());
+            let pump_start = self.trace_motion.then(std::time::Instant::now);
+            for message in self.engine.poll(self.now, commands) {
+                match &message {
+                    EngineMessage::Ready { .. } | EngineMessage::Snapshot(_) => snapshot_count += 1,
+                    EngineMessage::ResidentStates { residents } => {
+                        resident_update_count += residents.len()
+                    }
+                    _ => {}
+                }
+                self.report(message);
+            }
+            if let Some(start) = pump_start {
+                pump_seconds += start.elapsed().as_secs_f64();
+                pump_count += 1;
+            }
+            if let (Some(probe), Some(before)) = (motion_probe.as_mut(), before.as_ref()) {
+                let census = self.engine.motion_census(probe, before, self.now);
+                println!(
+                    "[motion] {}",
+                    serde_json::to_string(&census).expect("finite motion census")
+                );
+                next_motion += census_interval;
+            }
             if self.trace_food {
                 // Drain every step so the restock, the sales and the ledger print
                 // in the order they happened, not clumped at the census interval.
@@ -895,6 +953,12 @@ impl Runner {
                 self.print_pollen();
                 next_pollen_sample = self.now + pollen_interval;
             }
+        }
+        if self.trace_motion {
+            println!(
+                "[motion-cost] {{\"pump_seconds\":{pump_seconds},\"polls\":{pump_count},\"snapshots\":{snapshot_count},\"resident_status_updates\":{resident_update_count},\"mean_pump_ms\":{}}}",
+                pump_seconds * 1000.0 / pump_count.max(1) as f64
+            );
         }
         Ok(())
     }
@@ -1286,15 +1350,23 @@ impl Assets {
             (0, _) => seed,
             (count, Some(nav)) => {
                 let count = count.min(cathedral_sim::MAX_EXTRA_AMBIENT_NPCS);
-                let points = cathedral_sim::spread_over_walkable(nav, count as usize);
-                let sheets = cathedral_sim::extra_ambient_sheets(nav, &points, 0);
-                // The no-trade cohort, counted out loud
-                // (`features/implemented/give_the_crowd_somewhere_to_be.md` M2): roughly a
-                // quarter of any crowd has no occupation at all, and every one
-                // of them must carry a circumstance saying how they eat — the
-                // same pairing the lore loader demands of an authored
-                // `no_fixed_trade/` sheet. The unsupported count is a zero that
-                // deserves to be printed rather than assumed.
+                let occupied: Vec<_> = seed.characters.iter().map(|c| c.position_m).collect();
+                let crowd =
+                    cathedral_sim::generate_ambient(nav, count as usize, 0, &occupied, &[])?;
+                eprintln!(
+                    "[crowd] requested {}, placed {}, unplaced {}; {} housed, {} hardship, {} workers; door cap {}",
+                    crowd.placement.requested,
+                    crowd.placement.placed,
+                    crowd.placement.unplaced,
+                    crowd.placement.housed,
+                    crowd.placement.hardship,
+                    crowd.placement.workers,
+                    crowd.placement.door_cap
+                );
+                let sheets = crowd.sheets;
+                // Every default resident has no trade and a circumstance that
+                // explains household or local support. Keep the unsupported
+                // count explicit as a generation diagnostic.
                 let no_trade: Vec<&cathedral_sim::CharacterSheet> = sheets
                     .iter()
                     .filter(|sheet| {
@@ -1563,6 +1635,79 @@ mod tests {
         assert_eq!(assets.seed.characters.len(), in_seed + in_lore);
     }
 
+    #[test]
+    fn corrected_authored_starts_are_clear_of_residents_and_keep_outward_lanthorn_work() {
+        let assets = Assets::load(
+            Path::new("../../assets"),
+            Path::new("../../lore"),
+            false,
+            2000,
+        )
+        .unwrap();
+        let nav = assets.nav.as_ref().unwrap();
+        let mut world = cathedral_sim::build_world(
+            &assets.seed,
+            cathedral_sim::WorldConfig {
+                area_map: assets.areas.clone(),
+                ..Default::default()
+            },
+        );
+        world.shelters = assets.shelters;
+        let before: std::collections::BTreeMap<_, _> = world
+            .characters
+            .iter()
+            .map(|(id, c)| (id.clone(), c.position_m()))
+            .collect();
+        let mut round = cathedral_sim::round::Round::new();
+        let clock = WorldClock::new(3600.0, Office::Dayspring, 2, 0.0);
+        let diagnostics = round.seed(&mut world, nav, 0.0, &clock);
+        let resident = ActorId::from_raw("x00000");
+        let prompt =
+            cathedral_sim::prompt::render_prompt(&world, &resident, None, &assets.prompts).unwrap();
+        assert!(prompt.contains("**local_routine**") && prompt.contains("**your_routine**"));
+        assert!(!prompt.contains("**your_round**") && !prompt.contains("rp_"));
+        let corrections: Vec<_> = diagnostics
+            .iter()
+            .filter(|line| line.starts_with("[initial-surface]"))
+            .collect();
+        assert!(!corrections.is_empty());
+        assert!(
+            !corrections.iter().any(|line| line.contains("unresolved")),
+            "{corrections:?}"
+        );
+        for line in &corrections {
+            println!("{line}");
+        }
+        for (id, c) in &world.characters {
+            if !corrections
+                .iter()
+                .any(|line| line.starts_with(&format!("[initial-surface] {id}:")))
+            {
+                continue;
+            }
+            assert!(nav.segment_walkable_exact(c.position_m(), c.position_m()));
+            assert!(world.characters.iter().all(|(other, body)| other == id
+                || !world.is_present(other)
+                || c.position_m().distance(body.position_m()) >= 1.2));
+        }
+        let target = nav.node_point(nav.place("The Lanthorn").unwrap().node);
+        for raw in ["amt4p", "em3rl"] {
+            let id = ActorId::from_raw(raw);
+            let start = world.characters[&id].position_m();
+            assert!(start.distance(before[&id]) > 20.0 && start.distance(before[&id]) <= 40.0);
+            let route = nav
+                .connected_route(start, target, 0.3)
+                .expect("the existing outward work leg routes safely");
+            world.characters.get_mut(&id).unwrap().state.movement = Some(route.into_movement(0.0));
+            for _ in 0..10 {
+                let previous = world.characters[&id].position_m();
+                world.step_movement(0.05, nav, None);
+                assert!(nav.segment_walkable_exact(previous, world.characters[&id].position_m()));
+            }
+            assert!(world.characters[&id].position_m().distance(start) > 0.1);
+        }
+    }
+
     /// A canned chat-completions endpoint: enough HTTP to answer reqwest, and
     /// nothing more. The lib's `MockServer` is `#[cfg(test)]`-private to the
     /// library, and a bin is its own crate.
@@ -1658,6 +1803,7 @@ mod tests {
             trace_positions: false,
             trace_water: false,
             census_by_area: false,
+            trace_motion: false,
             census_per_day: 16.0,
             trace_food: false,
             trace_pollen: false,

@@ -1,0 +1,8 @@
+1000 started 2026-09-06T16:53:51.630605+00:00
+1000 complete 652.2931879510288
+/home/ran/src/rust/cathedralbevy/features/ambient_residents_evidence/final_1000_summary.json 99.05544554455446 {'pump_seconds': 651.1541649220051, 'polls': 144000, 'snapshots': 6292, 'resident_status_updates': 90908, 'mean_pump_ms': 4.5219039230694795}
+2000 started 2026-09-06T17:04:44.503569+00:00
+2000 complete 1293.4916124310112
+/home/ran/src/rust/cathedralbevy/features/ambient_residents_evidence/final_2000_summary.json 99.0608910891089 {'pump_seconds': 1291.7015611279935, 'polls': 144000, 'snapshots': 6292, 'resident_status_updates': 178273, 'mean_pump_ms': 8.97014973005551}
+20000 started 2026-09-06T17:26:18.272355+00:00
+20000 complete 110.70057117496617

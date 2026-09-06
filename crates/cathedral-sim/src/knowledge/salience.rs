@@ -548,6 +548,7 @@ mod tests {
             extended_character_description: String::new(),
             curiosity: None,
             generated: false,
+            generated_routine: None,
         }
     }
 

@@ -30,6 +30,13 @@ use serde::Deserialize;
 
 use crate::math::Vec3;
 
+mod local;
+#[cfg(test)]
+pub(crate) mod local_tests;
+pub mod residents;
+pub use local::{LocalPathBudget, LocalRoute};
+pub use residents::{ResidentPatch, ResidentPlaces, StandingSpot};
+
 /// The height every NPC walks at: `PLAYER_SPAWN.y` in `controller.rs`. Baked
 /// navigation is 2D on this plane — the city has no second storey you stand on.
 pub const WALK_Y: f64 = 0.91;
@@ -71,11 +78,15 @@ struct NavDoc {
     schema_version: u32,
     grid: GridDoc,
     nodes: Vec<[f64; 2]>,
+    #[serde(default)]
+    endpoint_nodes: Option<usize>,
     edges: Vec<(usize, usize, f64)>,
     places: Vec<PlaceDoc>,
     sites: Vec<SiteDoc>,
     doors: Vec<DoorDoc>,
     reference: ReferenceDoc,
+    #[serde(default)]
+    resident_places: ResidentPlaces,
 }
 
 #[derive(Debug, Deserialize)]
@@ -213,10 +224,12 @@ pub struct NavData {
     grid: NavGrid,
     bitset: Vec<u8>,
     nodes: Vec<[f64; 2]>,
+    endpoint_nodes: usize,
     adjacency: Vec<Vec<Edge>>,
     places: Vec<Place>,
     sites: Vec<Site>,
     doors: Vec<Door>,
+    resident_places: ResidentPlaces,
     place_by_name: HashMap<String, usize>,
     door_by_building: HashMap<String, usize>,
     forecourt: usize,
@@ -356,21 +369,32 @@ impl NavData {
 
         check_node(doc.reference.forecourt, "reference.forecourt")?;
 
-        let node_index = NodeIndex::build(&doc.nodes);
-        Ok(Self {
+        let endpoint_nodes = doc.endpoint_nodes.unwrap_or(n);
+        if endpoint_nodes == 0 || endpoint_nodes > n {
+            return Err(NavError::new("invalid endpoint_nodes"));
+        }
+        // Subdivisions add usable lane vertices, not new snapping destinations
+        // across neighbouring alleys. Existing authored endpoint semantics stay
+        // tied to the original graph; exact connectors can use every vertex.
+        let node_index = NodeIndex::build(&doc.nodes[..endpoint_nodes]);
+        let nav = Self {
             grid,
             bitset: bitset.to_vec(),
             nodes: doc.nodes,
+            endpoint_nodes,
             adjacency,
             places,
             sites,
             doors,
+            resident_places: doc.resident_places,
             place_by_name,
             door_by_building,
             forecourt: doc.reference.forecourt,
             node_index,
             distance_cache: DistanceCache((0..n).map(|_| OnceLock::new()).collect()),
-        })
+        };
+        nav.resident_places.validate(&nav)?;
+        Ok(nav)
     }
 
     pub fn grid(&self) -> NavGrid {
@@ -402,6 +426,10 @@ impl NavData {
 
     pub fn doors(&self) -> &[Door] {
         &self.doors
+    }
+
+    pub fn resident_places(&self) -> &ResidentPlaces {
+        &self.resident_places
     }
 
     pub fn adjacency(&self) -> &[Vec<Edge>] {
@@ -459,7 +487,7 @@ impl NavData {
     fn nearest_node_by_sweep(&self, x: f64, z: f64) -> Option<usize> {
         let mut best = None;
         let mut best_d2 = f64::INFINITY;
-        for (i, &[nx, nz]) in self.nodes.iter().enumerate() {
+        for (i, &[nx, nz]) in self.nodes.iter().take(self.endpoint_nodes).enumerate() {
             let d2 = (nx - x) * (nx - x) + (nz - z) * (nz - z);
             if d2 < best_d2 {
                 best_d2 = d2;
@@ -636,7 +664,14 @@ impl NavData {
         let points = &route.points;
         let n = points.len();
         if n < 2 || lane == 0.0 {
-            return points.clone();
+            return if points
+                .windows(2)
+                .all(|p| self.segment_walkable_exact(p[0], p[1]))
+            {
+                points.clone()
+            } else {
+                Vec::new()
+            };
         }
         // Per-segment corridor half-widths, from the traversed edges.
         let seg_hw: Vec<f64> = (0..n - 1)
@@ -664,7 +699,11 @@ impl NavData {
                     (Some(dir_in), Some(out)) => {
                         let sum = dir_in + out;
                         // A U-turn's miter is degenerate; keep the outgoing leg.
-                        if sum.length() < 1e-6 { Some(out) } else { Some(sum.normalize()) }
+                        if sum.length() < 1e-6 {
+                            Some(out)
+                        } else {
+                            Some(sum.normalize())
+                        }
                     }
                     (dir_in, out) => out.or(dir_in),
                 }
@@ -688,7 +727,7 @@ impl NavData {
             let mut accepted = Vec3::ZERO;
             for _ in 0..3 {
                 let candidate = right * offset;
-                if self.is_walkable(points[i].x + candidate.x, points[i].z + candidate.z) {
+                if self.segment_walkable_exact(points[i], points[i] + candidate) {
                     accepted = candidate;
                     break;
                 }
@@ -711,7 +750,7 @@ impl NavData {
                 if shift[i] == Vec3::ZERO && shift[i + 1] == Vec3::ZERO {
                     continue; // already the centreline; there is nowhere left to go
                 }
-                if self.segment_walkable(points[i] + shift[i], points[i + 1] + shift[i + 1]) {
+                if self.segment_walkable_exact(points[i] + shift[i], points[i + 1] + shift[i + 1]) {
                     continue;
                 }
                 // Both ends give ground, so a pinch in a long leg costs the lane
@@ -725,15 +764,27 @@ impl NavData {
             }
         }
 
-        (0..n).map(|i| points[i] + shift[i]).collect()
+        let shifted: Vec<_> = (0..n).map(|i| points[i] + shift[i]).collect();
+        if shifted
+            .windows(2)
+            .all(|p| self.segment_walkable_exact(p[0], p[1]))
+        {
+            shifted
+        } else if points
+            .windows(2)
+            .all(|p| self.segment_walkable_exact(p[0], p[1]))
+        {
+            points.clone()
+        } else {
+            // Legacy/custom assets can contain a blocked centreline. Failure
+            // is a failed route, never permission to fall through a corner.
+            Vec::new()
+        }
     }
 
-    /// Is every point of the stretch `a` → `b` on walkable ground? Sampled a
-    /// grid cell apart, which is the resolution the bitset is baked at — and it
-    /// is baked eroded by the agent radius, so nothing a body would collide with
-    /// hides between two samples. Crate-visible for the off-graph strides other
-    /// movers take (the dogs' drift): two walkable endpoints say nothing about
-    /// the ground between them.
+    /// Legacy sampled predicate for other movers' drifts. A corner graze can
+    /// hide between these samples; humanoid routes and actual movement instead
+    /// use `segment_walkable_exact`.
     pub(crate) fn segment_walkable(&self, a: Vec3, b: Vec3) -> bool {
         let span = Vec3::new(b.x - a.x, 0.0, b.z - a.z);
         let length = span.length();
@@ -782,7 +833,11 @@ pub fn door_edges_from_json(json: &str) -> Result<HashMap<String, usize>, NavErr
     }
     let doc: DoorsOnly = serde_json::from_str(json)
         .map_err(|error| NavError::new(format!("invalid navigation.json: {error}")))?;
-    Ok(doc.doors.into_iter().map(|d| (d.building, d.edge)).collect())
+    Ok(doc
+        .doors
+        .into_iter()
+        .map(|d| (d.building, d.edge))
+        .collect())
 }
 
 fn distance(a: [f64; 2], b: [f64; 2]) -> f64 {
@@ -808,7 +863,11 @@ fn back_off(shift: Vec3, give_up_m: f64) -> Vec3 {
 fn planar_dir(from: Vec3, to: Vec3) -> Option<Vec3> {
     let d = Vec3::new(to.x - from.x, 0.0, to.z - from.z);
     let length = d.length();
-    if length < 1e-9 { None } else { Some(d / length) }
+    if length < 1e-9 {
+        None
+    } else {
+        Some(d / length)
+    }
 }
 
 // --------------------------------------------------------------------------- //

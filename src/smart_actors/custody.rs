@@ -477,6 +477,7 @@ mod tests {
 
     fn actor(id: &str, control: ActorControl, at: Vec3) -> ActorSnapshot {
         ActorSnapshot {
+            resident: None,
             id: ActorId(id.into()),
             name_for_player: id.into(),
             control,

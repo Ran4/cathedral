@@ -1,0 +1,28 @@
+{
+  "head": "ecc1389a4d3edd173af9ee1a7396923d8e71a778",
+  "build": "cargo build -p cathedral-backends --bin cathedral-headless (dev, opt-level 1; dependencies opt-level 3)",
+  "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+  "normal_debug_scale": 1,
+  "seconds_per_day": 3600,
+  "days": 1,
+  "poll_seconds": 0.05,
+  "samples_per_day": 120,
+  "start_day": 2,
+  "start_office": "dayspring",
+  "flags": [
+    "--fake",
+    "--stage",
+    "--curiosity",
+    "--night-office",
+    "--weather clear"
+  ],
+  "shas": {
+    "target/debug/cathedral-headless": "4b85684fff358d7ad47d1d6eaa41d35cacecd4da1a6d1100c17c5fa04305459b",
+    "assets/world/navigation.json": "27007970c127fb36f5e9df886c8fd5f40f3d9e58b1d6d328760df1b8caeebb34",
+    "assets/world/navigation.bin": "c2488b185170ef9fc41e824388aa4e1cd54e5324e459604035e01068b226695f",
+    "assets/world/collision_footprints.json": "068499f2fb04bb7b94b8a98589eb5ffd6832fdf0b1eaad462c720c1d5d8e8a28",
+    "assets/world/rounds.json": "8f88501ceb032f6b61f2eb9bc02559fb31979a80aa416ebe50b4c8e0778013de"
+  },
+  "command": "target/debug/cathedral-headless --fake --stage --curiosity --night-office --weather clear --extra-ambient N --start-day 2 --start-office dayspring --seconds-per-day 3600 --watch-clock 1 --trace-motion --census-per-day 120",
+  "baseline_endpoint_note": "Captured baseline binary clamps final floating endpoint; terminal sample has no movement slice, is explicitly marked invalid and excluded from motion summaries. Final driver removes this clamp; all other baseline samples use its same 0.05s increments."
+}

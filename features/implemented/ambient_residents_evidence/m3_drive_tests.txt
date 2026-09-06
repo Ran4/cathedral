@@ -1,0 +1,53 @@
+    Blocking waiting for file lock on build directory
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+   Compiling cathedralbevy v0.1.0 (/home/ran/src/rust/cathedralbevy)
+warning: variants `Weather`, `Hud`, and `Interaction` are never constructed
+  --> src/perf.rs:53:5
+   |
+44 | pub enum Probe {
+   |          ----- variants in this enum
+...
+53 |     Weather,
+   |     ^^^^^^^
+54 |     Soundscape,
+55 |     Hud,
+   |     ^^^
+...
+58 |     Interaction,
+   |     ^^^^^^^^^^^
+   |
+   = note: `Probe` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `cathedralbevy` (bin "cathedralbevy" test) generated 1 warning
+    Finished `test` profile [optimized + debuginfo] target(s) in 2m 37s
+     Running unittests src/main.rs (target/debug/deps/cathedralbevy-96aaf906481dbd56)
+
+running 23 tests
+test drive::tests::empty_statements_are_skipped ... ok
+test drive::tests::bell_parses_both_ropes_and_validates_the_count ... ok
+test drive::tests::actions_fire_in_order_with_default_spacing ... ok
+test drive::tests::frame_stands_in_front_of_the_actor_and_looks_back ... ok
+test drive::tests::frame_peels_optional_numbers_off_a_multi_word_name ... ok
+test drive::tests::journal_pokes_preserve_names_and_sentences_and_reject_missing_parts ... ok
+test drive::tests::keycodes_resolve_by_variant_name ... ok
+test drive::tests::example_script_parses ... ok
+test drive::tests::parse_errors_name_the_bad_token ... ok
+test drive::tests::screenshot_names_must_stay_inside_the_session_directory ... ok
+test drive::tests::script_without_quit_auto_quits_after_a_grace_period ... ok
+test drive::tests::shot_shorthand_expands_to_a_valid_script ... ok
+test drive::tests::shot_blocks_until_the_file_is_saved ... ok
+test drive::tests::simulation_sleep_waits_through_pauses_and_variable_frame_pacing ... ok
+test drive::tests::sleep_extends_the_gap_to_the_next_action ... ok
+test drive::tests::status_parses_name_kind_and_bounded_value ... ok
+test drive::tests::tp_parses_position_and_optional_view ... ok
+test drive::tests::type_keeps_inner_spaces_and_requires_text ... ok
+test drive::tests::wait_online_holds_until_ready ... ok
+test drive::tests::wait_online_skips_when_actors_are_disabled ... ok
+test drive::tests::wait_online_times_out_and_continues ... ok
+test drive::tests::weather_parses_forced_kinds_intensity_and_timeline ... ok
+test drive::tests::a_framed_shot_lands_the_real_camera_at_eye_height_looking_at_the_actor ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 480 filtered out; finished in 0.01s
+

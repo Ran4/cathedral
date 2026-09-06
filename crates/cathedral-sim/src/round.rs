@@ -30,6 +30,9 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use serde::{Deserialize, Serialize};
 
+pub mod motion;
+pub mod residents;
+
 use crate::{
     EAT_SECONDS, FOOD_QUEUE_SHORT, GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, HEARING_RADIUS_M,
     HEARTH_REFILL_PER_GAME_SECOND, HUNGER_DECAY_PER_GAME_SECOND, HUNGER_FAMISHED, HUNGER_HUNGRY,
@@ -936,6 +939,9 @@ struct Townsperson {
     /// a `stop {}` — or the intent ending any other way — halts exactly this
     /// walk and never a round errand that happens to be under way.
     travel_for_intent: bool,
+    /// Diagnostic only: why the last committed route was started. Never read
+    /// by the ladder, so observations cannot alter an actor's decisions.
+    motion_cause: motion::MotionCause,
     /// Real-clock time of this idle actor's next ladder evaluation.
     next_decision: f64,
     /// Bumped each decision; the salt that makes the deterministic choices vary.
@@ -1134,6 +1140,7 @@ pub struct Round {
     /// time-scale (`WorldClock::offices_crossed`).
     last_office_now: f64,
     people: BTreeMap<ActorId, Townsperson>,
+    residents: residents::Residents,
     /// Active deterministic weather diversions.  Kept at round level so the
     /// authored townsperson seed format and LLM-facing intent model stay clean.
     weather_shelter_intents: BTreeMap<ActorId, WeatherShelterIntent>,
@@ -1477,7 +1484,12 @@ impl Round {
                 .get(&id)
                 .and_then(|character| character.lore());
             let ambient = lore.is_some_and(|profile| profile.significance == Significance::Ambient);
-            if !ambient {
+            if !ambient
+                || world
+                    .characters
+                    .get(&id)
+                    .is_some_and(residents::is_resident)
+            {
                 continue;
             }
             // The walker's own ward is already in hand — the loop fetches the
@@ -2375,6 +2387,7 @@ impl Round {
                 phase: Phase::Idle,
                 travel_target: None,
                 travel_for_intent: false,
+                motion_cause: motion::MotionCause::Other,
                 next_decision: now + decision_jitter(id, 0),
                 epoch: 0,
                 evening_seed: None,
@@ -3223,6 +3236,7 @@ impl Round {
                         phase: Phase::Idle,
                         travel_target: None,
                         travel_for_intent: false,
+                        motion_cause: motion::MotionCause::Other,
                         next_decision: now + decision_jitter(id, 0),
                         epoch: 0,
                         evening_seed: None,
@@ -3235,6 +3249,16 @@ impl Round {
                 continue;
             }
 
+            let worker_base = world.characters[id]
+                .lore()
+                .and_then(|l| l.generated_routine.as_ref())
+                .and_then(|r| match r {
+                    crate::crowd::GeneratedRoutine::Worker { workplace, .. } => {
+                        resolver.resolve(workplace)
+                    }
+                    _ => None,
+                })
+                .unwrap_or(base);
             let (legs, leash_m, curfew_exempt) = content
                 .as_ref()
                 .map(|(rounds, _)| {
@@ -3245,7 +3269,7 @@ impl Round {
                         id,
                         occupation.as_deref(),
                         home,
-                        base,
+                        worker_base,
                     )
                 })
                 .unwrap_or((Vec::new(), DEFAULT_ROUND_LEASH_M, false));
@@ -3317,6 +3341,7 @@ impl Round {
                     phase: Phase::Idle,
                     travel_target: None,
                     travel_for_intent: false,
+                    motion_cause: motion::MotionCause::Other,
                     next_decision: now + decision_jitter(id, 0),
                     epoch: 0,
                     evening_seed: None,
@@ -3346,6 +3371,7 @@ impl Round {
             registry.len(),
         ));
         world.places = registry;
+        residents::seed(self, world, nav, clock.at(now), now);
 
         // The food stalls (M3): resolve the pitches against the same nav graph,
         // then bind today's vendors and lay in the morning's stock so the market
@@ -3400,6 +3426,54 @@ impl Round {
         // inserts a `Townsperson`. `enrol_left_behind` inserts gate carriers at
         // runtime and every one of them carries `home: None`, so this register is
         // complete for everybody who has a door.
+        // Imported mobile authored spawns occasionally lie in walls (or on
+        // an eroded cell boundary). Correct initial placement once, before
+        // Ready/the first body exists. Absent road parties, prisoners and
+        // explicitly immovable people keep their authored representation.
+        // Their lore, base, home, rounds, destinations and speed stay intact.
+        for (id, person) in &self.people {
+            if !world.is_present(id) || world.custody.holds(id) {
+                continue;
+            }
+            let c = &world.characters[id];
+            if !c.lore().is_some_and(|l| !l.generated)
+                || (person.legs.is_empty() && !c.is_walking())
+            {
+                continue;
+            }
+            let original = c.position_m();
+            if nav.segment_walkable_exact(original, original) {
+                continue;
+            }
+            // Two real mobile starts lie 36m inside the nav-excluded nave.
+            // Their existing Lanthorn work destination is on its outer apron.
+            // A reviewed, building-specific initial-placement exception keeps
+            // that outward routine possible without inventing interior routes.
+            let nave = person.legs.iter().any(|leg| leg.label == "The Lanthorn")
+                && world
+                    .shelters
+                    .shelters()
+                    .iter()
+                    .any(|s| s.id == "lanthorn_nave" && s.contains(original));
+            let limit = if nave { 40.0 } else { 20.0 };
+            // Generated residents were already allocated using the imported
+            // spawns as blockers. Respect their actual bodies, and earlier
+            // corrections, so normalization cannot invalidate that placement.
+            let occupied: Vec<_> = world
+                .characters
+                .iter()
+                .filter(|(other, _)| *other != id && world.is_present(other))
+                .map(|(_, c)| c.position_m())
+                .collect();
+            match nav.initial_surface_position(original, limit, &occupied) {
+                Some(position) => {
+                    diagnostics.push(format!("[initial-surface] {}: ({:.4},{:.4}) -> ({:.4},{:.4}), {:.3}m (limit{limit:.0}m)",
+                        id,original.x,original.z,position.x,position.z,original.distance(position)));
+                    world.characters.get_mut(id).unwrap().state.position_m = position;
+                }
+                None => diagnostics.push(format!("[initial-surface] {}: unresolved within{limit:.0}m at ({:.4},{:.4}); no unsafe escape",id,original.x,original.z)),
+            }
+        }
         world.household_doors = std::sync::Arc::new(
             self.people
                 .iter()
@@ -5660,6 +5734,30 @@ fn home_point(character: &Character, homes: Option<&HomesDoc>) -> Option<Vec3> {
 /// Build a townsperson's resolved legs from their route override (the 19 authored
 /// majors) or their occupation template, dropping any leg whose anchor does not
 /// resolve.
+pub(crate) fn compatible_generated_workplace(
+    nav: &NavData,
+    occupation: &str,
+    workplace: &str,
+) -> bool {
+    let Ok(rounds) = serde_json::from_str::<RoundsDoc>(ROUNDS_JSON) else {
+        return false;
+    };
+    rounds
+        .workplaces
+        .get(occupation)
+        .is_some_and(|names| names.iter().any(|n| n == workplace))
+        && nav.places().iter().any(|p| p.name == workplace)
+        && rounds
+            .occupations
+            .get(occupation)
+            .and_then(|a| rounds.archetypes.get(a))
+            .is_some_and(|t| {
+                t.legs
+                    .iter()
+                    .any(|l| l.at == "workplace" && l.doing == Arrival::Work)
+            })
+}
+
 fn build_legs(
     rounds: &RoundsDoc,
     resolver: &PlaceResolver,
@@ -5826,7 +5924,7 @@ pub fn tick(
     apply_round_edits(round, world, now);
     tick_food_economy(round, world, clock, now, &mut nudges);
     round.tick_road_parties(world, nav, clock.at(now), now, in_conversation);
-    decay_needs(round, world, clock, now);
+    decay_needs(round, world, nav, clock, now);
     // The ward's air (`features/knowledge_and_rumor/`). After `decay_needs`
     // because that is where the game-days anchor is already read, and before
     // anything that moves anybody: a person deposits into the ward they are
@@ -5836,13 +5934,14 @@ pub fn tick(
     resolve_arrivals(round, world);
     resolve_food_arrivals(round, world);
     update_weather_shelter_intents(round, world, clock.game_days(now), now);
-    tick_intents(round, world, nav, now, &mut nudges);
+    tick_intents(round, world, nav, now, in_conversation, &mut nudges);
     service_sources(round, world, nav, clock, now, player_id, in_conversation);
     service_stalls(round, world, clock, now, player_id);
     round.tick_stock_plans(world, nav, clock.at(now), now, in_conversation);
     // Credit the interval that just elapsed before the office ladder can send
     // a worker away at the new bell.
     round.tick_production(world, clock, now, in_conversation);
+    residents::tick(round, world, nav, clock, now, in_conversation, &mut nudges);
     run_ladder(round, world, nav, clock, now, in_conversation, &mut nudges);
     round.trace_cart_load_changes(world);
     nudges
@@ -6035,6 +6134,9 @@ fn lamp_ring(nav: &NavData, centre: Vec3) -> Vec<Vec3> {
 /// *excused* walker: their pressing errand has already outranked the
 /// conversation, and a parting line must not stop them again.
 pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &ActorId) {
+    if round.residents.people.contains_key(id) && round.people.get(id).is_some_and(|p| !p.excused) {
+        residents::interrupt(round, world, id);
+    }
     let Some(person) = round.people.get_mut(id) else {
         return;
     };
@@ -6077,6 +6179,7 @@ fn tick_intents(
     world: &mut World,
     nav: &NavData,
     now: f64,
+    held: &BTreeSet<ActorId>,
     nudges: &mut Vec<ActorId>,
 ) {
     // The enrolled cast *and* every road-party member. Road members are
@@ -6249,6 +6352,13 @@ fn tick_intents(
             IntentTarget::Person { last_seen, .. } => (*last_seen, PERSON_ARRIVE_RADIUS_M),
         };
         let tracking = matches!(&intent.target, IntentTarget::Person { visible: true, .. });
+        if residents::is_resident(&world.characters[&id])
+            && !fresh
+            && held.contains(&id)
+            && round.people.get(&id).is_some_and(|p| !p.travel_for_intent)
+        {
+            continue;
+        }
         let Some(person) = round.people.get(&id) else {
             continue;
         };
@@ -6349,7 +6459,8 @@ fn is_meal_office(office: Office) -> bool {
 /// **hunger** decays for *every* enrolled townsperson — everyone eats
 /// (`03_hunger.md` §1, README §8.1) — and climbs back at the hearth for those
 /// the round has home during a meal office (§4: no items, no coins).
-fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64) {
+fn decay_needs(round: &mut Round, world: &mut World, nav: &NavData, clock: &WorldClock, now: f64) {
+    let from_days = round.last_game_days;
     let game_days = clock.game_days(now);
     let delta_days = (game_days - round.last_game_days).max(0.0);
     round.last_game_days = game_days;
@@ -6395,7 +6506,13 @@ fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f6
         // through the meal offices and are never home, so without the tavern
         // branch they would decay to nothing forever.
         let position = character.position_m();
-        let at_hearth = meal_office
+        let resident_gain = round
+            .residents
+            .people
+            .get_mut(id)
+            .map(|r| residents::support_gain(r, character, nav, from_days, game_days));
+        let at_hearth = resident_gain.is_none()
+            && meal_office
             && (person
                 .home
                 .is_some_and(|home| position.distance(home) <= CENSUS_HOME_RADIUS_M)
@@ -6414,6 +6531,9 @@ fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f6
         let hunger = &mut character.state.needs.hunger;
         if !kept {
             *hunger = (*hunger - hunger_drop).max(0.0);
+        }
+        if let Some(gain) = resident_gain {
+            *hunger = (*hunger + gain).min(HUNGER_MAX);
         }
         if at_hearth || kept {
             // The gaol is a hearth, for the reason above: rations come in, and
@@ -7663,6 +7783,13 @@ fn run_ladder(
     ids.clear();
     ids.extend(round.people.keys().cloned());
     for id in ids.drain(..) {
+        if world
+            .characters
+            .get(&id)
+            .is_some_and(residents::is_resident)
+        {
+            continue;
+        }
         if !world.is_present(&id) {
             continue;
         }
@@ -8086,6 +8213,7 @@ fn decide(
     // The `go_to` aiming the officer at the station is rung 8, below all of
     // these, so it needs the whole flight of them gated.
     let escorting = world.custody.is_escorting(id);
+    let resident = residents::is_resident(&world.characters[id]);
 
     let person = &round.people[id];
     let character = &world.characters[id];
@@ -8102,6 +8230,7 @@ fn decide(
     // works for them, and the rest linger in the street, which is exactly the
     // person the watch stops (`04_the_round.md` §6).
     if night
+        && !resident
         && !escorting
         && !person.curfew_exempt
         && let Some(home) = person.home
@@ -8142,7 +8271,7 @@ fn decide(
     // excuse itself before the body walks (the `excused` flag), exactly as
     // parched does — and rides only with the divert, so it injects only when the
     // rung actually acts.
-    if !escorting && character.needs().hunger < HUNGER_FAMISHED {
+    if !resident && !escorting && character.needs().hunger < HUNGER_FAMISHED {
         // Eat what you hold, standing — for anyone, the night trades included,
         // at any hour: a famished actor with food in hand always eats it (but a
         // commercially listed food is only a last preference, not protected
@@ -8201,7 +8330,7 @@ fn decide(
     // nearest open, staffed, affordable stall whose queue is short
     // (`FOOD_QUEUE_SHORT`). Quiet, like thirsty — no pressure percept. Its place
     // in the ladder is fixed: after thirsty (6), before the `go_to` errand (8).
-    if !escorting && character.needs().hunger < HUNGER_HUNGRY {
+    if !resident && !escorting && character.needs().hunger < HUNGER_HUNGRY {
         if let Some(item_id) = held_edible(round, world, character) {
             if !held_meal_waits_for_home(round, world, id, office, weekday) {
                 return (Decision::EatHeld(item_id), None);
@@ -8286,6 +8415,10 @@ fn decide(
         return (Decision::WalkToLamp(index), None);
     }
 
+    // Residents own bounded, individually reserved local roof positions.
+    if resident {
+        return (Decision::Stay, None);
+    }
     // Weather shelter — below needs, an explicit `go_to`, and the
     // lamplighter's essential dusk act, but above the ordinary work/idle round.
     // `run_ladder`'s conversation hold treats it as deferrable, and its early
@@ -8316,6 +8449,10 @@ fn decide(
             choose_weather_shelter(round, world, nav, id, position, office, release_threshold)
     {
         return (Decision::SeekShelter(intent), None);
+    }
+
+    if resident {
+        return (Decision::Stay, None);
     }
 
     // Rung 9 — the round: be where the current leg says. Skipped at night for the
@@ -8489,7 +8626,7 @@ fn apply_decision(
                 person.travel_target = None;
                 person.travel_for_intent = false;
             }
-            match route_path(nav, id, position, pitch) {
+            match route_path_to_point(nav, id, position, pitch) {
                 Some(path) => {
                     set_route(world, id, path);
                     round.people.get_mut(id).expect("person exists").food = Some(FoodErrand {
@@ -8520,6 +8657,13 @@ fn apply_decision(
             if let Some(path) = route_path(nav, id, position, target) {
                 set_route(world, id, path);
                 let person = round.people.get_mut(id).expect("person exists");
+                person.motion_cause = if person.home == Some(target) {
+                    motion::MotionCause::Domestic
+                } else if person.legs.is_empty() && target == person.base {
+                    motion::MotionCause::Recall
+                } else {
+                    motion::MotionCause::Round
+                };
                 person.phase = Phase::Travelling;
                 person.travel_target = Some(target);
                 person.travel_for_intent = false;
@@ -8530,6 +8674,7 @@ fn apply_decision(
             if let Some(path) = route_path_to_point(nav, id, position, target) {
                 set_route(world, id, path);
                 let person = round.people.get_mut(id).expect("person exists");
+                person.motion_cause = motion::MotionCause::ExplicitIntent;
                 person.phase = Phase::Travelling;
                 person.travel_target = Some(target);
                 person.travel_for_intent = true;
@@ -8541,6 +8686,7 @@ fn apply_decision(
             if let Some(path) = route_path_to_point(nav, id, position, intent.target) {
                 set_route(world, id, path);
                 let person = round.people.get_mut(id).expect("person exists");
+                person.motion_cause = motion::MotionCause::Weather;
                 person.phase = Phase::Travelling;
                 person.travel_target = Some(intent.target);
                 person.travel_for_intent = false;
@@ -8565,6 +8711,7 @@ fn apply_decision(
                 // resolve_arrivals clears the (now empty) `movement` on arrival,
                 // rather than leaving a stale `Some(path: [])` behind.
                 let person = round.people.get_mut(id).expect("person exists");
+                person.motion_cause = motion::MotionCause::Wander;
                 person.phase = Phase::Travelling;
                 person.travel_target = Some(target);
                 person.travel_for_intent = false;
@@ -8577,6 +8724,7 @@ fn apply_decision(
             if let Some(path) = route_path_to_point(nav, id, position, target) {
                 set_route(world, id, path);
                 let person = round.people.get_mut(id).expect("person exists");
+                person.motion_cause = motion::MotionCause::Lamp;
                 person.phase = Phase::Travelling;
                 person.travel_target = Some(target);
                 person.travel_for_intent = false;
@@ -8812,14 +8960,10 @@ fn clamp_to_leash(base: Vec3, target: Vec3, leash_m: f64) -> Vec3 {
 /// already there or no route.
 fn route_path(nav: &NavData, id: &ActorId, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
     let route = nav.route_between(from, to)?;
-    let trim = route
-        .points
-        .first()
-        .is_some_and(|point| planar_close(*point, from));
     let mut path = nav.offset_route(&route, lane_fraction(id));
-    if trim {
-        path.remove(0);
-    }
+    let first = *path.first()?;
+    let connector = nav.local_route(from, first, crate::nav::LocalPathBudget::VISIT)?;
+    path.splice(0..1, connector.points.into_iter().skip(1));
     if path.is_empty() { None } else { Some(path) }
 }
 
@@ -8831,11 +8975,21 @@ fn route_path(nav: &NavData, id: &ActorId, from: Vec3, to: Vec3) -> Option<Vec<V
 /// the intent's expiry ends the errand honestly. `None` still means "already
 /// there or unreachable".
 fn route_path_to_point(nav: &NavData, id: &ActorId, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
+    if let Some(route) = nav.connected_route(from, to, lane_fraction(id)) {
+        return Some(route.points.into_iter().skip(1).collect());
+    }
     let to = Vec3::new(to.x, WALK_Y, to.z);
     let mut path = route_path(nav, id, from, to).unwrap_or_default();
     let tail_missing = !path.last().is_some_and(|point| planar_close(*point, to));
-    if tail_missing && !planar_close(from, to) && nav.is_walkable(to.x, to.z) {
-        path.push(to);
+    if tail_missing
+        && !planar_close(from, to)
+        && let Some(connector) = nav.local_route(
+            path.last().copied().unwrap_or(from),
+            to,
+            crate::nav::LocalPathBudget::VISIT,
+        )
+    {
+        path.extend(connector.points.into_iter().skip(1));
     }
     if path.is_empty() { None } else { Some(path) }
 }
@@ -9058,6 +9212,7 @@ fn set_route(world: &mut World, id: &ActorId, path: Vec<Vec3>) {
         speed: WALK_SPEED_MPS,
         gait_phase,
         patrol: None,
+        exact_local: false,
         choke_wait: 0.0,
     });
 }

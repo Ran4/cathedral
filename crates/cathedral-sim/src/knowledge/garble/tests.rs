@@ -64,6 +64,7 @@ fn profile(occupation: Option<&str>, ward: PlanningWard, generated: bool) -> Lor
         extended_character_description: String::new(),
         curiosity: None,
         generated,
+        generated_routine: None,
     }
 }
 

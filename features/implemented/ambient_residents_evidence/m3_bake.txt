@@ -1,0 +1,2 @@
+grid 2907 x 3313 = 9.6M cells @ 0.25 m
+resident places: 2682 patches, 9232 spots

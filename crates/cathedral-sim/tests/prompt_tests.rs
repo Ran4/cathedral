@@ -76,7 +76,10 @@ fn the_sheet_carries_the_hour_only_when_the_world_has_a_clock() {
         after["you_are"]["location_description"],
         before["you_are"]["location_description"]
     );
-    assert_eq!(after["you_are"]["position_m"], before["you_are"]["position_m"]);
+    assert_eq!(
+        after["you_are"]["position_m"],
+        before["you_are"]["position_m"]
+    );
 }
 
 #[test]
@@ -104,7 +107,10 @@ fn the_sheet_carries_weather_only_with_clock_and_weather_context() {
     assert!(phrase.contains("steady rain"), "was: {phrase}");
     assert!(phrase.contains("streets are wet"), "was: {phrase}");
     assert!(phrase.contains("exposed"), "was: {phrase}");
-    assert!(!phrase.contains("0.58"), "numeric internals stay out of prompts");
+    assert!(
+        !phrase.contains("0.58"),
+        "numeric internals stay out of prompts"
+    );
 
     world.current_weather = None;
     let without_weather = sheet(&world, "sv3n1", &env);
@@ -136,6 +142,7 @@ fn the_sheet_says_where_the_current_walk_is_going() {
             speed: 1.4,
             gait_phase: 0.0,
             patrol: None,
+            exact_local: false,
             choke_wait: 0.0,
         });
         state.intent = Some(TravelIntent {
@@ -252,7 +259,10 @@ fn the_sheet_carries_the_wards_word_and_only_the_law_gets_the_verb() {
         after.contains("word_in_the_ward is what the ward is saying"),
         "the turn prompt explains how to weigh the word"
     );
-    assert!(!after.contains("raise_notice"), "the verb is the law's alone");
+    assert!(
+        !after.contains("raise_notice"),
+        "the verb is the law's alone"
+    );
     assert!(
         !after.contains("settle_notice"),
         "a mere carrier can neither raise nor settle"
@@ -282,9 +292,13 @@ fn the_sheet_carries_the_wards_word_and_only_the_law_gets_the_verb() {
         extended_character_description: String::new(),
         curiosity: None,
         generated: false,
+        generated_routine: None,
     });
     let law = render_prompt(&world, &sven, None, &env).unwrap();
-    assert!(law.contains("raise_notice {\"about\""), "the verb line is listed");
+    assert!(
+        law.contains("raise_notice {\"about\""),
+        "the verb line is listed"
+    );
     assert!(law.contains("You serve the city's law"), "and explained");
     assert!(
         law.contains("settle_notice {\"notice_id\": 3}"),
@@ -433,6 +447,7 @@ fn the_turn_sheet_carries_the_ward_mood_for_a_minor_of_that_ward() {
         extended_character_description: String::new(),
         curiosity: None,
         generated: false,
+        generated_routine: None,
     };
     // A Major of that ward reflects for themselves, so the batch is not theirs.
     world.characters.get_mut(&sven).unwrap().sheet.lore = Some(profile.clone());
@@ -494,7 +509,13 @@ fn the_body_pocket_verbs_render_only_for_a_body_that_could_use_them() {
         !holder.contains("frontbutt"),
         "a body without one is never told of it"
     );
-    for verb in ["retrieve_item {", "swallow {", "spit {", "gargle {", "expel {}"] {
+    for verb in [
+        "retrieve_item {",
+        "swallow {",
+        "spit {",
+        "gargle {",
+        "expel {}",
+    ] {
         assert!(holder.contains(verb), "missing {verb}");
     }
 
@@ -827,7 +848,10 @@ fn a_failed_turn_requeues_percepts_without_duplication() {
         [r#"Conny said to you: "Fresh fish!""#]
     );
     // The empty-history sentinel renders inline, not as a bullet.
-    assert!(prompt.contains("**recent_history** — nothing yet"), "{prompt}");
+    assert!(
+        prompt.contains("**recent_history** — nothing yet"),
+        "{prompt}"
+    );
 
     // …an event arrives while the completion is in flight…
     world
@@ -857,7 +881,10 @@ fn a_failed_turn_requeues_percepts_without_duplication() {
             "[You heard a big fart!]"
         ]
     );
-    assert!(retry.contains("**recent_history** — nothing yet"), "{retry}");
+    assert!(
+        retry.contains("**recent_history** — nothing yet"),
+        "{retry}"
+    );
 
     // After the successful retry each line graduates exactly once.
     world
@@ -926,6 +953,7 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
         extended_character_description: "SECRET EXTENDED DETAIL".into(),
         curiosity: None,
         generated: false,
+        generated_routine: None,
     });
 
     let rendered = render_prompt(&world, &actor("sv3n1"), None, &env).unwrap();
@@ -1003,6 +1031,7 @@ fn the_home_line_carries_its_wayfinding_handle_when_registered() {
             extended_character_description: String::new(),
             curiosity: None,
             generated: false,
+            generated_routine: None,
         });
     }
 
@@ -1068,7 +1097,9 @@ fn places_you_know_renders_the_held_handles_sorted_by_name() {
     {
         let sven = world.characters.get_mut(&actor("sv3n1")).unwrap();
         for id in ["pl_zz01", "pl_aa01", "pl_mm01", "pl_gone"] {
-            sven.state.places_known.insert(cathedral_sim::PlaceId::from_raw(id));
+            sven.state
+                .places_known
+                .insert(cathedral_sim::PlaceId::from_raw(id));
         }
     }
 
@@ -1105,6 +1136,7 @@ fn you_see_people_carry_the_moving_flag() {
         speed: 1.8,
         gait_phase: 0.0,
         patrol: None,
+        exact_local: false,
         choke_wait: 0.0,
     });
 
@@ -1130,7 +1162,10 @@ fn you_see_people_carry_the_moving_flag() {
     .unwrap();
     let rendered = sheet(&world, "sv3n1", &env);
     let to = &rendered["you_offer"][0]["to"];
-    assert!(to.get("moving").is_none(), "no moving flag in you_offer: {to}");
+    assert!(
+        to.get("moving").is_none(),
+        "no moving flag in you_offer: {to}"
+    );
 }
 
 /// The whole hunger loop closes on the sheet (`features/food_and_items/03_hunger.md`
@@ -1171,6 +1206,7 @@ fn the_hunger_condition_computes_and_clears_when_the_actor_eats() {
         extended_character_description: String::new(),
         curiosity: None,
         generated: false,
+        generated_routine: None,
     });
 
     // Seed hungry: below FAMISHED, the sheet computes `famished` after the
@@ -1187,7 +1223,13 @@ fn the_hunger_condition_computes_and_clears_when_the_actor_eats() {
     // of both thresholds.
     let loaf = ItemId::from_raw("ld001");
     world.add_item(Item::new(loaf.clone(), "loaf"));
-    world.characters.get_mut(&id).unwrap().state.holds.push(loaf.clone());
+    world
+        .characters
+        .get_mut(&id)
+        .unwrap()
+        .state
+        .holds
+        .push(loaf.clone());
     apply_action(&mut world, &id, "eat", &json!({ "item_id": "ld001" })).unwrap();
 
     assert!(
@@ -1217,14 +1259,23 @@ fn a_bound_vendor_lists_you_sell_prices_off_the_catalog() {
 
     // Unbound: no section.
     let before = render_prompt(&world, &id, None, &env).unwrap();
-    assert!(!before.contains("**you_sell**"), "an unbound actor has no price list");
+    assert!(
+        !before.contains("**you_sell**"),
+        "an unbound actor has no price list"
+    );
     assert_eq!(md_section(&before, "you_sell"), None);
 
     // The round binds a vendor by writing the catalog-priced listings onto the
     // sheet; the herring at one spark pins the singular unit word.
     world.characters.get_mut(&id).unwrap().state.you_sell = vec![
-        VendorListing { name: "herring".into(), price_sparks: 1 },
-        VendorListing { name: "loaf".into(), price_sparks: 2 },
+        VendorListing {
+            name: "herring".into(),
+            price_sparks: 1,
+        },
+        VendorListing {
+            name: "loaf".into(),
+            price_sparks: 2,
+        },
     ];
     let after = render_prompt(&world, &id, None, &env).unwrap();
     assert!(
@@ -1244,7 +1295,10 @@ fn a_bound_vendor_lists_you_sell_prices_off_the_catalog() {
     let hold_at = after.find("**you_hold**").unwrap();
     let sell_at = after.find("**you_sell**").unwrap();
     let see_at = after.find("**you_see**").unwrap();
-    assert!(hold_at < sell_at && sell_at < see_at, "you_sell is between you_hold and you_see");
+    assert!(
+        hold_at < sell_at && sell_at < see_at,
+        "you_sell is between you_hold and you_see"
+    );
 }
 
 /// §8: a carriage status is body language the host reads off the snapshot,
@@ -1285,6 +1339,9 @@ fn carriage_statuses_never_enter_the_prompt() {
         "a status changed the structured sheet"
     );
     let lower = after.to_lowercase();
-    assert!(!lower.contains("drunkenness"), "the prompt leaked drunkenness");
+    assert!(
+        !lower.contains("drunkenness"),
+        "the prompt leaked drunkenness"
+    );
     assert!(!lower.contains("weariness"), "the prompt leaked weariness");
 }

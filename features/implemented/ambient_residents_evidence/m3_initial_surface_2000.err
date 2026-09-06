@@ -1,0 +1,36 @@
+[crowd] requested 2000, placed 2000, unplaced 0; 1501 housed, 499 hardship, 0 workers; door cap 2
+[crowd] 2000 generated ambient citizens; 2000 with no trade at all (100.0%), 0 of those with no support circumstance
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 2514 enrolled (9 well keepers), 1914 housed, 69 water drawers
+[smart actors] wayfinding: 1992 places in the registry (1914 homes)
+[smart actors] round: 13 food stalls, 12 staffed on day 2 (Highmarket)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-66.8750), 13.375m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.8750,-69.3750), 9.303m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-281.3750), 17.836m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)

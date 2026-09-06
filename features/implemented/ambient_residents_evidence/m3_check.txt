@@ -1,0 +1,2 @@
+    Checking cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 3.32s

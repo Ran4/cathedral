@@ -1371,6 +1371,11 @@ fn process_engine_message(
                 sample.seq = sample.seq.wrapping_add(1);
             }
         }
+        EngineMessage::ResidentStates { residents } => {
+            for (id, status) in residents {
+                mirror.update_resident(&model::actor_id_from_sim(&id), status);
+            }
+        }
         EngineMessage::Lamps { lamps: set } => {
             // The lamp channel (M7), like `Clock`: a render-only mirror, no
             // snapshot, no revision. The sync system stands the posts up and
@@ -2817,6 +2822,7 @@ mod tests {
                 player_id: model::ActorId("player".into()),
                 actors: vec![
                     model::ActorSnapshot {
+                        resident: None,
                         id: model::ActorId("player".into()),
                         name_for_player: "You".into(),
                         control: model::ActorControl::Player,
@@ -2829,6 +2835,7 @@ mod tests {
                         pockets: Vec::new(),
                     },
                     model::ActorSnapshot {
+                        resident: None,
                         id: model::ActorId("near".into()),
                         name_for_player: "Near".into(),
                         control: model::ActorControl::Llm,
@@ -2841,6 +2848,7 @@ mod tests {
                         pockets: Vec::new(),
                     },
                     model::ActorSnapshot {
+                        resident: None,
                         id: model::ActorId("far".into()),
                         name_for_player: "Far".into(),
                         control: model::ActorControl::Llm,
@@ -2957,6 +2965,7 @@ mod tests {
                 player_id: player.clone(),
                 actors: vec![
                     model::ActorSnapshot {
+                        resident: None,
                         id: player.clone(),
                         name_for_player: "You".into(),
                         control: model::ActorControl::Player,
@@ -2969,6 +2978,7 @@ mod tests {
                         pockets: Vec::new(),
                     },
                     model::ActorSnapshot {
+                        resident: None,
                         id: giver.clone(),
                         name_for_player: "Ilse".into(),
                         control: model::ActorControl::Llm,
@@ -2981,6 +2991,7 @@ mod tests {
                         pockets: Vec::new(),
                     },
                     model::ActorSnapshot {
+                        resident: None,
                         id: other.clone(),
                         name_for_player: "Frans".into(),
                         control: model::ActorControl::Llm,

@@ -1,0 +1,115 @@
+[crowd] requested 1000, placed 1000, unplaced 0; 756 housed, 244 hardship, 0 workers; door cap 1
+[crowd] 1000 generated ambient citizens; 1000 with no trade at all (100.0%), 0 of those with no support circumstance
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 1514 enrolled (9 well keepers), 1169 housed, 69 water drawers
+[smart actors] wayfinding: 1247 places in the registry (1169 homes)
+[smart actors] round: 13 food stalls, 12 staffed on day 2 (Highmarket)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[night] Wyn Alder reflected: remember, set_round
+[night] Segwin Rasp reflected: remember, set_round
+[night] Havise Dorn reflected: remember, set_round
+[night] Osanne Vell reflected: remember, set_round
+[night] Cobb reflected: remember, set_round
+[night] Betriss Marle reflected: remember, set_round
+[night] Tam Rud reflected: remember, set_round
+[night] Tilman Rue reflected: remember, set_round
+[night] Sible Mott reflected: remember, set_round
+[night] Conny reflected: remember, set_round
+[night] Noll Fitch reflected: remember, set_round
+[night] Jonet Sparr reflected: remember, set_round
+[night] Aubin Ferrant reflected: remember, set_round
+[night] Gude reflected: remember, set_round
+[night] Hamel Stott reflected: remember, set_round
+[night] Ede of the Needle reflected: remember, set_round
+[night] Lise Copp reflected: remember, set_round
+[night] Ilse reflected: remember, set_round
+[night] Petronel Roper reflected: remember, set_round
+[night] Grigor Ashe reflected: remember, set_round
+[night] Sven reflected: remember, set_round
+[night] 31 ambient evenings moved to a tavern hearth for day 3
+[night] Aldith reflected: remember
+[night] Sef reflected: remember, set_round
+[night] Dunstan Pike reflected: remember, set_round
+[night] Mote reflected: remember, set_round
+[night] Nan reflected: remember, set_round
+[night] Tib reflected: remember, set_round
+[night] Jos Brant reflected: remember, set_round
+[night] Corin Copp reflected: remember, set_round
+[night] fabric ward reflected: ward_mood, Ansel Hobbe makes The Lanthorn leg 1 of their round
+[night] wick ward reflected: ward_mood, Aldith Rill makes The Wickmarket leg 1 of their round
+[night] cloth ward reflected: ward_mood, Ede Nett makes Seraph statue leg 1 of their round
+[night] wallwright ward reflected: ward_mood, Ansel Halfbell makes Coswald's Yard leg 1 of their round
+[night] cinder ward reflected: ward_mood, Dunstan Hook makes The Gradine leg 1 of their round
+[night] weigh ward reflected: ward_mood, Jonet Galt makes The Tallage leg 1 of their round
+[night] reed ward reflected: ward_mood, Ewart Alder makes Maren's Green leg 1 of their round
+[night] bell_and_sluice ward reflected: ward_mood, Ede Clove makes The Bellstand leg 1 of their round
+[night] Renna Tapster reflected: remember, set_round
+[night] Wyn Alder reflected: remember, set_round
+[night] Segwin Rasp reflected: remember, set_round
+[night] Havise Dorn reflected: remember, set_round
+[night] Osanne Vell reflected: remember, set_round
+[night] Cobb reflected: remember, set_round
+[night] Betriss Marle reflected: remember, set_round
+[night] Tam Rud reflected: remember, set_round
+[night] Tilman Rue reflected: remember, set_round
+[night] Sible Mott reflected: remember, set_round
+[night] Conny reflected: remember, set_round
+[night] Noll Fitch reflected: remember, set_round
+[night] Jonet Sparr reflected: remember, set_round
+[night] Aubin Ferrant reflected: remember, set_round
+[night] Gude reflected: remember, set_round
+[night] Hamel Stott reflected: remember, set_round
+[night] Ede of the Needle reflected: remember, set_round
+[night] Lise Copp reflected: remember, set_round
+[night] Ilse reflected: remember, set_round
+[night] Petronel Roper reflected: remember, set_round
+[night] Grigor Ashe reflected: remember, set_round
+[night] Sven reflected: remember, set_round
+[night] 35 ambient evenings moved to a tavern hearth for day 4
+[night] Aldith reflected: remember
+[night] Sef reflected: remember, set_round
+[night] Dunstan Pike reflected: remember, set_round
+[night] Mote reflected: remember, set_round
+[night] Nan reflected: remember, set_round
+[night] Tib reflected: remember, set_round
+[night] Jos Brant reflected: remember, set_round
+[night] Corin Copp reflected: remember, set_round
+[night] fabric ward reflected: ward_mood, Ansel Hobbe makes The Lanthorn leg 1 of their round
+[night] wick ward reflected: ward_mood, Aldith Rill makes The Wickmarket leg 1 of their round
+[night] cloth ward reflected: ward_mood, Ede Nett makes Seraph statue leg 1 of their round
+[night] wallwright ward reflected: ward_mood, Ansel Halfbell makes Coswald's Yard leg 1 of their round
+[night] cinder ward reflected: ward_mood, Dunstan Hook makes The Gradine leg 1 of their round
+[night] weigh ward reflected: ward_mood, Jonet Galt makes The Tallage leg 1 of their round
+[night] reed ward reflected: ward_mood, Ewart Alder makes Maren's Green leg 1 of their round
+[night] bell_and_sluice ward reflected: ward_mood, Ede Clove makes The Bellstand leg 1 of their round
+[night] Renna Tapster reflected: remember, set_round

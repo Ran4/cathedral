@@ -1,0 +1,38 @@
+{
+  "reviewed_utc": "2026-09-06T17:27:42.148238+00:00",
+  "scope": "Independent parent verification of the formal two-day behaviour traces; GPU and capacity acceptance are recorded separately. Optional admission and routed-length guarantees additionally use mechanical regression tests.",
+  "populations": [
+    {
+      "population": 1000,
+      "checks": {
+        "two_days_and_144000_polls": true,
+        "full_present_population": true,
+        "daytime_threshold": true,
+        "zero_jobs_legs_queues_famished_drift": true,
+        "optional_samples_under_10_percent": true,
+        "no_new_final_patch_ids": true
+      },
+      "stationary_mean_percent": 99.05544554455446,
+      "daytime_samples": 101,
+      "mean_pump_ms": 4.5219039230694795,
+      "summary_file": "final_1000_summary.json",
+      "summary_sha256": "40c5572d835970b5aa8404e126e058c3499ad87ffdf57f6a3a19d4e57ec393e0"
+    },
+    {
+      "population": 2000,
+      "checks": {
+        "two_days_and_144000_polls": true,
+        "full_present_population": true,
+        "daytime_threshold": true,
+        "zero_jobs_legs_queues_famished_drift": true,
+        "optional_samples_under_10_percent": true,
+        "no_new_final_patch_ids": true
+      },
+      "stationary_mean_percent": 99.0608910891089,
+      "daytime_samples": 101,
+      "mean_pump_ms": 8.97014973005551,
+      "summary_file": "final_2000_summary.json",
+      "summary_sha256": "d9d98f19abc5ad725f13be037e3987e147d83c036efcb817b31fc119268f3a0a"
+    }
+  ]
+}

@@ -54,6 +54,10 @@
     ],
     "finished": [
         {
+            "path": "features/implemented/ambient_residents.md",
+            "when": "2026-09-06T2046"
+        },
+        {
             "path": "features/implemented/npcs_know_how_far_their_workplace_is.md",
             "when": "2026-09-06T1246"
         },

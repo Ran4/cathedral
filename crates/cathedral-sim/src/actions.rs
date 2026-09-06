@@ -5581,6 +5581,7 @@ mod tests {
             extended_character_description: String::new(),
             curiosity,
             generated: false,
+            generated_routine: None,
         });
         person
     }

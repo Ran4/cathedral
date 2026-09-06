@@ -1,0 +1,1080 @@
+    Blocking waiting for file lock on build directory
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+   Compiling cathedralbevy v0.1.0 (/home/ran/src/rust/cathedralbevy)
+warning: variants `Weather`, `Hud`, and `Interaction` are never constructed
+  --> src/perf.rs:53:5
+   |
+44 | pub enum Probe {
+   |          ----- variants in this enum
+...
+53 |     Weather,
+   |     ^^^^^^^
+54 |     Soundscape,
+55 |     Hud,
+   |     ^^^
+...
+58 |     Interaction,
+   |     ^^^^^^^^^^^
+   |
+   = note: `Probe` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `cathedralbevy` (bin "cathedralbevy" test) generated 1 warning
+    Finished `test` profile [optimized + debuginfo] target(s) in 1m 23s
+     Running unittests src/main.rs (target/debug/deps/cathedralbevy-96aaf906481dbd56)
+
+running 503 tests
+test city::gates::tests::rewind_reconciles_without_a_transition ... ok
+test city::gates::tests::full_motion_durations_end_exactly_on_the_audio_boundaries ... ok
+test city::gates::tests::boundaries_are_one_shot_and_survive_missing_clock_frames ... ok
+test city::gates::tests::runtime_emits_no_initial_cue_and_one_cue_per_real_transition ... ok
+test city::gates::tests::skipped_offices_still_cross_the_relevant_boundary ... ok
+test city::gates::tests::first_valid_clock_initializes_silently_and_absence_does_not_count ... ok
+test city::marks::tests::a_mark_lands_on_the_nearest_wall_and_faces_out_of_it ... ok
+test city::marks::tests::a_faint_mark_reads_as_half_washed ... ok
+test city::marks::tests::a_mark_placed_nearer_than_its_anchor_still_reads ... ok
+test city::marks::tests::a_mark_read_from_beyond_arms_reach_offers_no_scrub ... ok
+test city::marks::tests::a_mark_with_no_wall_near_it_lies_flat_on_the_paving ... ok
+test city::marks::tests::a_non_finite_anchor_is_dropped_rather_than_drawn ... ok
+test city::marks::tests::a_placement_is_remembered_per_mark_and_anchor ... ok
+test city::marks::tests::a_wall_between_the_crosshair_and_a_mark_blocks_read_and_scrub ... ok
+test city::marks::system_tests::releasing_early_draws_nothing ... ok
+test city::marks::system_tests::the_picker_steps_on_the_key_and_resets_when_the_reach_moves ... ok
+test city::marks::system_tests::a_bare_city_draws_no_chalk ... ok
+test city::marks::system_tests::a_mark_in_the_mirror_becomes_geometry ... ok
+test city::marks::system_tests::an_unchanged_revision_does_not_rebuild ... ok
+test city::marks::system_tests::a_mark_with_no_wall_still_reaches_the_batch ... ok
+test city::marks::tests::aiming_at_a_mark_reads_out_its_meaning ... ok
+test city::marks::tests::an_empty_hand_is_told_why_nothing_happens ... ok
+test city::marks::tests::strength_reaches_the_vertex_alpha ... ok
+test city::marks::tests::the_prompt_says_what_the_hold_would_do ... ok
+test city::marks::tests::the_cycle_key_steps_through_every_sign_within_reach ... ok
+test city::marks::tests::the_glyph_geometry_counts_the_strokes ... ok
+test city::marks::tests::what_a_hold_would_do_depends_on_the_crosshair_and_the_pen ... ok
+test city::monuments::tests::monuments_flank_the_approach_without_blocking_it ... ok
+test city::route_boards::tests::exactly_the_four_annotated_places_receive_a_board ... ok
+test city::route_boards::tests::artwork_material_preserves_the_reviewed_colors ... ok
+test city::marks::tests::the_wall_label_flips_at_the_published_boundary ... ok
+test city::route_boards::tests::reviewed_texture_is_full_resolution_and_matches_the_board_aspect ... ok
+test city::smoke::tests::hearth_heat_follows_the_day_of_a_hearth ... ok
+test city::monuments::tests::monuments_have_the_requested_scale_and_dense_authored_geometry ... ok
+test city::plan::tests::the_stone_house_is_an_anchor_and_not_a_footprint ... ok
+test city::plan::tests::every_numbered_place_has_a_unique_number_and_anchor ... ok
+test city::plan::tests::fixed_lanthorn_and_map_orientation_have_not_drifted ... ok
+test city::plan::tests::authoritative_plan_loads_with_every_inventory_entry ... ok
+test city::plan::tests::every_numbered_place_has_a_non_overlapping_simulation_area ... ok
+test city::tests::bake_is_reproducible ... ignored, requires uv + python; re-runs the bake and checks it is byte-stable
+test city::surfaces::tests::dry_cut_is_not_classified_as_cobbles ... ok
+test city::surfaces::tests::network_matches_ribbon_width_and_round_ends ... ok
+test city::tests::export_collision_footprints ... ignored, writes an asset; run manually when scene collision changes
+test city::tests::every_oriented_box_face_is_wound_outward ... ok
+test city::tests::a_drawn_kerb_run_seats_every_stone_and_carries_the_sounding_under_it ... ok
+test city::tests::firewood_rick_stacks_across_the_wall_and_not_along_the_logs ... ok
+test city::tests::no_two_pieces_of_cut_furniture_share_the_same_kerb ... ok
+test city::tests::a_cut_water_stair_breaks_the_line_it_descends_through ... ok
+test city::tests::concave_gaunt_footprint_triangulates_without_filling_its_passage ... ok
+test city::tests::the_cut_kerb_heave_is_centred_on_the_profile_it_scatters ... ok
+test city::tests::every_building_collider_starts_at_its_visible_facades ... ok
+test city::tests::every_laid_kerbstone_has_flagged_margin_behind_it ... ok
+test city::tests::cut_cellar_openings_keep_clear_of_the_doors_they_belong_to ... ok
+test city::tests::every_cut_kerb_break_is_at_a_real_cut_facing_door ... ok
+test city::tests::the_cut_kerb_is_never_a_ridge_inside_a_square ... ok
+test city::tests::the_cut_kerb_holds_five_metres_off_the_plans_own_centreline ... ok
+test city::tests::the_cut_kerb_opens_at_every_side_street ... ok
+test city::tests::the_cut_sag_moves_the_kerbstone_down_and_never_sideways ... ok
+test city::tests::the_cut_soundings_leave_the_laid_furniture_standing ... ok
+test city::tests::the_cut_soundings_stay_inside_the_authored_envelope ... ok
+test city::tests::the_cut_facing_doors_keep_their_thresholds_proud_of_the_flags ... ok
+test city::tests::the_cut_margin_furniture_stands_on_its_own_street ... ok
+test city::tests::the_three_reaches_of_the_cut_are_furnished_differently ... ok
+test city::tests::the_cut_step_is_under_feet_exactly_where_the_street_is_raised ... ok
+test city::trade_props::tests::cargo_reaches_the_authored_contact_on_the_documented_delay ... ok
+test city::trade_props::tests::weighbeam_oscillation_is_damped_directional_and_settles_to_level ... ok
+test city::tests::wall_openings_interrupt_the_curtain_at_every_gate ... ok
+test city::trade_props::tests::cargo_contact_bounce_decays_and_cleanup_is_bounded ... ok
+test city::vermin::tests::a_boil_night_spans_midnight ... ok
+test city::vermin::tests::a_boil_outranks_the_darkness_gate ... ok
+test city::route_boards::tests::every_board_is_flush_on_a_real_facade ... ok
+test city::tests::the_door_you_see_is_the_door_you_walk_to ... ok
+test city::vermin::tests::a_rat_loop_is_deterministic_and_periodic ... ok
+test city::vermin::tests::a_swarm_percept_is_paced_on_the_sim_clock ... ok
+test city::tests::the_cut_margin_stays_connected_to_its_cartway ... ok
+test city::vermin::tests::a_wild_density_cannot_unbound_the_bake ... ok
+test city::vermin::tests::a_rat_is_wound_with_its_normals_out ... ok
+test city::vermin::tests::a_thin_obstacle_between_endpoints_refuses_the_sprint_and_the_dart ... ok
+test city::vermin::tests::heavy_rain_sends_most_rats_under_cover ... ok
+test city::vermin::tests::a_scatter_impulse_darts_and_dies_away ... ok
+test city::vermin::tests::night_colonies_follow_the_dark ... ok
+test city::vermin::tests::a_scatter_dart_answers_to_collision_as_well_as_nav ... ok
+test city::smoke::tests::puffs_fill_one_batched_mesh_of_camera_facing_quads ... ok
+test city::smoke::tests::the_snuffing_empties_the_smoke_mesh ... ok
+test city::vermin::tests::the_boil_walks_the_whole_colony_table ... ok
+test city::tests::no_wall_tower_is_planted_in_a_gate_opening ... ok
+test city::smoke::tests::local_eddies_never_reverse_the_authoritative_wind ... ok
+test city::water::mechanism_tests::inactive_mechanism_returns_to_exact_rest_phase ... ok
+test city::water::mechanism_tests::three_curb_conflict_jerks_once_then_holds ... ok
+test city::water::mechanism_tests::three_curb_mouths_have_deterministic_distinct_phases ... ok
+test config::tests::a_config_still_naming_dogs_enabled_loads ... ok
+test config::tests::a_config_written_before_the_crowd_knob_still_loads_an_empty_city ... ok
+test config::tests::a_config_written_before_the_rats_still_loads ... ok
+test config::tests::a_wild_vermin_density_is_normalized_not_obeyed ... ok
+test config::tests::ron_config_overrides_window_defaults ... ok
+test config::tests::saved_settings_round_trip_through_ron ... ok
+test controller::tests::a_free_players_delta_is_handed_to_the_sweep_untouched ... ok
+test controller::tests::a_hidden_window_does_not_let_the_real_mouse_steer_the_camera ... ok
+test controller::tests::a_solid_between_the_player_and_a_walking_anchor_breaks_the_grip_rather_than_dragging_them_through_it ... ok
+test controller::tests::acceleration_stops_at_wish_speed_and_keeps_perpendicular_momentum ... ok
+test controller::tests::diagonal_contact_keeps_tangential_velocity ... ok
+test controller::tests::diagonal_sweep_hits_a_box_instead_of_skipping_its_corner ... ok
+test controller::tests::diagonal_walking_input_is_not_faster ... ok
+test controller::tests::dynamic_barrier_boxes_share_the_continuous_collision_path ... ok
+test controller::tests::falling_lands_on_floor_and_reports_ground ... ok
+test controller::tests::fly_acceleration_has_no_implicit_gravity ... ok
+test controller::tests::flying_is_not_custody_so_the_clamp_never_touches_the_delta ... ok
+test controller::tests::friction_is_monotonic_and_safe_at_zero ... ok
+test controller::tests::high_speed_sweep_cannot_tunnel_through_a_thin_wall ... ok
+test controller::tests::one_stalled_frame_cannot_replay_thirty_fixed_solves ... ok
+test controller::tests::player_starts_on_the_west_approach_facing_the_actor_cluster ... ok
+test controller::tests::resting_on_floor_does_not_block_horizontal_motion ... ok
+test controller::tests::rotated_prism_ray_hits_its_actual_facade ... ok
+test controller::tests::static_world_ray_returns_nearest_wall_distance ... ok
+test controller::tests::swept_aabb_cannot_enter_a_rotated_prism ... ok
+test controller::tests::the_cut_riser_blocks_the_cartway_and_frees_the_margin ... ok
+test city::tests::every_water_source_is_built_and_sounds_like_itself ... ok
+test controller::tests::the_tether_clamps_the_desired_position_so_a_wall_still_stops_a_held_player ... ok
+test controller::tests::upward_sweep_stops_at_ceiling ... ok
+test controller::tests::walk_and_run_speeds_match_the_control_contract ... ok
+test controller::tests::wall_collision_preserves_tangential_slide ... ok
+test controller::tests::the_fixed_step_solve_clamps_before_it_sweeps_so_a_held_player_ends_up_outside_the_wall ... ok
+test drive::tests::actions_fire_in_order_with_default_spacing ... ok
+test drive::tests::bell_parses_both_ropes_and_validates_the_count ... ok
+test drive::tests::empty_statements_are_skipped ... ok
+test drive::tests::example_script_parses ... ok
+test drive::tests::frame_peels_optional_numbers_off_a_multi_word_name ... ok
+test drive::tests::frame_stands_in_front_of_the_actor_and_looks_back ... ok
+test drive::tests::journal_pokes_preserve_names_and_sentences_and_reject_missing_parts ... ok
+test drive::tests::keycodes_resolve_by_variant_name ... ok
+test drive::tests::a_framed_shot_lands_the_real_camera_at_eye_height_looking_at_the_actor ... ok
+test drive::tests::parse_errors_name_the_bad_token ... ok
+test drive::tests::screenshot_names_must_stay_inside_the_session_directory ... ok
+test drive::tests::shot_blocks_until_the_file_is_saved ... ok
+test drive::tests::shot_shorthand_expands_to_a_valid_script ... ok
+test drive::tests::simulation_sleep_waits_through_pauses_and_variable_frame_pacing ... ok
+test drive::tests::sleep_extends_the_gap_to_the_next_action ... ok
+test drive::tests::status_parses_name_kind_and_bounded_value ... ok
+test drive::tests::tp_parses_position_and_optional_view ... ok
+test drive::tests::type_keeps_inner_spaces_and_requires_text ... ok
+test drive::tests::wait_online_holds_until_ready ... ok
+test drive::tests::wait_online_skips_when_actors_are_disabled ... ok
+test drive::tests::wait_online_times_out_and_continues ... ok
+test drive::tests::script_without_quit_auto_quits_after_a_grace_period ... ok
+test drive::tests::weather_parses_forced_kinds_intensity_and_timeline ... ok
+test city::vermin::tests::the_gait_bends_a_rat_but_never_its_topology ... ok
+test map::tests::constants_match_the_bake_viewbox ... ok
+test map::tests::marker_arrow_points_where_the_player_faces ... ok
+test map::tests::projection_is_not_a_reflection ... ok
+test map::tests::click_far_outside_the_city_resolves_to_nothing ... ok
+test map::tests::spawn_lands_inside_the_image ... ok
+test map::tests::transform_round_trips ... ok
+test map::tests::turning_right_swings_the_marker_clockwise ... ok
+test map::tests::walking_forward_moves_the_marker_the_way_it_points ... ok
+test map::tests::ward_heat_dots_are_fullscreen_only_and_do_not_rewrite_quiet_layout ... ok
+test map::tests::click_on_a_place_snaps_to_it ... ok
+test mesh_batch::tests::an_idle_batch_is_drawable_rather_than_empty ... ok
+test mesh_batch::tests::a_batch_falls_back_to_the_idle_triangle_and_then_stays_put ... ok
+test mesh_batch::tests::the_reusing_write_is_the_moving_one_without_the_allocations ... ok
+test perf::tests::a_charged_span_lands_in_its_own_slot ... ok
+test perf::tests::a_span_is_free_until_perf_is_asked_for ... ok
+test perf::tests::attribution_ranks_worst_first_and_drops_the_floor ... ok
+test perf::tests::attribution_says_so_when_nothing_was_probed ... ok
+test perf::tests::every_probe_has_a_name ... ok
+test city::smoke::tests::a_hash_picked_subset_of_chimneys_smokes ... ok
+test scene::tests::baldachin_columns_stand_on_the_altar_steps ... ok
+test scene::tests::apse_arcade_carries_a_column_on_every_segment_boundary ... ok
+test scene::tests::cathedral_builds_headlessly_with_architecture_and_collision ... ok
+test screenshot::tests::f5_and_swedish_acute_key_request_a_capture ... ok
+test screenshot::tests::same_second_captures_get_increasing_suffixes ... ok
+test session_log::tests::initial_meta_parses_and_increments ... ok
+test session_log::tests::flushing_writes_each_staged_record_exactly_once_and_in_order ... ok
+test city::tests::city_builds_every_cadastral_building_and_named_place ... ok
+test session_log::tests::invalid_or_exhausted_session_is_detected ... ok
+test session_log::tests::session_directory_name_embeds_number_and_start_time ... ok
+test scene::tests::outer_aisle_wall_closes_the_shell_except_at_the_transept_arch ... ok
+test session_log::tests::utc_fallback_handles_epoch_and_leap_days ... ok
+test smart_actors::actor_sheet::tests::a_pending_intent_gets_its_own_line ... ok
+test smart_actors::actor_sheet::tests::bar_fills_and_clamps ... ok
+test smart_actors::actor_sheet::tests::body_renders_every_section_including_a_status_bar ... ok
+test smart_actors::actor_sheet::tests::demographic_line_reads_age_gender_district ... ok
+test smart_actors::actor_sheet::tests::empty_hands_and_still_mover_read_clearly ... ok
+test smart_actors::actor_sheet::tests::eta_reads_in_seconds_then_minutes ... ok
+test smart_actors::actor_sheet::tests::heading_line_degrades_without_eta_or_reason ... ok
+test smart_actors::actor_sheet::tests::identity_line_matches_the_requested_header ... ok
+test smart_actors::actor_sheet::tests::occupation_is_humanized_sentence_case ... ok
+test smart_actors::actor_sheet::tests::sticky_subject_prefers_crosshair_then_holds_then_clears ... ok
+test smart_actors::actor_sheet::tests::thirst_label_matches_ladder_thresholds ... ok
+test smart_actors::actor_sheet::tests::truncate_caps_long_lines_with_an_ellipsis ... ok
+test smart_actors::actor_sheet::tests::walk_lengths_are_measured_in_the_walk_plane ... ok
+test smart_actors::actor_sheet::tests::well_activity_outranks_the_arrived_summary_but_never_a_walk ... ok
+test smart_actors::actors::tests::actor_labels_hang_from_two_shared_layers_rather_than_a_root_each ... ok
+test smart_actors::actors::tests::lerp_angle_takes_the_short_way_round ... ok
+test smart_actors::actors::tests::name_labels_are_limited_to_the_nearest_twenty_people ... ok
+test smart_actors::actors::tests::name_labels_stop_at_the_label_radius ... ok
+test city::tests::batched_city_keeps_render_entity_count_bounded ... ok
+test session_log::tests::latest_symlink_is_created_and_repointed ... ok
+test smart_actors::actors::tests::stranger_name_labels_fade_linearly_from_fifteen_to_eight_metres ... ok
+test smart_actors::actors::tests::stranger_name_labels_stop_after_fifteen_metres ... ok
+test smart_actors::actors::tests::stranger_nameplates_hide_the_actor_id ... ok
+test smart_actors::actors::tests::thinking_ellipsis_animates_through_three_steps ... ok
+test smart_actors::actors::tests::thinking_indicator_uses_the_conversation_radius ... ok
+test smart_actors::area_debug::tests::box_transform_uses_the_authoritative_min_and_max ... ok
+test smart_actors::area_debug::tests::labels_show_the_exact_label_id_and_box_index ... ok
+test smart_actors::actors::tests::puppet_rig_spawns_bounded_shared_parts ... ok
+test map::tests::resolved_targets_are_always_walkable ... ok
+test smart_actors::actors::tests::stationary_actor_projection_reasserts_authoritative_spawn_positions ... ok
+test smart_actors::body::tests::an_urgency_step_never_pops_the_legs_of_a_long_walk ... ok
+test smart_actors::body::tests::carriage_is_identity_when_sober_and_rested ... ok
+test smart_actors::body::tests::carriage_reads_the_snapshot_statuses ... ok
+test smart_actors::body::tests::carry_owns_the_left_arm_over_the_walk_swing ... ok
+test smart_actors::body::tests::drunkenness_sways_within_the_clamp_and_staggers_the_phase ... ok
+test smart_actors::body::tests::face_projection_puts_the_face_upright_on_the_front ... ok
+test smart_actors::body::tests::garment_hems_clear_the_leg_swing ... ok
+test smart_actors::body::tests::gaze_aim_clamps_yaw_and_gives_up_behind ... ok
+test smart_actors::body::tests::gaze_priority_runs_conversation_offer_sound ... ok
+test smart_actors::body::tests::hand_activity_and_gestures_ride_the_pose_state ... ok
+test smart_actors::body::tests::hands_mirror_across_the_body ... ok
+test smart_actors::body::tests::idle_life_desyncs_across_actors_and_breathes ... ok
+test smart_actors::body::tests::layer_blending_overrides_by_weight ... ok
+test smart_actors::body::tests::locomotion_swings_legs_opposite_and_arms_counter ... ok
+test smart_actors::body::tests::loft_normals_point_outward_up_and_down_the_profile ... ok
+test smart_actors::body::tests::nod_dips_and_shake_sweeps_with_a_closed_envelope ... ok
+test smart_actors::body::tests::offer_extends_the_right_arm_toward_the_recipient ... ok
+test smart_actors::body::tests::pose_cost_at_tier_a_cap ... ignored, manual budget measurement; run in --release
+test smart_actors::body::tests::body_assets_are_a_bounded_shared_set ... ok
+test smart_actors::body::tests::pose_system_animates_walkers_and_leaves_the_root_alone ... ok
+test smart_actors::body::tests::a_restarted_gait_phase_snaps_instead_of_sweeping_backwards ... ok
+test smart_actors::body::tests::talk_deadlines_follow_the_bubble_formula_and_prune ... ok
+test smart_actors::body::tests::talk_gesticulation_lifts_forearms_and_differs_per_speaker ... ok
+test smart_actors::body::tests::the_dance_sways_the_upper_body_over_time_and_leaves_the_legs ... ok
+test smart_actors::body::tests::the_deliberate_catalog_maps_and_poses_the_upper_body ... ok
+test smart_actors::body::tests::the_skeleton_stands_on_the_ground_at_the_authored_height ... ok
+test smart_actors::body::tests::tier_a_cut_caps_at_the_nearest_sixty_four ... ok
+test smart_actors::body::tests::the_face_carries_relief_where_the_portrait_paints_it ... ok
+test smart_actors::body::tests::tint_and_face_picks_are_deterministic_and_in_band ... ok
+test smart_actors::body::tests::turn_lean_follows_yaw_rate_and_clamps ... ok
+test smart_actors::body::tests::urgency_quickens_clenches_and_stoops ... ok
+test smart_actors::body::tests::walk_factor_blends_between_settled_and_brisk ... ok
+test smart_actors::body::tests::weariness_drops_the_arm_swing ... ok
+test smart_actors::body::tests::weariness_stoops_the_torso_forward ... ok
+test smart_actors::bridge::tests::a_full_queue_names_the_coalesced_spatial_apart_from_a_lost_command ... ok
+test smart_actors::bridge::tests::inbox_reports_engine_channel_disconnection_exactly_once ... ok
+test smart_actors::bridge::tests::spatial_updates_are_explicitly_safe_to_coalesce ... ok
+test smart_actors::bridge::tests::streaming_commands_are_never_coalesced_as_spatials ... ok
+test smart_actors::chat::tests::backspace_and_delete_work_at_the_boundaries ... ok
+test smart_actors::chat::tests::closing_clears_the_line ... ok
+test smart_actors::chat::tests::ctrl_w_deletes_the_word_before_the_cursor ... ok
+test smart_actors::chat::tests::insert_types_at_the_cursor_and_filters_control_characters ... ok
+test smart_actors::chat::tests::readline_motions_move_by_characters_not_bytes ... ok
+test smart_actors::chat::tests::the_buffer_caps_at_the_engine_say_limit ... ok
+test city::tests::a_wall_tower_is_solid_only_where_its_masonry_is ... ok
+test smart_actors::config_menu::tests::stt_status_follows_selected_backend ... ok
+test smart_actors::chat::tests::an_open_box_hides_typed_keys_from_the_screenshot_binding ... ok
+test smart_actors::config_menu::tests::tts_status_reports_lifecycle ... ok
+test smart_actors::config_menu::tests::menu_spawns_hidden_with_all_controls ... ok
+test smart_actors::custody::tests::a_closing_officer_still_has_to_get_within_arms_reach ... ok
+test smart_actors::custody::tests::a_hand_already_on_your_arm_is_not_grabbed_again ... ok
+test smart_actors::body::tests::a_dance_snapshot_drives_the_loop_and_a_trigger_starts_a_one_shot ... ok
+test smart_actors::custody::tests::a_strayed_player_the_officer_has_closed_on_is_taken_where_they_stand ... ok
+test smart_actors::custody::tests::an_unbroken_arrangement_at_arms_reach_is_left_alone ... ok
+test smart_actors::custody::tests::flying_is_not_custody_however_firm_the_grip ... ok
+test smart_actors::custody::tests::flying_past_an_officer_is_never_grabbed ... ok
+test smart_actors::body::tests::speech_turns_the_head_and_talk_layer_on_and_they_decay ... ok
+test city::tests::the_cut_collides_exactly_the_riser_and_the_bollards ... ok
+test smart_actors::custody::tests::a_grip_the_sim_calls_twice_as_hard_fills_the_meter_half_as_fast ... ok
+test smart_actors::custody::tests::merely_being_in_charge_is_not_a_tether_because_nobody_has_taken_hold ... ok
+test smart_actors::custody::tests::leaning_into_a_wall_is_not_pulling ... ok
+test smart_actors::custody::tests::running_from_arms_reach_fires_the_grab_in_the_same_frame ... ok
+test smart_actors::custody::tests::the_committed_line_names_the_bell_the_fee_and_the_book ... ok
+test smart_actors::custody::tests::the_grab_is_never_a_lasso_beyond_arms_reach ... ok
+test smart_actors::custody::tests::the_plugin_builds_with_the_smart_actor_sets_absent ... ok
+test smart_actors::custody::tests::a_pull_held_through_the_break_reports_the_struggle_only_once ... ok
+test smart_actors::custody::tests::losing_the_hold_starts_the_next_pair_of_hands_from_zero ... ok
+test smart_actors::custody::tests::the_standing_line_names_the_door_out_of_every_word ... ok
+test smart_actors::custody::tests::the_reflex_measures_the_officer_where_they_are_now_and_not_where_a_snapshot_left_them ... ok
+test smart_actors::custody::tests::the_standing_line_is_empty_when_nothing_stands_against_you ... ok
+test smart_actors::hands::tests::a_fully_pocketed_stack_renders_no_carry_prop ... ok
+test smart_actors::custody::tests::walking_beside_your_escort_is_never_grabbed ... ok
+test smart_actors::hands::tests::a_lone_wallet_leaves_the_hands_empty ... ok
+test smart_actors::custody::tests::letting_go_for_a_second_loses_most_of_the_meter ... ok
+test smart_actors::hands::tests::offered_item_takes_the_right_hand_and_carry_skips_it ... ok
+test smart_actors::hands::tests::hand_props_reconcile_from_the_snapshot ... ok
+test smart_actors::hands::tests::a_grip_holds_the_arm_until_the_law_lets_go ... ok
+test smart_actors::hands::tests::one_holder_losing_his_reach_leaves_the_other_hand_on ... ok
+test smart_actors::hands::tests::prop_create_keep_and_replace_are_distinct ... ok
+test smart_actors::hands::tests::only_the_oldest_offer_is_in_hand ... ok
+test smart_actors::hands::tests::the_offer_index_answers_per_giver_and_breaks_ties_on_the_item ... ok
+test smart_actors::hud::tests::a_rejected_offer_notice_survives_the_toast_that_would_have_hidden_it ... ok
+test smart_actors::hud::tests::disconnect_clears_only_transient_actionable_ui ... ok
+test smart_actors::hud::tests::player_transcript_is_independent_from_overwrite_prone_toasts ... ok
+test smart_actors::hud::tests::actor_status_is_hidden_by_default_and_uses_larger_text ... ok
+test smart_actors::hud::tests::the_offer_outcome_notice_spawns_hidden_and_clear_of_its_neighbours ... ok
+test smart_actors::hud::tests::centered_readability_text_uses_compact_neutral_backdrops ... ok
+test smart_actors::hud::tests::voice_panel_tracks_each_backend_readiness_independently ... ok
+test smart_actors::interaction::mark_hint_tests::a_person_under_the_crosshair_wins_the_slot ... ok
+test smart_actors::interaction::mark_hint_tests::chalk_reads_out_when_nobody_is_under_the_crosshair ... ok
+test smart_actors::interaction::mark_hint_tests::no_chalk_and_nobody_is_an_empty_slot ... ok
+test smart_actors::interaction::mark_hint_tests::the_meaning_and_the_affordance_share_the_line ... ok
+test smart_actors::interaction::tests::actor_focus_hint_does_not_imply_that_gaze_targets_microphone_speech ... ok
+test smart_actors::interaction::tests::articles_make_offer_cards_read_naturally ... ok
+test smart_actors::interaction::tests::broadcast_dismissal_is_local_and_never_a_decline_intent ... ok
+test smart_actors::interaction::tests::cancelled_microphone_start_does_not_interrupt_npc_audio ... ok
+test smart_actors::interaction::tests::clearing_pending_unlocks_a_command_whose_result_was_lost ... ok
+test smart_actors::interaction::tests::command_waits_for_both_result_and_newer_snapshot ... ok
+test smart_actors::interaction::tests::available_microphone_arms_by_default_and_v_toggles_both_directions ... ok
+test smart_actors::hud::tests::voice_status_panel_has_requested_bottom_left_loader_shape ... ok
+test smart_actors::interaction::tests::failed_command_unlocks_without_waiting_for_snapshot ... ok
+test smart_actors::interaction::tests::effective_streaming_requires_cloud_selected_available_and_configured ... ok
+test smart_actors::interaction::tests::microphone_is_user_enabled_by_default_but_not_live_before_availability ... ok
+test smart_actors::interaction::tests::offer_range_is_inclusive_and_broadcast_dismissal_is_revision_scoped ... ok
+test smart_actors::interaction::tests::one_item_inventory_selects_automatically_and_selection_survives_reorder ... ok
+test smart_actors::interaction::tests::recording_activity_tracks_live_capture_not_microphone_preference ... ok
+test smart_actors::interaction::tests::disconnect_hides_actionable_cards_while_retaining_the_mirror ... ok
+test smart_actors::interaction::tests::right_click_intent_does_not_mutate_inventory_projection ... ok
+test smart_actors::interaction::tests::spatial_sequence_advances_when_an_action_has_a_new_position ... ok
+test smart_actors::interaction::tests::targeted_offer_cards_precede_broadcasts_and_keep_exact_item_ids ... ok
+test smart_actors::interaction::tests::the_coin_purse_prompts_for_an_offer_count ... ok
+test smart_actors::interaction::tests::the_inventory_renders_a_stack_count ... ok
+test smart_actors::inventory_ui::tests::an_empty_player_still_sees_the_two_common_slots ... ok
+test smart_actors::inventory_ui::tests::menu_entries_follow_the_shelf ... ok
+test smart_actors::inventory_ui::tests::pocketed_units_move_out_of_the_carried_section ... ok
+test smart_actors::interaction::tests::v_before_handshake_keeps_the_explicit_mic_off_state_visible ... ok
+test smart_actors::interaction::tests::z_toggles_between_cloud_and_local_transcription ... ok
+test smart_actors::inventory_ui::tests::the_frontbutt_section_appears_only_when_occupied ... ok
+test smart_actors::inventory_ui::tests::pressing_a_tile_opens_and_a_stray_click_dismisses_the_menu ... ok
+test smart_actors::inventory_ui::tests::the_screen_toggles_on_i_and_yields_to_the_settings_menu ... ok
+test smart_actors::inventory_ui::tests::screen_spawns_hidden_with_its_containers ... ok
+test smart_actors::inventory_ui::tests::two_units_in_one_cavity_fold_into_one_tile ... ok
+test smart_actors::inventory_ui::tests::tiles_and_entries_are_named_for_drive_clicks ... ok
+test smart_actors::journal_ui::tests::attribution_keeps_the_mouth_register_and_repeat_counts ... ok
+test smart_actors::journal_ui::tests::singular_receipt_counts_and_locative_places_read_naturally ... ok
+test smart_actors::local_engine::tests::an_unavailable_or_invalid_voice_falls_back_to_off_and_says_why ... ok
+test smart_actors::local_engine::tests::every_player_command_translates_into_the_engine_vocabulary ... ok
+test smart_actors::custody::tests::a_hold_the_sim_never_answers_can_be_torn_free_of_twice ... ok
+test smart_actors::custody::tests::pulling_for_five_seconds_tears_free_of_one_ordinary_holder ... ok
+test smart_actors::journal_ui::tests::a_full_journal_keeps_all_rows_and_scrolls_to_both_ends ... ok
+test city::tests::no_bridge_pier_stands_outside_its_shell ... ok
+test smart_actors::custody::tests::two_holders_do_not_let_go_inside_five_seconds ... ok
+test city::vermin::tests::a_footfall_arms_the_scatter_and_a_flight_over_it_does_not ... ok
+test smart_actors::local_engine::tests::the_handshake_reports_exactly_what_the_probe_found ... ok
+test smart_actors::microphone::tests::absent_microphone_is_a_nonfatal_capability_state ... ok
+test smart_actors::microphone::tests::audio_paths_are_confined_to_the_session_directory ... ok
+test smart_actors::microphone::tests::chunker_flushes_preroll_first_then_final_partial_and_end ... ok
+test city::vermin::tests::every_waypoint_is_walkable_and_uncollided ... ok
+test smart_actors::microphone::tests::duration_frame_conversion_is_exact_for_vad_boundaries ... ok
+test smart_actors::microphone::tests::f32_to_s16_saturates_out_of_range_and_zeroes_non_finite ... ok
+test city::vermin::tests::heavy_rain_thins_the_drawn_batch ... ok
+test smart_actors::microphone::tests::first_moderate_noise_buffer_cannot_hide_ordinary_voice ... ok
+test smart_actors::microphone::tests::full_bridge_queue_degrades_stream_without_blocking_or_an_end ... ok
+test smart_actors::microphone::tests::interrupted_voice_candidate_does_not_trigger_an_utterance ... ok
+test smart_actors::microphone::tests::microphone_channels_are_downmixed_to_mono_frames ... ok
+test smart_actors::microphone::tests::pre_roll_is_bounded_and_retains_the_newest_samples ... ok
+test smart_actors::microphone::tests::quiet_baseline_still_detects_quiet_sustained_speech ... ok
+test smart_actors::microphone::tests::resampler_downsamples_48k_exactly_2_to_1_and_preserves_dc ... ok
+test smart_actors::microphone::tests::resampler_is_identical_across_split_buffers ... ok
+test city::vermin::tests::a_boiling_colony_triples_its_batch ... ok
+test smart_actors::microphone::tests::steady_startup_ambience_becomes_the_noise_floor_not_endless_speech ... ok
+test smart_actors::microphone::tests::trailing_silence_is_clamped_to_the_supported_window ... ok
+test smart_actors::microphone::tests::vad_ignores_noise_then_requires_sustained_voice ... ok
+test smart_actors::model::tests::a_changed_roster_reindexes_instead_of_keeping_a_stale_map ... ok
+test smart_actors::model::tests::a_kept_index_map_still_resolves_to_the_new_snapshots_contents ... ok
+test smart_actors::model::tests::a_rejected_snapshot_leaves_the_previous_projection_standing ... ok
+test smart_actors::model::tests::a_reordered_roster_of_the_same_length_is_reindexed ... ok
+test smart_actors::model::tests::a_zero_quantity_stack_is_rejected_by_the_projection ... ok
+test smart_actors::model::tests::an_unchanged_roster_hands_back_no_rebuilt_maps ... ok
+test smart_actors::model::tests::an_unowned_item_is_rejected_by_the_projection ... ok
+test smart_actors::model::tests::duplicate_ids_are_still_rejected_when_the_roster_changes ... ok
+test smart_actors::model::tests::malformed_offer_does_not_replace_the_good_projection ... ok
+test smart_actors::model::tests::position_rejects_non_finite_values_and_converts_to_bevy ... ok
+test smart_actors::model::tests::projection_text_is_bounded_before_reaching_ecs_or_ui ... ok
+test smart_actors::model::tests::typed_ids_serialize_as_bare_strings ... ok
+test smart_actors::sound::tests::every_catalog_radius_maps_to_a_positive_spatial_scale ... ok
+test smart_actors::sound::tests::sound_ids_are_locked_to_asset_safe_names ... ok
+test smart_actors::speech::tests::an_emptied_bubble_stack_is_reaped_and_rebuilt_on_the_next_line ... ok
+test smart_actors::speech::tests::audio_has_a_hard_inclusive_hearing_gate_and_smooth_gain ... ok
+test smart_actors::speech::tests::bubble_duration_matches_the_settled_formula ... ok
+test smart_actors::speech::tests::bubble_stack_follows_its_speakers_moving_anchor ... ok
+test smart_actors::speech::tests::clearing_speech_removes_stacks_children_and_tracking ... ok
+test smart_actors::speech::tests::dead_microphone_worker_drops_optional_tts_after_a_bounded_wait ... ok
+test smart_actors::speech::tests::distinct_speakers_use_distinct_stacks ... ok
+test smart_actors::speech::tests::expected_audio_holds_its_bubble_past_minimum_reading_time ... ok
+test smart_actors::speech::tests::expected_audio_holds_the_current_subtitle_until_timeout ... ok
+test smart_actors::speech::tests::keyed_tts_failure_releases_audio_wait_immediately ... ok
+test smart_actors::speech::tests::live_pcm_stream_keeps_accepting_chunks_after_playback_starts ... ok
+test smart_actors::speech::tests::malformed_audio_is_rejected_before_bevy_decodes_it ... ok
+test smart_actors::speech::tests::npc_audio_waits_for_confirmed_microphone_suspension_and_resumes_once ... ok
+test smart_actors::speech::tests::only_local_streaming_voice_gets_the_pocket_speedup ... ok
+test smart_actors::speech::tests::out_of_order_pcm_chunk_releases_the_waiting_subtitle ... ok
+test smart_actors::speech::tests::player_speech_uses_the_tiny_caption_instead_of_npc_subtitle_queue ... ok
+test smart_actors::speech::tests::projected_dialogue_uses_a_padded_neutral_text_backdrop ... ok
+test smart_actors::speech::tests::queued_subtitles_receive_their_full_visible_duration ... ok
+test smart_actors::speech::tests::same_speaker_same_frame_uses_one_ordered_non_overlapping_stack ... ok
+test city::vermin::tests::the_boil_complement_is_walkable_inside_twice_the_reach ... ok
+test smart_actors::speech::tests::streaming_pcm_decoder_starts_immediately_and_finishes_after_buffer_drains ... ok
+test smart_actors::speech::tests::subtitle_stream_rejects_stale_or_duplicate_event_sequences ... ok
+test smart_actors::speech::tests::the_pcm_decoder_yields_the_same_stream_it_did_sample_by_sample ... ok
+test smart_actors::targeting::tests::body_distance_cutoffs_are_inclusive ... ok
+test smart_actors::targeting::tests::camera_ray_and_body_proximity_use_distinct_origins ... ok
+test smart_actors::targeting::tests::nearest_actor_volume_wins_independent_of_input_order ... ok
+test smart_actors::targeting::tests::origin_inside_target_hits_at_zero ... ok
+test smart_actors::targeting::tests::ray_aabb_returns_entry_distance_and_rejects_misses ... ok
+test smart_actors::targeting::tests::static_wall_blocks_actor_but_not_actor_in_front_of_it ... ok
+test smart_actors::tests::a_crowd_above_the_ceiling_is_reported_and_cut ... ok
+test smart_actors::speech::tests::stacked_bubbles_keep_individual_expiry_times ... ok
+test smart_actors::tests::a_lapsed_offer_blames_the_distance_and_says_where_the_item_went ... ok
+test city::vermin::tests::the_boil_is_announced_once_a_night ... ok
+test smart_actors::tests::a_refused_offer_names_who_refused_and_which_way_it_went ... ok
+test smart_actors::microphone::tests::service_drop_is_bounded_when_a_driver_worker_does_not_stop ... ok
+test city::vermin::tests::the_clock_and_the_cull_gate_the_batch ... ok
+test city::vermin::tests::an_empty_colony_boils_unannounced_and_unheard ... ok
+test city::vermin::tests::the_ablation_switch_spawns_nothing_and_density_scales_the_counts ... ok
+test session_log::tests::malformed_session_file_recovers_to_session_one ... ok
+test smart_actors::microphone::tests::cancelled_recordings_send_exactly_one_abort ... ok
+test smart_actors::microphone::tests::discard_falls_back_to_confined_file_cleanup_when_command_queue_is_full ... ok
+test smart_actors::microphone::tests::finished_recordings_send_stream_end_and_silent_utterances_say_so ... ok
+test smart_actors::tests::llm_status_tracks_the_actor_for_the_overhead_thinking_indicator ... ok
+test smart_actors::tests::npc_speech_only_expects_audio_from_the_acknowledged_usable_mode ... ok
+test smart_actors::tests::npc_voice_cycle_skips_unavailable_backends_and_includes_off ... ok
+test smart_actors::tests::audio_activity_tracks_live_voice_and_open_chat ... ok
+test smart_actors::tests::ready_capabilities_split_stt_availability_for_the_streaming_gate ... ok
+test smart_actors::tests::ready_hud_names_each_independently_missing_capability ... ok
+test smart_actors::tests::redirected_offer_keeps_player_withdrawal_feedback_visible ... ok
+test smart_actors::tests::routine_world_sounds_route_without_creating_npc_reflex_stimuli ... ok
+test smart_actors::tests::settled_spatial_constants_match_the_protocol_contract ... ok
+test session_log::tests::session_file_is_created_then_increased_once_per_start ... ok
+test city::plan::tests::distributed_population_spawns_clear_city_buildings_walls_and_fixtures ... ok
+test smart_actors::local_engine::tests::fake_mode_reports_every_capability_and_selects_the_configured_voice ... ok
+test smart_actors::local_engine::tests::the_game_gates_idle_cognition_on_the_players_neighborhood_and_on_news ... ok
+test smart_actors::tests::the_projection_admits_a_full_crowd ... ok
+test smart_actors::tests::thinking_hud_names_only_actors_within_conversation_range ... ok
+test soundscape::tests::a_bed_follows_the_nearest_part_of_its_place_and_stops_having_a_direction_inside ... ok
+test soundscape::tests::a_bell_cue_queues_one_peal_and_refuses_to_overlap_itself ... ok
+test smart_actors::local_engine::tests::the_engine_transcribes_from_the_directory_the_microphone_records_into ... ok
+test soundscape::tests::a_summons_cried_during_the_curfew_peal_never_falls_between_its_strokes ... ok
+test soundscape::tests::an_assembled_peal_is_jittered_by_hand_but_never_retuned ... ok
+test soundscape::tests::animal_approaches_rearm_with_hysteresis_and_ravens_clear_the_bells ... ok
+test soundscape::tests::cargo_impacts_match_the_visible_prop_contact_delays ... ok
+test soundscape::tests::church_beds_are_zone_shaped_and_require_a_congregation ... ok
+test soundscape::tests::coughs_use_work_clothes_and_yawns_prefer_projected_weariness ... ok
+test soundscape::tests::crossed_lightning_message_queues_one_delayed_thunder ... ok
+test soundscape::tests::cue_cooldown_is_deterministic_and_boundary_inclusive ... ok
+test soundscape::tests::every_descriptor_points_at_a_nonempty_reviewed_asset ... ok
+test soundscape::tests::every_named_place_bed_binds_to_a_shipped_area_within_its_own_carry ... ok
+test soundscape::tests::every_route_has_a_unique_asset_and_the_right_container ... ok
+test soundscape::tests::footstep_cadence_consumes_one_stride_and_respects_cooldown ... ok
+test soundscape::tests::a_body_yawns_once_an_evening_though_the_day_rolls_over_inside_it ... ok
+test soundscape::tests::headless_plugin_registers_contract_without_audio_output ... ok
+test soundscape::tests::hens_and_bees_are_small_sources_in_the_places_that_keep_them ... ok
+test soundscape::tests::implementation_manifest_contains_every_runtime_route ... ok
+test soundscape::tests::lightning_delay_is_physical_real_time ... ok
+test soundscape::tests::loop_virtualizer_queries_are_disjoint_at_system_initialization ... ok
+test soundscape::tests::market_and_work_schedules_follow_office_and_weekday ... ok
+test soundscape::tests::place_beds_hand_over_to_each_other_instead_of_playing_at_once ... ok
+test soundscape::tests::rut_crossing_survives_a_large_frame_step_without_false_infinite_lines ... ok
+test soundscape::tests::shelter_crossfades_exterior_rain_to_the_matching_roof ... ok
+test soundscape::tests::special_well_classification_is_nearest_and_bounded ... ok
+test soundscape::tests::tallage_sales_route_to_the_authored_weighbeam_only_inside_the_square ... ok
+test soundscape::tests::the_drapers_reach_bed_is_weather_shaped_and_the_open_pitches_thin_in_rain ... ok
+test soundscape::tests::the_knell_carry_matches_the_clip ... ok
+test soundscape::tests::the_scold_rings_curfew_once_a_day_and_only_after_the_seventh_office ... ok
+test soundscape::tests::the_silent_soundscape_plugin_forwards_bells_and_discards_playback ... ok
+test soundscape::tests::the_two_civic_bells_stay_countable_and_hang_in_their_own_towers ... ok
+test soundscape::tests::urban_nature_schedules_and_locations_follow_the_city_clock_and_map ... ok
+test soundscape::tests::well_audio_windows_cover_clips_and_conflicts_require_overlapping_draws ... ok
+test soundscape::tests::well_mechanism_snapshot_observes_timer_boundaries_and_conflict_window ... ok
+test tests::default_window_mode_is_fullscreen ... ok
+test weather::cover::tests::committed_cover_grid_stays_within_its_memory_budget ... ok
+test weather::cover::tests::flying_above_a_roof_is_exposed_but_keeps_the_roof_impact ... ok
+test weather::cover::tests::named_cover_probes_and_open_square_are_classified ... ok
+test weather::cover::tests::puddle_surface_follows_cobbles_and_excludes_the_dry_cut ... ok
+test weather::materials::tests::zero_wetness_returns_the_exact_dry_color ... ok
+test soundscape::tests::generated_weather_clips_are_valid_bounded_pcm_wavs ... ok
+test weather::render::tests::falling_rain_moves_downwind_like_clouds_and_smoke ... ok
+test weather::render::tests::flash_has_two_pulses_and_ends_before_thunder_can_arrive ... ok
+test weather::render::tests::fog_is_dense_at_street_level_and_clears_above_the_roofs ... ok
+test weather::render::tests::puddle_candidates_are_stable_and_reject_covered_cells ... ok
+test weather::render::tests::rain_capacity_is_bounded_and_monotonic ... ok
+test weather::render::tests::representative_cloud_states_dim_direct_light_monotonically ... ok
+test weather::render::tests::streaks_stop_above_cover_and_still_exist_for_a_flying_camera ... ok
+test weather::tests::a_silent_sim_leaves_the_projection_on_the_clear_default ... ok
+test weather::tests::bridge_receive_does_not_need_a_world_mirror ... ok
+test weather::tests::no_renderer_app_still_constructs_weather_projection ... ok
+test weather::tests::the_one_time_snap_lands_on_the_sims_first_sample ... ok
+test weather::render::tests::committed_puddles_and_runoff_are_static_bounded_batches ... ok
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] Havise Ashe takes Ilse in charge for Tallage toll-house
+[smart actors] Havise Ashe takes Player in charge for Tallage toll-house
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] Ilse starts a word going (bed): "the reeve wife was at the Bellstand after curfew"
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] Havise Ashe takes Player in charge for Tallage toll-house
+[smart actors] Havise Ashe takes Ilse in charge for The Wool Gate
+[smart actors] k0fb1 is committed to The Stone House
+[smart actors] Ilse: offer_item failed: a stranger (id player) is more than 4 metres away
+test smart_actors::local_engine::tests::a_failed_start_disconnects_instead_of_crashing_the_game ... ok
+test smart_actors::local_engine::tests::the_handle_names_a_private_directory_the_guard_owns ... ok
+test smart_actors::tests::an_engine_that_dies_holding_the_player_lets_go_of_them ... ok
+test smart_actors::tests::the_custody_cues_sound_where_the_scene_is_and_not_a_revision_behind_it ... [smart actors] round: 2 fixed road parties
+ok
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+test smart_actors::tests::being_taken_in_charge_puts_the_law_standing_line_on_the_hud ... [smart actors] gaol: 8 held in The Stone House
+ok
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+test smart_actors::tests::an_ordinary_poll_leaves_the_ward_heat_unflagged ... ok
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+test smart_actors::tests::a_hand_the_sim_takes_off_an_arm_stops_being_drawn ... ok[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+test smart_actors::tests::a_reposition_in_the_snapshot_retires_the_stale_movement_sample ... [initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+ok[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+test smart_actors::tests::an_ordinary_poll_leaves_the_journal_unflagged ... ok[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+test smart_actors::tests::a_players_receipt_reaches_the_journal_overlay ... [initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+ok
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+test smart_actors::tests::re_entering_at_a_gate_is_not_undone_by_a_pre_departure_sample ... ok[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+test city::tests::no_walkable_cell_is_solid ... [initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+ok[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[smart actors] Havise Ashe takes Player in charge for Tallage toll-house
+[smart actors] round: 2 fixed road parties
+[smart actors] round: 20 lamps across 5 squares, 5 squares kept
+[smart actors] round: 9 water sources, 9 staffed | 514 enrolled (9 well keepers), 413 housed, 69 water drawers
+[smart actors] wayfinding: 491 places in the registry (413 homes)
+[smart actors] round: 13 food stalls, 11 staffed on day 0 (Bellday)
+[smart actors] gaol: 8 held in The Stone House
+[initial-surface] a9prs: (71.4200,-69.0000) -> (84.6250,-68.1250), 13.234m (limit20m)
+[initial-surface] ak3vd: (75.5800,-69.0000) -> (84.6250,-66.8750), 9.291m (limit20m)
+[initial-surface] amt4p: (0.0000,45.0000) -> (-0.1250,81.8750), 36.875m (limit40m)
+[initial-surface] ar5tl: (-184.0000,-248.6000) -> (-190.1250,-248.6250), 6.125m (limit20m)
+[initial-surface] ax5nf: (-134.5000,-275.6000) -> (-117.6250,-279.3750), 17.292m (limit20m)
+[initial-surface] az2sm: (71.4200,-59.6670) -> (84.1250,-58.6250), 12.748m (limit20m)
+[initial-surface] dv8ll: (-26.4250,265.5331) -> (-26.1250,265.1250), 0.507m (limit20m)
+[initial-surface] e8sib: (-346.7500,43.7500) -> (-346.3750,43.6250), 0.395m (limit20m)
+[initial-surface] eatan: (-325.5000,-320.2500) -> (-325.1250,-320.3750), 0.395m (limit20m)
+[initial-surface] em3rl: (-8.0000,25.0000) -> (-44.6250,24.8750), 36.625m (limit40m)
+[initial-surface] fc2hb: (-340.5000,155.7500) -> (-340.1250,155.6250), 0.395m (limit20m)
+[initial-surface] fg2sh: (-154.8000,15.4800) -> (-158.6250,15.3750), 3.826m (limit20m)
+[initial-surface] fo6gl: (-332.7500,288.7500) -> (-332.3750,288.6250), 0.395m (limit20m)
+[initial-surface] ft3tb: (-156.9330,17.7200) -> (-158.6250,17.6250), 1.695m (limit20m)
+[initial-surface] g8rnn: (-326.5000,-311.1000) -> (-326.1250,-311.1250), 0.376m (limit20m)
+[initial-surface] gw4ld: (-294.2500,-275.6000) -> (-285.3750,-274.8750), 8.905m (limit20m)
+[initial-surface] p0001: (-292.2500,-459.7500) -> (-292.3750,-459.3750), 0.395m (limit20m)
+[initial-surface] p0005: (-321.7500,-351.1000) -> (-321.3750,-351.1250), 0.376m (limit20m)
+[initial-surface] p0017: (-208.2500,197.7500) -> (-207.6250,197.6250), 0.637m (limit20m)
+[initial-surface] p001b: (-208.2500,-103.2500) -> (-208.1250,-103.1250), 0.177m (limit20m)
+[initial-surface] p002m: (-208.2500,260.7500) -> (-207.6250,260.6250), 0.637m (limit20m)
+[initial-surface] p0034: (-208.2500,-362.2500) -> (-207.6250,-362.3750), 0.637m (limit20m)
+[initial-surface] p0062: (50.7500,-466.5000) -> (50.6250,-466.1250), 0.395m (limit20m)
+[initial-surface] p0072: (-208.2500,-12.2500) -> (-207.6250,-12.3750), 0.637m (limit20m)
+[initial-surface] p0074: (-208.2500,22.7500) -> (-207.6250,22.6250), 0.637m (limit20m)
+[initial-surface] p0076: (-208.2500,106.7500) -> (-207.6250,106.6250), 0.637m (limit20m)
+[initial-surface] p008e: (78.7500,-467.0000) -> (78.6250,-466.6250), 0.395m (limit20m)
+[initial-surface] p00ah: (288.7500,-458.0000) -> (288.6250,-457.6250), 0.395m (limit20m)
+[smart actors] night office: 30 majors reflect at their own bedtimes, 8 wards batch at the Snuffing (38 calls a game day)
+[weather] day 0 07:23 broken_cloud -> clear, wind 1.4 m/s north, visibility 350 m
+test smart_actors::tests::walking_away_from_an_offer_puts_the_reason_and_its_cause_on_the_hud ... ok
+test smart_actors::tests::the_strain_bar_survives_the_standing_line_a_walking_officer_republishes ... ok
+test smart_actors::tests::the_journal_and_the_map_refuse_to_open_over_each_other ... ok
+test smart_actors::tests::a_word_the_player_started_puts_the_stake_line_on_the_hud ... ok
+test smart_actors::local_engine::tests::fake_local_engine_runs_scripted_exchange_offline_and_cleans_up ... FAILED
+test smart_actors::tests::complete_plugin_reaches_ready_and_spawns_the_cast_headlessly ... ok
+
+failures:
+
+---- smart_actors::local_engine::tests::fake_local_engine_runs_scripted_exchange_offline_and_cleans_up stdout ----
+
+thread 'smart_actors::local_engine::tests::fake_local_engine_runs_scripted_exchange_offline_and_cleans_up' (1206) panicked at src/smart_actors/local_engine.rs:1132:13:
+timed out waiting for Ilse's coin offer
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    smart_actors::local_engine::tests::fake_local_engine_runs_scripted_exchange_offline_and_cleans_up
+
+test result: FAILED. 499 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 6.09s
+
+error: test failed, to rerun pass `--bin cathedralbevy`

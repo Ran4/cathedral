@@ -1,0 +1,284 @@
+{
+  "authored_sheets": 519,
+  "blocked_spawn_count": 23,
+  "unsafe_boundary_count": 11,
+  "blocked": [
+    {
+      "id": "aq7ld",
+      "name": "Aldith",
+      "spawn": [
+        142,
+        -64.4
+      ]
+    },
+    {
+      "id": "gw4ld",
+      "name": "Wyn Alder",
+      "spawn": [
+        -294.25,
+        -275.6
+      ]
+    },
+    {
+      "id": "a9prs",
+      "name": "Segwin Rasp",
+      "spawn": [
+        71.42,
+        -69
+      ]
+    },
+    {
+      "id": "ak3vd",
+      "name": "Havise Dorn",
+      "spawn": [
+        75.58,
+        -69
+      ]
+    },
+    {
+      "id": "cbred",
+      "name": "Colin Barley",
+      "spawn": [
+        -428.4,
+        23.8
+      ]
+    },
+    {
+      "id": "clant",
+      "name": "Clement Rode",
+      "spawn": [
+        428.4,
+        84.0
+      ]
+    },
+    {
+      "id": "dbred",
+      "name": "Douce Fenn",
+      "spawn": [
+        -429.8,
+        23.8
+      ]
+    },
+    {
+      "id": "ft3tb",
+      "name": "Sef",
+      "spawn": [
+        -156.933,
+        17.72
+      ]
+    },
+    {
+      "id": "dv8ll",
+      "name": "Osanne Vell",
+      "spawn": [
+        -26.425,
+        265.5331
+      ]
+    },
+    {
+      "id": "amt4p",
+      "name": "Dunstan Pike",
+      "spawn": [
+        0,
+        45
+      ]
+    },
+    {
+      "id": "em3rl",
+      "name": "Betriss Marle",
+      "spawn": [
+        -8,
+        25
+      ]
+    },
+    {
+      "id": "p002m",
+      "name": "Osanne Pike",
+      "spawn": [
+        -208.25,
+        260.75
+      ]
+    },
+    {
+      "id": "p0072",
+      "name": "Noll Rook",
+      "spawn": [
+        -208.25,
+        -12.25
+      ]
+    },
+    {
+      "id": "p0074",
+      "name": "Ansel Lark",
+      "spawn": [
+        -208.25,
+        22.75
+      ]
+    },
+    {
+      "id": "p0076",
+      "name": "Hamel Nett",
+      "spawn": [
+        -208.25,
+        106.75
+      ]
+    },
+    {
+      "id": "ar5tl",
+      "name": "Tilman Rue",
+      "spawn": [
+        -184,
+        -248.6
+      ]
+    },
+    {
+      "id": "az2sm",
+      "name": "Sible Mott",
+      "spawn": [
+        71.42,
+        -59.667
+      ]
+    },
+    {
+      "id": "ax5nf",
+      "name": "Noll Fitch",
+      "spawn": [
+        -134.5,
+        -275.6
+      ]
+    },
+    {
+      "id": "p0034",
+      "name": "Sible Tarn",
+      "spawn": [
+        -208.25,
+        -362.25
+      ]
+    },
+    {
+      "id": "rbrde",
+      "name": "Hugh Crake of Brede",
+      "spawn": [
+        -427.0,
+        24.5
+      ]
+    },
+    {
+      "id": "rlant",
+      "name": "Mabile Skell of Ostrelle",
+      "spawn": [
+        427.0,
+        84.0
+      ]
+    },
+    {
+      "id": "fg2sh",
+      "name": "Grigor Ashe",
+      "spawn": [
+        -154.8,
+        15.48
+      ]
+    },
+    {
+      "id": "p0017",
+      "name": "Betriss Stott",
+      "spawn": [
+        -208.25,
+        197.75
+      ]
+    }
+  ],
+  "boundary": [
+    {
+      "id": "fc2hb",
+      "name": "Cobb Hobbe",
+      "spawn": [
+        -340.5,
+        155.75
+      ]
+    },
+    {
+      "id": "fo6gl",
+      "name": "Odo Trask",
+      "spawn": [
+        -332.75,
+        288.75
+      ]
+    },
+    {
+      "id": "p0062",
+      "name": "Grigor Rook",
+      "spawn": [
+        50.75,
+        -466.5
+      ]
+    },
+    {
+      "id": "p0001",
+      "name": "Sibbe Wick",
+      "spawn": [
+        -292.25,
+        -459.75
+      ]
+    },
+    {
+      "id": "p0005",
+      "name": "Renna Skell",
+      "spawn": [
+        -321.75,
+        -351.1
+      ]
+    },
+    {
+      "id": "e8sib",
+      "name": "Ede Hobbe",
+      "spawn": [
+        -346.75,
+        43.75
+      ]
+    },
+    {
+      "id": "eatan",
+      "name": "Gile Tarn",
+      "spawn": [
+        -325.5,
+        -320.25
+      ]
+    },
+    {
+      "id": "p00ah",
+      "name": "Hamel Fenn",
+      "spawn": [
+        288.75,
+        -458
+      ]
+    },
+    {
+      "id": "p008e",
+      "name": "Warin Tarn",
+      "spawn": [
+        78.75,
+        -467
+      ]
+    },
+    {
+      "id": "g8rnn",
+      "name": "Renn of the Slip",
+      "spawn": [
+        -326.5,
+        -311.1
+      ]
+    },
+    {
+      "id": "p001b",
+      "name": "Bertran Rasp",
+      "spawn": [
+        -208.25,
+        -103.25
+      ]
+    }
+  ],
+  "method": "Committed bitset MSB-first walkability, exactly as NavData::cell_walkable, at every authored lore spawn; plus conservative adjacent-cell check at exact grid boundaries. No positions changed.",
+  "bitset_sha256": "c2488b185170ef9fc41e824388aa4e1cd54e5324e459604035e01068b226695f",
+  "correction": "Supersedes earlier parent audit which mistakenly interpreted bits as little-endian. Do not use the old43/27 counts."
+}

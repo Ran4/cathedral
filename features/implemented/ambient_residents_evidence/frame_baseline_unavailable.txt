@@ -1,0 +1,9 @@
+Frame baseline unavailable: NVIDIA-SMI cannot communicate with the NVIDIA driver, including an unsandboxed read-only check.
+Session 801/802: missing assets (excluded); session 803: correct assets but CPU llvmpipe (excluded), watchdog exit 124.
+No renderer results from these trials are comparable GPU baselines.
+2026-09-06T14:15:31.686588Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 15.0.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 23.2.1-1ubuntu3.1~22.04.4 (LLVM 15.0.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: false }
+2026-09-06T14:15:31.686609Z  WARN bevy_render::renderer: The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-09-06T14:15:32.203972Z ERROR bevy_asset::server: Could not find an asset loader matching: Asset Type: Some(TypeId(0xbb30f5f362e04c6013b60067be062a35)); Path: "sounds/well_trough.wav";
+2026-09-06T14:15:32.203972Z ERROR bevy_asset::server: Could not find an asset loader matching: Asset Type: Some(TypeId(0xbb30f5f362e04c6013b60067be062a35)); Path: "sounds/cistern_drip.wav";
+2026-09-06T14:15:32.203974Z ERROR bevy_asset::server: Could not find an asset loader matching: Asset Type: Some(TypeId(0xbb30f5f362e04c6013b60067be062a35)); Path: "sounds/chain_draw.wav";
+[drive] watchdog: run exceeded 120s; aborting

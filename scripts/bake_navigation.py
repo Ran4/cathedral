@@ -577,6 +577,28 @@ def bake():
     grid = Grid(plan)
     log(f"grid {grid.w} x {grid.h} = {grid.w * grid.h / 1e6:.1f}M cells @ {CELL} m")
 
+    if "--resident-places-only" in sys.argv or "--route-clearance-only" in sys.argv:
+        # Add/rebuild optional resident metadata without changing street graph,
+        # widths or bitset. The full bake below emits the same metadata.
+        doc = json.loads(OUT_JSON.read_text())
+        bits = np.unpackbits(np.frombuffer(OUT_BIN.read_bytes(), dtype=np.uint8))
+        main = bits[:grid.w * grid.h].reshape((grid.h, grid.w)).astype(bool)
+        if "--route-clearance-only" in sys.argv:
+            from bake_route_clearance import refine_routes
+            measurements = refine_routes(Surface(grid, main), doc)
+            if '--route-report' in sys.argv:
+                index = sys.argv.index('--route-report') + 1
+                if index >= len(sys.argv):
+                    raise SystemExit('--route-report needs an output path')
+                Path(sys.argv[index]).write_text(json.dumps(measurements, indent=2) + '\n')
+            log(f"route clearance: {measurements['edges']} edges, {len(measurements['repaired_edges'])} repairs")
+        from bake_resident_places import bake_resident_places
+        doc["resident_places"] = bake_resident_places(plan, Surface(grid, main), doc, ROOT)
+        OUT_JSON.write_text(json.dumps(doc, separators=(",", ":")) + "\n")
+        patches = doc["resident_places"]["patches"]
+        log(f"resident places: {len(patches)} patches, {sum(p['capacity'] for p in patches)} spots")
+        return
+
     main = build_walkable(plan, grid)
     surface = Surface(grid, main)
 
@@ -682,6 +704,12 @@ def bake():
         "doors": doors,
         "reference": {"forecourt": forecourt},
     }
+    from bake_route_clearance import refine_routes
+    refine_routes(surface, doc)
+    from bake_resident_places import bake_resident_places
+    doc["resident_places"] = bake_resident_places(plan, surface, doc, ROOT)
+    patches = doc["resident_places"]["patches"]
+    log(f"resident places: {len(patches)} patches, {sum(p['capacity'] for p in patches)} spots")
     OUT_JSON.write_text(json.dumps(doc, separators=(",", ":"), sort_keys=False) + "\n")
     log(f"wrote {OUT_JSON.relative_to(ROOT)} "
         f"({len(graph.nodes)} nodes, {len(edges)} edges, {len(places)} places, "

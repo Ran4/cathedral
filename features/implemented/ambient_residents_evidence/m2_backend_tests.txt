@@ -1,0 +1,16 @@
+    Blocking waiting for file lock on build directory
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+    Finished `test` profile [optimized + debuginfo] target(s) in 45.79s
+     Running unittests src/bin/cathedral_headless.rs (target/debug/deps/cathedral_headless-21c040bf31cf4561)
+
+running 6 tests
+test tests::repr_escapes_the_way_cpython_does ... ok
+test tests::status_flag_parses_name_kind_and_bounded_value ... ok
+test tests::the_final_state_block_prints_python_literals ... ok
+test tests::the_cost_footer_switches_precision_at_half_a_cent ... ok
+test tests::the_shipped_assets_load ... ok
+test tests::a_turn_parked_by_the_floor_does_not_wait_on_the_provider ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+

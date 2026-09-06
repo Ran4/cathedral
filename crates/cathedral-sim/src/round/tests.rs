@@ -13,6 +13,9 @@ use std::collections::{BTreeMap, BTreeSet};
 #[path = "knowledge_tests.rs"]
 mod knowledge_tests;
 
+#[path = "motion_tests.rs"]
+mod motion_tests;
+
 const NAV_JSON: &str = include_str!("../../../../assets/world/navigation.json");
 const NAV_BIN: &[u8] = include_bytes!("../../../../assets/world/navigation.bin");
 const CATALOG: &str = include_str!("../../../../assets/sounds/catalog.toml");
@@ -67,6 +70,7 @@ fn person(
         extended_character_description: String::new(),
         curiosity: None,
         generated: false,
+        generated_routine: None,
     });
     Character::from_sheet(CharacterSheet {
         pockets: Vec::new(),
@@ -1559,7 +1563,7 @@ fn the_confined_are_fed_and_watered_because_they_cannot_go_and_get_it() {
     }
     // A third of a game day of decay — far past THIRST_PARCHED for anyone the
     // clock is allowed to touch.
-    decay_needs(&mut round, &mut world, &clock, 1200.0);
+    decay_needs(&mut round, &mut world, &nav, &clock, 1200.0);
 
     let kept = &world.characters[&held].state.needs;
     assert_eq!(kept.thirst, 60.0, "the keeper brings water");
@@ -2921,6 +2925,7 @@ fn household_vessels_queue_ahead_of_trade_vessels() {
         phase: Phase::Idle,
         travel_target: None,
         travel_for_intent: false,
+        motion_cause: motion::MotionCause::Other,
         next_decision: 0.0,
         epoch: 0,
         evening_seed: None,
@@ -2969,6 +2974,7 @@ fn a_full_vessel_is_delivered_by_kind() {
         phase: Phase::Drawing,
         travel_target: None,
         travel_for_intent: false,
+        motion_cause: motion::MotionCause::Other,
         next_decision: 0.0,
         epoch: 0,
         evening_seed: None,
@@ -4022,6 +4028,7 @@ fn errand_debug_reduces_the_phase_the_well_and_the_walk() {
             phase: Phase::Queued,
             travel_target: None,
             travel_for_intent: false,
+            motion_cause: motion::MotionCause::Other,
             next_decision: 0.0,
             epoch: 0,
             evening_seed: None,
@@ -4084,7 +4091,7 @@ fn the_lamplighters_dusk_beats_light_the_squares_and_dawn_snuffs_them() {
         // of them to a curb.
         world.add_character(person(
             id,
-            Vec3::new(x, WALK_Y, z),
+            nav.node_point(nav.nearest_node(x * 0.7, z * 0.7).unwrap()),
             Some("lamplighter"),
             Significance::Minor,
         ));
@@ -4186,7 +4193,7 @@ fn a_conversation_holds_the_taper() {
     let mut world = base_world();
     world.add_character(person(
         "dtbvl",
-        Vec3::new(-20.0, WALK_Y, 356.0),
+        nav.node_point(nav.nearest_node(-14.0, 249.2).unwrap()),
         Some("lamplighter"),
         Significance::Minor,
     ));
@@ -4363,7 +4370,7 @@ fn the_tavern_hearth_feeds_its_trade_only_at_a_meal_office() {
             state.position_m = tavern;
             state.needs.hunger = HUNGER_FAMISHED / 2.0;
         }
-        decay_needs(&mut round, &mut world, &clock_at(office), 40.0);
+        decay_needs(&mut round, &mut world, &nav, &clock_at(office), 40.0);
         world.characters[&brew].needs().hunger
     };
 
@@ -4411,7 +4418,13 @@ fn the_anchoress_is_fed_in_her_cell() {
         .state
         .needs
         .hunger = HUNGER_FAMISHED / 2.0;
-    decay_needs(&mut round, &mut world, &clock_at(Office::HighWick), 40.0);
+    decay_needs(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock_at(Office::HighWick),
+        40.0,
+    );
     assert!(
         world.characters[&id].needs().hunger > HUNGER_FAMISHED,
         "her cell is her hearth during a meal office"
@@ -4829,6 +4842,7 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
                 phase: Phase::Idle,
                 travel_target: None,
                 travel_for_intent: false,
+                motion_cause: motion::MotionCause::Other,
                 next_decision: 0.0,
                 epoch: 0,
                 evening_seed: None,
@@ -5313,6 +5327,7 @@ fn carry_home_only_when_actually_heading_home() {
         phase: Phase::Idle,
         travel_target: None,
         travel_for_intent: false,
+        motion_cause: motion::MotionCause::Other,
         next_decision: 0.0,
         epoch: 0,
         evening_seed: None,
@@ -6964,6 +6979,7 @@ fn active_production_fixture(work_minutes: u32) -> (World, Round, ActorId, World
             phase: Phase::Idle,
             travel_target: None,
             travel_for_intent: false,
+            motion_cause: motion::MotionCause::Other,
             next_decision: 0.0,
             epoch: 0,
             evening_seed: None,
@@ -7273,6 +7289,7 @@ fn weather_person(position: Vec3) -> Townsperson {
         phase: Phase::Idle,
         travel_target: None,
         travel_for_intent: false,
+        motion_cause: motion::MotionCause::Other,
         next_decision: 0.0,
         epoch: 0,
         evening_seed: None,
@@ -7479,7 +7496,14 @@ fn an_interrupted_follow_waits_out_the_answers_beat() {
 
     // The very next poll does not put them back on their feet.
     let mut nudges = Vec::new();
-    tick_intents(&mut round, &mut world, &nav, 1.0, &mut nudges);
+    tick_intents(
+        &mut round,
+        &mut world,
+        &nav,
+        1.0,
+        &BTreeSet::new(),
+        &mut nudges,
+    );
     assert!(
         world.characters[&chaser].state.movement.is_none(),
         "the answer's beat holds the follow"
@@ -7487,7 +7511,14 @@ fn an_interrupted_follow_waits_out_the_answers_beat() {
     assert_eq!(round.people[&chaser].phase, Phase::Idle);
 
     // Once the cadence comes due, the chase resumes.
-    tick_intents(&mut round, &mut world, &nav, 5.0, &mut nudges);
+    tick_intents(
+        &mut round,
+        &mut world,
+        &nav,
+        5.0,
+        &BTreeSet::new(),
+        &mut nudges,
+    );
     assert!(
         world.characters[&chaser].state.movement.is_some(),
         "the cadence resumes the chase"
@@ -8161,83 +8192,28 @@ fn a_chalked_ward_sign_pulls_that_wards_evening_crowd() {
 #[test]
 fn a_generated_citizen_with_no_trade_is_enrolled_with_no_legs() {
     let nav = nav();
-    let stands = crate::crowd::spread_over_walkable(&nav, 64);
-    let sheets = crate::crowd::extra_ambient_sheets(&nav, &stands, 0);
-    let no_trade: Vec<ActorId> = sheets
-        .iter()
-        .filter(|sheet| {
-            sheet
-                .lore
-                .as_ref()
-                .is_some_and(|lore| lore.occupation_id.is_none())
-        })
-        .map(|sheet| sheet.id.clone())
-        .collect();
-    let trades: Vec<ActorId> = sheets
-        .iter()
-        .filter(|sheet| {
-            sheet
-                .lore
-                .as_ref()
-                .is_some_and(|lore| lore.occupation_id.is_some())
-        })
-        .map(|sheet| sheet.id.clone())
-        .collect();
-    assert!(
-        !no_trade.is_empty() && !trades.is_empty(),
-        "a crowd of 64 holds both kinds"
-    );
-
+    let crowd = crate::crowd::generate_ambient(&nav, 64, 0, &[], &[]).unwrap();
     let mut world = base_world();
-    for sheet in sheets {
+    for sheet in crowd.sheets {
         world.add_character(Character::from_sheet(sheet));
     }
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
-
-    for id in &no_trade {
-        let person = &round.people[id];
-        assert!(
-            person.legs.is_empty(),
-            "{id} has no trade and should have no legs: {:?}",
-            person.legs.iter().map(|leg| &leg.label).collect::<Vec<_>>()
-        );
-        // M3 moved this one line: `build_legs` still returns the default for
-        // them (no archetype, no route), but the enrolment branch then draws a
-        // generated citizen their own leash over the crowd band.
-        assert!(
-            (CROWD_LEASH_MIN_M..=CROWD_LEASH_MAX_M).contains(&person.leash_m),
-            "{id} should mill on a crowd leash, not the cast's ten: {}",
-            person.leash_m
-        );
-        assert!(!person.curfew_exempt);
-        // M4 left this pair standing, deliberately. A no-trade citizen carries
-        // `pauper`, and `bake_homes.py` refuses a bed to anybody who does — so
-        // the crowd's doors go to the three quarters with a trade, and this
-        // cohort is still the people the watch finds in the street at curfew.
-        assert!(person.home.is_none(), "no door goes to a generated pauper");
-        // The base the wander leash is measured from is their spawn — the
-        // 12 m stand M1 gave them, which is the point of standing them there.
+    assert_eq!(round.resident_count(), 64);
+    for (id, person) in &round.people {
+        assert!(person.legs.is_empty() && person.source.is_none());
+        assert_eq!(person.leash_m, 0.0);
         assert_eq!(person.base, world.characters[id].position_m());
-        // A trade is also what binds a drawer to a well curb, so this cohort
-        // stays out of the queues `--trace-water` measures.
-        assert!(person.source.is_none());
+        assert!(world.characters[id].lore().unwrap().occupation_id.is_none());
         assert!(
-            world.characters[id].state.daily_round.is_empty(),
-            "{id} should have no round to recite in their prompt"
+            world.characters[id]
+                .state
+                .daily_round
+                .iter()
+                .any(|line| line.contains("locally"))
         );
     }
-
-    // The control: the same generator, the same graph, a trade — and legs.
-    let with_legs = trades
-        .iter()
-        .filter(|id| !round.people[*id].legs.is_empty())
-        .count();
-    assert!(
-        with_legs > trades.len() / 2,
-        "only {with_legs} of {} tradesmen were given a round",
-        trades.len()
-    );
+    assert!(round.people.values().filter(|p| p.home.is_some()).count() > 40);
 }
 
 /// A generated citizen with the same shape [`crate::crowd`] mints, but stood
@@ -8299,7 +8275,7 @@ fn a_generated_citizens_leash_is_drawn_across_the_whole_band() {
 /// them the same leash to the metre — the wide one belongs to the generated
 /// citizens beside them, who all draw inside the band.
 #[test]
-fn the_crowd_takes_the_wide_leash_and_the_cast_keeps_its_own() {
+fn residents_have_no_wander_leash_and_the_cast_keeps_its_own() {
     let nav = nav();
     let stands = crate::crowd::spread_over_walkable(&nav, 128);
     let authored: Vec<(&str, &str)> = vec![
@@ -8356,7 +8332,7 @@ fn the_crowd_takes_the_wide_leash_and_the_cast_keeps_its_own() {
         }
         generated += 1;
         assert!(
-            (CROWD_LEASH_MIN_M..=CROWD_LEASH_MAX_M).contains(&townsperson.leash_m),
+            townsperson.leash_m == 0.0,
             "{id} enrolled on {} m",
             townsperson.leash_m
         );
@@ -8413,6 +8389,7 @@ fn a_generated_citizen_censuses_at_a_post_as_wide_as_their_leash() {
                 phase: Phase::Idle,
                 travel_target: None,
                 travel_for_intent: false,
+                motion_cause: motion::MotionCause::Other,
                 next_decision: 0.0,
                 epoch: 0,
                 evening_seed: None,
@@ -8491,6 +8468,7 @@ fn a_generated_idler_past_the_leash_is_walked_back() {
                 phase: Phase::Idle,
                 travel_target: None,
                 travel_for_intent: false,
+                motion_cause: motion::MotionCause::Other,
                 next_decision: 0.0,
                 epoch: 0,
                 evening_seed: None,
@@ -8674,7 +8652,7 @@ fn the_crowd_is_housed_at_its_own_doors_and_the_cast_keeps_its_bake() {
             .expect("a door on the profile is a door in the round");
         assert_eq!(home, Vec3::new(x, WALK_Y, z), "{id} sleeps somewhere else");
         // `base` is home for the housed, so the patch they mill over is theirs.
-        assert_eq!(person.base, home);
+        assert_eq!(person.base, world.characters[id].position_m());
 
         // The handle: filed in the registry, and held by its owner, so
         // `places_you_know` can say "go_to" their own door.
@@ -8746,45 +8724,23 @@ fn the_crowd_is_housed_at_its_own_doors_and_the_cast_keeps_its_bake() {
 /// their bed is not idle either: it is what the curfew rung and the nightly
 /// ambient evening roll both open on.
 #[test]
-fn a_generated_tradesman_now_has_a_leg_home_and_a_loiterer_still_has_none() {
+fn generated_residents_have_homes_without_an_occupational_home_leg() {
     let nav = nav();
-    let stands = crate::crowd::spread_over_walkable(&nav, 64);
-    let sheets = crate::crowd::extra_ambient_sheets(&nav, &stands, 0);
+    let crowd = crate::crowd::generate_ambient(&nav, 64, 0, &[], &[]).unwrap();
+    let housed = crowd.placement.housed;
     let mut world = base_world();
-    for sheet in sheets {
+    for sheet in crowd.sheets {
         world.add_character(Character::from_sheet(sheet));
     }
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
-
-    let mut walk_home = 0usize;
-    let mut trades = 0usize;
-    for (id, person) in &round.people {
-        let lore = world.characters[id].lore().expect("a generated profile");
-        let bed = person.legs.iter().find(|leg| leg.is_home);
-        if lore.occupation_id.is_none() {
-            assert!(
-                person.legs.is_empty(),
-                "{id} has no trade and should still have no legs"
-            );
-            assert!(person.home.is_none(), "{id} is a pauper and gets no door");
-            continue;
-        }
-        let home = person.home.expect("M4 houses everybody with a trade");
-        trades += 1;
-        if let Some(bed) = bed {
-            assert_eq!(bed.at, home, "{id}'s home leg goes somewhere else");
-            // Sleeping or merely at their ease — the archetypes differ, and a
-            // night trade's bed leg is `Idle`; what matters is that it is theirs.
-            assert!(matches!(bed.doing, Arrival::Sleep | Arrival::Idle));
-            walk_home += 1;
-        }
-    }
-    assert!(trades > 20, "only {trades} generated tradesmen");
-    assert!(
-        walk_home > trades / 2,
-        "only {walk_home} of {trades} tradesmen walk home; before M4 it was 0"
+    assert!(housed > 40);
+    assert_eq!(
+        round.people.values().filter(|p| p.home.is_some()).count(),
+        housed
     );
+    assert!(round.people.values().all(|p| p.legs.is_empty()));
+    assert_eq!(round.reroll_ambient_evenings(&mut world, 4), 0);
 }
 
 /// `give_the_crowd_somewhere_to_be.md` M5: the office lag is drawn per person
@@ -8835,7 +8791,7 @@ fn a_generated_citizens_office_lag_is_drawn_across_the_whole_band() {
 /// lag reads the city's own clock — [`Townsperson::leg_time`] is the identity,
 /// so not one authored leg crosses a moment later than it did before M5.
 #[test]
-fn the_crowd_dawdles_after_the_bell_and_the_cast_keeps_the_citys_own() {
+fn residents_have_no_office_lag_and_the_cast_keeps_the_citys_own() {
     let nav = nav();
     let stands = crate::crowd::spread_over_walkable(&nav, 128);
     let authored: Vec<(&str, &str)> = vec![
@@ -8889,8 +8845,7 @@ fn the_crowd_dawdles_after_the_bell_and_the_cast_keeps_the_citys_own() {
         }
         generated += 1;
         assert_eq!(
-            person.leg_lag_share,
-            crowd_leg_lag_share(id),
+            person.leg_lag_share, 0.0,
             "{id} enrolled on a lag no rule drew"
         );
         if person.leg_time(noon) != noon {
@@ -8902,7 +8857,7 @@ fn the_crowd_dawdles_after_the_bell_and_the_cast_keeps_the_citys_own() {
         "only {generated} generated citizens enrolled"
     );
     assert!(
-        dawdlers > generated / 2,
+        dawdlers == 0,
         "only {dawdlers} of {generated} read a lagged clock"
     );
 }
@@ -8969,6 +8924,7 @@ fn a_generated_citizen_holds_the_old_leg_across_the_bell_and_then_crosses() {
                 phase: Phase::Idle,
                 travel_target: None,
                 travel_for_intent: false,
+                motion_cause: motion::MotionCause::Other,
                 next_decision: 0.0,
                 epoch: 0,
                 evening_seed: None,

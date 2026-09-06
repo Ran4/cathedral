@@ -225,6 +225,8 @@ pub struct LoreProfile {
     /// it, and nothing in a prompt ever mentions it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub generated: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub generated_routine: Option<crate::crowd::GeneratedRoutine>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -466,6 +468,7 @@ impl LoreCharacterSheet {
                 extended_character_description: self.extended_character_description,
                 curiosity: self.curiosity,
                 generated: false,
+                generated_routine: None,
             }),
             presence: Presence::InCity,
             presence_epoch: 0,
