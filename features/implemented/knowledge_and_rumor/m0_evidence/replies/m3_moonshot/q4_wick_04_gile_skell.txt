@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Grigor Ashe? Can't say I've heard the name, friend. But I did hear tell of a butcher from the Weigh Ward being taken up at the Slate Cistern two days past—maybe that's the one you mean? If you're looking for word of him, you'd do better asking at the Stone House than among the stalls."}

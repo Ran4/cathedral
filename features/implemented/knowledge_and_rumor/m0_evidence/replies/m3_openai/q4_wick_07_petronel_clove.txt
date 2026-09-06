@@ -1,0 +1,1 @@
+say {"target":"player","text":"I heard Grigor Ashe was taken at Next to the Seraph statue yesterday and lies in the Stone House, from Havise Bram. I cannot say it happened here at the Wickmarket."}

@@ -98,8 +98,8 @@ fn collect_json_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<(), 
 mod tests {
     use super::*;
     use cathedral_sim::{
-        ActorId, AreaMap, PlayerKnowledge, PromptEnv, Significance, Vec3,
-        WorldConfig, build_world, render_prompt,
+        ActorId, AreaMap, PlayerKnowledge, PromptEnv, Significance, Vec3, WorldConfig, build_world,
+        render_prompt,
     };
     use std::collections::BTreeSet;
 
@@ -117,8 +117,10 @@ mod tests {
         let public = sources
             .iter()
             .filter(|(path, source)| {
-                let sheet: serde_json::Value = serde_json::from_str(source)
-                    .unwrap_or_else(|error| panic!("character file {path} does not parse: {error}"));
+                let sheet: serde_json::Value =
+                    serde_json::from_str(source).unwrap_or_else(|error| {
+                        panic!("character file {path} does not parse: {error}")
+                    });
                 sheet["significance"] != "ambient"
             })
             .count();
@@ -467,6 +469,112 @@ mod tests {
              (bound raised from 128 KiB when the lore-item wave seeded ~65 held \
              goal items — apples, knives, blankets, kindling)",
             encoded.len()
+        );
+
+        // Saturate the longest real sheet, not a synthetic short one. Every
+        // holding uses the longest shipped template, the longest unknown role,
+        // the long low-band third-hand hedge, a teller and a day in words.
+        let reader = ActorId::from_raw(longest.1);
+        let subject = world
+            .characters
+            .values()
+            .filter(|candidate| {
+                candidate.id() != &reader
+                    && !world.characters[&reader].knows().contains(candidate.id())
+            })
+            .filter(|candidate| {
+                candidate
+                    .lore()
+                    .and_then(|lore| lore.occupation_display.as_ref())
+                    .is_some()
+            })
+            .max_by_key(|candidate| {
+                candidate
+                    .lore()
+                    .unwrap()
+                    .occupation_display
+                    .as_ref()
+                    .unwrap()
+                    .len()
+            })
+            .unwrap()
+            .id()
+            .clone();
+        let said = world
+            .fact_catalog
+            .specs()
+            .iter()
+            .max_by_key(|fact| fact.said.len())
+            .unwrap()
+            .said
+            .clone();
+        let rows: Vec<_> = (0..cathedral_sim::knowledge::HOLDINGS_MAX).map(|n| serde_json::json!({
+            "id": format!("budget.probe{n}"), "topic": "craft", "said": said,
+            "subject": [subject], "seeded": [subject], "place": "wickmarket", "day": 1, "decays": true,
+            "garble": "place,day"
+        })).collect();
+        let pack = cathedral_sim::knowledge::FactCatalog::from_json(
+            &serde_json::json!({"schema_version": 1, "facts": rows}).to_string(),
+        )
+        .unwrap();
+        assert!(pack.seed(&mut world).is_empty());
+        world.current_time = Some(cathedral_sim::WorldTime {
+            day: 3,
+            fraction: 0.0,
+            office: cathedral_sim::Office::Dayspring,
+            weekday: cathedral_sim::Weekday::Bellday,
+        });
+        for n in 0..cathedral_sim::knowledge::HOLDINGS_MAX {
+            let key = world
+                .knowledge
+                .key_of(&cathedral_sim::FactId::from_raw(format!("budget.probe{n}")))
+                .unwrap();
+            cathedral_sim::knowledge::learn(
+                &mut world,
+                &reader,
+                key,
+                cathedral_sim::knowledge::Telling {
+                    hops: 3,
+                    from: Some(subject.clone()),
+                    heat: 1.0,
+                    view: Default::default(),
+                },
+                Some(3.0),
+            );
+        }
+        let since = vec!["Tell me about the budget business.".to_string()];
+        let saturated_prompt = render_prompt(&world, &reader, Some(&since), &env).unwrap();
+        let saturated = saturated_prompt.len();
+        let added = saturated.saturating_sub(longest.0);
+        let block = saturated_prompt
+            .split("**what_you_know**")
+            .nth(1)
+            .unwrap()
+            .split("\n**")
+            .next()
+            .unwrap();
+        assert_eq!(
+            block.lines().filter(|line| line.starts_with("- ")).count(),
+            cathedral_sim::knowledge::KNOWN_SHEET_MAX
+        );
+        assert!(block.contains("two days past") && block.contains("you had it from"));
+        assert_eq!(
+            world.knowledge.holdings_len(&reader),
+            cathedral_sim::knowledge::HOLDINGS_MAX
+        );
+        eprintln!(
+            "longest prompt with {} facts held: {saturated} bytes ({added} added, {:.0} B/fact)",
+            cathedral_sim::knowledge::HOLDINGS_MAX,
+            added as f64 / cathedral_sim::knowledge::KNOWN_SHEET_MAX as f64
+        );
+        assert!(
+            saturated <= 64 * 1024,
+            "saturated known-word sheet exceeds 64 KiB: {saturated}"
+        );
+        assert_eq!(
+            serde_json::to_vec(&world.public_snapshot(&ActorId::from_raw("player"))).unwrap(),
+            encoded,
+            "saturating knowledge must not change a byte of the public snapshot"
         );
 
         // …and the same bound with the walls fully chalked

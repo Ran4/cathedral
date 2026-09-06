@@ -42,6 +42,12 @@ const REPLY_DANCE: &str = concat!(
     r#"gesture {"kind": "dance"}"#,
 );
 
+const REPLY_RAISE_WORD: &str = concat!(
+    r#"say {"target": "player", "text": "Is that so. I had not heard it."}"#,
+    "\n",
+    r#"raise_word {"topic": "coin", "said": "the salt weighed short at the cellars and somebody pocketed the difference"}"#,
+);
+
 /// The scripted reply for one rendered prompt.
 ///
 /// Rules, in order (any parse failure falls through to the no-op):
@@ -50,7 +56,8 @@ const REPLY_DANCE: &str = concat!(
 /// 3. anyone **asked a question** who holds something → they say their first
 ///    `what_you_know` bullet back, verbatim (`features/knowledge_and_rumor/`).
 /// 4. anyone asked to dance or wave → they say so and do it.
-/// 5. anyone else → a no-op turn.
+/// 5. an offered word and the scripted salt assertion → a claim.
+/// 6. anyone else → a no-op turn.
 pub fn fake_reply(prompt: &str) -> String {
     let Some(name) = sheet_name(prompt) else {
         return REPLY_NOOP.to_string();
@@ -82,6 +89,9 @@ pub fn fake_reply(prompt: &str) -> String {
     }
     if history.contains("wave") {
         return REPLY_WAVE.to_string();
+    }
+    if prompt.contains("raise_word {") && history.contains("short measure at the salt cellars") {
+        return REPLY_RAISE_WORD.to_string();
     }
     REPLY_NOOP.to_string()
 }
@@ -115,9 +125,7 @@ pub fn fake_night_reply(prompt: &str) -> String {
         format!(r#"remember {{"memory": "I, {name}, lay down at the end of an ordinary day."}}"#);
     if let (Some(place), true) = (first_place_id(prompt), has_round_legs(prompt)) {
         reply.push('\n');
-        reply.push_str(&format!(
-            r#"set_round {{"leg": 1, "place_id": "{place}"}}"#
-        ));
+        reply.push_str(&format!(r#"set_round {{"leg": 1, "place_id": "{place}"}}"#));
     }
     reply
 }
@@ -312,14 +320,23 @@ mod tests {
 
     #[test]
     fn anyone_asked_to_wave_greets_and_waves_at_the_player() {
-        let reply = fake_reply(&prompt_with("Sven", &["Player said: \"Please wave at me\""]));
+        let reply = fake_reply(&prompt_with(
+            "Sven",
+            &["Player said: \"Please wave at me\""],
+        ));
         assert!(reply.contains("hello there"), "{reply}");
-        assert!(reply.contains(r#"gesture {"kind": "wave", "to": "player"}"#), "{reply}");
+        assert!(
+            reply.contains(r#"gesture {"kind": "wave", "to": "player"}"#),
+            "{reply}"
+        );
     }
 
     #[test]
     fn anyone_asked_to_dance_starts_the_dance_loop() {
-        let reply = fake_reply(&prompt_with("Conny", &["Player said: \"Would you dance?\""]));
+        let reply = fake_reply(&prompt_with(
+            "Conny",
+            &["Player said: \"Would you dance?\""],
+        ));
         assert!(reply.contains(r#"gesture {"kind": "dance"}"#), "{reply}");
     }
 

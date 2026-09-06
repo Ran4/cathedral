@@ -1,0 +1,176 @@
+{
+  "provider": "openai",
+  "model": "gpt-5.6-luna",
+  "calls": [
+    {
+      "sheet": "q2_holder_hops3_low_band.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 4.654,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q2_holder_hops3_low_band.txt"
+      ],
+      "sheet_sha256": "b5f33a201653e4f6e5c76352f9a6d832a24179faaec7215b152b311f68630072"
+    },
+    {
+      "sheet": "q2_holder_hops3_top_band.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 3.127,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q2_holder_hops3_top_band.txt"
+      ],
+      "sheet_sha256": "9aab15dd5d3a199c14a9512ff3b0eff37b8d1739f28b192da690a3ebe3fa9f31"
+    },
+    {
+      "sheet": "q2_holder_hops4_low_band.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 3.438,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q2_holder_hops4_low_band.txt"
+      ],
+      "sheet_sha256": "bd9858357495971b5cd3116c63cc438e46a85fe4def3b5dee9f85459684a61de"
+    },
+    {
+      "sheet": "q2_holder_hops4_top_band.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 3.482,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q2_holder_hops4_top_band.txt"
+      ],
+      "sheet_sha256": "793b0d05042728dbe43d95cba2e8f6a65312cd97d2a8d5bd900aa3146ee744d4"
+    },
+    {
+      "sheet": "q4_wick_01_ansel_quern.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 2.826,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q4_wick_01_ansel_quern.txt"
+      ],
+      "sheet_sha256": "c9f00b902e65aebb9c3d578dc59ba8cfeffffdf43e7bed381717e4576c3bb2e8"
+    },
+    {
+      "sheet": "q4_wick_02_sibbe_hobbe.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 2.185,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q4_wick_02_sibbe_hobbe.txt"
+      ],
+      "sheet_sha256": "35dde9a3fc8ff23f49f504a4d9921f0bc61a7dfeeed7a9a1783a67e351abc4e9"
+    },
+    {
+      "sheet": "q4_wick_03_osanne_vell.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 1.455,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q4_wick_03_osanne_vell.txt"
+      ],
+      "sheet_sha256": "bc49d0071c6ae1987df10ea1444d296ab8fad2d5f11d24228f938339a4c24961"
+    },
+    {
+      "sheet": "q4_wick_04_gile_skell.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 2.074,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q4_wick_04_gile_skell.txt"
+      ],
+      "sheet_sha256": "9cb4787edeb29f8da894074c1325cb816d02c996f8b0251538f39017803318be"
+    },
+    {
+      "sheet": "q4_wick_05_rohese_crake.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 1.999,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q4_wick_05_rohese_crake.txt"
+      ],
+      "sheet_sha256": "c8d7099eb6fde8c577f60842aa59d55bfea465e2be46a1753343a88a47e860a0"
+    },
+    {
+      "sheet": "q4_wick_06_havise_bram.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 1.869,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q4_wick_06_havise_bram.txt"
+      ],
+      "sheet_sha256": "3b6d4f2b80d0cde3ab00c29a093667dcf37111ed2ccf7fd9028dee7bff9d019b"
+    },
+    {
+      "sheet": "q4_wick_07_petronel_clove.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 1.878,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q4_wick_07_petronel_clove.txt"
+      ],
+      "sheet_sha256": "a8049aa0550acca9642632f5f45103df09db5940b63dd14cfc75167db80b6b5b"
+    },
+    {
+      "sheet": "q4_wick_08_ede_kett.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 1.821,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "openai",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m3_garble/q4_wick_08_ede_kett.txt"
+      ],
+      "sheet_sha256": "afc05070658d8d0b70acbd1edd7d8051bc855cc787c649157de75ab6940d7367"
+    }
+  ],
+  "git_commit": "f830ff6969d1dc1611afe4cc6db953ffc9f44658",
+  "previous": null
+}

@@ -35,8 +35,8 @@ use bevy::{
 };
 
 use crate::map::MapState;
-use crate::smart_actors::{ConfigMenuState, InventoryUiState};
 use crate::smart_actors::model::ActorId;
+use crate::smart_actors::{ConfigMenuState, InventoryUiState};
 
 const FIXED_HZ: f64 = 120.0;
 /// The most wall-clock time one frame may hand to the fixed-step accumulator.
@@ -585,11 +585,13 @@ fn attach_sky_probe_once_rendering(
         return;
     }
     for camera in &cameras {
-        commands.entity(camera).insert(AtmosphereEnvironmentMapLight {
-            intensity: 0.65,
-            size: UVec2::splat(128),
-            ..default()
-        });
+        commands
+            .entity(camera)
+            .insert(AtmosphereEnvironmentMapLight {
+                intensity: 0.65,
+                size: UVec2::splat(128),
+                ..default()
+            });
     }
 }
 
@@ -653,15 +655,19 @@ fn collect_input(
     menu: Res<ConfigMenuState>,
     map: Res<MapState>,
     inventory: Option<Res<InventoryUiState>>,
+    journal: Option<Res<crate::smart_actors::JournalUiState>>,
     mut input: ResMut<ControllerInput>,
     mut controller: Single<&mut PlayerController>,
     mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
 ) {
-    // While the fullscreen map or the `I` inventory screen is open the cursor is
-    // released for clicking; that overlay owns the cursor, and the player holds
+    // While the map, inventory or journal is open the cursor is released for
+    // clicking; that overlay owns the cursor, and the player holds
     // still (movement, jump, the fly toggle, and click-to-recapture all pause).
     // Mouse-look already stops on its own once the cursor is unlocked.
-    if map.fullscreen_open || inventory.is_some_and(|inventory| inventory.open) {
+    if map.fullscreen_open
+        || inventory.is_some_and(|inventory| inventory.open)
+        || journal.is_some_and(|journal| journal.open)
+    {
         input.movement = Vec2::ZERO;
         input.running = false;
         input.fly_vertical = 0.0;
@@ -747,7 +753,6 @@ fn fixed_player_movement(
     player: Single<(&mut PlayerController, &mut PhysicalPosition)>,
     mut dynamic_boxes: Local<Vec<SolidBox>>,
 ) {
-
     let _span = crate::perf::span(crate::perf::Probe::Controller);
     let dt = fixed_time.delta_secs();
     let (mut controller, mut physical_position) = player.into_inner();
@@ -823,10 +828,8 @@ fn fixed_player_movement(
         // ground so friction, coyote time and the next jump behave. Flying
         // skips it, as it skips gravity.
         if let Some(profile) = margin.as_ref() {
-            let lift = profile.ground_lift(
-                physical_position.current.x,
-                physical_position.current.z,
-            );
+            let lift =
+                profile.ground_lift(physical_position.current.x, physical_position.current.z);
             if lift > 0.0 {
                 let floor = WALK_BAND_LO + lift + PLAYER_HALF_SIZE.y;
                 if physical_position.current.y <= floor && controller.velocity.y <= 0.0 {
@@ -1754,7 +1757,10 @@ mod tests {
 
         // Outside the wall, on the player's own side of it.
         assert!(result.contacts.blocked_x);
-        close(result.position.x, wall.min.x - TEST_HALF_SIZE.x - COLLISION_SKIN);
+        close(
+            result.position.x,
+            wall.min.x - TEST_HALF_SIZE.x - COLLISION_SKIN,
+        );
 
         // …and the discriminator: had the clamp been applied to this resolved
         // position instead, the player would now be standing in masonry.
@@ -1823,7 +1829,11 @@ mod tests {
     #[test]
     fn flying_is_not_custody_so_the_clamp_never_touches_the_delta() {
         let anchor = Vec3::new(2.0, 0.0, 0.0);
-        let state = PlayerCustodyState::held_at(anchor, 1, cathedral_sim::custody::STRAIN_BASE_SECONDS as f32);
+        let state = PlayerCustodyState::held_at(
+            anchor,
+            1,
+            cathedral_sim::custody::STRAIN_BASE_SECONDS as f32,
+        );
         let start = Vec3::new(-3.0, 0.0, 0.0);
         let wish = Vec3::new(-1.0, 0.0, 0.0);
 
@@ -1875,7 +1885,11 @@ mod tests {
         collision_world.add_box(Vec3::new(-20.0, -1.0, -20.0), Vec3::new(20.0, 0.0, 20.0));
         collision_world.add_box(Vec3::new(0.0, 0.0, -10.0), Vec3::new(0.4, 3.0, 10.0));
         app.insert_resource(collision_world);
-        app.insert_resource(PlayerCustodyState::held_at(anchor, 1, cathedral_sim::custody::STRAIN_BASE_SECONDS as f32));
+        app.insert_resource(PlayerCustodyState::held_at(
+            anchor,
+            1,
+            cathedral_sim::custody::STRAIN_BASE_SECONDS as f32,
+        ));
         app.world_mut().spawn((
             PlayerController::default(),
             PhysicalPosition {
@@ -1930,8 +1944,7 @@ mod tests {
             ));
             app.world_mut()
                 .spawn((PlayerController::default(), Transform::default()));
-            app.world_mut()
-                .spawn((PlayerCamera, Transform::default()));
+            app.world_mut().spawn((PlayerCamera, Transform::default()));
             app.add_systems(Update, mouse_look);
             app.update();
 

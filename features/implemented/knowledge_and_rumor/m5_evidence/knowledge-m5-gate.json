@@ -1,0 +1,86 @@
+[
+  {
+    "name": "rustfmt",
+    "command": [
+      "rustfmt",
+      "--check",
+      "--edition",
+      "2024",
+      "--config",
+      "skip_children=true",
+      "crates/cathedral-backends/src/bin/cathedral_headless.rs",
+      "crates/cathedral-backends/src/world_data.rs",
+      "crates/cathedral-backends/tests/knowledge_consequences.rs",
+      "crates/cathedral-sim/src/actions.rs",
+      "crates/cathedral-sim/src/engine.rs",
+      "crates/cathedral-sim/src/knowledge/mint.rs",
+      "crates/cathedral-sim/src/knowledge/mod.rs",
+      "crates/cathedral-sim/src/knowledge/pollen.rs",
+      "crates/cathedral-sim/src/knowledge/source.rs",
+      "crates/cathedral-sim/src/lib.rs",
+      "crates/cathedral-sim/src/notices.rs",
+      "crates/cathedral-sim/src/prompt/mod.rs",
+      "crates/cathedral-sim/src/round.rs",
+      "crates/cathedral-sim/src/round/knowledge_tests.rs",
+      "crates/cathedral-sim/src/round/tests.rs",
+      "crates/cathedral-sim/tests/engine_tests.rs",
+      "crates/cathedral-sim/tests/knowledge/m4.rs",
+      "crates/cathedral-sim/tests/knowledge/m5.rs",
+      "crates/cathedral-sim/tests/knowledge_tests.rs",
+      "src/drive.rs",
+      "src/map.rs",
+      "src/smart_actors/bridge.rs",
+      "src/smart_actors/custody.rs",
+      "src/smart_actors/journal_ui.rs",
+      "src/smart_actors/local_engine.rs",
+      "src/smart_actors/mod.rs",
+      "src/soundscape.rs"
+    ],
+    "returncode": 0,
+    "seconds": 0.647,
+    "log": "/tmp/knowledge-m5-rustfmt.log"
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--workspace",
+      "--all-targets",
+      "--offline",
+      "--message-format=json"
+    ],
+    "returncode": 0,
+    "seconds": 9.883,
+    "log": "/tmp/knowledge-m5-clippy.jsonl"
+  },
+  {
+    "name": "workspace-test",
+    "command": [
+      "cargo",
+      "test",
+      "--workspace",
+      "--offline"
+    ],
+    "returncode": 0,
+    "seconds": 138.017,
+    "log": "/tmp/knowledge-m5-workspace-test.log"
+  },
+  {
+    "name": "canary",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cathedral-backends",
+      "--lib",
+      "--offline",
+      "full_roster_prompts_and_public_snapshot_remain_bounded",
+      "--",
+      "--nocapture"
+    ],
+    "returncode": 0,
+    "seconds": 1.08,
+    "log": "/tmp/knowledge-m5-canary.log"
+  }
+]

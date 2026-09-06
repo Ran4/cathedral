@@ -1,0 +1,14 @@
+[
+  {
+    "carrier": "fc2hb",
+    "note": "Shipped renderer and original scenario backstory, memory, goal and since-lines; four real cast ids at scenario hearing distances. The no-occasion history is a render override and does not dispatch a say.",
+    "sheet": "q5b_raise_word_no_occasion",
+    "with_occasion": false
+  },
+  {
+    "carrier": "fc2hb",
+    "note": "Shipped renderer and original scenario backstory, memory, goal and since-lines; four real cast ids at scenario hearing distances. The no-occasion history is a render override and does not dispatch a say.",
+    "sheet": "q5b_raise_word_with_occasion",
+    "with_occasion": true
+  }
+]

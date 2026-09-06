@@ -520,6 +520,8 @@ impl NpcScheduler {
         // subsumed — but the world can still have changed under the request, so
         // the actor-exists / still-LLM revalidation stays (scheduler.md §4.2.d).
         if !is_current_llm {
+            world.knowledge.take_seated(&flight.actor_id);
+            world.knowledge.withdraw_offer(&flight.actor_id);
             // The drained percepts die with the result. Defensible: the actor is
             // gone (or is no longer an LLM), so there is nobody left to re-read
             // them (scheduler.md risk 3).
@@ -547,6 +549,8 @@ impl NpcScheduler {
         error: &CognitionError,
         events: &mut Vec<SchedulerEvent>,
     ) {
+        world.knowledge.take_seated(&flight.actor_id);
+        world.knowledge.withdraw_offer(&flight.actor_id);
         let backoff = self.backoff_after_failure();
         self.next_turn_at = now + backoff;
         self.requeue_unspent_turn(&flight.actor_id, flight.lane);
@@ -693,6 +697,16 @@ impl NpcScheduler {
             }
         }
 
+        let spoke = world.spoke_this_turn.as_ref() == Some(&flight.actor_id);
+        let seated = world.knowledge.take_seated(&flight.actor_id);
+        if spoke {
+            let game_days = world.current_time.map(|time| time.game_days());
+            for key in seated {
+                crate::knowledge::reheat(world, &flight.actor_id, key, game_days);
+            }
+        }
+        world.knowledge.withdraw_offer(&flight.actor_id);
+
         // The `system:` lines pushed above (invalid output, failed actions) can
         // carry the inbox past its bound when mid-flight percepts already filled
         // it; keep the invariant every path shares.
@@ -797,6 +811,8 @@ impl NpcScheduler {
                 )));
             }
             Err(busy) => {
+                world.knowledge.take_seated(&actor_id);
+                world.knowledge.withdraw_offer(&actor_id);
                 let actor = world
                     .characters
                     .get_mut(&actor_id)
@@ -1352,7 +1368,10 @@ mod tests {
                 if status.message.as_deref() == Some("discarded a stale LLM result")
         )));
         assert_eq!(world.characters[&road].memories(), ["Old road memory"]);
-        assert_eq!(world.characters[&road].recent_history(), ["Old road history"]);
+        assert_eq!(
+            world.characters[&road].recent_history(),
+            ["Old road history"]
+        );
         assert!(world.characters[&road].inbox().is_empty());
         assert!(world.characters[&road].state.pending_history.is_empty());
         assert!(transcript.is_empty());

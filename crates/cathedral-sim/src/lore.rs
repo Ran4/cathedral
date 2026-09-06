@@ -61,6 +61,13 @@ pub enum PlanningWard {
 }
 
 impl PlanningWard {
+    /// The authored spelling, case-insensitively, for drive input.
+    pub fn parse(value: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|w| w.as_str().eq_ignore_ascii_case(value))
+    }
+
     /// The eight wards, in declaration order — the order the Night Office fills
     /// its ward batches in, so a night is the same night every run.
     pub const ALL: [PlanningWard; 8] = [

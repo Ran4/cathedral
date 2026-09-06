@@ -1,0 +1,25 @@
+[
+  {
+    "name": "band",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/cathedral-headless",
+      "--fake",
+      "--watch-clock",
+      "1",
+      "--seconds-per-day",
+      "3600",
+      "--start-office",
+      "dayspring",
+      "--trace-pollen",
+      "--pollen-seed",
+      "The Wickmarket",
+      "--pollen-per-day",
+      "48"
+    ],
+    "environment": {},
+    "binary_sha256": "771382ee0243cb4c826d28099e25f7a51b3dd0edf5bdc2687bfe83f0db86f331",
+    "returncode": 0,
+    "wall_seconds": 11.947,
+    "pollen_sha256": "680c49ec729f956eafd44a8ed153d036bc8a3b53a9560b9a09c2306b8dec3062"
+  }
+]

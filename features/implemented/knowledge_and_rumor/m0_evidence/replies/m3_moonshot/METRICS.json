@@ -1,0 +1,167 @@
+{
+  "spoken": {
+    "q4_wick_01_ansel_quern": "Aye, it's true enough. They took Grigor Ashe right here at the Wickmarket, yesterday. He lies in the Stone House now \u2014 I had it from a chandler of the Wick Ward who was standing there when it happened.",
+    "q4_wick_02_sibbe_hobbe": "Not at the Wickmarket, no. They took him by the Dawn Bearer statue, two days past \u2014 or so a chandler of the Wick Ward told me, and he swore he was there. He's in the Stone House now, if it's true.",
+    "q4_wick_03_osanne_vell": "Aye, it's true. I saw it from my own doorway. They took him, and he didn't say a word. Just went quiet with the sergeant's hand on his arm.",
+    "q4_wick_04_gile_skell": "Grigor Ashe? Can't say I've heard the name, friend. But I did hear tell of a butcher from the Weigh Ward being taken up at the Slate Cistern two days past\u2014maybe that's the one you mean? If you're looking for word of him, you'd do better asking at the Stone House than among the stalls.",
+    "q4_wick_05_rohese_crake": "Aye, it's true. They took him three days past, right here on the Wickmarket. He's in the Stone House now.",
+    "q4_wick_06_havise_bram": "I don't know a Grigor Ashe, and I've seen no taking here today. What I heard\u2014down a line of mouths, mind\u2014was a cargo worker of the Weigh Ward taken at Slate Cistern two days past, lying in the Stone House now. If you need the truth of it, ask at the Stone House or the Weigh Ward, where they keep such records.",
+    "q4_wick_07_petronel_clove": "Nay, not at the Wickmarket. They took him next to the Seraph statue, yesterday \u2014 or so Havise Bram had it, and it's been through many mouths since. He lies in the Stone House, they say.",
+    "q4_wick_08_ede_kett": "Aye. Saw it myself, two days past. He's in the Stone House now."
+  },
+  "pairs": [
+    {
+      "a": "q4_wick_01_ansel_quern",
+      "b": "q4_wick_02_sibbe_hobbe",
+      "jaccard": 0.2903225806451613
+    },
+    {
+      "a": "q4_wick_01_ansel_quern",
+      "b": "q4_wick_03_osanne_vell",
+      "jaccard": 0.125
+    },
+    {
+      "a": "q4_wick_01_ansel_quern",
+      "b": "q4_wick_04_gile_skell",
+      "jaccard": 0.12
+    },
+    {
+      "a": "q4_wick_01_ansel_quern",
+      "b": "q4_wick_05_rohese_crake",
+      "jaccard": 0.2916666666666667
+    },
+    {
+      "a": "q4_wick_01_ansel_quern",
+      "b": "q4_wick_06_havise_bram",
+      "jaccard": 0.10204081632653061
+    },
+    {
+      "a": "q4_wick_01_ansel_quern",
+      "b": "q4_wick_07_petronel_clove",
+      "jaccard": 0.23333333333333334
+    },
+    {
+      "a": "q4_wick_01_ansel_quern",
+      "b": "q4_wick_08_ede_kett",
+      "jaccard": 0.07692307692307693
+    },
+    {
+      "a": "q4_wick_02_sibbe_hobbe",
+      "b": "q4_wick_03_osanne_vell",
+      "jaccard": 0.09090909090909091
+    },
+    {
+      "a": "q4_wick_02_sibbe_hobbe",
+      "b": "q4_wick_04_gile_skell",
+      "jaccard": 0.12
+    },
+    {
+      "a": "q4_wick_02_sibbe_hobbe",
+      "b": "q4_wick_05_rohese_crake",
+      "jaccard": 0.4090909090909091
+    },
+    {
+      "a": "q4_wick_02_sibbe_hobbe",
+      "b": "q4_wick_06_havise_bram",
+      "jaccard": 0.125
+    },
+    {
+      "a": "q4_wick_02_sibbe_hobbe",
+      "b": "q4_wick_07_petronel_clove",
+      "jaccard": 0.1935483870967742
+    },
+    {
+      "a": "q4_wick_02_sibbe_hobbe",
+      "b": "q4_wick_08_ede_kett",
+      "jaccard": 0.2727272727272727
+    },
+    {
+      "a": "q4_wick_03_osanne_vell",
+      "b": "q4_wick_04_gile_skell",
+      "jaccard": 0.061224489795918366
+    },
+    {
+      "a": "q4_wick_03_osanne_vell",
+      "b": "q4_wick_05_rohese_crake",
+      "jaccard": 0.125
+    },
+    {
+      "a": "q4_wick_03_osanne_vell",
+      "b": "q4_wick_06_havise_bram",
+      "jaccard": 0.0
+    },
+    {
+      "a": "q4_wick_03_osanne_vell",
+      "b": "q4_wick_07_petronel_clove",
+      "jaccard": 0.1
+    },
+    {
+      "a": "q4_wick_03_osanne_vell",
+      "b": "q4_wick_08_ede_kett",
+      "jaccard": 0.043478260869565216
+    },
+    {
+      "a": "q4_wick_04_gile_skell",
+      "b": "q4_wick_05_rohese_crake",
+      "jaccard": 0.09302325581395349
+    },
+    {
+      "a": "q4_wick_04_gile_skell",
+      "b": "q4_wick_06_havise_bram",
+      "jaccard": 0.25
+    },
+    {
+      "a": "q4_wick_04_gile_skell",
+      "b": "q4_wick_07_petronel_clove",
+      "jaccard": 0.06
+    },
+    {
+      "a": "q4_wick_04_gile_skell",
+      "b": "q4_wick_08_ede_kett",
+      "jaccard": 0.1282051282051282
+    },
+    {
+      "a": "q4_wick_05_rohese_crake",
+      "b": "q4_wick_06_havise_bram",
+      "jaccard": 0.0975609756097561
+    },
+    {
+      "a": "q4_wick_05_rohese_crake",
+      "b": "q4_wick_07_petronel_clove",
+      "jaccard": 0.21739130434782608
+    },
+    {
+      "a": "q4_wick_05_rohese_crake",
+      "b": "q4_wick_08_ede_kett",
+      "jaccard": 0.35714285714285715
+    },
+    {
+      "a": "q4_wick_06_havise_bram",
+      "b": "q4_wick_07_petronel_clove",
+      "jaccard": 0.0625
+    },
+    {
+      "a": "q4_wick_06_havise_bram",
+      "b": "q4_wick_08_ede_kett",
+      "jaccard": 0.13513513513513514
+    },
+    {
+      "a": "q4_wick_07_petronel_clove",
+      "b": "q4_wick_08_ede_kett",
+      "jaccard": 0.08695652173913043
+    }
+  ],
+  "mean": 0.15243500222778877,
+  "max": 0.4090909090909091,
+  "pairs_ge_0_60": 0,
+  "md5": {
+    "q4_wick_01_ansel_quern": "0713aaccc4a9ac305036a2255a2ce135",
+    "q4_wick_02_sibbe_hobbe": "c1c48c3158b466d95ffdc92d2e0e19ac",
+    "q4_wick_03_osanne_vell": "c667dbc661253584aee6637a4b063a52",
+    "q4_wick_04_gile_skell": "b98c5b8890e971fb59fa4c577a418426",
+    "q4_wick_05_rohese_crake": "8073989b1b53cae784cab55aac69615d",
+    "q4_wick_06_havise_bram": "2053a81e969b67b2a5fb670b14ca0910",
+    "q4_wick_07_petronel_clove": "79ac59138b3aedc33b18c066ad6a9612",
+    "q4_wick_08_ede_kett": "107d16f734676b21dce8958a323e680f"
+  }
+}

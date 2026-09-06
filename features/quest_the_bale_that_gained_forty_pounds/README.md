@@ -1,12 +1,5 @@
 Status: SPEC ONLY — unimplemented (2026-08-30)
 
-STALE WHERE IT TOUCHES KNOWLEDGE (2026-08-30): `features/knowledge_and_rumor/` is being built
-end-to-end **first**, on its own, and this spec will be rewritten against the API that actually
-ships. Wherever the text below describes what the knowledge layer owns, when this quest may
-start, or a casebook/receipt store of its own, `features/knowledge_and_rumor/README.md` wins.
-Do not reconcile this file now.
-
-
 # Quest: the bale that gained forty pounds
 
 Working title: **Forty Pounds Over**
@@ -275,9 +268,11 @@ These are general, live on `World`, and are not quest-gated:
 - `speech_router.rs` and the 20 m hearing calculation — witnesses are *whoever was actually within
   earshot*, computed the same way as everything else.
 - `attention.rs` — the stage. The quest never widens the LLM stage or raises the actor cap.
-- **`features/knowledge_and_rumor/`** — `Fact`, `holds()`, the `what_you_know` block, pollen
-  propagation and garbling, player receipts, the journal overlay and `World::arm_actor`. The quest
-  authors JSON facts and consumes all of it. See *Knowledge, memory and entry* below.
+- **`features/implemented/knowledge_and_rumor/`** — shipped through M5 (2026-09-06): `Fact`, fully
+  qualified `knowledge::holds`, the `what_you_know` block, pollen/garbling, `player_learned`, and
+  `EngineMessage::Journal { entries, standing }`. The quest owns no knowledge Rust type. It reads
+  its JSON pack with `knowledge::catalog::FactCatalog::extend_from_json`; `World::arm_actor(id,
+  goal)` seeds only a goal, never memories or a round. See *Knowledge, memory and entry* below.
 
 ### Foundation dependencies
 
@@ -286,7 +281,7 @@ These are general, live on `World`, and are not quest-gated:
 | Item weight | Does not exist | **Owned by this feature.** M0. |
 | Sealed lots + custody chain | Does not exist | **Owned by this feature.** M0. |
 | Keys and locked places | `features/keys_and_locked_places.md`, SPEC ONLY | **Scoped substitute.** M2 ships a single authored `key` item (kind already exists) that opens exactly one door — the bonded warehouse — with a hard-coded reach check. If the keys feature lands first, the substitute is deleted and the door registers with it. The quest must not block on it. |
-| **Knowledge and rumour** | `features/knowledge_and_rumor/`, SPEC ONLY | **Hard prerequisite — this quest does not start until it lands (M4 there).** It owns `Fact`/`holds()`, the `what_you_know` prompt block, pollen, garbling, player receipts, the journal and `World::arm_actor`. Decided 2026-08-30 to ship both halves as one feature rather than an interim fact-only layer. |
+| **Knowledge and rumour** | `features/implemented/knowledge_and_rumor/`, M0–M5 shipped 2026-09-06 | **Satisfied.** Shared catalog/`knowledge::holds`, prompt block, pollen, garbling, player receipts, journal and goal-only `World::arm_actor`. No interim fact queue is needed. |
 | Quest scaffolding | Does not exist; two other specs each propose their own | **Shared.** M0 lands `quest.rs` as a small common host (id, phase, data gate, outcome application) that `KnellQuest` and `DrainQuest` can adopt. Receipts and the casebook are *not* here — they belong to the knowledge layer, which all three quests share. |
 | Player purchase/payment | Only `round::try_purchase`; no general credit path | Duty payment and surety go through a narrow quest-owned settlement that calls the same spark-moving code. Noted in `crowd-knob`/`chalking` findings as a recurring gap; not fixed here. |
 | Persistence | No save | The quest is a single-session arc by design (~1.5 game days). Outcomes apply to the live world and are lost on quit, as everything else is. |
@@ -485,8 +480,18 @@ records it as the sentence they heard.
 
 ## Knowledge, memory and entry
 
-Everything here rides `features/knowledge_and_rumor/`. The quest authors facts as JSON and owns no
-knowledge code.
+Everything here rides `features/implemented/knowledge_and_rumor/` (M5 shipped 2026-09-06). The quest
+passes a `schema_version: 1` JSON pack to `knowledge::catalog::FactCatalog::extend_from_json` and
+seeds it at the appropriate quest hook. Calls remain fully qualified as `knowledge::holds`; never
+import a bare `holds`, which would collide conceptually with inventory holdings.
+
+`said` and per-holder `own` are templates using `{subject}`, `{place}` and `{day}`, resolved for the
+reader's known names. `bale.promise` is `topic: "talk"`, base **0.15**, non-decaying and
+`garble: "none"`: the three people know the arrangement, but it never auto-volunteers or deposits.
+`bale.stop` is `topic: "law"`, base **0.80**, decaying with `garble: "place,day"`: the city learns the
+accusation and its location/date can go wrong. A fully drifting row uses
+`garble: "subject,place,day"`. The low-band promise is the quest's hinge precisely because relevance
+and asking must reach it; giving it a high band would erase that comparison.
 
 ### Why the quest does not use memories
 
@@ -496,9 +501,11 @@ writer. Anything quest-critical parked there is on a timer. `recent_history` is 
 evaporates. (`Character::remember_percept` writes to `recent_history`, not memories, despite the
 name.)
 
-So quest knowledge is a **fact**, re-derived into the sheet every turn by `holds()`, exactly as
-`word_in_the_ward` re-derives notices. It cannot be forgotten, cannot drift, and is gated by a
-predicate rather than by a model's cooperation.
+So quest knowledge is a **fact**, re-derived into the sheet every turn by `knowledge::holds`, exactly as
+`word_in_the_ward` re-derives notices. Sealed standing rows cannot be forgotten or garbled; news
+rows drift only through their authored mask. Source invalidation is a sim predicate. Quest-phase
+sources are currently a placeholder that stays true, so this quest must wire phase invalidation
+or explicitly invalidate its rows when the phase changes.
 
 ### What people already know before the quest exists
 
@@ -527,7 +534,7 @@ Arming is **played, not narrated**. It puts things in the world rather than in a
 | Armed | How |
 |---|---|
 | Clemence Hobbe's bolt | Minted as a real `cloth`/`grade=broadcloth` item in her workshop |
-| `bale.promise` | An authored fact, `seeded` to Renn, Clemence Hobbe and Ede, `decays: false`, `garble: none` |
+| `bale.promise` | An authored fact, `seeded` to Renn, Clemence Hobbe and Ede, `decays: false`, `garble: "none"` |
 | Renn's intent | `World::arm_actor` sets his goal: *get her bolt onto Hugh's cart before the Tallage seals it, and do not let my mother hear of it* |
 | Renn's day | The extra Tally Bridge leg on his round |
 | Ede's errand | A real Needle→bridge run, walked, for a real penny |
@@ -537,9 +544,10 @@ happened. And `current_goal` is the strongest lever in the prompt — durable, r
 the model is already told to keep it current. A Renn carrying that goal behaves correctly with no
 knowledge injection at all.
 
-`arm_actor` is a **seed, not an override**: once armed, the actor's own `set_goal` and `forget` win.
-Expect it for two characters here — Renn's goal, and the two private recollections with no physical
-proof (his diverted hour, Warin hearing the beam settle heavy). Everything else is a fact.
+`World::arm_actor(id, goal)` is a **goal seed, not an override**: once armed, the actor's own
+`set_goal` wins. There is no memories parameter. Renn's diverted hour and Warin hearing the beam
+settle heavy are one-person seeded facts with `own` templates, so `forget` cannot erase the quest's
+hinge. Set Renn's additional round through `set_round`; it is not part of `arm_actor`.
 
 ### How knowledge spreads through the quest
 
@@ -548,7 +556,7 @@ Entirely through the shared layer; no quest-specific gating.
 | When | Who holds what |
 |---|---|
 | Arming | Three people hold `bale.promise` at hops 0. Nobody else has heard of it. |
-| The gate stop | `bale.stop` is minted from the seizure event, `seeded` from its `recipient_ids` — whoever was actually within earshot — and spreads as ordinary pollen, place and day free to garble. |
+| The gate stop | `bale.stop` is minted from the seizure event, `seeded` from `characters_within(at, HEARING_RADIUS_M, None)` at the successful seizure hook — actual witnesses, not the event’s delivery-gated or empty `recipient_ids` — and spreads as ordinary pollen, place and day free to garble. |
 | Lamplight | The notice against Hugh climbs to `Summoned` and travels on `notices.rs`'s own carrier roll, which is not this feature's problem. |
 | The opening | Minted public, high heat, `seeded` from the crowd. |
 
@@ -587,8 +595,9 @@ brings it up on its own, in a garbled form, which is also the most in-fiction po
 
 ### The journal
 
-Owned by the knowledge layer (`01_facts.md`), not by the quest. The quest supplies only its two
-standing lines:
+The existing `src/smart_actors/journal_ui.rs` renders the shared `player_learned` receipts through
+`EngineMessage::Journal { entries, standing }`. The quest adds its two standing strings at the sim's
+`knowledge::standing_lines` producer seam; the journal itself gains no quest logic or receipt store:
 
 - **the clock** — "the bale opens at Dayspring — one bell away"
 - **the stake** — "Hugh Crake is summoned to answer for it"
@@ -874,10 +883,9 @@ not hold never enter any view.
 
 Each is independently playable and testable, headless, with the fake backend.
 
-**Prerequisite: `features/knowledge_and_rumor/` through its own M4.** Nothing below starts before
-it. That is a real schedule cost — its M4 is a perceptibility tuning pass with an open-ended shape —
-and it was accepted deliberately on 2026-08-30 in exchange for three quests not each building their
-own knowledge system.
+**Knowledge prerequisite satisfied: M0–M5 shipped 2026-09-06.**
+`features/implemented/knowledge_and_rumor/` contains the measured provider/cadence records and the
+shared API this quest consumes. The following quest milestones retain their own scope.
 
 ### M0 — Weight, lots, and one clock
 - `weight_lb` in the item catalog with per-metadata variants; `ItemCatalog::weight_lb`.
@@ -899,7 +907,7 @@ own knowledge system.
 ### M2 — The evidence surface
 - `assets/world/quests/bale.json`: the seven evidence traces as **authored facts** with sealed
   `seeded` sets and per-holder `own` phrasings. No Rust.
-- Arming: the bolt minted, `bale.promise` seeded, Renn's goal and round set via `World::arm_actor`,
+- Arming: the bolt minted, `bale.promise` seeded, Renn’s goal seeded via `World::arm_actor` and his round via `set_round`,
   Ede's errand walked.
 - The three examinations (seal, cord, beam) as authored dispositions — who *will* say what they know.
 - The single scoped warehouse key and its reach check.
@@ -971,13 +979,11 @@ ell.
 
 ## Risks and open questions
 
-1. **The knowledge layer is now on the critical path — accepted, but it is the schedule risk.**
-   Decided 2026-08-30: `features/knowledge_and_rumor/` ships both halves together and all three
-   quests wait for it. Its own principal risk is perceptibility tuning ("the LLM must voice the
-   injected line often enough for the player to feel the wave, without every mouth parroting the
-   same sentence"), which is open-ended by nature. If that milestone stalls, three quests stall.
-   The alternative considered and rejected was an interim fact-only layer with a deterministic
-   gossip roll standing in for propagation.
+1. **Knowledge integration still needs quest-specific playtesting.** The shared layer shipped
+   through M5 on 2026-09-06, with garbled provider replies and both cadence ends measured. This
+   removes the former dependency risk; it does not prove these seven clues are understandable in
+   this quest. Keep the sealed-truth and player-heard distinction in its own acceptance runs.
+
 2. **`quest.rs` is smaller than it was.** With receipts and the casebook moved to the knowledge
    layer, the shared quest host is a phase, a data gate and outcome application — small enough that
    landing it in M0 no longer commits the sibling specs to much.
@@ -1006,8 +1012,8 @@ ell.
 - `assets/world/rounds.json` (`road_parties[0]`), `assets/world/items.json`, `assets/world/places.json`
 - `crates/cathedral-sim/src/{notices,custody,marks,round,item,inventory}.rs`
 - `features/implemented/law_and_order.md`, `features/implemented/chalking_the_walls.md`
-- **`features/knowledge_and_rumor/`** (SPEC ONLY — the hard prerequisite; `01_facts.md` is the
-  contract this quest authors against)
+- **`features/implemented/knowledge_and_rumor/`** (M0–M5 shipped 2026-09-06; `01_facts.md` is the
+  catalog/receipt contract this quest authors against)
 - `features/keys_and_locked_places.md` (SPEC ONLY — the other real dependency)
 - Sibling quest specs: `features/quest_ring_a_dead_womans_name_at_marenstide/`,
   `features/quest_secure_votes_for_a_drainage_funding_plan_before_the_rain/`

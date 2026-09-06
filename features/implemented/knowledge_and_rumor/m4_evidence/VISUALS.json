@@ -1,0 +1,1301 @@
+{
+  "renderer": "llvmpipe/software Vulkan; full textured scene stalls in this environment",
+  "asset_root": "/tmp/cathedral-m4-ui-assets (real fonts and city_map only; runtime world data unchanged)",
+  "logical_resolution": "960x540",
+  "extra_ambient": 0,
+  "fake_backend": true,
+  "headless": true,
+  "wait_corrections": "lie 20 seconds, debug poke 15 seconds, for software frame delay",
+  "runs": [
+    {
+      "drive": "journal",
+      "returncode": 0,
+      "seconds": 25.22,
+      "session": "/home/ran/src/rust/cathedralbevy/logs/session_789_2026-09-06_00_45_19",
+      "window_samples": [
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        }
+      ],
+      "screenshots": [
+        "/home/ran/src/rust/cathedralbevy/logs/session_789_2026-09-06_00_45_19/screenshots/journal.png"
+      ]
+    },
+    {
+      "drive": "lie",
+      "returncode": 0,
+      "seconds": 49.13,
+      "session": "/home/ran/src/rust/cathedralbevy/logs/session_793_2026-09-06_00_48_12",
+      "window_samples": [
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        }
+      ],
+      "screenshots": [
+        "/home/ran/src/rust/cathedralbevy/logs/session_793_2026-09-06_00_48_12/screenshots/lie_told.png",
+        "/home/ran/src/rust/cathedralbevy/logs/session_793_2026-09-06_00_48_12/screenshots/lie_journal.png"
+      ]
+    },
+    {
+      "drive": "stake",
+      "returncode": 0,
+      "seconds": 25.5,
+      "session": "/home/ran/src/rust/cathedralbevy/logs/session_794_2026-09-06_00_50_28",
+      "window_samples": [
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        }
+      ],
+      "screenshots": [
+        "/home/ran/src/rust/cathedralbevy/logs/session_794_2026-09-06_00_50_28/screenshots/stake_line.png"
+      ]
+    },
+    {
+      "drive": "pickup",
+      "returncode": 0,
+      "seconds": 33.18,
+      "session": "/home/ran/src/rust/cathedralbevy/logs/session_792_2026-09-06_00_46_41",
+      "window_samples": [
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        },
+        {
+          "window": "75497476",
+          "state": "Map State: IsUnMapped",
+          "focused": false
+        }
+      ],
+      "screenshots": [
+        "/home/ran/src/rust/cathedralbevy/logs/session_792_2026-09-06_00_46_41/screenshots/picked_up.png"
+      ]
+    }
+  ]
+}

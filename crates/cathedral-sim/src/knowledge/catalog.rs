@@ -15,6 +15,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::Deserialize;
 
 use super::{FACTS_MAX_LIVE, Fact, GarbleMask, Topic};
+use crate::ids::FactKey;
 use crate::ids::{ActorId, AreaId, FactId, ItemId, is_valid_id};
 use crate::knowledge::source::FactSource;
 use crate::world::World;
@@ -218,6 +219,13 @@ impl FactCatalog {
         }
         self.specs.extend(parsed);
         Ok(())
+    }
+
+    /// Resolve and install one authored row through the same loader as `seed`.
+    pub fn seed_one(&self, world: &mut World, id: &FactId) -> Option<FactKey> {
+        let spec = self.specs.iter().find(|s| &s.id == id)?.clone();
+        Self { specs: vec![spec] }.seed(world);
+        world.knowledge.key_of(id)
     }
 
     /// Install every row into a live world: resolve `place` against the

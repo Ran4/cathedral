@@ -103,6 +103,8 @@ pub const NOTICES_SHEET_MAX: usize = 4;
 /// six are both [`Self::Word`] — a demand is speech, not state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rung {
+    /// Declared first: derived Ord makes hearsay lower than every other word.
+    Hearsay,
     /// The live notice; carriers cool toward the accused.
     Word,
     /// An officer has called them to answer by a named bell.
@@ -161,6 +163,8 @@ pub struct WardNotice {
     /// Rung 4: the summons went unanswered past its own bell. Any law-cast
     /// actor may now `seize` the accused anywhere in the city.
     pub warrant: bool,
+    /// The raiser was told; they did not witness the deed.
+    pub hearsay: bool,
     /// Law-cast carriers already served the face-to-face percept, once each.
     /// Cleared on every rung change ([`Notices::summon`],
     /// [`Notices::issue_warrants`]): the officer must be told again exactly when
@@ -188,6 +192,8 @@ impl WardNotice {
                 "; summoned to answer by {}",
                 summons.office.label()
             ));
+        } else if self.hearsay {
+            line.push_str("; had at second hand, and nobody saw it");
         }
         line
     }
@@ -198,6 +204,8 @@ impl WardNotice {
             Rung::Warranted
         } else if self.summons.is_some() {
             Rung::Summoned
+        } else if self.hearsay {
+            Rung::Hearsay
         } else {
             Rung::Word
         }
@@ -237,6 +245,62 @@ impl Notices {
         wronged: Option<ActorId>,
         taken: Option<ItemId>,
     ) -> Option<u64> {
+        self.push(
+            false,
+            about,
+            deed,
+            place,
+            since,
+            raised_game_days,
+            raised_by,
+            accused,
+            wronged,
+            taken,
+        )
+    }
+
+    /// The same settlement path, with an explicit second-hand origin.
+    #[allow(clippy::too_many_arguments)]
+    pub fn raise_hearsay(
+        &mut self,
+        about: String,
+        deed: String,
+        place: Option<String>,
+        since: Option<String>,
+        raised_game_days: Option<f64>,
+        raised_by: ActorId,
+        accused: Option<ActorId>,
+        wronged: Option<ActorId>,
+        taken: Option<ItemId>,
+    ) -> Option<u64> {
+        self.push(
+            true,
+            about,
+            deed,
+            place,
+            since,
+            raised_game_days,
+            raised_by,
+            accused,
+            wronged,
+            taken,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn push(
+        &mut self,
+        hearsay: bool,
+        about: String,
+        deed: String,
+        place: Option<String>,
+        since: Option<String>,
+        raised_game_days: Option<f64>,
+        raised_by: ActorId,
+        accused: Option<ActorId>,
+        wronged: Option<ActorId>,
+        taken: Option<ItemId>,
+    ) -> Option<u64> {
         if self.live.len() >= NOTICES_MAX_LIVE {
             let Some(oldest) = self.live.iter().position(|notice| !notice.warrant) else {
                 return None;
@@ -258,6 +322,7 @@ impl Notices {
             taken,
             summons: None,
             warrant: false,
+            hearsay,
             served: BTreeSet::new(),
         });
         Some(id)
@@ -355,6 +420,7 @@ impl Notices {
     ) -> Option<&WardNotice> {
         self.live.iter().find(|notice| {
             notice.accused.as_ref() == Some(accused)
+                && !notice.hearsay
                 && &notice.raised_by == officer
                 && match (notice.raised_game_days, game_days) {
                     (Some(raised), Some(now)) => now - raised <= WITNESSED_BREACH_GAME_DAYS,

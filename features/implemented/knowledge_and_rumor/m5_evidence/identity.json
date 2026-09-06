@@ -1,0 +1,50 @@
+[
+  {
+    "name": "base",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/cathedral-headless",
+      "--fake",
+      "--watch-clock",
+      "1",
+      "--seconds-per-day",
+      "3600",
+      "--start-office",
+      "dayspring",
+      "--trace-pollen",
+      "--pollen-seed",
+      "The Wickmarket",
+      "--pollen-per-day",
+      "48",
+      "--pollen-no-salience"
+    ],
+    "environment": {},
+    "binary_sha256": "771382ee0243cb4c826d28099e25f7a51b3dd0edf5bdc2687bfe83f0db86f331",
+    "returncode": 0,
+    "wall_seconds": 12.055,
+    "pollen_sha256": "4008e4c029af8da1ab7be08adfb79024e6d1836d312cc876ec3ea2892c220b6a"
+  },
+  {
+    "name": "flat",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/cathedral-headless",
+      "--fake",
+      "--watch-clock",
+      "1",
+      "--seconds-per-day",
+      "3600",
+      "--start-office",
+      "dayspring",
+      "--trace-pollen",
+      "--pollen-seed",
+      "The Wickmarket",
+      "--pollen-per-day",
+      "48",
+      "--pollen-flat"
+    ],
+    "environment": {},
+    "binary_sha256": "771382ee0243cb4c826d28099e25f7a51b3dd0edf5bdc2687bfe83f0db86f331",
+    "returncode": 0,
+    "wall_seconds": 12.114,
+    "pollen_sha256": "4008e4c029af8da1ab7be08adfb79024e6d1836d312cc876ec3ea2892c220b6a"
+  }
+]

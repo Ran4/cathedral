@@ -232,7 +232,19 @@ enum Action {
         kind: String,
         anchor: String,
     },
-    /// `scrub <anchor>`: wipe the nearest live mark off that anchor.
+    /// Give the player an authored telling, or seed a ward's air so a pickup
+    /// can be watched. Uses the sim's real receipt and merge path.
+    SeedFact {
+        fact: String,
+        ward: Option<String>,
+    },
+    /// Start a word by a named mouth. Bypasses the occasion gate and cap while
+    /// preserving the sim's single claim constructor and its guardrails.
+    RaiseWord {
+        who: String,
+        topic: String,
+        said: String,
+    },
     Scrub {
         anchor: String,
     },
@@ -293,6 +305,11 @@ impl Action {
                 None => format!("seize {officer}"),
             },
             Self::Chalk { kind, anchor } => format!("chalk {kind} -> {anchor}"),
+            Self::SeedFact { fact, ward } => match ward {
+                Some(ward) => format!("seed-fact {fact} -> {ward}"),
+                None => format!("seed-fact {fact}"),
+            },
+            Self::RaiseWord { who, topic, said } => format!("raise-word {who} -> {topic} {said}"),
             Self::Scrub { anchor } => format!("scrub {anchor}"),
             Self::Commit { target } => match target {
                 Some(target) => format!("commit {target}"),
@@ -397,6 +414,8 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
         "status" => parse_status(argument, statement),
         "seize" => parse_seize(argument, statement),
         "chalk" => parse_chalk(argument, statement),
+        "seed-fact" => parse_seed_fact(argument, statement),
+        "raise-word" => parse_raise_word(argument, statement),
         "scrub" => {
             if argument.is_empty() {
                 Err(format!("`scrub` needs an anchor handle in `{statement}`"))
@@ -471,6 +490,51 @@ fn parse_chalk(argument: &str, statement: &str) -> Result<Action, String> {
     Ok(Action::Chalk {
         kind: kind.to_string(),
         anchor: anchor.to_string(),
+    })
+}
+
+/// Names contain spaces; the arrow separates the mouth from a single-word
+/// topic and the rest of the sentence without guessing where the name ends.
+fn parse_raise_word(argument: &str, statement: &str) -> Result<Action, String> {
+    let invalid = || {
+        format!(
+            "`raise-word` needs `<who> -> <topic> <said>`, e.g. `raise-word Ilse -> bed the reeve's wife was at the Bellstand after curfew`, got `{statement}`"
+        )
+    };
+    let (who, word) = argument.split_once("->").ok_or_else(invalid)?;
+    let (topic, said) = word
+        .trim()
+        .split_once(char::is_whitespace)
+        .ok_or_else(invalid)?;
+    let (who, topic, said) = (who.trim(), topic.trim(), said.trim());
+    if who.is_empty() || topic.is_empty() || said.is_empty() || said.contains("->") {
+        return Err(invalid());
+    }
+    Ok(Action::RaiseWord {
+        who: who.into(),
+        topic: topic.into(),
+        said: said.into(),
+    })
+}
+
+fn parse_seed_fact(argument: &str, statement: &str) -> Result<Action, String> {
+    let (fact, ward) = match argument.split_once("->") {
+        Some((fact, ward)) => (fact.trim(), Some(ward.trim())),
+        None => (argument.trim(), None),
+    };
+    if fact.is_empty()
+        || fact.split_whitespace().count() != 1
+        || ward.is_some_and(|ward| {
+            ward.is_empty() || ward.split_whitespace().count() != 1 || ward.contains("->")
+        })
+    {
+        return Err(format!(
+            "`seed-fact` needs `<fact_id> [-> <ward>]`, e.g. `seed-fact ashe.salt.short -> wick`, got `{statement}`"
+        ));
+    }
+    Ok(Action::SeedFact {
+        fact: fact.into(),
+        ward: ward.map(str::to_string),
     })
 }
 
@@ -676,6 +740,15 @@ enum Directive {
         kind: String,
         anchor: String,
     },
+    SeedFact {
+        fact: String,
+        ward: Option<String>,
+    },
+    RaiseWord {
+        who: String,
+        topic: String,
+        said: String,
+    },
     Scrub {
         anchor: String,
     },
@@ -805,6 +878,10 @@ impl Scheduler {
             Action::Status { name, kind, value } => Some(Directive::Status { name, kind, value }),
             Action::Seize { officer, target } => Some(Directive::Seize { officer, target }),
             Action::Chalk { kind, anchor } => Some(Directive::Chalk { kind, anchor }),
+            Action::SeedFact { fact, ward } => Some(Directive::SeedFact { fact, ward }),
+            Action::RaiseWord { who, topic, said } => {
+                Some(Directive::RaiseWord { who, topic, said })
+            }
             Action::Scrub { anchor } => Some(Directive::Scrub { anchor }),
             Action::Commit { target } => Some(Directive::Commit { target }),
             Action::Weather { kind, intensity } => Some(Directive::Weather { kind, intensity }),
@@ -1004,7 +1081,8 @@ fn run_drive_script(
         Some(Directive::Bell(pattern)) => {
             // A civic bell is render-side texture with a diegetic meaning, not
             // a catalog event: it goes straight to the soundscape's own cue
-            // stream and never reaches an actor inbox.
+            // stream. An accepted peal also reaches the sim's knowledge layer,
+            // without adding an actor inbox percept.
             cues.write(SoundscapeCue::CivicBell(pattern));
         }
         Some(Directive::Status { name, kind, value }) => match bridge.as_deref() {
@@ -1052,6 +1130,37 @@ fn run_drive_script(
             }
             None => drive_log(&format!(
                 "[drive] {now:.1}s warning: `chalk` needs smart actors"
+            )),
+        },
+        Some(Directive::SeedFact { fact, ward }) => match bridge.as_deref() {
+            Some(bridge) => {
+                if let Err(error) = bridge.try_send(BridgeCommand::DebugSeedFact {
+                    fact: fact.clone(),
+                    ward: ward.clone(),
+                }) {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: seed-fact not sent: {error}"
+                    ));
+                }
+            }
+            None => drive_log(&format!(
+                "[drive] {now:.1}s warning: `seed-fact` needs smart actors"
+            )),
+        },
+        Some(Directive::RaiseWord { who, topic, said }) => match bridge.as_deref() {
+            Some(bridge) => {
+                if let Err(error) = bridge.try_send(BridgeCommand::DebugRaiseWord {
+                    who: who.clone(),
+                    topic: topic.clone(),
+                    said: said.clone(),
+                }) {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: raise-word not sent: {error}"
+                    ));
+                }
+            }
+            None => drive_log(&format!(
+                "[drive] {now:.1}s warning: `raise-word` needs smart actors"
             )),
         },
         Some(Directive::Scrub { anchor }) => match bridge.as_deref() {
@@ -1153,6 +1262,53 @@ mod tests {
 
     use super::*;
     use crate::controller::{PhysicalPosition, PlayerCamera, apply_teleports};
+
+    #[test]
+    fn journal_pokes_preserve_names_and_sentences_and_reject_missing_parts() {
+        let actions = parse_script("seed-fact ashe.salt.short; seed-fact ashe.salt.short -> wick; raise-word Havise Ashe -> bed the reeve wife was at the Bellstand after curfew").unwrap();
+        assert_eq!(
+            actions,
+            vec![
+                Action::SeedFact {
+                    fact: "ashe.salt.short".into(),
+                    ward: None
+                },
+                Action::SeedFact {
+                    fact: "ashe.salt.short".into(),
+                    ward: Some("wick".into())
+                },
+                Action::RaiseWord {
+                    who: "Havise Ashe".into(),
+                    topic: "bed".into(),
+                    said: "the reeve wife was at the Bellstand after curfew".into()
+                },
+            ]
+        );
+        for action in &actions {
+            assert_eq!(
+                parse_script(&action.describe()).unwrap(),
+                vec![action.clone()]
+            );
+        }
+        for bad in [
+            "seed-fact",
+            "seed-fact -> wick",
+            "seed-fact ashe.salt.short ->",
+            "seed-fact ashe.salt.short -> wick -> reed",
+            "raise-word Ilse bed a saying",
+            "raise-word -> bed a saying",
+            "raise-word Ilse -> bed",
+            "raise-word Ilse -> bed   ",
+            "raise-word Ilse -> bed a -> b",
+        ] {
+            assert!(parse_script(bad).is_err(), "accepted {bad}");
+        }
+        let mut scheduler = Scheduler::new(actions);
+        assert!(matches!(
+            scheduler.tick(ACTION_SPACING, Some(true), true),
+            Some(Directive::SeedFact { ward: None, .. })
+        ));
+    }
 
     #[test]
     fn example_script_parses() {

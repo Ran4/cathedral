@@ -10,6 +10,9 @@ use crate::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
+#[path = "knowledge_tests.rs"]
+mod knowledge_tests;
+
 const NAV_JSON: &str = include_str!("../../../../assets/world/navigation.json");
 const NAV_BIN: &[u8] = include_bytes!("../../../../assets/world/navigation.bin");
 const CATALOG: &str = include_str!("../../../../assets/sounds/catalog.toml");
@@ -6422,7 +6425,12 @@ fn a_sellers_brief_excursion_never_rearms_the_stock_travel_deadline() {
     let quiet = BTreeSet::new();
     let seller = ActorId::from_raw("rbrde");
     let pitch = round.counters["brede_grain_seven_lofts"].pitch;
-    let away = pitch + Vec3::new(round.counters["brede_grain_seven_lofts"].radius_m + 5.0, 0.0, 0.0);
+    let away = pitch
+        + Vec3::new(
+            round.counters["brede_grain_seven_lofts"].radius_m + 5.0,
+            0.0,
+            0.0,
+        );
 
     round.tick_stock_plans(&mut world, &nav, clock.at(0.0), 0.0, &quiet);
     let deadline = round.market_errands[&buyer]

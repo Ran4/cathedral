@@ -1,0 +1,22 @@
+{
+  "scope": "Existing source-data illustration only; no new geometry or route feasibility validated.",
+  "sources": {
+    "lore/places/ombreval_buildings.json": "0cf1c5b148ce54091d3ed561cd4ef62c042655b9c589172433791d2e47c0c86e",
+    "assets/world/navigation.json": "27007970c127fb36f5e9df886c8fd5f40f3d9e58b1d6d328760df1b8caeebb34"
+  },
+  "north": "+x",
+  "east": "-z",
+  "pawnshop_door_node": 650,
+  "pawnshop_door_xz": [
+    -189.625,
+    47.375
+  ],
+  "pawnshop_place_node": 484,
+  "pawnshop_place_xz": [
+    -196.375,
+    27.125
+  ],
+  "door_place_straight_distance_m": 21.34537420613656,
+  "navigation_nodes": 3972,
+  "navigation_edges": 4008
+}

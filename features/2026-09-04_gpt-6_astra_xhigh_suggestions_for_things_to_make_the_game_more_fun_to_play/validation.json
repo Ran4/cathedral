@@ -1,0 +1,255 @@
+{
+  "page_count": 35,
+  "expected_pages": 35,
+  "diagram_count": 9,
+  "pages": [
+    {
+      "page": 1,
+      "expected_heading": "AN ALIBI",
+      "heading_found": true,
+      "words": 80,
+      "out_of_bounds": []
+    },
+    {
+      "page": 2,
+      "expected_heading": "A crime you solve with your feet",
+      "heading_found": true,
+      "words": 362,
+      "out_of_bounds": []
+    },
+    {
+      "page": 3,
+      "expected_heading": "The opening: the wrong man holding a wound",
+      "heading_found": true,
+      "words": 397,
+      "out_of_bounds": []
+    },
+    {
+      "page": 4,
+      "expected_heading": "Author truth: what actually happened",
+      "heading_found": true,
+      "words": 447,
+      "out_of_bounds": []
+    },
+    {
+      "page": 5,
+      "expected_heading": "A cast with reasons to speak carefully",
+      "heading_found": true,
+      "words": 372,
+      "out_of_bounds": []
+    },
+    {
+      "page": 6,
+      "expected_heading": "The fixed incident, second by second",
+      "heading_found": true,
+      "words": 347,
+      "out_of_bounds": []
+    },
+    {
+      "page": 7,
+      "expected_heading": "The geography is the central discovery",
+      "heading_found": true,
+      "words": 354,
+      "out_of_bounds": []
+    },
+    {
+      "page": 8,
+      "expected_heading": "Make the alibi mathematically fair",
+      "heading_found": true,
+      "words": 349,
+      "out_of_bounds": []
+    },
+    {
+      "page": 9,
+      "expected_heading": "What each account does and does not say",
+      "heading_found": true,
+      "words": 375,
+      "out_of_bounds": []
+    },
+    {
+      "page": 10,
+      "expected_heading": "Location one: Odo's comparison room",
+      "heading_found": true,
+      "words": 376,
+      "out_of_bounds": []
+    },
+    {
+      "page": 11,
+      "expected_heading": "Location two: the pawnshop alibi",
+      "heading_found": true,
+      "words": 368,
+      "out_of_bounds": []
+    },
+    {
+      "page": 12,
+      "expected_heading": "Location three: the beam and Warin's alibi",
+      "heading_found": true,
+      "words": 406,
+      "out_of_bounds": []
+    },
+    {
+      "page": 13,
+      "expected_heading": "Location four: the man who taught Corin",
+      "heading_found": true,
+      "words": 418,
+      "out_of_bounds": []
+    },
+    {
+      "page": 14,
+      "expected_heading": "Walk the account before trying to disprove it",
+      "heading_found": true,
+      "words": 385,
+      "out_of_bounds": []
+    },
+    {
+      "page": 15,
+      "expected_heading": "Find the upper way",
+      "heading_found": true,
+      "words": 406,
+      "out_of_bounds": []
+    },
+    {
+      "page": 16,
+      "expected_heading": "Stage a reconstruction people can watch",
+      "heading_found": true,
+      "words": 414,
+      "out_of_bounds": []
+    },
+    {
+      "page": 17,
+      "expected_heading": "Evidence catalogue: the incident and alibis",
+      "heading_found": true,
+      "words": 369,
+      "out_of_bounds": []
+    },
+    {
+      "page": 18,
+      "expected_heading": "Evidence catalogue: connecting a person",
+      "heading_found": true,
+      "words": 416,
+      "out_of_bounds": []
+    },
+    {
+      "page": 19,
+      "expected_heading": "The packet continues to exist",
+      "heading_found": true,
+      "words": 381,
+      "out_of_bounds": []
+    },
+    {
+      "page": 20,
+      "expected_heading": "Corin's story changes under pressure",
+      "heading_found": true,
+      "words": 433,
+      "out_of_bounds": []
+    },
+    {
+      "page": 21,
+      "expected_heading": "Optional operation: watch the return trip",
+      "heading_found": true,
+      "words": 401,
+      "out_of_bounds": []
+    },
+    {
+      "page": 22,
+      "expected_heading": "The notebook keeps claims apart",
+      "heading_found": true,
+      "words": 368,
+      "out_of_bounds": []
+    },
+    {
+      "page": 23,
+      "expected_heading": "Opportunity is not identity; identity is not proof of every charge",
+      "heading_found": true,
+      "words": 402,
+      "out_of_bounds": []
+    },
+    {
+      "page": 24,
+      "expected_heading": "The public reconstruction",
+      "heading_found": true,
+      "words": 413,
+      "out_of_bounds": []
+    },
+    {
+      "page": 25,
+      "expected_heading": "A quieter resolution\u2014and a compromised one",
+      "heading_found": true,
+      "words": 400,
+      "out_of_bounds": []
+    },
+    {
+      "page": 26,
+      "expected_heading": "Endings are several records, not one score",
+      "heading_found": true,
+      "words": 417,
+      "out_of_bounds": []
+    },
+    {
+      "page": 27,
+      "expected_heading": "Full playthrough: from suspicion to reconstruction",
+      "heading_found": true,
+      "words": 439,
+      "out_of_bounds": []
+    },
+    {
+      "page": 28,
+      "expected_heading": "Other complete ways through the case",
+      "heading_found": true,
+      "words": 393,
+      "out_of_bounds": []
+    },
+    {
+      "page": 29,
+      "expected_heading": "When players do the unexpected",
+      "heading_found": true,
+      "words": 413,
+      "out_of_bounds": []
+    },
+    {
+      "page": 30,
+      "expected_heading": "Time, accessibility and a case worth returning to",
+      "heading_found": true,
+      "words": 394,
+      "out_of_bounds": []
+    },
+    {
+      "page": 31,
+      "expected_heading": "What exists, and what this case must add",
+      "heading_found": true,
+      "words": 371,
+      "out_of_bounds": []
+    },
+    {
+      "page": 32,
+      "expected_heading": "State, content and scope of the first build",
+      "heading_found": true,
+      "words": 350,
+      "out_of_bounds": []
+    },
+    {
+      "page": 33,
+      "expected_heading": "Milestones and tests that can reject the design",
+      "heading_found": true,
+      "words": 402,
+      "out_of_bounds": []
+    },
+    {
+      "page": 34,
+      "expected_heading": "Sources: architecture, cast and geography",
+      "heading_found": true,
+      "words": 295,
+      "out_of_bounds": []
+    },
+    {
+      "page": 35,
+      "expected_heading": "Sources: scope, artefacts and verification",
+      "heading_found": true,
+      "words": 404,
+      "out_of_bounds": []
+    }
+  ],
+  "issues": [],
+  "checks": "Page count, each expected heading on its page, text bounds, preview generation. Human visual review is separate.",
+  "pdf_sha256": "6ac228c380c16e0f5305e59e3249a58198e0c095e86fe6cc1d64313151963ba8"
+}

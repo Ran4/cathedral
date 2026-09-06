@@ -1,0 +1,1 @@
+say {"target":"player","text":"I know nothing of Bertran Hobbe's mill. Stall talk only says a cargo worker's mill sent short weight to the Wickmarket bakehouse, and the flour was cut with bean meal. Ask a miller or the bakehouse."}

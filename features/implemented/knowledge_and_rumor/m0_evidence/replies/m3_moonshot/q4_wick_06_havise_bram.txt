@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I don't know a Grigor Ashe, and I've seen no taking here today. What I heard—down a line of mouths, mind—was a cargo worker of the Weigh Ward taken at Slate Cistern two days past, lying in the Stone House now. If you need the truth of it, ask at the Stone House or the Weigh Ward, where they keep such records."}

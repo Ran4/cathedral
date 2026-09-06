@@ -294,6 +294,7 @@ pub(super) fn collect_chat_input(
     mut keyboard_events: MessageReader<KeyboardInput>,
     menu: Res<ConfigMenuState>,
     inventory: Res<super::inventory_ui::InventoryUiState>,
+    journal: Option<Res<super::journal_ui::JournalUiState>>,
     cursor: Query<&CursorOptions, With<PrimaryWindow>>,
     config: Res<SmartActorsConfig>,
     runtime: Res<SmartActorRuntime>,
@@ -307,6 +308,7 @@ pub(super) fn collect_chat_input(
         if !keyboard.any_just_pressed([KeyCode::Enter, KeyCode::NumpadEnter])
             || menu.open
             || inventory.open
+            || journal.is_some_and(|journal| journal.open)
             || cursor
                 .single()
                 .map_or(true, |cursor| cursor.grab_mode == CursorGrabMode::None)
@@ -329,10 +331,7 @@ pub(super) fn collect_chat_input(
     let mut cancel = false;
     let mut event_keys: Vec<KeyCode> = Vec::new();
     for event in keyboard_events.read() {
-        if matches!(
-            event.key_code,
-            KeyCode::ControlLeft | KeyCode::ControlRight
-        ) {
+        if matches!(event.key_code, KeyCode::ControlLeft | KeyCode::ControlRight) {
             chat.ctrl_down = event.state == ButtonState::Pressed;
             continue;
         }
@@ -369,8 +368,7 @@ pub(super) fn collect_chat_input(
     // Drive scripts inject `ButtonInput` presses without raw keyboard events.
     // Only keys that produced no raw event count, so a real keypress (which
     // produces both) is never applied twice.
-    let fallback =
-        |key: KeyCode| keyboard.just_pressed(key) && !event_keys.contains(&key);
+    let fallback = |key: KeyCode| keyboard.just_pressed(key) && !event_keys.contains(&key);
     submit = submit || fallback(KeyCode::Enter) || fallback(KeyCode::NumpadEnter);
     cancel = cancel || fallback(KeyCode::Escape);
     if fallback(KeyCode::Backspace) {
@@ -519,7 +517,11 @@ pub(super) fn update_chat_input_ui(
     // `Mut` deref marks its `Node` dirty, and a dirty node forces taffy to
     // recompute the whole chat panel — re-running the measure closure over the
     // input line's text — on every frame the box is open.
-    let caret_color = if caret_visible { hud::TEXT } else { Color::NONE };
+    let caret_color = if caret_visible {
+        hud::TEXT
+    } else {
+        Color::NONE
+    };
     if color.0 != caret_color {
         color.0 = caret_color;
     }
@@ -546,11 +548,7 @@ fn caret_offset(
     before: &str,
 ) -> Option<(f32, usize)> {
     let logical = computed.inverse_scale_factor();
-    if let Some(glyph) = layout
-        .glyphs
-        .iter()
-        .find(|glyph| glyph.section_index == 2)
-    {
+    if let Some(glyph) = layout.glyphs.iter().find(|glyph| glyph.section_index == 2) {
         let x = glyph.position.x - glyph.atlas_info.rect.size().x / 2.0;
         return Some((x * logical, glyph.line_index));
     }

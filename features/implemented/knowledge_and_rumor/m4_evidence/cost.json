@@ -1,0 +1,25 @@
+{
+  "command": "target/release/cathedral-headless --fake --extra-ambient 20000 --watch-clock 0.05 --seconds-per-day 3600 --start-office dayspring --trace-pollen --pollen-step 3 --pollen-seed \"The Wickmarket\" --pollen-saturate",
+  "off_environment": {
+    "CATHEDRAL_NO_KNOWLEDGE": "1"
+  },
+  "on": {
+    "user_s": 174.57,
+    "system_s": 0.38,
+    "wall_s": 194.16,
+    "rss_kib": 377052,
+    "facts": 256,
+    "holdings": 39535,
+    "air_rows": 84,
+    "store_kib_printed": 4864.1,
+    "rolls_per_game_hour_bound": 421188
+  },
+  "off": {
+    "user_s": 175.79,
+    "system_s": 0.32,
+    "wall_s": 186.29,
+    "rss_kib": 375340
+  },
+  "cpu_delta_pct": -0.6940098981739529,
+  "rss_delta_mib": 1.671875
+}

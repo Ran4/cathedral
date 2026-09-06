@@ -251,7 +251,8 @@ release {"person": "4bfk4"}                          # Let someone you have in c
 {% endif %}{% if is_held %}struggle {}                                          # Try to pull free of whoever has hold of you
 {% endif %}{% if sounds_enabled %}make_sound {"sound": "fart"}                         # Deliberately make a noise everyone within earshot perceives; sounds: {{ emittable_sounds }}
 {% endif %}gesture {"kind": "wave|beckon|nod|shake_head|shrug|point|bow|dance", "to": "optional name"}  # Small body language others can see; use it instead of narrating gestures in say
-set_goal {"goal": "Eat fish"}
+{% if has_raise_word %}raise_word {"topic": "bread", "said": "the Wickmarket had no rye at all by midday"}  # Start a word going about something you have just been told and did not know; topics: bed, blood, law, omen, stranger, coin, bread, craft, talk
+{% endif %}set_goal {"goal": "Eat fish"}
 set_goal {"goal": null}                              # Clear your goal (achieved or given up)
 remember {"memory": "I like ships"}
 forget {"memory": "I like ships"}

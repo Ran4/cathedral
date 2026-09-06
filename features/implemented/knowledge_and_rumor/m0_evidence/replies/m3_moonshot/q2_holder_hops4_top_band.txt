@@ -1,0 +1,1 @@
+say {"target": "player", "text": "What's between them? I couldn't say, friend — I only know what the whole city knows, that Rohese Sedge goes in at Doctor Ferrant's door after the Snuffing, and it's not for physic. What that means, you'll have to ask someone who keeps such company — maybe one of the doctor's neighbors, or someone in her trade."}

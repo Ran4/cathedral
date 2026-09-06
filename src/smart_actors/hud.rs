@@ -124,6 +124,7 @@ pub struct SmartActorHudState {
     /// The law's standing line — no clock on it at all, because it is true
     /// until the sim says otherwise (`law_and_order.md` M4).
     law_standing: String,
+    journal_standing: String,
     pub focus_hint: String,
     pub subtitle: String,
     pub microphone_available: bool,
@@ -150,6 +151,7 @@ impl Default for SmartActorHudState {
             offer_card: String::new(),
             offer_outcome: None,
             law_standing: String::new(),
+            journal_standing: String::new(),
             focus_hint: String::new(),
             subtitle: String::new(),
             microphone_available: false,
@@ -198,6 +200,16 @@ impl SmartActorHudState {
     /// one where the panel must not be on screen at all.
     pub fn set_law_standing(&mut self, text: String) {
         self.law_standing = text;
+    }
+
+    /// The sim's live word of the player's own; empty hides the line.
+    pub fn set_journal_standing(&mut self, text: String) {
+        self.journal_standing = text;
+    }
+
+    #[cfg(test)]
+    pub(super) fn journal_standing_text(&self) -> &str {
+        &self.journal_standing
     }
 
     #[cfg(test)]
@@ -375,6 +387,10 @@ pub(super) struct OfferOutcomeText;
 /// story, a brand with no door is a bug.
 #[derive(Component)]
 pub(crate) struct LawStandingText;
+/// A word of the player's own going round, true until the sim clears it.
+/// Like the law's line, it must name what would end it.
+#[derive(Component)]
+pub(crate) struct JournalStandingText;
 #[derive(Component)]
 pub(super) struct FocusHintText;
 #[derive(Component)]
@@ -516,6 +532,15 @@ pub fn spawn_smart_actor_hud(mut commands: Commands, fonts: Option<Res<Cathedral
         "Law standing line",
         LawStandingText,
         20.0,
+        16.0,
+        OFFLINE,
+        body_font.clone(),
+    );
+    spawn_centered_text(
+        &mut commands,
+        "Journal standing line",
+        JournalStandingText,
+        26.0,
         16.0,
         OFFLINE,
         body_font.clone(),
@@ -725,6 +750,7 @@ pub fn update_smart_actor_hud(
             Option<&OfferCardText>,
             Option<&OfferOutcomeText>,
             Option<&LawStandingText>,
+            Option<&JournalStandingText>,
             Option<&FocusHintText>,
             Option<&PlayerTranscriptText>,
             Option<&VoicePanelText>,
@@ -737,6 +763,7 @@ pub fn update_smart_actor_hud(
             With<OfferCardText>,
             With<OfferOutcomeText>,
             With<LawStandingText>,
+            With<JournalStandingText>,
             With<FocusHintText>,
             With<PlayerTranscriptText>,
             With<VoicePanelText>,
@@ -837,6 +864,7 @@ pub fn update_smart_actor_hud(
         offer,
         offer_outcome,
         law_standing,
+        journal_standing,
         hint,
         player_transcript,
         voice_panel,
@@ -866,6 +894,8 @@ pub fn update_smart_actor_hud(
             set_optional_text(offer_outcome_text, &mut text, node.as_mut());
         } else if law_standing.is_some() {
             set_optional_text(&state.law_standing, &mut text, node.as_mut());
+        } else if journal_standing.is_some() {
+            set_optional_text(&state.journal_standing, &mut text, node.as_mut());
         } else if hint.is_some() {
             set_optional_text(&state.focus_hint, &mut text, node.as_mut());
         } else if player_transcript.is_some() {

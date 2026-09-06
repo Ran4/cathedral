@@ -249,6 +249,7 @@ fn fact_source_reaches_no_projection() {
 
     let mut engine = engine_with_config(EngineConfig {
         fact_packs: vec![SENTINEL_PACK.to_string()],
+        idle_mode: cathedral_sim::IdleCognitionMode::Stage,
         ..EngineConfig::default()
     });
     assert_eq!(
@@ -369,11 +370,139 @@ fn fact_source_reaches_no_projection() {
         }
     }
 
+    // M4: the same sealed-source walk now passes through a real receipt and
+    // the hot journal channel, with a claim whose chain leads to the player.
+    let claim = knowledge::mint::mint_claim(
+        engine.world_mut(),
+        &actor("k0fb1"),
+        knowledge::Topic::Bed,
+        "a candle burned above the court".into(),
+        vec![],
+        Some(actor("player")),
+        Some(0.0),
+    )
+    .unwrap();
+    knowledge::learn(
+        engine.world_mut(),
+        &actor("player"),
+        claim,
+        Telling {
+            hops: 1,
+            from: Some(actor("k0fb1")),
+            heat: 1.0,
+            view: Default::default(),
+        },
+        Some(0.0),
+    );
+    knowledge::learn(
+        engine.world_mut(),
+        &actor("player"),
+        garbled_key,
+        Telling {
+            hops: 3,
+            from: Some(actor("sv3n1")),
+            heat: 1.0,
+            view: Default::default(),
+        },
+        Some(0.0),
+    );
+    let mut saw_journal = false;
+    // M5: the map and census are projections too, and all four new diagnostic
+    // paths are exercised below with sealed sentinel-bound propositions.
+    let mut law = profile(Some("Watchman"), PlanningWard::Fabric);
+    law.occupation_id = Some("watchman_and_keeper".into());
+    let door = engine.world().characters[&actor("player")].position_m();
+    engine
+        .world_mut()
+        .characters
+        .get_mut(&actor("sv3n1"))
+        .unwrap()
+        .sheet
+        .lore = Some(law);
+    stand(engine.world_mut(), "sv3n1", door);
+    engine
+        .world_mut()
+        .places
+        .add_home(&actor("sv3n1"), "Sven", door);
+    assert!(seed_pack(engine.world_mut(), r#"{"id":"sealed.door","topic":"bed","said":"a stranger is spoken of","subject":["player"],"seeded":["sv3n1"],"source":{"quest_phase":{"quest":"zzsentinel","phase":3}}},
+        {"id":"sealed.hearsay","topic":"law","said":"{subject} was taken in charge","subject":["cb947"],"seeded":["k0fb1"],"source":{"quest_phase":{"quest":"zzsentinel","phase":4}}}"#).is_empty());
+    let key = engine
+        .world()
+        .knowledge
+        .key_of(&FactId::from_raw("sealed.hearsay"))
+        .unwrap();
+    knowledge::learn(
+        engine.world_mut(),
+        &actor("sv3n1"),
+        key,
+        Telling {
+            hops: 2,
+            from: Some(actor("k0fb1")),
+            heat: 1.0,
+            view: knowledge::FactView {
+                subject: Some(actor("player")),
+                ..Default::default()
+            },
+        },
+        Some(0.0),
+    );
+    let census = knowledge::pollen::census(
+        engine.world(),
+        &cathedral_sim::WorldClock::new(3600.0, Office::Dayspring, 0, 0.05),
+        0.0,
+    );
+    for line in census
+        .topic_lines()
+        .into_iter()
+        .chain(engine.knowledge_lines())
+    {
+        assert!(
+            SENTINELS.iter().all(|sentinel| !line.contains(sentinel)),
+            "{line}"
+        );
+    }
+    let mut saw_ward_heat = false;
+    let mut diagnostics = Vec::new();
+
     // Ten polls' worth of every hot channel, through `Debug` — the route a
     // projection-walking test cannot see, and the reason the seal is structural.
     let mut seen = 0usize;
     for step in 0..10 {
-        for message in engine.poll(f64::from(step) * 0.05, Vec::new()) {
+        let commands = if step == 0 {
+            vec![cathedral_sim::EngineCommand::Knell {
+                years: 17,
+                at: door,
+            }]
+        } else {
+            Vec::new()
+        };
+        for message in engine.poll(f64::from(step) * 0.05, commands) {
+            match &message {
+                cathedral_sim::EngineMessage::WardHeat { wards } => {
+                    saw_ward_heat = true;
+                    assert_eq!(wards.len(), 8);
+                }
+                cathedral_sim::EngineMessage::Diagnostic(line) => diagnostics.push(line.clone()),
+                cathedral_sim::EngineMessage::LawStanding { notices, .. } => {
+                    for notice in notices {
+                        assert_no_mechanism_words(&[&notice.line, &notice.clears_when]);
+                    }
+                }
+                _ => {}
+            }
+            if let cathedral_sim::EngineMessage::Journal { entries, standing } = &message {
+                saw_journal = true;
+                assert!(!entries.is_empty() && !standing.is_empty());
+                for entry in entries {
+                    let strings: Vec<&str> = std::iter::once(entry.word.as_str())
+                        .chain(entry.from.as_deref())
+                        .chain(entry.place.as_deref())
+                        .chain(std::iter::once(entry.when.as_str()))
+                        .collect();
+                    assert_no_mechanism_words(&strings);
+                }
+                assert_no_mechanism_words(&standing.iter().map(String::as_str).collect::<Vec<_>>());
+            }
             let rendered = format!("{message:?}");
             for sentinel in SENTINELS {
                 assert!(
@@ -385,6 +514,14 @@ fn fact_source_reaches_no_projection() {
         }
     }
     assert!(seen > 0, "ten polls produced no messages at all");
+    assert!(saw_journal, "the sentinel walk exercised a journal message");
+    assert!(saw_ward_heat);
+    for phrase in ["minted", "does not open", "hearsay", "no longer so"] {
+        assert!(
+            diagnostics.iter().any(|line| line.contains(phrase)),
+            "{phrase}: {diagnostics:?}"
+        );
+    }
 
     // And the one bit that *is* exempt still works, so the walk-back affordance is
     // not accidentally sealed away with the payload.
@@ -513,7 +650,17 @@ fn character(id: &str, name: &str, lore: Option<LoreProfile>, knows: &[&str]) ->
         voice_key: None,
         // Far apart, so nobody lands in anybody's `you_see` and the sheets stay
         // about the block.
-        position_m: Vec3::new(1000.0 * (id.len() as f64), WALK_Y, 0.0),
+        // Equal-length ids used to overlap, accidentally making every cold
+        // subject present once M5 added greeting relevance. Each id now owns
+        // a distinct test stand; proximity scenarios move actors explicitly.
+        position_m: Vec3::new(
+            1000.0
+                * f64::from(id.bytes().fold(0_u32, |n, byte| {
+                    n.wrapping_mul(31).wrapping_add(u32::from(byte))
+                })),
+            WALK_Y,
+            0.0,
+        ),
         facing_yaw: 0.0,
         holds: Vec::new(),
         goal: "None".into(),
@@ -1110,10 +1257,12 @@ fn the_block_is_omitted_when_the_layer_is_off() {
 
     world.knowledge_enabled = false;
     assert_eq!(bullets(&world, "readr1", &[], &env), None);
+    assert!(knowledge::holdings_of(&world, &actor("readr1")).is_empty());
+    world.knowledge_enabled = true;
     assert_eq!(
         knowledge::holdings_of(&world, &actor("readr1")).len(),
         2,
-        "the store is unchanged; only the reader is gated"
+        "ablation gates every reader without destroying the stored holdings"
     );
 }
 
@@ -2067,6 +2216,10 @@ fn the_store_footprint_is_bounded() {
         store_clone.as_secs_f64() / world_clone.as_secs_f64() * 100.0,
     );
     assert_eq!(whole.knowledge.len(), world.knowledge.len());
+    // Drop the timing probes before mutating again: an Arc COW clone would
+    // shrink Vec capacity to length and understate the saturated allocation.
+    drop(store);
+    drop(whole);
 
     // And at the cap, which is where the number matters: `live` is deep-copied
     // per clone, linearly in the facts, and 6 rows say nothing about 256.
@@ -2088,6 +2241,69 @@ fn the_store_footprint_is_bounded() {
         cathedral_sim::knowledge::FACTS_MAX_LIVE,
         "the store is at FACTS_MAX_LIVE"
     );
+    // M5's receipt mouth sets are saturated as well, using real learning so
+    // the bounded log and per-actor eviction code determine the allocations.
+    let mut player = character("player", "Player", None, &[]);
+    player.sheet.control = Control::Player;
+    world.add_character(player);
+    let receipt_keys: Vec<_> = world
+        .knowledge
+        .facts()
+        .take(knowledge::PLAYER_RECEIPTS_MAX)
+        .map(|(key, _)| key)
+        .collect();
+    for key in receipt_keys {
+        for mouth in 0..knowledge::PLAYER_RECEIPTS_MAX {
+            knowledge::learn(
+                &mut world,
+                &actor("player"),
+                key,
+                Telling {
+                    hops: 3,
+                    from: Some(actor(&format!("x{mouth:05}"))),
+                    heat: 1.0,
+                    view: Default::default(),
+                },
+                Some(0.0),
+            );
+        }
+    }
+    assert_eq!(
+        world.knowledge.player_learned.len(),
+        knowledge::PLAYER_RECEIPTS_MAX
+    );
+    assert!(
+        world
+            .knowledge
+            .player_learned
+            .values()
+            .all(|receipt| usize::from(receipt.tellings) == knowledge::PLAYER_RECEIPTS_MAX)
+    );
+    let full_bytes = world.knowledge.footprint_bytes();
+    assert!(
+        full_bytes <= 32 * 1024 * 1024,
+        "full store and receipt sets: {full_bytes} bytes"
+    );
+    // Every resident can own both a refusal deadline and a refusal memory;
+    // each door throttle has the single configured player as caller. This is
+    // deliberately more simultaneous closed doors than a player can reach in
+    // one game hour. Six-byte ids match this crowd and its player.
+    let mut empty = engine_with_config(EngineConfig::default());
+    empty.poll(0.0, vec![]);
+    let per_resident_aux = std::mem::size_of::<(ActorId, f64)>()
+        + std::mem::size_of::<ActorId>()
+        + std::mem::size_of::<((ActorId, ActorId), f64)>()
+        + 4 * 6
+        + 3 * 48;
+    let auxiliary_bound = empty.knowledge_auxiliary_bytes() + BODIES * per_resident_aux;
+    println!(
+        "[pollen-aux] saturated store {full_bytes} bytes; all-resident consequence cache bound {auxiliary_bound} bytes; combined {} bytes",
+        full_bytes + auxiliary_bound
+    );
+    assert!(
+        full_bytes + auxiliary_bound <= 32 * 1024 * 1024,
+        "store plus consequence caches exceed 32 MiB"
+    );
     let started = std::time::Instant::now();
     let store = world.knowledge.clone();
     let store_clone_full = started.elapsed();
@@ -2096,7 +2312,7 @@ fn the_store_footprint_is_bounded() {
     let world_clone_full = started.elapsed();
     println!(
         "[pollen] Knowledge::clone() at {} live facts: {:.4} ms; the whole World::clone() \
-         (20,520 characters): {:.3} ms — the store is {:.2}% of what a catalog sale pays",
+         (20,521 characters): {:.3} ms — the store is {:.2}% of what a catalog sale pays",
         store.len(),
         store_clone_full.as_secs_f64() * 1000.0,
         world_clone_full.as_secs_f64() * 1000.0,
@@ -2287,6 +2503,45 @@ fn a_chain_is_reconstructed_not_logged() {
         })
         .count();
     assert!(garbled > 0, "nothing drifted down a four-link chain");
+}
+
+/// Exercise the actual air pickup, rather than inserting precomputed views
+/// through `learn`: both the delta and its immediate mouth must survive it.
+#[test]
+fn a_ward_pickup_installs_the_reconstructible_garble() {
+    let (mut world, key) = chain_world();
+    let listener = actor("hearer");
+    world.add_character(character("hearer", "A Listener", None, &[]));
+    stand(&mut world, "hearer", IN_FABRIC);
+    let fact = world.knowledge.fact(key).unwrap().clone();
+    let (hops, expected) = (1..=8)
+        .map(|hops| {
+            (
+                hops,
+                knowledge::garble::view_for(&world, &fact, &listener, hops),
+            )
+        })
+        .find(|(_, view)| view.subject.is_some())
+        .expect("the test must receive a swapped subject");
+    let ward = world.ward_at(IN_FABRIC).unwrap();
+    assert!(
+        world
+            .knowledge
+            .deposit(ward, key, hops - 1, 1.0, &actor("wit000"), 0.0)
+    );
+
+    // No lore gives this NPC curiosity 1, and Law's no-trade ear makes the
+    // pickup certain. No production roll or rate is overridden.
+    knowledge::pollen::poll_person(&mut world, &listener, 0.0);
+    let held = knowledge::holds_key(&world, &listener, key).expect("the air taught the listener");
+    assert_eq!(held.view, expected);
+    assert_eq!(held.hops, hops);
+    assert_eq!(held.heat(Some(0.0)), knowledge::HOP_LOSS);
+    assert_eq!(held.from, Some(actor("wit000")));
+    assert_eq!(
+        knowledge::chain(&world, &listener, key),
+        vec![actor("wit000")]
+    );
 }
 
 /// T12. **Topic is invariant under garbling**, asserted over every hop of a walked
@@ -2789,6 +3044,69 @@ fn a_stage_hop_never_looks_past_earshot() {
     );
 }
 
+/// Being audible to the player does not make two mouths audible to each other.
+/// The pair uses the same inclusive, full-3D boundary as ordinary speech.
+#[test]
+fn a_stage_hop_respects_the_distance_between_its_mouths() {
+    for (offset, in_range) in [
+        (Vec3::new(10.0, 0.0, 0.0), true),
+        (Vec3::new(10.0 + 1e-6, 0.0, 0.0), false),
+        (Vec3::new(6.0, 8.0, 0.0), true),
+        (Vec3::new(6.0, 8.0 + 1e-6, 0.0), false),
+        (Vec3::new(19.0, 0.0, 0.0), false),
+    ] {
+        let (mut world, key) = stage_world(2);
+        stand(&mut world, "mouth000", IN_FABRIC - offset);
+        stand(&mut world, "mouth001", IN_FABRIC + offset);
+        assert_eq!(
+            world
+                .characters_within(IN_FABRIC, cathedral_sim::HEARING_RADIUS_M, None)
+                .len(),
+            3,
+            "both mouths must be on stage for offset {offset:?}"
+        );
+
+        // One pass: a player pickup cannot bridge the gap until a later pass.
+        // The lore-less listener's roll is certain whenever the pair is allowed.
+        knowledge::pollen::hop_on_stage(&mut world, &actor("player"), 0.0, 0.0);
+        let held = knowledge::holds_key(&world, &actor("mouth001"), key);
+        assert_eq!(
+            held.is_some(),
+            in_range,
+            "pair distance {} m, holding {held:?}",
+            2.0 * offset.length()
+        );
+        if let Some(held) = held {
+            assert_eq!(held.hops, 1);
+            assert_eq!(held.from, Some(actor("mouth000")));
+        }
+    }
+}
+
+/// A street wider than earshot needs an intermediate mouth, and every link of
+/// the returned chain must have been within speaking distance at the transfer.
+#[test]
+fn a_stage_hop_needs_an_intermediary_across_the_player() {
+    let (mut world, key) = stage_world(3);
+    stand(&mut world, "mouth000", IN_FABRIC - Vec3::X * 19.0);
+    stand(&mut world, "mouth001", IN_FABRIC);
+    stand(&mut world, "mouth002", IN_FABRIC + Vec3::X * 19.0);
+
+    knowledge::pollen::hop_on_stage(&mut world, &actor("player"), 0.0, 0.0);
+    let middle = knowledge::holds_key(&world, &actor("mouth001"), key).expect("nearby pickup");
+    assert_eq!(middle.hops, 1);
+    assert!(knowledge::holds_key(&world, &actor("mouth002"), key).is_none());
+
+    knowledge::pollen::hop_on_stage(&mut world, &actor("player"), 2.0, 0.0);
+    let far = knowledge::holds_key(&world, &actor("mouth002"), key).expect("relayed pickup");
+    assert_eq!(far.hops, 2);
+    assert_eq!(far.from, Some(actor("mouth001")));
+    assert_eq!(
+        knowledge::chain(&world, &actor("mouth002"), key),
+        vec![actor("mouth001"), actor("mouth000")]
+    );
+}
+
 /// T19. One pass is bounded: thirty mouths in earshot, every roll certain, and a
 /// single pass may still only make `STAGE_HOP_MAX_PAIRS` new holdings. Risk 3's
 /// cost premise, asserted rather than assumed.
@@ -2832,6 +3150,56 @@ fn knowledge_disabled_makes_no_stage_hop() {
         world.knowledge, before,
         "a stage hop wrote to the store with the layer off"
     );
+}
+
+/// The O(N) scan is gated by real time in both scheduler modes. Add the fact
+/// after the first poll, so a repeated scan would produce an observable pickup.
+/// These new bodies have no round enrollment, and no ward air row is seeded:
+/// only the stage path can teach the listener during these two seconds.
+#[test]
+fn the_engine_throttles_stage_hops_in_both_idle_modes() {
+    for idle_mode in [
+        cathedral_sim::IdleCognitionMode::All,
+        cathedral_sim::IdleCognitionMode::Stage,
+    ] {
+        let mut engine = engine_with_config(EngineConfig {
+            idle_mode,
+            ..EngineConfig::default()
+        });
+        engine.poll(0.0, Vec::new());
+        let world = engine.world_mut();
+        let at = world.characters[&actor("player")].position_m();
+        for (id, offset) in [("mouth000", 3.0), ("mouth001", 6.0)] {
+            world.add_character(character(id, "A Mouth", None, &[]));
+            stand(world, id, at + Vec3::X * offset);
+        }
+        assert!(
+            seed_pack(
+                world,
+                r#"{"id":"test.stage.gate", "topic":"bed", "said":"the scales were wrong",
+                    "seeded":["mouth000"]}"#,
+            )
+            .is_empty()
+        );
+        let key = world
+            .knowledge
+            .key_of(&FactId::from_raw("test.stage.gate"))
+            .unwrap();
+        assert_eq!(world.knowledge.air_entries(), 0);
+
+        for tick in 1..200 {
+            engine.poll(f64::from(tick) / 100.0, Vec::new());
+            assert!(
+                knowledge::holds_key(engine.world(), &actor("mouth001"), key).is_none(),
+                "{idle_mode:?}: the stage ran early at tick {tick}"
+            );
+        }
+        engine.poll(knowledge::STAGE_HOP_SECONDS, Vec::new());
+        let held = knowledge::holds_key(engine.world(), &actor("mouth001"), key)
+            .expect("the due scan must teach the nearby listener");
+        assert_eq!(held.from, Some(actor("mouth000")), "{idle_mode:?}");
+        assert_eq!(held.hops, 1, "{idle_mode:?}");
+    }
 }
 
 /// The teller fixture: one fact per band, a reader who does not know the mouth they
@@ -3036,3 +3404,8 @@ fn a_swapped_subject_the_reader_does_not_know_renders_as_a_role() {
         );
     }
 }
+
+#[path = "knowledge/m4.rs"]
+mod m4;
+#[path = "knowledge/m5.rs"]
+mod m5;

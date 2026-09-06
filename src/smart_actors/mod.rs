@@ -24,6 +24,7 @@ mod hands;
 mod hud;
 mod interaction;
 mod inventory_ui;
+mod journal_ui;
 mod lamps;
 mod microphone;
 mod sound;
@@ -50,6 +51,7 @@ pub use chat::{ChatInputSet, ChatInputState};
 pub use clock::WorldClockState;
 pub use config_menu::ConfigMenuState;
 pub use inventory_ui::InventoryUiState;
+pub use journal_ui::JournalUiState;
 pub use targeting::ActorFocus;
 
 /// The one actor the game itself controls.
@@ -569,6 +571,25 @@ impl Plugin for SmartActorsPlugin {
                     .after(config_menu::update_config_menu),
             );
 
+        // Receipts remain readable when the actor engine is disabled.
+        app.init_resource::<journal_ui::JournalUiState>()
+            .init_resource::<journal_ui::PlayerJournal>()
+            .init_resource::<crate::map::WardHeatState>()
+            .add_systems(Startup, journal_ui::spawn_journal_ui)
+            .add_systems(
+                Update,
+                (
+                    journal_ui::toggle_journal,
+                    journal_ui::refresh_journal_ui,
+                    journal_ui::scroll_journal,
+                    journal_ui::update_journal_ui,
+                )
+                    .chain()
+                    .after(config_menu::update_config_menu)
+                    .after(inventory_ui::toggle_inventory)
+                    .after(crate::map::toggle_fullscreen_map),
+            );
+
         if !self.config.enabled {
             let mut hud = hud::SmartActorHudState::default();
             hud.connection = hud::ConnectionUiState::Disabled;
@@ -635,6 +656,12 @@ impl Plugin for SmartActorsPlugin {
                 inventory_ui::handle_inventory_actions
                     .after(inventory_ui::handle_inventory_tile_clicks)
                     .before(inventory_ui::refresh_inventory_ui),
+            )
+            .add_systems(
+                PostUpdate,
+                journal_ui::journal_standing_hud
+                    .after(SmartActorSet::DrainBridge)
+                    .before(SmartActorSet::Present),
             )
             .configure_sets(
                 PostUpdate,
@@ -967,6 +994,8 @@ struct HotChannels<'w, 's> {
     /// What the player's hand could chalk (`chalking_the_walls.md` M3). Hot
     /// because it changes with every step taken near a door.
     chalk: ResMut<'w, crate::city::ChalkStanding>,
+    journal: ResMut<'w, journal_ui::PlayerJournal>,
+    ward_heat: ResMut<'w, crate::map::WardHeatState>,
     time: Res<'w, Time>,
     drain_timer: Local<'s, DrainTimer>,
 }
@@ -1122,6 +1151,8 @@ fn drain_bridge_messages(
                     &mut hot.lightning,
                     &mut hot.law,
                     &mut hot.chalk,
+                    &mut hot.journal,
+                    &mut hot.ward_heat,
                     hot.time.elapsed_secs_f64(),
                 );
                 // Do not open the default input device before the engine
@@ -1236,6 +1267,8 @@ fn process_engine_message(
     // picker resets on this resource's change flag, so it must be flagged when
     // what is within reach moves and not merely when a message arrives.
     chalk: &mut ResMut<crate::city::ChalkStanding>,
+    journal: &mut ResMut<journal_ui::PlayerJournal>,
+    ward_heat: &mut ResMut<crate::map::WardHeatState>,
     received_at_seconds: f64,
 ) {
     match message {
@@ -1680,6 +1713,25 @@ fn process_engine_message(
             };
             if **chalk != next {
                 **chalk = next;
+            }
+        }
+        EngineMessage::Journal { entries, standing } => {
+            // Keep the wrapper intact until this arm: a Clock or Weather
+            // message must never mark the player's receipts changed.
+            let next = journal_ui::PlayerJournal {
+                entries: entries
+                    .into_iter()
+                    .map(journal_ui::row_from_entry)
+                    .collect(),
+                standing,
+            };
+            if **journal != next {
+                **journal = next;
+            }
+        }
+        EngineMessage::WardHeat { wards } => {
+            if ward_heat.wards != wards {
+                ward_heat.wards = wards;
             }
         }
         EngineMessage::Gesture {
@@ -3157,22 +3209,25 @@ mod tests {
     /// skipped a frame in the game's life. Unflagged frames existing at all is
     /// the pin; how many is the engine's business, not this test's.
     #[test]
-    fn an_ordinary_poll_leaves_the_law_and_the_pack_unflagged() {
+    fn an_ordinary_poll_leaves_the_ward_heat_unflagged() {
         #[derive(Resource, Default)]
         struct FlaggedFrames {
             frames: u32,
             law: u32,
             dogs: u32,
+            ward_heat: u32,
         }
 
         fn count_flags(
             law: Res<custody::PlayerCustodyState>,
             dogs: Res<dogs::DogInbox>,
+            ward_heat: Res<crate::map::WardHeatState>,
             mut counts: ResMut<FlaggedFrames>,
         ) {
             counts.frames += 1;
             counts.law += u32::from(law.is_changed());
             counts.dogs += u32::from(dogs.is_changed());
+            counts.ward_heat += u32::from(ward_heat.is_changed());
         }
 
         let mut app = ready_fake_plugin_app();
@@ -3189,6 +3244,10 @@ mod tests {
         let counts = app.world().resource::<FlaggedFrames>();
         assert!(counts.frames >= 30, "the probe ran on every frame");
         assert!(
+            counts.ward_heat < counts.frames,
+            "ordinary polls must not flag ward heat"
+        );
+        assert!(
             counts.law < counts.frames,
             "the player's standing was flagged on all {} frames — some message \
              that does not write it is stamping it",
@@ -3200,6 +3259,230 @@ mod tests {
              write it is stamping it",
             counts.frames,
         );
+    }
+
+    fn journal_key() -> KeyCode {
+        KeyCode::from_reflect(&bevy::reflect::enums::DynamicEnum::new(
+            "KeyJ",
+            bevy::reflect::enums::DynamicVariant::Unit,
+        ))
+        .expect("the journal key is a unit variant")
+    }
+
+    fn tap_overlay_key(app: &mut App, key: KeyCode) {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(key);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+    }
+
+    #[test]
+    fn a_players_receipt_reaches_the_journal_overlay() {
+        let mut app = ready_fake_plugin_app();
+        {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let sim = engine.world_mut().expect("the engine is live");
+            let fact_id = cathedral_sim::FactId::from_raw("ashe.salt.short");
+            let key = sim
+                .fact_catalog
+                .clone()
+                .seed_one(sim, &fact_id)
+                .expect("authored row");
+            let player = sim.player_id().expect("one player").clone();
+            sim.characters
+                .get_mut(&player)
+                .unwrap()
+                .state
+                .knows
+                .insert(cathedral_sim::ActorId::from_raw("k0fb1"));
+            let now = sim.current_time.map(|time| time.game_days());
+            cathedral_sim::knowledge::learn(
+                sim,
+                &player,
+                key,
+                cathedral_sim::knowledge::Telling {
+                    from: Some(cathedral_sim::ActorId::from_raw("k0fb1")),
+                    hops: 1,
+                    heat: 1.0,
+                    view: Default::default(),
+                },
+                now,
+            );
+        }
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline
+            && app
+                .world()
+                .resource::<journal_ui::PlayerJournal>()
+                .entries
+                .is_empty()
+        {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+        let row = app
+            .world()
+            .resource::<journal_ui::PlayerJournal>()
+            .entries
+            .first()
+            .expect("the player's receipt crossed the bridge")
+            .clone();
+        assert!(row.attribution.contains("at one remove"), "{row:?}");
+        assert!(row.attribution.contains("Ilse"), "{row:?}");
+        assert!(
+            row.attribution.contains(" at ") || row.attribution.contains(", at "),
+            "{row:?}"
+        );
+        assert!(row.word.contains("salt"), "{row:?}");
+        tap_overlay_key(&mut app, journal_key());
+        let world = app.world_mut();
+        let mut roots = world.query_filtered::<&Node, With<journal_ui::JournalUiRoot>>();
+        assert_eq!(roots.single(world).unwrap().display, Display::Flex);
+        let mut texts = world.query::<&Text>();
+        assert!(texts.iter(world).any(|text| text.0 == row.attribution));
+        assert!(texts.iter(world).any(|text| text.0 == row.word));
+    }
+
+    #[test]
+    fn an_ordinary_poll_leaves_the_journal_unflagged() {
+        #[derive(Resource, Default)]
+        struct FlaggedFrames {
+            frames: u32,
+            journal: u32,
+        }
+        fn count_flags(journal: Res<journal_ui::PlayerJournal>, mut counts: ResMut<FlaggedFrames>) {
+            counts.frames += 1;
+            counts.journal += u32::from(journal.is_changed());
+        }
+        let mut app = ready_fake_plugin_app();
+        app.init_resource::<FlaggedFrames>()
+            .add_systems(Last, count_flags);
+        for _ in 0..30 {
+            app.update();
+            thread::sleep(Duration::from_millis(2));
+        }
+        let counts = app.world().resource::<FlaggedFrames>();
+        assert_eq!(counts.frames, 30);
+        assert!(
+            counts.journal < counts.frames,
+            "ordinary messages flagged the journal on all {} frames",
+            counts.frames
+        );
+    }
+
+    #[test]
+    fn the_journal_and_the_map_refuse_to_open_over_each_other() {
+        let mut app = ready_fake_plugin_app();
+        crate::map::add_overlay_input_for_tests(&mut app);
+        app.update();
+        let j = journal_key();
+        tap_overlay_key(&mut app, j);
+        assert!(app.world().resource::<JournalUiState>().open);
+        tap_overlay_key(&mut app, KeyCode::KeyM);
+        assert!(
+            !app.world()
+                .resource::<crate::map::MapState>()
+                .fullscreen_open
+        );
+        tap_overlay_key(&mut app, KeyCode::KeyI);
+        assert!(!app.world().resource::<InventoryUiState>().open);
+        tap_overlay_key(&mut app, KeyCode::Enter);
+        assert!(!app.world().resource::<chat::ChatInputState>().open);
+        assert!(app.world().resource::<JournalUiState>().open);
+        tap_overlay_key(&mut app, j);
+        {
+            let world = app.world_mut();
+            let mut cursors = world.query_filtered::<&CursorOptions, With<PrimaryWindow>>();
+            let cursor = cursors.single(world).unwrap();
+            assert_eq!(cursor.grab_mode, CursorGrabMode::Locked);
+            assert!(!cursor.visible);
+        }
+        tap_overlay_key(&mut app, KeyCode::KeyM);
+        assert!(
+            app.world()
+                .resource::<crate::map::MapState>()
+                .fullscreen_open
+        );
+        tap_overlay_key(&mut app, j);
+        assert!(!app.world().resource::<JournalUiState>().open);
+        tap_overlay_key(&mut app, KeyCode::KeyM);
+        tap_overlay_key(&mut app, KeyCode::KeyI);
+        assert!(app.world().resource::<InventoryUiState>().open);
+        tap_overlay_key(&mut app, j);
+        assert!(!app.world().resource::<JournalUiState>().open);
+        tap_overlay_key(&mut app, KeyCode::KeyI);
+        tap_overlay_key(&mut app, KeyCode::Enter);
+        assert!(app.world().resource::<chat::ChatInputState>().open);
+        tap_overlay_key(&mut app, j);
+        assert!(!app.world().resource::<JournalUiState>().open);
+        tap_overlay_key(&mut app, KeyCode::Escape);
+        assert!(!app.world().resource::<chat::ChatInputState>().open);
+        tap_overlay_key(&mut app, j);
+        assert!(app.world().resource::<JournalUiState>().open);
+        // Settings owns Esc and takes over the journal's pointer in one frame.
+        tap_overlay_key(&mut app, KeyCode::Escape);
+        assert!(app.world().resource::<ConfigMenuState>().open);
+        assert!(!app.world().resource::<JournalUiState>().open);
+        tap_overlay_key(&mut app, j);
+        assert!(!app.world().resource::<JournalUiState>().open);
+        tap_overlay_key(&mut app, KeyCode::Escape);
+        assert!(!app.world().resource::<ConfigMenuState>().open);
+        tap_overlay_key(&mut app, j);
+        let world = app.world_mut();
+        let mut buttons =
+            world.query_filtered::<&mut Interaction, With<journal_ui::JournalCloseButton>>();
+        *buttons.single_mut(world).unwrap() = Interaction::Pressed;
+        app.update();
+        assert!(!app.world().resource::<JournalUiState>().open);
+        let world = app.world_mut();
+        let mut cursors = world.query_filtered::<&CursorOptions, With<PrimaryWindow>>();
+        assert_eq!(
+            cursors.single(world).unwrap().grab_mode,
+            CursorGrabMode::Locked
+        );
+    }
+
+    #[test]
+    fn a_word_the_player_started_puts_the_stake_line_on_the_hud() {
+        let mut app = ready_fake_plugin_app();
+        {
+            let world = app.world_mut();
+            let mut lines = world.query_filtered::<&Node, With<hud::JournalStandingText>>();
+            assert_eq!(lines.single(world).unwrap().display, Display::None);
+        }
+        app.world()
+            .resource::<bridge::BridgeHandle>()
+            .try_send(bridge::BridgeCommand::DebugRaiseWord {
+                who: "Ilse".into(),
+                topic: "bed".into(),
+                said: "the reeve wife was at the Bellstand after curfew".into(),
+            })
+            .expect("the command queue has room");
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline
+            && app
+                .world()
+                .resource::<hud::SmartActorHudState>()
+                .journal_standing_text()
+                .is_empty()
+        {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+        let text = app
+            .world()
+            .resource::<hud::SmartActorHudState>()
+            .journal_standing_text()
+            .to_string();
+        assert!(text.contains("A WORD OF YOURS IS GOING ROUND"), "{text:?}");
+        let world = app.world_mut();
+        let mut lines = world.query_filtered::<(&Text, &Node), With<hud::JournalStandingText>>();
+        let (shown, node) = lines.single(world).unwrap();
+        assert_eq!(shown.0, text);
+        assert_eq!(node.display, Display::Flex);
     }
 
     /// The rejection notice through the real plugin: Ilse holds her coin out to
@@ -4260,12 +4543,7 @@ mod tests {
             .world()
             .resource::<model::WorldMirror>()
             .actor(&model::ActorId("player".into()))
-            .and_then(|player| {
-                player
-                    .holds
-                    .iter()
-                    .position(|held| held.0 == "c0prs")
-            })
+            .and_then(|player| player.holds.iter().position(|held| held.0 == "c0prs"))
             .expect("the player holds the spark by now");
         let slot_key = [KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3][coin_slot];
         app.world_mut()

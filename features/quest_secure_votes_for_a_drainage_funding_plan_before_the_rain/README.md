@@ -1,12 +1,5 @@
 Status: SPEC ONLY — unimplemented (2026-08-27)
 
-STALE WHERE IT TOUCHES KNOWLEDGE (2026-08-30): `features/knowledge_and_rumor/` is being built
-end-to-end **first**, on its own, and this spec will be rewritten against the API that actually
-ships. Wherever the text below describes what the knowledge layer owns, when this quest may
-start, or a casebook/receipt store of its own, `features/knowledge_and_rumor/README.md` wins.
-Do not reconcile this file now.
-
-
 # Quest: secure nine votes for a drainage-funding plan before the rain
 
 Working title: **Nine Before Rain**
@@ -96,7 +89,7 @@ in hard rain; it is not an invented F.437 citywide catastrophe.
 - eight ward knots and their quest-specific tasks/receipts;
 - a final hand-count and four policy outcomes;
 - quest-specific morning receipts, rumors and integrity consequences;
-- the casebook projection for this quest;
+- learned words and two standing strings supplied to the existing shared journal;
 - deterministic fake-backend and headless coverage for the complete quest.
 
 ### This feature consumes but does not own
@@ -119,7 +112,7 @@ Three advertised experiences are foundation dependencies, not current systems:
 | Dependency | What exists now | What this quest requires |
 |---|---|---|
 | Persistence | Settings persistence only; no world/engine checkpoint. | A versioned whole-engine checkpoint. A quest-only save would restore votes while inventory, custody, marks, knowledge and NPC positions reset. |
-| Political rumor | A feature design exists, but no runtime pollen propagation. | Bounded typed facts that travel without requiring LLM turns; a temporary quest queue is acceptable only through M2. |
+| Political rumor | Knowledge M0–M5 shipped 2026-09-06: JSON catalog, `knowledge::holds`, pollen, garbling and player receipts. | **Satisfied.** Use `knowledge::catalog::FactCatalog::extend_from_json`; no temporary quest queue. A political promise is normally `talk` (base 0.15); a legal accusation can be `law` (0.80). The author chooses the proposition’s kind, not a high band merely because a vote matters. |
 | Player curfew | Snuffing changes NPC rounds, but there is no player curfew offence/detection mechanic. | Watch-witnessed proximity detection before any route promises curfew consequences. |
 
 Weather is implemented and deterministic, but its current seeded timeline does not guarantee a promised storm
@@ -173,7 +166,7 @@ At the Bellstand, Gude explains only what the player needs:
 Accepting gives:
 
 - `quest_drain_writ`, a non-transferable quest document;
-- `quest_drain_docket`, the diegetic casebook root;
+- `quest_drain_docket`, the diegetic document framing the shared journal and draft interaction;
 - the three canonical base proposals;
 - Gude as the first lead;
 - a first appointment with one Wick or Bell-and-Sluice bencher.
@@ -432,7 +425,9 @@ Receipts are append-only facts with stable ids. Examples:
 - a Chapter commitment, surety, bribe or notice was accepted;
 - a voter pledged, recused or withdrew for a named reason.
 
-Receipts are not all shown. The casebook projects only what the player has learned or directly caused.
+Quest outcome receipts still prove transactions and votes. Learned sentences belong to the shared
+`player_learned` store, projected through `EngineMessage::Journal { entries, standing }` only when
+the player heard, witnessed or caused them; the quest owns no duplicate knowledge ledger.
 
 ## Civic tasks: embodied proof, not repair grinding
 
@@ -465,7 +460,10 @@ route, timing, witnesses, inventory and social framing.
 
 ## Casebook / docket
 
-The quest gets one diegetic status surface. It is a projection of known state, not omniscience.
+The docket frames the existing shared journal (`src/smart_actors/journal_ui.rs`). `player_learned`
+and `EngineMessage::Journal { entries, standing }` carry learned sentences; the quest contributes a
+clock and stake at `knowledge::standing_lines`, without quest-aware rendering or another receipt
+store. The following known draft/vote controls remain player-safe quest interaction state.
 
 Always visible after acceptance:
 
@@ -490,7 +488,7 @@ critical accessibility gate.
 
 ## Rumor and Night Office integration
 
-Full `Rumor Pollen` is a preferred integration, not an excuse to block M0–M2.
+Full knowledge/pollen shipped before these quest milestones (2026-09-06); this quest consumes it.
 
 Quest facts eligible to become bounded rumor tokens:
 
@@ -500,8 +498,10 @@ Quest facts eligible to become bounded rumor tokens:
 - the player publicly contradicting their own carried words;
 - a named ward service performed before witnesses.
 
-Until generic rumor propagation exists, M2 may use an authored quest fact queue that transfers only at fixed
-public gatherings and the Night Office. Replace it rather than maintaining two permanent rumor systems.
+Author these propositions in a quest JSON pack or mint them at explicit successful-event hooks,
+with actual earshot seeds, and use shared pollen. There is no temporary quest fact queue. Generic
+Night Office settlement remains a future knowledge integration; the following quest-specific
+reflection behavior must be wired explicitly and cannot be assumed to exist.
 
 The Night Office may:
 
@@ -708,10 +708,13 @@ Likely new messages/snapshot projections:
 - small request-result/receipt messages for immediate feedback;
 - quest work progress only when it changes, not every frame.
 
-Do not place the casebook inside the actor/item `PublicSnapshot` or touch the whole public-state revision for
-each lead; that republishes the full cast and configured crowd. Project `DrainQuestView` into a dedicated Bevy
-`QuestCasebookState`. The Bevy side renders player-safe typed state and does not re-derive vote legality or count
-votes. Hidden trust, private objections, unknown receipts and secret facts never enter the view.
+Do not place the journal inside the actor/item `PublicSnapshot` or touch the whole public-state
+revision for each lead; that republishes the full cast and configured crowd. This boundary is now
+enforced by the knowledge projection tests and snapshot canary. Use the existing
+`EngineMessage::Journal { entries, standing }` for learned words and standing strings, with no new
+`QuestCasebookState`. `DrainQuestView` may carry the draft/work interaction state on its own revision;
+the Bevy side must not re-derive vote legality or count votes. Hidden trust, private objections,
+unknown receipts and secret facts never enter either projection.
 
 ## Milestones
 
@@ -739,7 +742,7 @@ Each milestone is independently playable and testable.
 ### M2 — Docket and all sixteen voters
 
 - Add all three bases, fixed rider catalog and sixteen voter records.
-- Implement the quest casebook/docket and accessible text controls.
+- Supply docket content to the existing shared journal and implement accessible draft interaction controls.
 - Add the eight ward knots with at least two routes each.
 - Add deterministic fake-backend quest decisions.
 - Validate that at least three distinct nine-vote coalitions exist.
@@ -891,7 +894,7 @@ If this is not fun and legible at four voters, do not author the remaining twelv
 - `lore/wells_and_water.md` — water infrastructure, labor, queues, repairs and shortages.
 - `lore/the_dry_boatmen.md` — Reed Postern, dry carry, the tun and Reed interests.
 - `features/lore_ward_politics.md` — open gameplay layer this quest concretizes.
-- `features/knowledge_and_rumor/` — the shared knowledge layer (facts + rumour propagation); was `features/rumors.md`. As of 2026-08-30 it also owns quest receipts, the player's casebook and the journal, which this spec currently proposes for itself.
+- `features/implemented/knowledge_and_rumor/` — the shared knowledge layer (facts + rumour propagation); was `features/rumors.md`. M0–M5 shipped 2026-09-06; it owns player-learned receipts and the shared journal this quest consumes.
 - `features/false_peals__ring_the_bells_manually.md` — optional high-risk sequence break.
 - `features/implemented/law_and_order.md` — notices, custody, surety and escape.
 - `features/implemented/chalking_the_walls.md` — authoritative forged/scrubbed marks.

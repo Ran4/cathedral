@@ -1,0 +1,111 @@
+{
+  "scope": "Finite design-model observations, not implemented gameplay, complete proof-rule validation or surveyed geometry.",
+  "source": "quest_model.json",
+  "source_sha256": "ed23a36da1323b1f21b92709a7b3cac2ac2f47dff589dcbeec0fba9a83fa87c6",
+  "assertions_checked": 17,
+  "result": "All expected design observations reproduced, including the documented original-model defects.",
+  "checks": [
+    {
+      "id": "A01",
+      "observed": 48,
+      "expected": 48,
+      "meaning": "Illustrative private edge total; no route was surveyed."
+    },
+    {
+      "id": "A02",
+      "observed": 30.857142857142858,
+      "expected": 30.857142857142858,
+      "meaning": "Original arithmetic omits the authored departure delay."
+    },
+    {
+      "id": "A03",
+      "observed": 33.85714285714286,
+      "expected": 33.85714285714286,
+      "meaning": "Including three departure seconds, before new door/stair/turn costs."
+    },
+    {
+      "id": "A04",
+      "observed": false,
+      "expected": false,
+      "meaning": "The complete reference does not fit the original 32-second conservative minimum."
+    },
+    {
+      "id": "A05",
+      "observed": true,
+      "expected": true,
+      "meaning": "It does fit nominal 36 seconds; nominal and conservative are different claims."
+    },
+    {
+      "id": "A06",
+      "observed": false,
+      "expected": false,
+      "meaning": "The plan's proposed two-second separation margin is also unmet."
+    },
+    {
+      "id": "A07",
+      "observed": 576,
+      "expected": 576,
+      "meaning": "This is the old two-edge public out-and-back model, not a controller-space certificate."
+    },
+    {
+      "id": "A08",
+      "observed": 48.0,
+      "expected": 48.0,
+      "meaning": "Distance/sprint arithmetic alone cannot prove all actual public alternatives exceed the gap."
+    },
+    {
+      "id": "E01",
+      "observed": true,
+      "expected": true,
+      "meaning": "The original physical bundle supports the model's recovery recipe."
+    },
+    {
+      "id": "E02",
+      "observed": true,
+      "expected": true,
+      "meaning": "The original physical bundle supports the model's assault recipe."
+    },
+    {
+      "id": "E03",
+      "observed": false,
+      "expected": false,
+      "meaning": "The advertised no-confession physical path does not support the old theft recipe; CASE_CONTRACT adds the continuous removal link."
+    },
+    {
+      "id": "E04",
+      "observed": true,
+      "expected": true,
+      "meaning": "The old model accepts later handling plus generic E15; the plan instead requires an original-act link and a specifically incompatible proposition."
+    },
+    {
+      "id": "E05",
+      "observed": false,
+      "expected": false,
+      "meaning": "Later handling alone supplies no assault support even in the original recipe."
+    },
+    {
+      "id": "T01",
+      "observed": 27.5,
+      "expected": 27.5,
+      "meaning": "Only the original default opening and unchanged clock rate give this real-minute window."
+    },
+    {
+      "id": "T02",
+      "observed": 72.5,
+      "expected": 72.5,
+      "meaning": "Normal play continues through the original review deadline."
+    },
+    {
+      "id": "T03",
+      "observed": false,
+      "expected": false,
+      "meaning": "A 75-minute uninterrupted walkthrough cannot attend a 72.5-minute review that waited for it."
+    },
+    {
+      "id": "T04",
+      "observed": false,
+      "expected": false,
+      "meaning": "The longer walkthrough needs later/limited review or a lodged autonomous submission."
+    }
+  ]
+}

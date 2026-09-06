@@ -1,0 +1,2 @@
+remember {"memory":"A chandler of the Wick Ward told me Grigor Ashe was taken at the Wickmarket yesterday and lies in the Stone House."}
+say {"target":"player","text":"So they say. A chandler of the Wick Ward told me Grigor Ashe was taken here yesterday and lies in the Stone House."}

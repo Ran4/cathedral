@@ -534,11 +534,14 @@ pub fn select_inventory_item(
     scroll: Res<AccumulatedMouseScroll>,
     mirror: Res<WorldMirror>,
     inventory: Option<Res<super::inventory_ui::InventoryUiState>>,
+    journal: Option<Res<super::journal_ui::JournalUiState>>,
     mut state: ResMut<InteractionState>,
 ) {
-    // The `I` screen owns the pointer while it is open: its wheel scrolls the
-    // panel and its digits are not quickbar keys.
-    if inventory.is_some_and(|inventory| inventory.open) {
+    // The inventory and journal own the pointer while open: their wheel and
+    // digit input must not also change the quickbar selection.
+    if inventory.is_some_and(|inventory| inventory.open)
+        || journal.is_some_and(|journal| journal.open)
+    {
         return;
     }
     let player_id = ActorId("player".into());

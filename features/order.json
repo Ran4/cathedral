@@ -43,9 +43,6 @@
             "path": "features/quicker_response_improvements.md"
         },
         {
-            "path": "features/knowledge_and_rumor/"
-        },
-        {
             "path": "features/scents.md"
         },
         {
@@ -56,6 +53,10 @@
         }
     ],
     "finished": [
+        {
+            "path": "features/implemented/knowledge_and_rumor/",
+            "when": "2026-09-06T0924"
+        },
         {
             "path": "features/implemented/give_the_crowd_somewhere_to_be.md",
             "when": "2026-08-10T0130"

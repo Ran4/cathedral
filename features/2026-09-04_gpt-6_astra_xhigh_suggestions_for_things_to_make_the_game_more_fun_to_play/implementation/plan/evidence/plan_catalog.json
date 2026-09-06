@@ -1,0 +1,1981 @@
+{
+  "schema": 1,
+  "scope": "Planning traceability only; no scenario has run by this catalog.",
+  "milestones": [
+    {
+      "id": "M0",
+      "file": "M0_baseline_and_prerequisites.md",
+      "sequential_predecessor": null,
+      "scenarios": [
+        "V01",
+        "V02",
+        "V03"
+      ]
+    },
+    {
+      "id": "M1",
+      "file": "M1_live_time_and_transactions.md",
+      "sequential_predecessor": "M0",
+      "scenarios": [
+        "V04",
+        "V05",
+        "V06",
+        "V07",
+        "V08"
+      ]
+    },
+    {
+      "id": "M2",
+      "file": "M2_simulation_checkpoints.md",
+      "sequential_predecessor": "M1",
+      "scenarios": [
+        "V09",
+        "V10",
+        "V11",
+        "V12",
+        "V13"
+      ]
+    },
+    {
+      "id": "M3",
+      "file": "M3_save_load_application.md",
+      "sequential_predecessor": "M2",
+      "scenarios": [
+        "V14",
+        "V15",
+        "V16",
+        "V17",
+        "V18"
+      ]
+    },
+    {
+      "id": "M4",
+      "file": "M4_layered_navigation.md",
+      "sequential_predecessor": "M3",
+      "scenarios": [
+        "V19",
+        "V20",
+        "V21"
+      ]
+    },
+    {
+      "id": "M5",
+      "file": "M5_perception_and_observations.md",
+      "sequential_predecessor": "M4",
+      "scenarios": [
+        "V22",
+        "V23",
+        "V24",
+        "V25"
+      ]
+    },
+    {
+      "id": "M6",
+      "file": "M6_access_and_permissions.md",
+      "sequential_predecessor": "M5",
+      "scenarios": [
+        "V26",
+        "V27",
+        "V28",
+        "V29"
+      ]
+    },
+    {
+      "id": "M7",
+      "file": "M7_objects_and_examinations.md",
+      "sequential_predecessor": "M6",
+      "scenarios": [
+        "V30",
+        "V31",
+        "V32"
+      ]
+    },
+    {
+      "id": "M8",
+      "file": "M8_activities_and_appointments.md",
+      "sequential_predecessor": "M7",
+      "scenarios": [
+        "V33",
+        "V34",
+        "V35",
+        "V36",
+        "V37"
+      ]
+    },
+    {
+      "id": "M9",
+      "file": "M9_inquiries_and_evidence.md",
+      "sequential_predecessor": "M8",
+      "scenarios": [
+        "V38",
+        "V39",
+        "V40",
+        "V41",
+        "V42"
+      ]
+    },
+    {
+      "id": "M10",
+      "file": "M10_conversation_and_interface.md",
+      "sequential_predecessor": "M9",
+      "scenarios": [
+        "V43",
+        "V44",
+        "V45",
+        "V46"
+      ]
+    },
+    {
+      "id": "M11",
+      "file": "M11_orders_and_dispositions.md",
+      "sequential_predecessor": "M10",
+      "scenarios": [
+        "V47",
+        "V48",
+        "V49"
+      ]
+    },
+    {
+      "id": "M12",
+      "file": "M12_dynamic_enforcement.md",
+      "sequential_predecessor": "M11",
+      "scenarios": [
+        "V50",
+        "V51",
+        "V52",
+        "V53",
+        "V54",
+        "V55"
+      ]
+    },
+    {
+      "id": "M13",
+      "file": "M13_authoring_and_foundation_acceptance.md",
+      "sequential_predecessor": "M12",
+      "scenarios": [
+        "V56",
+        "V57",
+        "V58"
+      ]
+    },
+    {
+      "id": "M14",
+      "file": "M14_tallage_district.md",
+      "sequential_predecessor": "M13",
+      "scenarios": [
+        "V59",
+        "V60"
+      ]
+    },
+    {
+      "id": "M15",
+      "file": "M15_incident_and_cast.md",
+      "sequential_predecessor": "M14",
+      "scenarios": [
+        "V61",
+        "V62",
+        "V63"
+      ]
+    },
+    {
+      "id": "M16",
+      "file": "M16_investigation_and_public_review.md",
+      "sequential_predecessor": "M15",
+      "scenarios": [
+        "V64",
+        "V65",
+        "V66"
+      ]
+    },
+    {
+      "id": "M17",
+      "file": "M17_alternatives_and_recovery.md",
+      "sequential_predecessor": "M16",
+      "scenarios": [
+        "V67",
+        "V68",
+        "V69",
+        "V70",
+        "V71"
+      ]
+    },
+    {
+      "id": "M18",
+      "file": "M18_lasting_consequences.md",
+      "sequential_predecessor": "M17",
+      "scenarios": [
+        "V72",
+        "V73",
+        "V74"
+      ]
+    },
+    {
+      "id": "M19",
+      "file": "M19_acceptance_and_release.md",
+      "sequential_predecessor": "M18",
+      "scenarios": [
+        "V75",
+        "V76",
+        "V77",
+        "V78"
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "R01",
+      "decisions": [
+        "D01"
+      ],
+      "requirement": "Prove reusable systems with independent content before authoring the full case.",
+      "scenarios": [
+        "V01",
+        "V56",
+        "V57",
+        "V58"
+      ]
+    },
+    {
+      "id": "R02",
+      "decisions": [
+        "D02"
+      ],
+      "requirement": "Install the past incident once in normal city history, without acceptance-triggered spawning.",
+      "scenarios": [
+        "V61",
+        "V63",
+        "V71"
+      ]
+    },
+    {
+      "id": "R03",
+      "decisions": [
+        "D02"
+      ],
+      "requirement": "Provide developer starts through the same production content and movement-faithful progression.",
+      "scenarios": [
+        "V21",
+        "V57",
+        "V59",
+        "V61"
+      ]
+    },
+    {
+      "id": "R04",
+      "decisions": [
+        "D03"
+      ],
+      "requirement": "Player and NPC traverse coherent interiors, floors, stairs and real openings.",
+      "scenarios": [
+        "V19",
+        "V20",
+        "V21",
+        "V29",
+        "V52",
+        "V59",
+        "V76"
+      ]
+    },
+    {
+      "id": "R05",
+      "decisions": [
+        "D03"
+      ],
+      "requirement": "Support timing claims with complete measured acts, uncertainty and conservative route coverage.",
+      "scenarios": [
+        "V20",
+        "V21",
+        "V35",
+        "V60"
+      ]
+    },
+    {
+      "id": "R06",
+      "decisions": [
+        "D03",
+        "D04"
+      ],
+      "requirement": "Witnesses see/hear only supported local events, with temporal and identity limits.",
+      "scenarios": [
+        "V22",
+        "V23",
+        "V24",
+        "V25",
+        "V35",
+        "V52",
+        "V60",
+        "V65",
+        "V69"
+      ]
+    },
+    {
+      "id": "R07",
+      "decisions": [
+        "D01",
+        "D04"
+      ],
+      "requirement": "Use the shipped shared knowledge system and preserve durable learned evidence references.",
+      "scenarios": [
+        "V01",
+        "V25",
+        "V38",
+        "V41",
+        "V49",
+        "V58",
+        "V74",
+        "V77"
+      ]
+    },
+    {
+      "id": "R08",
+      "decisions": [
+        "D01",
+        "D03"
+      ],
+      "requirement": "Physical access, keys, consent and official scope work as ordinary reusable systems.",
+      "scenarios": [
+        "V19",
+        "V26",
+        "V27",
+        "V28",
+        "V29",
+        "V67",
+        "V74"
+      ]
+    },
+    {
+      "id": "R09",
+      "decisions": [
+        "D01",
+        "D06"
+      ],
+      "requirement": "Objects, documents, containment, transfers and examinations preserve identity and custody.",
+      "scenarios": [
+        "V24",
+        "V26",
+        "V30",
+        "V31",
+        "V32",
+        "V55",
+        "V62",
+        "V73"
+      ]
+    },
+    {
+      "id": "R10",
+      "decisions": [
+        "D01",
+        "D05"
+      ],
+      "requirement": "Activities and appointments compete with ordinary duties and continue off stage.",
+      "scenarios": [
+        "V07",
+        "V28",
+        "V33",
+        "V34",
+        "V35",
+        "V37",
+        "V41",
+        "V50",
+        "V66"
+      ]
+    },
+    {
+      "id": "R11",
+      "decisions": [
+        "D01",
+        "D04"
+      ],
+      "requirement": "Findings evaluate bound, supported propositions and distinguish partial conclusions.",
+      "scenarios": [
+        "V31",
+        "V32",
+        "V38",
+        "V39",
+        "V40",
+        "V41",
+        "V42",
+        "V47",
+        "V56",
+        "V64",
+        "V65",
+        "V67",
+        "V68",
+        "V69"
+      ]
+    },
+    {
+      "id": "R12",
+      "decisions": [
+        "D04"
+      ],
+      "requirement": "Natural language and explicit controls use equivalent validated actions and truthful receipts.",
+      "scenarios": [
+        "V06",
+        "V43",
+        "V44",
+        "V76",
+        "V77"
+      ]
+    },
+    {
+      "id": "R13",
+      "decisions": [
+        "D05"
+      ],
+      "requirement": "Reading, conversation, input, menus and provider latency never pause the city.",
+      "scenarios": [
+        "V04",
+        "V05",
+        "V17",
+        "V21",
+        "V34",
+        "V43",
+        "V44",
+        "V46",
+        "V66",
+        "V71",
+        "V75",
+        "V78"
+      ]
+    },
+    {
+      "id": "R14",
+      "decisions": [
+        "D06"
+      ],
+      "requirement": "Checkpoint the complete authoritative simulation, including pending semantic work.",
+      "scenarios": [
+        "V02",
+        "V05",
+        "V09",
+        "V10",
+        "V11",
+        "V12",
+        "V13",
+        "V14",
+        "V30",
+        "V58",
+        "V75"
+      ]
+    },
+    {
+      "id": "R15",
+      "decisions": [
+        "D06"
+      ],
+      "requirement": "Save anywhere and adopt a coherent host/sim world with durable ordered slot publication.",
+      "scenarios": [
+        "V12",
+        "V14",
+        "V15",
+        "V16",
+        "V17",
+        "V18",
+        "V58",
+        "V75",
+        "V78"
+      ]
+    },
+    {
+      "id": "R16",
+      "decisions": [
+        "D04",
+        "D06"
+      ],
+      "requirement": "Fence old-world callbacks and deduplicate committed effects across save/load and retries.",
+      "scenarios": [
+        "V05",
+        "V06",
+        "V08",
+        "V09",
+        "V10",
+        "V11",
+        "V13",
+        "V14",
+        "V15",
+        "V18",
+        "V42",
+        "V45",
+        "V54",
+        "V75"
+      ]
+    },
+    {
+      "id": "R17",
+      "decisions": [
+        "D07"
+      ],
+      "requirement": "Separate allegations, authority, deliveries, execution and independent custody grounds.",
+      "scenarios": [
+        "V27",
+        "V47",
+        "V48",
+        "V49",
+        "V54",
+        "V72"
+      ]
+    },
+    {
+      "id": "R18",
+      "decisions": [
+        "D07"
+      ],
+      "requirement": "Issued orders reach informed executors through ordinary channels and fair bounded dispatch.",
+      "scenarios": [
+        "V50",
+        "V51",
+        "V53",
+        "V72"
+      ]
+    },
+    {
+      "id": "R19",
+      "decisions": [
+        "D03",
+        "D07"
+      ],
+      "requirement": "Guards search by learned leads and physically seize, escort and hand over a subject.",
+      "scenarios": [
+        "V50",
+        "V52",
+        "V53",
+        "V54",
+        "V72"
+      ]
+    },
+    {
+      "id": "R20",
+      "decisions": [
+        "D07"
+      ],
+      "requirement": "Correction, release, property, reputation and other proceedings remain distinct lasting outcomes.",
+      "scenarios": [
+        "V42",
+        "V47",
+        "V55",
+        "V70",
+        "V72",
+        "V74"
+      ]
+    },
+    {
+      "id": "R21",
+      "decisions": [
+        "D01",
+        "D04"
+      ],
+      "requirement": "Private admissions and restricted submissions have supported corroboration and truthful privacy.",
+      "scenarios": [
+        "V40",
+        "V45",
+        "V62",
+        "V68",
+        "V70",
+        "V77"
+      ]
+    },
+    {
+      "id": "R22",
+      "decisions": [
+        "D01"
+      ],
+      "requirement": "The early physical route supports the original theft and assault without confession or surveillance.",
+      "scenarios": [
+        "V38",
+        "V64"
+      ]
+    },
+    {
+      "id": "R23",
+      "decisions": [
+        "D01",
+        "D05"
+      ],
+      "requirement": "A late player can complete the physical route without a bargain or the missed retrieval.",
+      "scenarios": [
+        "V62",
+        "V67",
+        "V71"
+      ]
+    },
+    {
+      "id": "R24",
+      "decisions": [
+        "D01",
+        "D03"
+      ],
+      "requirement": "Surveillance observes actual object handling and supports only its warranted allegation.",
+      "scenarios": [
+        "V23",
+        "V24",
+        "V37",
+        "V61",
+        "V69"
+      ]
+    },
+    {
+      "id": "R25",
+      "decisions": [
+        "D01"
+      ],
+      "requirement": "Independent cry witnesses can clear Warin without identifying Corin.",
+      "scenarios": [
+        "V38",
+        "V65",
+        "V66"
+      ]
+    },
+    {
+      "id": "R26",
+      "decisions": [
+        "D01",
+        "D07"
+      ],
+      "requirement": "Agreements, sponsorship, confidential terms and one-use services have executable obligations.",
+      "scenarios": [
+        "V28",
+        "V36",
+        "V48",
+        "V70",
+        "V73"
+      ]
+    },
+    {
+      "id": "R27",
+      "decisions": [
+        "D01",
+        "D07"
+      ],
+      "requirement": "Payments, rewards and property deliveries conserve real resources and fulfil once.",
+      "scenarios": [
+        "V36",
+        "V70",
+        "V73"
+      ]
+    },
+    {
+      "id": "R28",
+      "decisions": [
+        "D01",
+        "D03"
+      ],
+      "requirement": "Versioned content packs, actual district authoring and stable cast bindings support future authors.",
+      "scenarios": [
+        "V56",
+        "V57",
+        "V59",
+        "V60",
+        "V63"
+      ]
+    },
+    {
+      "id": "R29",
+      "decisions": [
+        "D01",
+        "D05",
+        "D06"
+      ],
+      "requirement": "New systems have measured bounded time, memory, IO and retention costs.",
+      "scenarios": [
+        "V03",
+        "V06",
+        "V16",
+        "V17",
+        "V51",
+        "V58",
+        "V75",
+        "V78"
+      ]
+    },
+    {
+      "id": "R30",
+      "decisions": [
+        "D01",
+        "D04"
+      ],
+      "requirement": "Release includes human comprehension/enjoyment and live-language evidence, not only fake traces.",
+      "scenarios": [
+        "V43",
+        "V59",
+        "V76",
+        "V77"
+      ]
+    },
+    {
+      "id": "R31",
+      "decisions": [
+        "D05"
+      ],
+      "requirement": "Missed appointments, changing circumstances and absence leave truthful records and continuation.",
+      "scenarios": [
+        "V34",
+        "V41",
+        "V44",
+        "V46",
+        "V66",
+        "V67",
+        "V69",
+        "V71",
+        "V76"
+      ]
+    },
+    {
+      "id": "R32",
+      "decisions": [
+        "D01",
+        "D07"
+      ],
+      "requirement": "Migrations preserve a coherent ordinary city and reconcile existing knowledge, keys and law.",
+      "scenarios": [
+        "V01",
+        "V02",
+        "V03",
+        "V49",
+        "V63",
+        "V78"
+      ]
+    },
+    {
+      "id": "R33",
+      "decisions": [
+        "D04",
+        "D05"
+      ],
+      "requirement": "Player displays distinguish unknown off-stage outcomes from known scheduled or completed events.",
+      "scenarios": [
+        "V18",
+        "V25",
+        "V34",
+        "V46",
+        "V66",
+        "V74"
+      ]
+    },
+    {
+      "id": "R34",
+      "decisions": [
+        "D04"
+      ],
+      "requirement": "Findings and diagnostics cannot reveal unlearned hidden truth or causal provenance.",
+      "scenarios": [
+        "V25",
+        "V37",
+        "V39",
+        "V40",
+        "V43",
+        "V45",
+        "V57",
+        "V68",
+        "V77"
+      ]
+    },
+    {
+      "id": "R35",
+      "decisions": [
+        "D01",
+        "D05"
+      ],
+      "requirement": "One shared operation/duty/resource owner controls progress, interruption and recovery.",
+      "scenarios": [
+        "V02",
+        "V04",
+        "V07",
+        "V09",
+        "V29",
+        "V31",
+        "V33",
+        "V51",
+        "V52"
+      ]
+    },
+    {
+      "id": "R36",
+      "decisions": [
+        "D06"
+      ],
+      "requirement": "Every later subsystem extends persistence and continuation evidence in its own milestone.",
+      "scenarios": [
+        "V09",
+        "V19",
+        "V26",
+        "V30",
+        "V36",
+        "V42",
+        "V58",
+        "V61",
+        "V74",
+        "V75"
+      ]
+    },
+    {
+      "id": "R37",
+      "decisions": [
+        "D01",
+        "D04"
+      ],
+      "requirement": "The complete case has readable operative documents, independently sourced accounts and clear stakes.",
+      "scenarios": [
+        "V32",
+        "V62",
+        "V63",
+        "V64",
+        "V76"
+      ]
+    },
+    {
+      "id": "R38",
+      "decisions": [
+        "D03",
+        "D04"
+      ],
+      "requirement": "Sealed record access and physically audible speech remain separate during live audience changes.",
+      "scenarios": [
+        "V22",
+        "V45",
+        "V68"
+      ]
+    },
+    {
+      "id": "R39",
+      "decisions": [
+        "D01",
+        "D07"
+      ],
+      "requirement": "Forged collection authority, valid pledge debt and actual redemption are distinct property states.",
+      "scenarios": [
+        "V62",
+        "V73"
+      ]
+    },
+    {
+      "id": "R40",
+      "decisions": [
+        "D07"
+      ],
+      "requirement": "Station capacity, keeper coverage, hold deadlines and actual release egress are authoritative.",
+      "scenarios": [
+        "V33",
+        "V48",
+        "V53",
+        "V55"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "V01",
+      "owner": "M0",
+      "requirements": [
+        "R01",
+        "R07",
+        "R32"
+      ],
+      "title": "Knowledge prerequisite",
+      "setup_and_action": "Reconcile the completed knowledge M0\u2013M5 against current source and its own acceptance record.",
+      "acceptance": "The plan uses shipped holders, provenance, player-learning and retention APIs; no guessed duplicate store or stale quest stub remains.",
+      "evidence_kind": "source + existing feature acceptance",
+      "status": "planned"
+    },
+    {
+      "id": "V02",
+      "owner": "M0",
+      "requirements": [
+        "R14",
+        "R32",
+        "R35"
+      ],
+      "title": "Authority inventory",
+      "setup_and_action": "Enumerate mutable sim/host owners, capabilities and migration seams on the actual implementation baseline.",
+      "acceptance": "Every future-affecting field has a checkpoint policy; every new shared service has one producer and explicit consumers.",
+      "evidence_kind": "source audit",
+      "status": "planned"
+    },
+    {
+      "id": "V03",
+      "owner": "M0",
+      "requirements": [
+        "R29",
+        "R32"
+      ],
+      "title": "Reproducible baseline",
+      "setup_and_action": "Run accepted baseline suites and profile movement-faithful default/2,000-citizen runs, with 20,000 separately labeled stress.",
+      "acceptance": "Record commit/tree, hardware, poll pattern, CPU/frame/memory figures and numeric budgets. A coarse clock watcher is not movement evidence.",
+      "evidence_kind": "tests + measurement",
+      "status": "planned"
+    },
+    {
+      "id": "V04",
+      "owner": "M1",
+      "requirements": [
+        "R13",
+        "R35"
+      ],
+      "title": "Live overlays and conversation",
+      "setup_and_action": "Keep a conversation/floor hold and each existing menu open across movement, need and calendar transitions.",
+      "acceptance": "Simulation events and ordinary duties continue; only input capture or a particular person's permitted courtesy changes.",
+      "evidence_kind": "sim + host",
+      "status": "planned"
+    },
+    {
+      "id": "V05",
+      "owner": "M1",
+      "requirements": [
+        "R13",
+        "R14",
+        "R16"
+      ],
+      "title": "Clock crossing ownership",
+      "setup_and_action": "Change 1\u00d7/60\u00d7 immediately after bedtime and midnight while Round skips a cadence tick.",
+      "acceptance": "One office, production/settlement edge and ambient/night duty is processed; historical cursors are not reinterpreted through the new rate.",
+      "evidence_kind": "deterministic sim",
+      "status": "planned"
+    },
+    {
+      "id": "V06",
+      "owner": "M1",
+      "requirements": [
+        "R12",
+        "R16",
+        "R29"
+      ],
+      "title": "No partial or duplicate action",
+      "setup_and_action": "Repeat commands, conflict their payloads, exhaust the bounded replay window and inject failed route/authority/resource validation.",
+      "acceptance": "One effect/receipt at most; rejection leaves no partial custody/inventory mutation, and compacted IDs including never-accepted requests cannot replay. M2 extends the same fixture through restore.",
+      "evidence_kind": "deterministic sim",
+      "status": "planned"
+    },
+    {
+      "id": "V07",
+      "owner": "M1",
+      "requirements": [
+        "R10",
+        "R35"
+      ],
+      "title": "Minimal operation kernel",
+      "setup_and_action": "Two duties claim one actor/resource; interrupt and replan during bounded in-memory work.",
+      "acceptance": "One owner, conserved completed steps and operation-wide recovery budget; replanning does not reset exhaustion. M2 adds the checkpoint continuation in V09.",
+      "evidence_kind": "deterministic sim",
+      "status": "planned"
+    },
+    {
+      "id": "V08",
+      "owner": "M1",
+      "requirements": [
+        "R16"
+      ],
+      "title": "World and actor generations",
+      "setup_and_action": "Deliver a result for an old world and a departed incarnation with reused numeric request/actor IDs.",
+      "acceptance": "Both identity fences work independently; no current-world effect or presentation acknowledgement is accepted.",
+      "evidence_kind": "sim + host",
+      "status": "planned"
+    },
+    {
+      "id": "V09",
+      "owner": "M2",
+      "requirements": [
+        "R14",
+        "R16",
+        "R35",
+        "R36"
+      ],
+      "title": "Populated checkpoint",
+      "setup_and_action": "Capture M1 kernel ownership/progress and exhausted replay windows plus ordinary queues, production, offers, road parties, weather, lamps, knowledge, custody and needs mid-operation.",
+      "acceptance": "Fresh hydration resumes canonical state/events and replay rejection with controlled subsequent inputs, without new/seed paths or omitted subsystem state.",
+      "evidence_kind": "deterministic continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V10",
+      "owner": "M2",
+      "requirements": [
+        "R14",
+        "R16"
+      ],
+      "title": "Pending cognition categories",
+      "setup_and_action": "Capture an empty-inbox idle submission and a held completion followed by newer player speech.",
+      "acceptance": "Unfinished work restores one owed retry; held results apply once without resubmission; old drained history and newer obligations remain distinct.",
+      "evidence_kind": "deterministic continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V11",
+      "owner": "M2",
+      "requirements": [
+        "R14",
+        "R16"
+      ],
+      "title": "Night obligation identity",
+      "setup_and_action": "Capture queued/submitted/completed Night duties around midnight and actor departure/re-entry.",
+      "acceptance": "Owed day, incarnation and spent/completed state survive; no doubled reflection or ambient reroll, and valid retries still yield to the player.",
+      "evidence_kind": "deterministic continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V12",
+      "owner": "M2",
+      "requirements": [
+        "R14",
+        "R15"
+      ],
+      "title": "Validation and compatibility",
+      "setup_and_action": "Load valid Never sentinels, invalid floats, duplicate ownership, overflow, missing adapters and incompatible content/generator versions.",
+      "acceptance": "Virgin worlds work; invalid candidates fail with subsystem diagnostics before adoption; no defaults are silently reseeded.",
+      "evidence_kind": "DTO validation",
+      "status": "planned"
+    },
+    {
+      "id": "V13",
+      "owner": "M2",
+      "requirements": [
+        "R14",
+        "R16"
+      ],
+      "title": "Capture is observation",
+      "setup_and_action": "Request repeated saves with no elapsed time, including committed receipts not yet consumed by the host.",
+      "acceptance": "No extra poll, cognition, event or physical change; all committed readable effects at the watermark belong to the capture.",
+      "evidence_kind": "sim + host",
+      "status": "planned"
+    },
+    {
+      "id": "V14",
+      "owner": "M3",
+      "requirements": [
+        "R14",
+        "R15",
+        "R16"
+      ],
+      "title": "Matched physical capture",
+      "setup_and_action": "Save mid-jump at nonzero host/sim residual and ordinary pre-capture wall debt while a custody threshold command is queued.",
+      "acceptance": "Accepted sim pose equals the authoritative body; residuals/debt remain distinct, no offline/preparation debt is added and resistance emits its threshold effect once.",
+      "evidence_kind": "fresh-process host continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V15",
+      "owner": "M3",
+      "requirements": [
+        "R15",
+        "R16"
+      ],
+      "title": "Late callback storm",
+      "setup_and_action": "After adoption deliver old cognition, Night, STT, TTS, PCM, microphone/backend-status and SpeechPresented callbacks.",
+      "acceptance": "No old voice, automatic utterance or domain effect enters the loaded generation, including reused IDs.",
+      "evidence_kind": "host/backend integration",
+      "status": "planned"
+    },
+    {
+      "id": "V16",
+      "owner": "M3",
+      "requirements": [
+        "R15",
+        "R29"
+      ],
+      "title": "Durable ordered saves",
+      "setup_and_action": "Reverse two same-slot write completions; inject IO failures and process death after payload, recovery-reference and active-reference publication/flush steps.",
+      "acceptance": "The latest authorized durable publication wins; an acknowledged prior reference/payload remains recoverable, uncertain publication is not reported as success and retention stays bounded.",
+      "evidence_kind": "backend fault injection",
+      "status": "planned"
+    },
+    {
+      "id": "V17",
+      "owner": "M3",
+      "requirements": [
+        "R13",
+        "R15",
+        "R29"
+      ],
+      "title": "Prepared adoption and retirement",
+      "setup_and_action": "Delay load preparation while the city runs, then inject staging/adoption failure and expensive old-world retirement.",
+      "acceptance": "Adoption resumes at the saved instant and swaps one coherent bundle; rollback includes clocks/UI; retirement does not create an unbudgeted frame stall.",
+      "evidence_kind": "host integration + measurement",
+      "status": "planned"
+    },
+    {
+      "id": "V18",
+      "owner": "M3",
+      "requirements": [
+        "R15",
+        "R16",
+        "R33"
+      ],
+      "title": "Presentation continuation",
+      "setup_and_action": "Save during speech/recording and on both sides of rat-percept and civic/well cue deadlines; later M10 extends this fixture with explicit dictation purposes and cancelled drafts.",
+      "acceptance": "Committed lines/history remain without repeated speech, unsent text stays a draft and late callbacks cannot broadcast it; semantic rat events and presented cues do not duplicate or vanish.",
+      "evidence_kind": "fresh-process host continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V19",
+      "owner": "M4",
+      "requirements": [
+        "R04",
+        "R08",
+        "R36"
+      ],
+      "title": "Layered body parity",
+      "setup_and_action": "Walk player and NPC through stairs, L-corners, landings, low headroom, closed portals and vertically overlapping rooms.",
+      "acceptance": "Both use actual supported routes and consistent collision/topology; no ground flattening, wall crossing or accidental cross-floor interaction.",
+      "evidence_kind": "sim + hidden-window drive",
+      "status": "planned"
+    },
+    {
+      "id": "V20",
+      "owner": "M4",
+      "requirements": [
+        "R04",
+        "R05"
+      ],
+      "title": "Conservative route coverage",
+      "setup_and_action": "Add a usable roof/drop/jump or boundary shortcut absent from the ordinary NPC graph.",
+      "acceptance": "The permissive lower-bound model includes it or declines certification; graph shortest path is never mislabeled universal physical minimum.",
+      "evidence_kind": "geometry analysis",
+      "status": "planned"
+    },
+    {
+      "id": "V21",
+      "owner": "M4",
+      "requirements": [
+        "R03",
+        "R04",
+        "R05",
+        "R13"
+      ],
+      "title": "Movement-faithful advancement",
+      "setup_and_action": "Replay equal elapsed time with regular/jittered polling and a large requested development advance.",
+      "acceptance": "All accepted spans are spent in ordered substeps; route/custody/object results agree within stated tolerance and dropped spans are reported.",
+      "evidence_kind": "deterministic replay",
+      "status": "planned"
+    },
+    {
+      "id": "V22",
+      "owner": "M5",
+      "requirements": [
+        "R06",
+        "R38"
+      ],
+      "title": "Local perception",
+      "setup_and_action": "Put listeners/observers across walls, floors and changing doors, with vertical gaze/fog/darkness; vary arrivals during capture versus STT latency.",
+      "acceptance": "Perception follows the declared policy without radius-only witnesses; utterance-time coverage controls delayed speech, partial hearing grants no whole proposition and badges disclose no unseen audience count.",
+      "evidence_kind": "sim + visual/audio evidence",
+      "status": "planned"
+    },
+    {
+      "id": "V23",
+      "owner": "M5",
+      "requirements": [
+        "R06",
+        "R24"
+      ],
+      "title": "Temporal sight gap",
+      "setup_and_action": "Use identical visible endpoints with an intermediate pillar occlusion, door closure or hidden exchange.",
+      "acceptance": "Continuous observation breaks; catch-up endpoints cannot grant unseen intermediate acts or restore continuity retroactively.",
+      "evidence_kind": "deterministic spatial replay",
+      "status": "planned"
+    },
+    {
+      "id": "V24",
+      "owner": "M5",
+      "requirements": [
+        "R06",
+        "R09",
+        "R24"
+      ],
+      "title": "Observable object identity",
+      "setup_and_action": "Show two similar bundles, pocket the packet or hold it as an unrendered second item.",
+      "acceptance": "A visible person does not expose hidden inventory IDs; observation tracks strengthen only through supported features/handling and later examination.",
+      "evidence_kind": "sim + host presentation",
+      "status": "planned"
+    },
+    {
+      "id": "V25",
+      "owner": "M5",
+      "requirements": [
+        "R06",
+        "R07",
+        "R33",
+        "R34"
+      ],
+      "title": "Last known information",
+      "setup_and_action": "Move a person/object unseen while the player and an officer consult existing records.",
+      "acceptance": "Both retain last learned locations/times; no hidden transform or movement task leaks into their displays or leads.",
+      "evidence_kind": "knowledge-boundary tests",
+      "status": "planned"
+    },
+    {
+      "id": "V26",
+      "owner": "M6",
+      "requirements": [
+        "R08",
+        "R09",
+        "R36"
+      ],
+      "title": "Keys and thresholds",
+      "setup_and_action": "Use a wrong, borrowed, copied-pattern, lost or swallowed unique key against current lock/bar states.",
+      "acceptance": "Physical match and lawful permission remain separate; identity and actual threshold state survive transfer/recovery/save.",
+      "evidence_kind": "sim + host",
+      "status": "planned"
+    },
+    {
+      "id": "V27",
+      "owner": "M6",
+      "requirements": [
+        "R08",
+        "R17"
+      ],
+      "title": "Scoped entry",
+      "setup_and_action": "Accept loft consent, then attempt rack/desk entry outside its scope or after revocation.",
+      "acceptance": "Only covered current acts proceed; later order-backed adapters use real authority and delivery rather than a warrant boolean.",
+      "evidence_kind": "permission integration",
+      "status": "planned"
+    },
+    {
+      "id": "V28",
+      "owner": "M6",
+      "requirements": [
+        "R08",
+        "R10",
+        "R26"
+      ],
+      "title": "Keeper and loan availability",
+      "setup_and_action": "Request entry/key loan while its keeper is away, occupied or relieved.",
+      "acceptance": "A real undertaking, journey and bounded availability policy handles it; the key/keeper is not duplicated or teleported.",
+      "evidence_kind": "sim + interface",
+      "status": "planned"
+    },
+    {
+      "id": "V29",
+      "owner": "M6",
+      "requirements": [
+        "R04",
+        "R08",
+        "R35"
+      ],
+      "title": "Door operation interruption",
+      "setup_and_action": "Close/bar a portal during traversal or interrupt an opening while another operation claims it.",
+      "acceptance": "Physical state, nav revision, access receipt and resource ownership remain coherent; retries retain overall progress budgets.",
+      "evidence_kind": "deterministic continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V30",
+      "owner": "M7",
+      "requirements": [
+        "R09",
+        "R14",
+        "R36"
+      ],
+      "title": "Unique-object lineage",
+      "setup_and_action": "Transfer, pocket, wet, transform, swallow and recover a specimen while saving across each boundary.",
+      "acceptance": "One physical identity or explicit lineage persists; neither quantity conservation nor custody history silently resets.",
+      "evidence_kind": "inventory continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V31",
+      "owner": "M7",
+      "requirements": [
+        "R09",
+        "R11",
+        "R35"
+      ],
+      "title": "Examination semantics",
+      "setup_and_action": "Interrupt a fracture/document comparison, swap an object revision and attempt to remove its reserved original.",
+      "acceptance": "Results identify actual method/objects/revisions; incomplete work produces no completed match, and invalidated drafts remain understandable.",
+      "evidence_kind": "sim + interface",
+      "status": "planned"
+    },
+    {
+      "id": "V32",
+      "owner": "M7",
+      "requirements": [
+        "R09",
+        "R11",
+        "R37"
+      ],
+      "title": "Readable originals and copies",
+      "setup_and_action": "Read an operative document, make an authenticated copy, then alter or lose the original.",
+      "acceptance": "The record distinguishes author, authenticity, visible text, copy act and source; possession or handwriting resemblance alone is insufficient.",
+      "evidence_kind": "authoring + sim",
+      "status": "planned"
+    },
+    {
+      "id": "V33",
+      "owner": "M8",
+      "requirements": [
+        "R10",
+        "R35",
+        "R40"
+      ],
+      "title": "Duty priority and cover",
+      "setup_and_action": "Combine urgent needs, conversations, curfew, examinations, escort and post relief.",
+      "acceptance": "One arbiter owns routes/resources, maintains required cover and reports bounded interruption without inventing staff.",
+      "evidence_kind": "deterministic sim",
+      "status": "planned"
+    },
+    {
+      "id": "V34",
+      "owner": "M8",
+      "requirements": [
+        "R10",
+        "R13",
+        "R31",
+        "R33"
+      ],
+      "title": "Appointment without player",
+      "setup_and_action": "A necessary attendee is delayed while the player reads elsewhere through the meeting window.",
+      "acceptance": "The meeting uses only permitted present/recorded material, records its actual outcome and supports later business without pausing or teleporting.",
+      "evidence_kind": "sim + interface",
+      "status": "planned"
+    },
+    {
+      "id": "V35",
+      "owner": "M8",
+      "requirements": [
+        "R05",
+        "R06",
+        "R10"
+      ],
+      "title": "Complete timed demonstration",
+      "setup_and_action": "Observe departure/return but have the stand-in skip hidden work; vary mechanism load and historical sighting travel.",
+      "acceptance": "Only covered acts count; endpoints do not certify hidden steps, and the sighting interval includes actual mechanism/travel uncertainty.",
+      "evidence_kind": "replay + measurement",
+      "status": "planned"
+    },
+    {
+      "id": "V36",
+      "owner": "M8",
+      "requirements": [
+        "R26",
+        "R27",
+        "R36"
+      ],
+      "title": "Finite agreements and services",
+      "setup_and_action": "Let two agreements and ordinary spending compete for the same funds; accept a calendar undertaking and single-use cargo task, interrupt and reload.",
+      "acceptance": "Actual resources fund at most one effect; outstanding obligations, finite terms and redemption persist. M9 later integrates formal disclosure/verification, exercised by V40/V58.",
+      "evidence_kind": "deterministic continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V37",
+      "owner": "M8",
+      "requirements": [
+        "R10",
+        "R24",
+        "R34"
+      ],
+      "title": "Learned strategy triggers",
+      "setup_and_action": "Send one warning to an actor and keep an identical warning only in the player's private notes.",
+      "acceptance": "Only the actually received fact changes an allowed bounded activity strategy; off-stage deterministic duties remain independent of cognition.",
+      "evidence_kind": "knowledge + activity integration",
+      "status": "planned"
+    },
+    {
+      "id": "V38",
+      "owner": "M9",
+      "requirements": [
+        "R07",
+        "R11",
+        "R22",
+        "R25"
+      ],
+      "title": "Minimal sufficient evidence",
+      "setup_and_action": "Remove each essential support, add duplicate retellings, and distinguish physical, admission, recovery and clearance requests.",
+      "acceptance": "Each finding downgrades correctly; opportunity, recovery, theft, assault and uncorroborated continuous presence remain distinct.",
+      "evidence_kind": "data-driven rule tests",
+      "status": "planned"
+    },
+    {
+      "id": "V39",
+      "owner": "M9",
+      "requirements": [
+        "R11",
+        "R34"
+      ],
+      "title": "Cross-case binding attack",
+      "setup_and_action": "Mix valid packets, wallet dates, statements and intervals from different incidents or named holders.",
+      "acceptance": "Shared typed actor/object/event/interval bindings prevent unrelated valid facts satisfying one conjunction.",
+      "evidence_kind": "adversarial rule tests",
+      "status": "planned"
+    },
+    {
+      "id": "V40",
+      "owner": "M9",
+      "requirements": [
+        "R11",
+        "R21",
+        "R34"
+      ],
+      "title": "Hidden-cause noninterference",
+      "setup_and_action": "Keep admissible inputs identical but change unlearned planting, whispers and retelling histories.",
+      "acceptance": "Official findings and diagnostics stay identical until new evidence establishes the difference; no private provenance oracle appears.",
+      "evidence_kind": "paired-world rule tests",
+      "status": "planned"
+    },
+    {
+      "id": "V41",
+      "owner": "M9",
+      "requirements": [
+        "R07",
+        "R10",
+        "R11",
+        "R31"
+      ],
+      "title": "Autonomous supported account",
+      "setup_and_action": "With player/cognition absent, an informed NPC lodges their own account and an uninformed NPC attempts the same.",
+      "acceptance": "Only actual holdings/authorised records can be submitted; confirmation and recipients are recorded without granting hidden history.",
+      "evidence_kind": "off-stage deterministic sim",
+      "status": "planned"
+    },
+    {
+      "id": "V42",
+      "owner": "M9",
+      "requirements": [
+        "R11",
+        "R16",
+        "R20",
+        "R36"
+      ],
+      "title": "Amended findings",
+      "setup_and_action": "Confirm a false account, later correct it and reopen after save/load.",
+      "acceptance": "Old submissions stay immutable, new grounds form an amendment and downstream authority receives one explicit change event.",
+      "evidence_kind": "deterministic continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V43",
+      "owner": "M10",
+      "requirements": [
+        "R12",
+        "R13",
+        "R30",
+        "R34"
+      ],
+      "title": "Input parity and comprehension",
+      "setup_and_action": "Perform the same confirmed action/channel by voice, typing and controls; mis-transcribe a name and alter only hidden picker/claim data.",
+      "acceptance": "Formal actions use the same validated service, unconfirmed accusations do not lodge, already spoken words stay heard and hidden state cannot change learned choices or resolution diagnostics.",
+      "evidence_kind": "host + human + live language",
+      "status": "planned"
+    },
+    {
+      "id": "V44",
+      "owner": "M10",
+      "requirements": [
+        "R12",
+        "R13",
+        "R31"
+      ],
+      "title": "Stale live draft",
+      "setup_and_action": "Keep a selected bundle open while its recipient leaves, item moves or grant changes.",
+      "acceptance": "Commit-time validation is specific, preserves drafts and does not invalidate on unrelated crowd revisions or pause the city.",
+      "evidence_kind": "hidden-window drive + human",
+      "status": "planned"
+    },
+    {
+      "id": "V45",
+      "owner": "M10",
+      "requirements": [
+        "R16",
+        "R21",
+        "R34",
+        "R38"
+      ],
+      "title": "Sensitive audience change",
+      "setup_and_action": "Compare a perceived door opening with paired worlds differing only by an undetected listener; cancel/restore explicit dictation while its transcript is delayed.",
+      "acceptance": "Only perceived/reported changes interrupt unemitted presentation; hidden listeners do not change UI or submission outcome. Sealed delivery emits no speech, old spoken effects persist and drafts never fall back to public chat.",
+      "evidence_kind": "perception + interface integration",
+      "status": "planned"
+    },
+    {
+      "id": "V46",
+      "owner": "M10",
+      "requirements": [
+        "R13",
+        "R31",
+        "R33"
+      ],
+      "title": "Unknown off-stage result",
+      "setup_and_action": "The notebook stays open past review time while the reviewer is blocked elsewhere.",
+      "acceptance": "Display says the scheduled time passed with outcome unconfirmed; held/cancelled/postponed updates require a real received report.",
+      "evidence_kind": "host + knowledge boundary",
+      "status": "planned"
+    },
+    {
+      "id": "V47",
+      "owner": "M11",
+      "requirements": [
+        "R11",
+        "R17",
+        "R20"
+      ],
+      "title": "Independent authority and grounds",
+      "setup_and_action": "Return property, centrally recall a mandate still in transit, deliver recall before an older copy and request a named second valid ground.",
+      "acceptance": "Registry issuance, finite local grants, received tombstones and holds remain distinct; no psychic cancellation, wrong-order lookup, assault erasure, revived execution or deadline reset occurs.",
+      "evidence_kind": "deterministic law",
+      "status": "planned"
+    },
+    {
+      "id": "V48",
+      "owner": "M11",
+      "requirements": [
+        "R17",
+        "R26",
+        "R40"
+      ],
+      "title": "Station and hold declarations",
+      "setup_and_action": "Validate occupied stations, legacy inmates, sponsorship, deferred review and intake/handover/extension just before, exactly at and after an office cutoff.",
+      "acceptance": "Capacity/care/egress and pre-delivered defaults are explicit; exclusive cutoff is deterministic, handover preserves received recall and no delay or exact-boundary extension renews expired authority.",
+      "evidence_kind": "data validation + law",
+      "status": "planned"
+    },
+    {
+      "id": "V49",
+      "owner": "M11",
+      "requirements": [
+        "R07",
+        "R17",
+        "R32"
+      ],
+      "title": "Ordinary law migration",
+      "setup_and_action": "Disable the quest and exercise garbled-hearsay summons, witnessed watch intervention, posted fees, debt and authored inmates.",
+      "acceptance": "Each uses its proper capability/provenance; watch cause and prisoner handover meet the declared next-bell procedure; no invented finding or accidental release.",
+      "evidence_kind": "base-game regression",
+      "status": "planned"
+    },
+    {
+      "id": "V50",
+      "owner": "M12",
+      "requirements": [
+        "R10",
+        "R18",
+        "R19"
+      ],
+      "title": "Issuance to actual arrest",
+      "setup_and_action": "Issue an order with no informed executor, distant player and unavailable cognition; provide a supported lead and feasible resources.",
+      "acceptance": "Ordinary checking/delivery, assignment, search, local seizure, route escort and handover all occur through production services.",
+      "evidence_kind": "off-stage end-to-end",
+      "status": "planned"
+    },
+    {
+      "id": "V51",
+      "owner": "M12",
+      "requirements": [
+        "R18",
+        "R29",
+        "R35"
+      ],
+      "title": "Fair blocked dispatch",
+      "setup_and_action": "Queue three orders including an impossible oldest lead, a feasible later one and a stream of new ordinary work.",
+      "acceptance": "Stable age/priority and persisted retry/parking prevent starvation or monopolisation; exhausted pre-seizure claims are released.",
+      "evidence_kind": "deterministic continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V52",
+      "owner": "M12",
+      "requirements": [
+        "R04",
+        "R06",
+        "R19",
+        "R35"
+      ],
+      "title": "Physical pursuit and escort",
+      "setup_and_action": "Lose sight, turn L-corners, climb stairs and meet opposing escorts/temporary or permanent blockers.",
+      "acceptance": "Search uses learned leads; both bodies move within speed/collision limits, preserve overall recovery budgets and never snap through walls.",
+      "evidence_kind": "sim + hidden-window drive",
+      "status": "planned"
+    },
+    {
+      "id": "V53",
+      "owner": "M12",
+      "requirements": [
+        "R18",
+        "R19",
+        "R40"
+      ],
+      "title": "Capacity and overnight cover",
+      "setup_and_action": "Two escorts compete for one intake slot while multiple arrests and Snuffing threaten keeper/post coverage.",
+      "acceptance": "Slot reservation/handover is unique, physical inmates count, available relief is real and occupied stations retain the declared care policy.",
+      "evidence_kind": "sim + content acceptance",
+      "status": "planned"
+    },
+    {
+      "id": "V54",
+      "owner": "M12",
+      "requirements": [
+        "R16",
+        "R17",
+        "R19"
+      ],
+      "title": "Coordination races",
+      "setup_and_action": "Separate central recall from actual officer/keeper receipt during search/escort/intake; attach a second ground, race autonomous seizure and reload.",
+      "acceptance": "Distant behavior changes only after available causes; local tombstones/cutoffs remain binding, one shared execution/custody persists and independent grounds keep original deadlines.",
+      "evidence_kind": "deterministic continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V55",
+      "owner": "M12",
+      "requirements": [
+        "R09",
+        "R20",
+        "R40"
+      ],
+      "title": "Release and booked property",
+      "setup_and_action": "Expire a hold while a door is blocked and an offered packet's booking transfer is pending; replace its keeper.",
+      "acceptance": "Legal release, restraint removal and actual egress are distinct; property custody/ownership/return claims persist with explicit failed or completed receipts.",
+      "evidence_kind": "sim + host",
+      "status": "planned"
+    },
+    {
+      "id": "V56",
+      "owner": "M13",
+      "requirements": [
+        "R01",
+        "R11",
+        "R28"
+      ],
+      "title": "Independent author proves reuse",
+      "setup_and_action": "An author builds two differently structured disputes, including one with no offender, plus pursuit and agreement fixtures.",
+      "acceptance": "Normal UI/headless services work from data; no branch in the engine, evaluator or guard service checks a case/actor ID to make them function.",
+      "evidence_kind": "author demonstration",
+      "status": "planned"
+    },
+    {
+      "id": "V57",
+      "owner": "M13",
+      "requirements": [
+        "R01",
+        "R03",
+        "R28",
+        "R34"
+      ],
+      "title": "Pack validation and tooling",
+      "setup_and_action": "Load packs with dangling roles, dates, references, essential inaccessible locations, missing adapters or private-fact leaks.",
+      "acceptance": "Actionable source diagnostics appear before partial installation; documented shortcuts use real services and do not patch clues into saves.",
+      "evidence_kind": "authoring validation",
+      "status": "planned"
+    },
+    {
+      "id": "V58",
+      "owner": "M13",
+      "requirements": [
+        "R01",
+        "R07",
+        "R14",
+        "R15",
+        "R29",
+        "R36"
+      ],
+      "title": "Foundation continuation gate",
+      "setup_and_action": "Save/restore independent fixtures across every new subsystem, after more than 256 mints/six holdings and under declared archive-quota saturation and closed/reopened inquiries.",
+      "acceptance": "All owners extend continuation; essential/transitive evidence remains addressable without unlimited hot news, admission fails before unsupported installation and full foundation acceptance precedes Tallage content.",
+      "evidence_kind": "fresh-process integrated acceptance",
+      "status": "planned"
+    },
+    {
+      "id": "V59",
+      "owner": "M14",
+      "requirements": [
+        "R03",
+        "R04",
+        "R28",
+        "R30"
+      ],
+      "title": "A convincing ordinary district",
+      "setup_and_action": "Compare candidate plans/sections and traverse ordinary work, cart and pedestrian paths with the quest disabled.",
+      "acceptance": "Interiors and private links have mundane purposes; entrances/nav/collision/housing agree and the detour does not depend on invisible restrictions.",
+      "evidence_kind": "site review + human + drive",
+      "status": "planned"
+    },
+    {
+      "id": "V60",
+      "owner": "M14",
+      "requirements": [
+        "R05",
+        "R06",
+        "R28"
+      ],
+      "title": "Historical route certificate",
+      "setup_and_action": "Measure complete private work, conservative public alternatives, Lise's sighting endpoints and Warin's cry-alignment coverage.",
+      "acceptance": "The report meets the advance-selected margin/uncertainty relation under established historical conditions, or the strong claim remains unaccepted.",
+      "evidence_kind": "geometry + temporal evidence",
+      "status": "planned"
+    },
+    {
+      "id": "V61",
+      "owner": "M15",
+      "requirements": [
+        "R02",
+        "R03",
+        "R24",
+        "R36"
+      ],
+      "title": "One established history",
+      "setup_and_action": "Open different fresh civil dates/offices, then advance a late developer start from the same anchor, reload and discover out of order.",
+      "acceptance": "Past history and resolved future offices install once; hold expiry is independent, basic retrieval moves real property, and late/load operations never re-anchor deadlines.",
+      "evidence_kind": "content continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V62",
+      "owner": "M15",
+      "requirements": [
+        "R09",
+        "R21",
+        "R23",
+        "R37",
+        "R39"
+      ],
+      "title": "Operative papers and accounts",
+      "setup_and_action": "Inspect the genuine pledge, forged release, counterfoil, lodged Lise account and restricted Odo detail.",
+      "acceptance": "Exact text, parties, wallet identity/dating, unpaid balance and disclosure provenance support the promised noncircular routes without extra mandatory witnesses.",
+      "evidence_kind": "content/schema review",
+      "status": "planned"
+    },
+    {
+      "id": "V63",
+      "owner": "M15",
+      "requirements": [
+        "R02",
+        "R28",
+        "R32",
+        "R37"
+      ],
+      "title": "Stable cast in the city",
+      "setup_and_action": "Install Mott's stable tier/duties and the existing seven-person cast with their normal homes/roles.",
+      "acceptance": "No required ambient-only reference remains, cast knowledge is intentionally seeded and ordinary occupations continue around the incident.",
+      "evidence_kind": "lore validation + sim",
+      "status": "planned"
+    },
+    {
+      "id": "V64",
+      "owner": "M16",
+      "requirements": [
+        "R11",
+        "R22",
+        "R37"
+      ],
+      "title": "Early physical full case",
+      "setup_and_action": "Recover the packet early; obtain origin, fracture match and the same wallet's dating, with no confession or surveillance.",
+      "acceptance": "E01's sole continuous encounter and bound authenticated chain support original theft and assault; opportunity alone is insufficient.",
+      "evidence_kind": "full content playthrough",
+      "status": "planned"
+    },
+    {
+      "id": "V65",
+      "owner": "M16",
+      "requirements": [
+        "R06",
+        "R11",
+        "R25"
+      ],
+      "title": "Warin-only success",
+      "setup_and_action": "Establish Averil/Gile's independent continued observation and cry relation, then stop investigating Corin.",
+      "acceptance": "Warin can be formally cleared under the supported procedure, and the game recognises a legitimate partial achievement without inventing a culprit.",
+      "evidence_kind": "full content playthrough",
+      "status": "planned"
+    },
+    {
+      "id": "V66",
+      "owner": "M16",
+      "requirements": [
+        "R10",
+        "R13",
+        "R25",
+        "R31",
+        "R33"
+      ],
+      "title": "Public review while life continues",
+      "setup_and_action": "Lodge partial/full bundles or leave NPCs to submit supported material while the player misses High Wick.",
+      "acceptance": "The actual review can be limited, delayed or successful; only lodged evidence counts and later records report its real outcome.",
+      "evidence_kind": "off-stage content playthrough",
+      "status": "planned"
+    },
+    {
+      "id": "V67",
+      "owner": "M17",
+      "requirements": [
+        "R08",
+        "R11",
+        "R23",
+        "R31"
+      ],
+      "title": "Late physical recovery",
+      "setup_and_action": "Miss retrieval/review; Corin refuses wallet comparison and the bargain, Lise is absent and the rack is empty.",
+      "acceptance": "The logged fragment and retrievable wallet deposition permit comparison; its match plus Lise's prior identification of the particular desk and failed rack search permit scoped desk access before packet recovery.",
+      "evidence_kind": "full content playthrough",
+      "status": "planned"
+    },
+    {
+      "id": "V68",
+      "owner": "M17",
+      "requirements": [
+        "R11",
+        "R21",
+        "R34",
+        "R38"
+      ],
+      "title": "Private admission",
+      "setup_and_action": "Confirm named acts and independently supplied detail; contrast an established leading leak with an unlearned secret leak.",
+      "acceptance": "Only supported corroboration is certified; sealed delivery is actual, hidden histories do not become diagnostics and later established contamination can amend findings.",
+      "evidence_kind": "full content playthrough",
+      "status": "planned"
+    },
+    {
+      "id": "V69",
+      "owner": "M17",
+      "requirements": [
+        "R06",
+        "R11",
+        "R24",
+        "R31"
+      ],
+      "title": "Watch the moving packet",
+      "setup_and_action": "Follow actual retrieval, warn Corin through a real recipient, lose sight, or observe a planted/handed-over similar bundle.",
+      "acceptance": "Bounded strategy changes only from learned warnings; continuity and identity support handling at most unless further evidence establishes the original acts.",
+      "evidence_kind": "spatial content playthrough",
+      "status": "planned"
+    },
+    {
+      "id": "V70",
+      "owner": "M17",
+      "requirements": [
+        "R20",
+        "R21",
+        "R26",
+        "R27"
+      ],
+      "title": "Hush and sponsorship terms",
+      "setup_and_action": "Contrast legitimate sealed restitution with a hush bundle withheld even from sealed institutional delivery; let another witness disclose and miss a sponsored report.",
+      "acceptance": "Counterparties, real payments and finite terms remain distinct; third-party speech is not player breach, forbidden hush terms gain no automatic legal remedy, and sponsorship never becomes innocence or a renewed hold.",
+      "evidence_kind": "full content playthrough",
+      "status": "planned"
+    },
+    {
+      "id": "V71",
+      "owner": "M17",
+      "requirements": [
+        "R02",
+        "R13",
+        "R23",
+        "R31"
+      ],
+      "title": "Exploration and interruption",
+      "setup_and_action": "Find the passage/packet first, read through events, interrupt a search and return after a day.",
+      "acceptance": "Discovery is retained without reseeding, missed observations remain missed and at least one supported complete route still exists.",
+      "evidence_kind": "slow/exploratory human + replay",
+      "status": "planned"
+    },
+    {
+      "id": "V72",
+      "owner": "M18",
+      "requirements": [
+        "R17",
+        "R18",
+        "R19",
+        "R20"
+      ],
+      "title": "Consequences happen elsewhere",
+      "setup_and_action": "Issue/amend orders while Corin, Warin and the player are in different districts; revisit after an office/day.",
+      "acceptance": "Actual dispatch, custody, release and corrections occur or remain honestly blocked; learned records distinguish orders from completed arrests.",
+      "evidence_kind": "longitudinal content replay",
+      "status": "planned"
+    },
+    {
+      "id": "V73",
+      "owner": "M18",
+      "requirements": [
+        "R09",
+        "R26",
+        "R27",
+        "R39"
+      ],
+      "title": "Redemption and earned service",
+      "setup_and_action": "Reject forged collection while the pledge remains unpaid, then supply genuine payment and redeem Warin's cargo favour twice.",
+      "acceptance": "No free return follows forgery alone; authorised delivery conserves tools/funds and one-use service requires real permission/resources and fulfils once.",
+      "evidence_kind": "content economy continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V74",
+      "owner": "M18",
+      "requirements": [
+        "R07",
+        "R08",
+        "R20",
+        "R33",
+        "R36"
+      ],
+      "title": "Aftermath and reopening",
+      "setup_and_action": "Let gossip/night work run, change who learns the correction, revisit Lise's conditional passage grant/restriction and reopen after loading.",
+      "acceptance": "Actual knowledge drives responses and scoped access; learned geography persists, and amendments do not reset evidence, money, actors or completed orders.",
+      "evidence_kind": "multi-day continuation",
+      "status": "planned"
+    },
+    {
+      "id": "V75",
+      "owner": "M19",
+      "requirements": [
+        "R13",
+        "R14",
+        "R15",
+        "R16",
+        "R29",
+        "R36"
+      ],
+      "title": "Whole delivery endurance",
+      "setup_and_action": "Run representative complete paths over multiple game days and save before/after every decisive boundary.",
+      "acceptance": "Full suites and fresh-process continuation pass; retention stays bounded without dropping referenced evidence, renewing duties or losing city state.",
+      "evidence_kind": "release integration",
+      "status": "planned"
+    },
+    {
+      "id": "V76",
+      "owner": "M19",
+      "requirements": [
+        "R04",
+        "R12",
+        "R30",
+        "R31",
+        "R37"
+      ],
+      "title": "Human investigation",
+      "setup_and_action": "Observe five to eight formative testers across voice/keyboard, familiarity and slow/exploratory styles.",
+      "acceptance": "They explain their reconstruction, distinguish opportunity from identification, understand pending actions and find the spatial/social work worth doing; concrete failures drive revision.",
+      "evidence_kind": "human formative sessions",
+      "status": "planned"
+    },
+    {
+      "id": "V77",
+      "owner": "M19",
+      "requirements": [
+        "R07",
+        "R12",
+        "R21",
+        "R30",
+        "R34"
+      ],
+      "title": "Live language boundaries",
+      "setup_and_action": "Exercise holders/non-holders, evasions, specific admissions, false accusations and disclosure with live providers.",
+      "acceptance": "Models neither invent physical results nor leak sealed history; deterministic confirmation/receipts preserve mechanics when prose varies or requests fail.",
+      "evidence_kind": "live-provider evidence",
+      "status": "planned"
+    },
+    {
+      "id": "V78",
+      "owner": "M19",
+      "requirements": [
+        "R13",
+        "R15",
+        "R29",
+        "R32"
+      ],
+      "title": "Performance and compatibility release",
+      "setup_and_action": "Compare accepted reference runs at default/2,000 citizens and separate 20,000 stress, including saves, retirement and concurrent ordinary work.",
+      "acceptance": "Agreed numeric time/memory budgets and declared behavior/content compatibility pass; known baseline stress cost is separated from added multiplicative cost.",
+      "evidence_kind": "measurement + release audit",
+      "status": "planned"
+    }
+  ]
+}

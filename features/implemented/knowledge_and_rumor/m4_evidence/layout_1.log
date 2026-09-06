@@ -1,0 +1,252 @@
+font alias=asset_id:AssetId<bevy_text::font::Font>{ index: 0, generation: 0} bytes=422280
+font alias=asset_id:AssetId<bevy_text::font::Font>{ index: 1, generation: 0} bytes=353196
+rows=1 frame=0 begin
+rows=1 frame=0 done 2.385614ms
+rows=1 frame=1 begin
+rows=1 frame=1 done 349.159µs
+rows=1 frame=2 begin
+rows=1 frame=2 done 230.808µs
+rows=1 frame=3 begin
+rows=1 frame=3 done 237.146µs
+rows=1 frame=4 begin
+rows=1 frame=4 done 310.885µs
+rows=1 frame=5 begin
+rows=1 frame=5 done 265.137µs
+rows=1 frame=6 begin
+rows=1 frame=6 done 285.115µs
+rows=1 frame=7 begin
+rows=1 frame=7 done 288.614µs
+rows=1 frame=8 begin
+rows=1 frame=8 done 2.126506ms
+rows=1 frame=9 begin
+rows=1 frame=9 done 243.373µs
+rows=1 frame=10 begin
+rows=1 frame=10 done 315.324µs
+rows=1 frame=11 begin
+rows=1 frame=11 done 256.238µs
+rows=1 frame=12 begin
+rows=1 frame=12 done 237.77µs
+rows=1 frame=13 begin
+rows=1 frame=13 done 256.078µs
+rows=1 frame=14 begin
+rows=1 frame=14 done 258.339µs
+rows=1 frame=15 begin
+rows=1 frame=15 done 184.858µs
+rows=1 frame=16 begin
+rows=1 frame=16 done 262.138µs
+rows=1 frame=17 begin
+rows=1 frame=17 done 213.488µs
+rows=1 frame=18 begin
+rows=1 frame=18 done 206.234µs
+rows=1 frame=19 begin
+rows=1 frame=19 done 222.996µs
+rows=1 frame=20 begin
+rows=1 frame=20 done 243.248µs
+rows=1 frame=21 begin
+rows=1 frame=21 done 237.824µs
+rows=1 frame=22 begin
+rows=1 frame=22 done 239.203µs
+rows=1 frame=23 begin
+rows=1 frame=23 done 279.695µs
+rows=1 frame=24 begin
+rows=1 frame=24 done 209.733µs
+rows=1 frame=25 begin
+rows=1 frame=25 done 246.661µs
+rows=1 frame=26 begin
+rows=1 frame=26 done 264.739µs
+rows=1 frame=27 begin
+rows=1 frame=27 done 251.524µs
+rows=1 frame=28 begin
+rows=1 frame=28 done 236.729µs
+rows=1 frame=29 begin
+rows=1 frame=29 done 264.074µs
+rows=1 frame=30 begin
+rows=1 frame=30 done 204.975µs
+rows=1 frame=31 begin
+rows=1 frame=31 done 355.338µs
+rows=1 frame=32 begin
+rows=1 frame=32 done 314.699µs
+rows=1 frame=33 begin
+rows=1 frame=33 done 223.319µs
+rows=1 frame=34 begin
+rows=1 frame=34 done 208.835µs
+rows=1 frame=35 begin
+rows=1 frame=35 done 291.021µs
+rows=1 frame=36 begin
+rows=1 frame=36 done 199.433µs
+rows=1 frame=37 begin
+rows=1 frame=37 done 255.796µs
+rows=1 frame=38 begin
+rows=1 frame=38 done 285.97µs
+rows=1 frame=39 begin
+rows=1 frame=39 done 201.663µs
+rows=1 frame=40 begin
+rows=1 frame=40 done 247.482µs
+rows=1 frame=41 begin
+rows=1 frame=41 done 300.828µs
+rows=1 frame=42 begin
+rows=1 frame=42 done 214.002µs
+rows=1 frame=43 begin
+rows=1 frame=43 done 222.332µs
+rows=1 frame=44 begin
+rows=1 frame=44 done 210.704µs
+rows=1 frame=45 begin
+rows=1 frame=45 done 179.311µs
+rows=1 frame=46 begin
+rows=1 frame=46 done 208.93µs
+rows=1 frame=47 begin
+rows=1 frame=47 done 209.38µs
+rows=1 frame=48 begin
+rows=1 frame=48 done 180.077µs
+rows=1 frame=49 begin
+rows=1 frame=49 done 165.11µs
+rows=1 frame=50 begin
+rows=1 frame=50 done 164.84µs
+rows=1 frame=51 begin
+rows=1 frame=51 done 258.594µs
+rows=1 frame=52 begin
+rows=1 frame=52 done 230.272µs
+rows=1 frame=53 begin
+rows=1 frame=53 done 239.093µs
+rows=1 frame=54 begin
+rows=1 frame=54 done 195.925µs
+rows=1 frame=55 begin
+rows=1 frame=55 done 245.803µs
+rows=1 frame=56 begin
+rows=1 frame=56 done 184.305µs
+rows=1 frame=57 begin
+rows=1 frame=57 done 300.153µs
+rows=1 frame=58 begin
+rows=1 frame=58 done 301.363µs
+rows=1 frame=59 begin
+rows=1 frame=59 done 347.554µs
+rows=1 frame=60 begin
+rows=1 frame=60 done 238.482µs
+rows=1 frame=61 begin
+rows=1 frame=61 done 261.114µs
+rows=1 frame=62 begin
+rows=1 frame=62 done 319.477µs
+rows=1 frame=63 begin
+rows=1 frame=63 done 299.17µs
+rows=1 frame=64 begin
+rows=1 frame=64 done 223.78µs
+rows=1 frame=65 begin
+rows=1 frame=65 done 220.96µs
+rows=1 frame=66 begin
+rows=1 frame=66 done 181.421µs
+rows=1 frame=67 begin
+rows=1 frame=67 done 192.51µs
+rows=1 frame=68 begin
+rows=1 frame=68 done 210.98µs
+rows=1 frame=69 begin
+rows=1 frame=69 done 180.697µs
+rows=1 frame=70 begin
+rows=1 frame=70 done 168.946µs
+rows=1 frame=71 begin
+rows=1 frame=71 done 254.247µs
+rows=1 frame=72 begin
+rows=1 frame=72 done 224.163µs
+rows=1 frame=73 begin
+rows=1 frame=73 done 215.858µs
+rows=1 frame=74 begin
+rows=1 frame=74 done 276.243µs
+rows=1 frame=75 begin
+rows=1 frame=75 done 290.916µs
+rows=1 frame=76 begin
+rows=1 frame=76 done 277.143µs
+rows=1 frame=77 begin
+rows=1 frame=77 done 352.145µs
+rows=1 frame=78 begin
+rows=1 frame=78 done 313.659µs
+rows=1 frame=79 begin
+rows=1 frame=79 done 350.122µs
+rows=1 frame=80 begin
+rows=1 frame=80 done 301.175µs
+rows=1 frame=81 begin
+rows=1 frame=81 done 272.294µs
+rows=1 frame=82 begin
+rows=1 frame=82 done 238.869µs
+rows=1 frame=83 begin
+rows=1 frame=83 done 208.979µs
+rows=1 frame=84 begin
+rows=1 frame=84 done 260.266µs
+rows=1 frame=85 begin
+rows=1 frame=85 done 325.299µs
+rows=1 frame=86 begin
+rows=1 frame=86 done 297.854µs
+rows=1 frame=87 begin
+rows=1 frame=87 done 329.377µs
+rows=1 frame=88 begin
+rows=1 frame=88 done 277.199µs
+rows=1 frame=89 begin
+rows=1 frame=89 done 239.063µs
+rows=1 frame=90 begin
+rows=1 frame=90 done 249.046µs
+rows=1 frame=91 begin
+rows=1 frame=91 done 213.379µs
+rows=1 frame=92 begin
+rows=1 frame=92 done 218.943µs
+rows=1 frame=93 begin
+rows=1 frame=93 done 2.367249ms
+rows=1 frame=94 begin
+rows=1 frame=94 done 268.598µs
+rows=1 frame=95 begin
+rows=1 frame=95 done 188.937µs
+rows=1 frame=96 begin
+rows=1 frame=96 done 222.579µs
+rows=1 frame=97 begin
+rows=1 frame=97 done 298.313µs
+rows=1 frame=98 begin
+rows=1 frame=98 done 212.864µs
+rows=1 frame=99 begin
+rows=1 frame=99 done 225.793µs
+rows=1 frame=100 begin
+rows=1 frame=100 done 214.305µs
+rows=1 frame=101 begin
+rows=1 frame=101 done 196.481µs
+rows=1 frame=102 begin
+rows=1 frame=102 done 175.774µs
+rows=1 frame=103 begin
+rows=1 frame=103 done 198.944µs
+rows=1 frame=104 begin
+rows=1 frame=104 done 184.573µs
+rows=1 frame=105 begin
+rows=1 frame=105 done 196.425µs
+rows=1 frame=106 begin
+rows=1 frame=106 done 225.002µs
+rows=1 frame=107 begin
+rows=1 frame=107 done 243.522µs
+rows=1 frame=108 begin
+rows=1 frame=108 done 326.241µs
+rows=1 frame=109 begin
+rows=1 frame=109 done 1.350868ms
+rows=1 frame=110 begin
+rows=1 frame=110 done 322.34µs
+rows=1 frame=111 begin
+rows=1 frame=111 done 227.678µs
+rows=1 frame=112 begin
+rows=1 frame=112 done 251.577µs
+rows=1 frame=113 begin
+rows=1 frame=113 done 232.539µs
+rows=1 frame=114 begin
+rows=1 frame=114 done 241.931µs
+rows=1 frame=115 begin
+rows=1 frame=115 done 183.352µs
+rows=1 frame=116 begin
+rows=1 frame=116 done 279.692µs
+rows=1 frame=117 begin
+rows=1 frame=117 done 276.118µs
+rows=1 frame=118 begin
+rows=1 frame=118 done 236.049µs
+rows=1 frame=119 begin
+rows=1 frame=119 done 232.563µs
+rows=1 Journal close: size=Vec2(84.0, 29.0), content=Vec2(84.0, 29.0), scroll=Vec2(0.0, 0.0)
+rows=1 Journal overlay: size=Vec2(1280.0, 720.0), content=Vec2(1020.0, 428.0), scroll=Vec2(0.0, 0.0)
+rows=1 Journal panel: size=Vec2(760.0, 135.0), content=Vec2(760.0, 135.0), scroll=Vec2(0.0, 0.0)
+rows=1 Journal entries: size=Vec2(708.0, 44.0), content=Vec2(708.0, 44.0), scroll=Vec2(0.0, 0.0)
+rows=1 max scroll=0, position=Vec2(0.0, 0.0), computed=Vec2(0.0, 0.0)
+atlas dimensions=(512, 512, 1)
+atlas dimensions=(512, 512, 1)
+atlas dimensions=(512, 512, 1)
+atlas dimensions=(512, 512, 1)
+PASS rows=1 small=false

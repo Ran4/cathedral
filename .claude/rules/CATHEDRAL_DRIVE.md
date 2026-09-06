@@ -46,6 +46,11 @@ must be set); it just never puts anything on it.
 Actions (each fires ~0.5 s after the previous):
 
 - `key <KeyCode>` — press a key, e.g. `key Escape`, `key KeyZ`, `key F5`.
+  `key KeyJ` opens/closes the journal of words the player has heard. It shows
+  each mouth, place, day and distance of telling, plus repeat/ward counts and
+  any live standing words. Scroll the entries with the mouse wheel; `click
+  Journal close` also closes it. Map, inventory and chat cannot open over the
+  journal; Esc takes over with settings and closes it.
 - `hold <KeyCode> <seconds>` — hold a key down, e.g. `hold KeyW 20` walks
   forward for 20 s; the next action fires after release. Caveat: a window
   focus loss mid-hold releases all keys (Bevy clears `ButtonInput` on
@@ -56,6 +61,22 @@ Actions (each fires ~0.5 s after the previous):
 - `shot <name>` — capture a PNG to `logs/latest_session/screenshots/<name>.png`.
 - `sleep <seconds>` — wait.
 - `wait-online` — block until the actor engine is ready (30 s timeout).
+- `seed-fact <fact_id> [-> <ward>]` — tell the player an authored `facts.json`
+  row so its receipt can be read without waiting for the city's next event.
+  Without a ward it comes at one remove from a nearby mouth when one is
+  present, through the real merge and receipt path. Both shipped handles,
+  `ashe.salt.short` and `vell.stall.pitch`, work. With a ward (e.g. `wick` or
+  `bell_and_sluice`) it goes into that ward's air so a pickup can be watched;
+  it does not immediately give the player a receipt. An unknown fact or ward
+  is diagnosed and skipped.
+- `raise-word <who> -> <topic> <said>` — start a word by a named mouth, with
+  the player at the head of its chain. The explicit arrow preserves display
+  names with spaces; the first word after it is the topic, the rest is the
+  sentence. Topics are `bed blood law omen stranger coin bread craft talk`;
+  an unrecognised tag falls back to `talk`. This stages what a scripted run
+  cannot otherwise request from an LLM: it bypasses the occasion gate and
+  office cap, while using the same claim constructor and its guardrails.
+  A handle matching nobody is logged and skipped rather than a fault.
 - `sound <sound_id>` — emit a catalog world sound, e.g. `sound town_bell` (the
   stand-in trigger for world causes the sim lacks).
 - `bell curfew | summons | knell <years>` — ring one of the two civic bells
@@ -157,6 +178,33 @@ Without a trailing `quit` the game exits ~2 s after the last action; a watchdog
 aborts after `CATHEDRAL_DRIVE_TIMEOUT` seconds (default 60). The `[drive]` lines
 are also mirrored into the session's `logs/latest_session/logs.jsonl` (source
 `"drive"`).
+
+Journal examples — each uses the real GPU without mapping a window:
+
+```sh
+# An attributed receipt on screen, then close and recapture the cursor.
+CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 \
+  CATHEDRAL_DRIVE='wait-online; seed-fact ashe.salt.short; sleep 2; key KeyJ; sleep 1; shot journal; key KeyJ; quit' cargo run
+
+# Tell Ilse the scripted lie; the fake reply raises a word from that occasion.
+CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE_TIMEOUT=90 \
+  CATHEDRAL_DRIVE='wait-online; frame Ilse 3; sleep 1; key Enter; type Grigor Ashe gave me short measure at the salt cellars yesterday; key Enter; sleep 12; shot lie_told; key KeyJ; sleep 1; shot lie_journal; quit' cargo run
+
+# The direct poke shows the standing line without waiting for a fake turn.
+CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 \
+  CATHEDRAL_DRIVE='wait-online; raise-word Ilse -> bed the reeve wife was at the Bellstand after curfew; sleep 3; shot stake_line; quit' cargo run
+
+# A ward-air pickup at 60×; an empty journal is a possible roll, not a failure.
+CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 \
+  CATHEDRAL_DRIVE='wait-online; key KeyT; key KeyT; seed-fact ashe.salt.short -> wick; sleep 20; key KeyJ; sleep 1; shot picked_up; quit' cargo run
+```
+
+`journal.png` shows the attributed quote; `lie_told.png` and `stake_line.png`
+show `A WORD OF YOURS IS GOING ROUND` and the named way to answer it.
+`frame Ilse 3` guarantees a hearer nearby for the lie. The air example is a
+probabilistic look: player curiosity is 0.35 per stir, and at 60× it shows
+pickups within a ward rather than travel across the city. Each new run moves
+`logs/latest_session`, so earlier shots stay under their own session directory.
 
 Example — open the settings menu, switch the STT pill, close it, exit:
 

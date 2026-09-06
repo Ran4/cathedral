@@ -1,0 +1,1 @@
+say {"target":"player","text":"I don't know about Grigor Ashe. A Wick Ward baker told me a butcher was taken at Slate Cistern two days past and lies in the Stone House; the Stone House is the place to ask."}

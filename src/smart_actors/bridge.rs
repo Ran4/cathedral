@@ -224,6 +224,26 @@ pub enum BridgeCommand {
         kind: String,
         anchor: String,
     },
+    /// Drive pokes for the journal and a word raised by a named mouth.
+    DebugSeedFact {
+        fact: String,
+        ward: Option<String>,
+    },
+    DebugRaiseWord {
+        who: String,
+        topic: String,
+        said: String,
+    },
+    /// The host's civic ropes announce their accepted peal to the sim.
+    Knell {
+        years: u32,
+        at: Position,
+    },
+    CivicPeal {
+        rope: cathedral_sim::CivicRope,
+        at: Position,
+        radius_m: f64,
+    },
     DebugScrub {
         anchor: String,
     },
@@ -234,7 +254,9 @@ pub enum BridgeCommand {
     /// CATHEDRAL_DRIVE `commit` action (`law_and_order.md` M5): finish the
     /// escort at the Stone House. `seize` alone only ever shows the walk, and
     /// the cell is the half of M5 worth looking at.
-    DebugCommit { target: Option<String> },
+    DebugCommit {
+        target: Option<String>,
+    },
     /// CATHEDRAL_DRIVE stand-in for world sounds the sim cannot cause yet
     /// (nothing rings the town bell: no clock, no calendar).
     DebugSound {

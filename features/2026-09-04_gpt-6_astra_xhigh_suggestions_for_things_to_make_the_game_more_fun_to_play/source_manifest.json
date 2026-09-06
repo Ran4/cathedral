@@ -1,0 +1,248 @@
+{
+  "inspection_date": "2026-09-04",
+  "head": "f56a2c306ec1523fc569c7c2de232b8c90d4d4ef",
+  "scope": "Local working tree, including uncommitted design work; no fresh gameplay run",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "c3bdcc377efbbf978b93ee4083c923a8d61337a61dcfbc4073acb9919907759e",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/AGENTS.md",
+      "sha256": "3c5decbeea9ab230cb55f19fc50b6bac0cebed65f7be672203ef2f2bd4a380d7",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/AGENTS.md",
+      "sha256": "d9090cf470fe945fba9449947c408d2f5131dbd0744126832a5abffad9d8d238",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "config.ron",
+      "sha256": "84d4227f57d8498295a6499a2e059659a461acb499f2aef9812ed34e2ad9f439",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/lib.rs",
+      "sha256": "9f5629b66e01a1c5a70451380fe0516c9ff12883921b239975b8ca319a3c07b9",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine.rs",
+      "sha256": "643443adbbaf9628cdea9960fdbc83c35b656302aea208e80a8b7202f1c21141",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/actions.rs",
+      "sha256": "a653117d83819f4c442c405fc7f0637ce4e9cbf5b90619b5b8387b803c80a556",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/world.rs",
+      "sha256": "d7db884905955db0549ad0faba053b72b11acb8caab41e40b763cc8071a4d587",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/round.rs",
+      "sha256": "e377b34f7e748ba318adb5388cba128d3bb3c7e705c48af70aca484b3284c7b8",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/clock.rs",
+      "sha256": "e8b605c34103065c4a11bce99ed2f72156d3f128d731a59bd4b426d928964586",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/night.rs",
+      "sha256": "d91e8708fa8728521f05329fa573c43ce771c09271bc2d379792b8af15b4f111",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/traits.rs",
+      "sha256": "0917eb8fd24a4df0860762bc051ba6401d38c451f8f8183fc573771b649101ee",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/snapshot.rs",
+      "sha256": "05810de3387935c218eab9811206e8a4c0c4c7cba6f1491ad4fb2cec78e65a2f",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/event.rs",
+      "sha256": "732f59951134a7eadca50dce41ebb60704eeae4454a9436df3b9c4ed3f1646c1",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/notices.rs",
+      "sha256": "9a38d7d8e4dce3e7acc719dab86f65b1678bfbdba5aba62893a96af560b36610",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/custody.rs",
+      "sha256": "b70c2605da4aa582314eda5677b00b14d42dac299f6ba8c8a3c5dd808eba58ca",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "crates/cathedral-sim/src/marks.rs",
+      "sha256": "3abf6acd79d831645d10e0cced10d472074dfbfb6a70a559c4185400ee96aafc",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "src/controller.rs",
+      "sha256": "4f3e2f28811bbd1051d1d707f9eef775abe960156d2ccf870997dda657999228",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "src/map.rs",
+      "sha256": "66bffe3e37e697532f7d544d4e73989057aca188d9361a00f984fe6b6ca54c25",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "src/smart_actors/local_engine.rs",
+      "sha256": "7117571fa542d2415e294418fd0dd2c4186f3f0481f9232862f15580a2ae7d03",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "src/smart_actors/interaction.rs",
+      "sha256": "676bae2f08010150dc119af48f97efbb7d9b9112584a147eefcf47f82c377bb5",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "src/smart_actors/chat.rs",
+      "sha256": "db07c681e16b75d78cc811013a8b0aca2b08ba517274e988556be36009d0acb3",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "src/smart_actors/inventory_ui.rs",
+      "sha256": "384cee7c2f87a15f370e97d5cecf0c04fcf9e7b797de2d50588095fc15692faa",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/characters/scribe_and_clerk/fc9rn_corin_copp.json",
+      "sha256": "805fcee7fa2a58270aeb76edd2e884488da0d77e3bf81ecd30e869ed7611c0e3",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/characters/money_dealer/fl5cp_lise_copp.json",
+      "sha256": "212dd62278a57142858c3afe6c2c60c61f7c433b775b1109356c187cafc06b76",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/characters/court_officer/fo6gl_odo_trask.json",
+      "sha256": "019f0e6f63575b5d6af905bdde640f4fb862176e75d5bfc43b68ef0005367bab",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/characters/cargo_worker/fw7ub_warin_underbridge.json",
+      "sha256": "330543d9a910bfa37f893afcef2b04844ee180b2ebddf3de918237a6d2522e98",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/characters/revenue_worker/fa8tn_averil_tarn.json",
+      "sha256": "31a9fe01f38b3ce6be0c82cfe6894a3f9f1097c1d84070886b146854a3d7dfd9",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/characters/scribe_and_clerk/fg4br_gile_of_brede.json",
+      "sha256": "63149213460d45540c61e5d19ce559d780366283bf602b275365f8d988be8a56",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/characters/bailiff_and_gaoler/p00a3_segwin_mott.json",
+      "sha256": "a94df16aca2d647e4e23174d5ca4e3ae9133581ad86a4f4c103b35e5d05e9007",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/places/00_city_plan.md",
+      "sha256": "0859be86d4c51072b0a4900fcb350fcfb0940bf6863e2dedb1b9bb1f75064cb9",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/places/02_canonical_gazetteer.md",
+      "sha256": "79990fbfb66ad008f298c9d89f4e3ff809e7d2d226f7623f1d073fad2a5cc75a",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "assets/world/areas.json",
+      "sha256": "32cb227b6014f34272e89e727dedf64ed64372fc26e735159cb7c84c06a92d54",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/the_dry_boatmen.md",
+      "sha256": "04b9fcd66ce59b3f512ab9e645f43332ac25469b355ba16f8b13bc7731aead78",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "lore/second_sun/00_canon.md",
+      "sha256": "a9821f981a3546b9832c4850647e30e122e9054ebbdc126bb8ba534e738feef8",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/knowledge_and_rumor/README.md",
+      "sha256": "e185cfa7a43b5944c30663dab093f9aed7e010bc2740b150d29759f6e4b276fd",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/knowledge_and_rumor/plan/M1.md",
+      "sha256": "6a7c78a89c7776147f88a5621847b0ba523b66239dbfe2487a74b4229dbe8b3a",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/knowledge_and_rumor/plan/M5.md",
+      "sha256": "9445e2e7db6cb4e5c7802a1bf34b61282fe029774e4c09292e627536aa1cd1ee",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/knowledge_and_rumor/m0_evidence/NOTES.md",
+      "sha256": "368bc5a45dbe4ef8f7a40356f2dbe3a29ce3ee5d0181c336f48302ab51cf83ec",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/keys_and_locked_places.md",
+      "sha256": "32cdeeb5c9def947c65b95fb245bac7a143c344494ed37e81bd1ce0b9651bdc0",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/implemented/law_and_order.md",
+      "sha256": "7914476485ec80215c9fcb4bef91a86cf4cc5f56c5fc6c8d0218669c865d2316",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/quest_the_bale_that_gained_forty_pounds/README.md",
+      "sha256": "a8823a7f6d88d9f86eaf01fa97f9bb25fa1cd64c480c6b3227c39e02f95f3ffc",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/quest_ring_a_dead_womans_name_at_marenstide/README.md",
+      "sha256": "8b871eaa8123c2693bfc36f6a2b4e86c5625e82137ef7d617f3703ce9dd30bd1",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/quest_secure_votes_for_a_drainage_funding_plan_before_the_rain/README.md",
+      "sha256": "17db9ff1a78ef5e446b8b8266c384a515893cf43eeae7e7e55ec8bbc502ee4ed",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    },
+    {
+      "path": "features/systemic_quest_suggestions.md",
+      "sha256": "9d3326c2a8a074a52c6566511e0b3d37e59bfcc08b12eeee9db79da84cc7d022",
+      "scope": "status, relevant sections or representative code inspected; not a full-file audit"
+    }
+  ],
+  "images": [
+    {
+      "file": "figures/reference_image.png",
+      "source": "docs/reference_image.png",
+      "altered": false,
+      "sha256": "18d0c2d1461b60abd6f0be0f9bb7286453a6f2b532e3b285df4cdd77a6d9e568"
+    }
+  ],
+  "diagrams": "Nine original investigation diagrams; PNG and SVG; proposed topology and timing, not game measurements",
+  "generation_inputs": {
+    "manuscript.md": "6a17b87910daab23815ed62b02aaae75e2bf55b1e2a71923cc91229716b445f0",
+    "generate_gdd.py": "571e639df5e54f6d5a803efa87f377bca130864eb3a730f5dc112bd6f655f119",
+    "quest_figures.py": "e88ca66be06b136ab4f5d642f0f7b1781f0bbc9169b2573dab79b1f8dd297d4d",
+    "quest_model.json": "ed23a36da1323b1f21b92709a7b3cac2ac2f47dff589dcbeec0fba9a83fa87c6",
+    "validate_quest.py": "3a9004d8c998d08d3675b0b32f5c31fe70b71b1bc50ec5bf2cd940c0fa8e19c5"
+  }
+}

@@ -1,0 +1,3 @@
+```
+say {"target": "player", "text": "Bertran Hobbe? I don't know the name. What I have heard — and it's only carried talk, mind — is that some animal worker's mill here in the Weigh Ward sent short weight to the Wickmarket bakehouse, and the flour was cut with bean meal besides. If it's truth you're after, ask at the bakehouse what came into their bins, or put it to the miller himself and watch his face."}
+```

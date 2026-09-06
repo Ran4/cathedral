@@ -1,0 +1,17 @@
+{
+  "checked_at_utc": "2026-09-05T12:01:52.422872+00:00",
+  "head_observed": "0504d29480762be80e67ab3c2f0a7552ec505a5f",
+  "scope": "Local planning structure, generated traceability and current site-source hashes only.",
+  "game_acceptance": "Not run or certified by this tool; all 78 scenarios remain planned.",
+  "milestones": 20,
+  "requirements": 40,
+  "planned_scenarios": 78,
+  "markdown_files_checked": 37,
+  "local_links_and_anchors_checked": 745,
+  "external_links_not_fetched": 0,
+  "site_source_hashes_checked": 2,
+  "original_model_hashes_checked": 1,
+  "design_probe_assertions_recorded": 17,
+  "plan_markdown_words": 55936,
+  "result": "passed"
+}

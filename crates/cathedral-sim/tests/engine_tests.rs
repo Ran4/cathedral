@@ -636,7 +636,10 @@ fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
         (slices - slices.round()).abs() < 1e-6,
         "a whole number of slices"
     );
-    assert_eq!(engine.world().characters[&mover].position_m().x, last_advance);
+    assert_eq!(
+        engine.world().characters[&mover].position_m().x,
+        last_advance
+    );
 }
 
 /// A long stall — a suspend, or a frame that took seconds — must not amplify
@@ -696,7 +699,9 @@ fn a_long_gap_poll_caps_the_catch_up_and_snaps_the_clock_forward() {
     // clock snaps to `now`. The mover advances exactly the cap, not the ~180 m an
     // uncapped catch-up would have run.
     let first = engine.poll(100.0, Vec::new());
-    let x1 = movement_of(&first).expect("the mover moved")[0].position_m.x;
+    let x1 = movement_of(&first).expect("the mover moved")[0]
+        .position_m
+        .x;
     let slices1 = x1 / slice;
     assert!(
         (slices1 - MAX_MOVEMENT_CATCHUP_SLICES as f64).abs() < 1e-6,
@@ -707,7 +712,9 @@ fn a_long_gap_poll_caps_the_catch_up_and_snaps_the_clock_forward() {
     // four slices. Had the backlog been deferred instead of dropped, the clock
     // would still trail by ~100 s and this poll would hit the cap again.
     let second = engine.poll(100.2, Vec::new());
-    let x2 = movement_of(&second).expect("the mover moved")[0].position_m.x;
+    let x2 = movement_of(&second).expect("the mover moved")[0]
+        .position_m
+        .x;
     let delta_slices = (x2 - x1) / slice;
     assert!(
         (2.5..5.5).contains(&delta_slices),
@@ -1303,10 +1310,7 @@ fn a_silent_player_decline_hands_the_offerer_the_priority_slot() {
     });
     let (success, code, _) = result(&messages);
     assert!(success, "{code:?}");
-    assert_eq!(
-        harness.engine.scheduler().priority_actor_id(),
-        Some(&ilse)
-    );
+    assert_eq!(harness.engine.scheduler().priority_actor_id(), Some(&ilse));
     // The giver keeps the item; only the wake-up changed.
     assert_eq!(
         harness.engine.world().characters[&ilse].holds(),
@@ -2463,7 +2467,6 @@ fn speech_event_id(messages: &[EngineMessage]) -> SpeechEventId {
     }
 }
 
-
 // ---------------------------------------------- body pockets (extra_pockets.md)
 
 /// Put one apple and one spark in the player's hands, both palmable.
@@ -2572,12 +2575,14 @@ fn the_players_pocketing_below_is_witnessed_at_arms_length() {
             .unwrap_or_default()
     }
     assert!(
-        heard(&harness.engine, &sven).ends_with("hitched up their clothes and pushed an apple up their arse"),
+        heard(&harness.engine, &sven)
+            .ends_with("hitched up their clothes and pushed an apple up their arse"),
         "the man in front of him saw it plainly: {}",
         heard(&harness.engine, &sven)
     );
     assert!(
-        heard(&harness.engine, &ilse).ends_with("slipped something out of sight beneath their clothes"),
+        heard(&harness.engine, &ilse)
+            .ends_with("slipped something out of sight beneath their clothes"),
         "twelve metres away it is only a motion: {}",
         heard(&harness.engine, &ilse)
     );
@@ -2613,10 +2618,7 @@ fn the_players_pocketing_below_is_witnessed_at_arms_length() {
         "{}",
         heard(&harness.engine, &sven)
     );
-    assert_eq!(
-        harness.engine.scheduler().priority_actor_id(),
-        Some(&sven)
-    );
+    assert_eq!(harness.engine.scheduler().priority_actor_id(), Some(&sven));
 }
 
 /// A cheeked coin is the sly act the cutpurse defence is built on, so it buys
@@ -2706,7 +2708,9 @@ fn the_gut_forms_a_stool_on_the_clock_and_expel_clears_the_urgency() {
     let messages = engine.poll(17.0, Vec::new());
     let digested: Vec<&EngineMessage> = messages
         .iter()
-        .filter(|message| matches!(message, EngineMessage::WorldEvent { kind, .. } if kind == "digest"))
+        .filter(
+            |message| matches!(message, EngineMessage::WorldEvent { kind, .. } if kind == "digest"),
+        )
         .collect();
     assert_eq!(digested.len(), 1, "{messages:#?}");
     let player_character = &engine.world().characters[&player()];
@@ -2874,9 +2878,13 @@ fn the_hold_ceiling_frees_an_arrest_and_never_the_authored_cell() {
     {
         let world = harness.engine.world_mut();
         world.custody.seed_inmate(inmate.clone(), gaol.clone());
-        world
-            .custody
-            .seize(arrested.clone(), ActorId::from_raw("k0fb1"), None, gaol.clone(), 0.0);
+        world.custody.seize(
+            arrested.clone(),
+            ActorId::from_raw("k0fb1"),
+            None,
+            gaol.clone(),
+            0.0,
+        );
         world.custody.commit(&arrested, 0.0);
     }
 
@@ -2943,8 +2951,7 @@ fn commitment_takes_the_named_thing_and_nothing_else() {
         let world = engine.world_mut();
         world.add_item(cathedral_sim::Item::new(knife.clone(), "knife"));
         world.add_item(cathedral_sim::Item::new(bread.clone(), "bread"));
-        world.characters.get_mut(&thief).unwrap().state.holds =
-            vec![knife.clone(), bread.clone()];
+        world.characters.get_mut(&thief).unwrap().state.holds = vec![knife.clone(), bread.clone()];
         let notice = world
             .notices
             .raise(
@@ -3008,9 +3015,9 @@ fn commitment_takes_the_named_thing_and_nothing_else() {
     // emits `commit` only for the Stone House — a gate arch has no leaf to shut
     // — so the host needs no station test of its own to cue it.
     assert!(
-        arrival
-            .iter()
-            .any(|message| matches!(message, EngineMessage::WorldEvent { kind, .. } if kind == "commit")),
+        arrival.iter().any(
+            |message| matches!(message, EngineMessage::WorldEvent { kind, .. } if kind == "commit")
+        ),
         "arriving is a world event the host can put a sound on: {:?}",
         arrival
             .iter()
@@ -3159,15 +3166,30 @@ fn walking_out_of_the_cell_buys_a_word_no_payment_answers() {
 
     // Standing at the back wall is not leaving — this is why the roam is the
     // leash and not the four-metre arrival radius.
-    harness.engine.world_mut().characters.get_mut(&prisoner).unwrap().state.position_m =
-        Vec3::new(cell.x + 5.0, cell.y, cell.z);
+    harness
+        .engine
+        .world_mut()
+        .characters
+        .get_mut(&prisoner)
+        .unwrap()
+        .state
+        .position_m = Vec3::new(cell.x + 5.0, cell.y, cell.z);
     harness.now = 1.0;
     harness.poll();
-    assert!(harness.engine.world().custody.holds(&prisoner), "still inside");
+    assert!(
+        harness.engine.world().custody.holds(&prisoner),
+        "still inside"
+    );
 
     // Out through the doorway, and the ward hears of it.
-    harness.engine.world_mut().characters.get_mut(&prisoner).unwrap().state.position_m =
-        Vec3::new(cell.x + 12.0, cell.y, cell.z);
+    harness
+        .engine
+        .world_mut()
+        .characters
+        .get_mut(&prisoner)
+        .unwrap()
+        .state
+        .position_m = Vec3::new(cell.x + 12.0, cell.y, cell.z);
     harness.now = 2.0;
     harness.poll();
 
@@ -3196,12 +3218,7 @@ fn walking_out_of_the_cell_buys_a_word_no_payment_answers() {
     );
     // …and the one door that does is a person choosing it.
     assert!(
-        harness
-            .engine
-            .world_mut()
-            .notices
-            .settle(word.id)
-            .is_some(),
+        harness.engine.world_mut().notices.settle(word.id).is_some(),
         "only the law can end this one"
     );
 }
@@ -3256,7 +3273,13 @@ fn the_sentence_is_the_next_bell_and_the_ceiling_catches_the_far_ones() {
     }
     // Commit through the engine's own path, so the bell is stamped the way a
     // real arrival stamps it.
-    engine.world_mut().characters.get_mut(&prisoner).unwrap().state.position_m = cell;
+    engine
+        .world_mut()
+        .characters
+        .get_mut(&prisoner)
+        .unwrap()
+        .state
+        .position_m = cell;
     engine.poll(0.5, Vec::new());
     engine.world_mut().custody.commit(&prisoner, 0.5);
     // The stamp happens in `announce_commitment`; do it the same way the escort
@@ -3304,11 +3327,13 @@ fn the_sentence_is_the_next_bell_and_the_ceiling_catches_the_far_ones() {
     // only door, and it still closes.
     let mut harness = Builder::default().build();
     harness.ready();
-    harness
-        .engine
-        .world_mut()
-        .custody
-        .seize(prisoner.clone(), officer.clone(), None, gaol(cell), 0.0);
+    harness.engine.world_mut().custody.seize(
+        prisoner.clone(),
+        officer.clone(),
+        None,
+        gaol(cell),
+        0.0,
+    );
     harness.engine.world_mut().custody.commit(&prisoner, 0.0);
     harness.now = cathedral_sim::custody::STONE_HOUSE_HOLD_SECONDS + 1.0;
     harness.poll();
@@ -3383,7 +3408,10 @@ fn a_hand_that_has_just_landed_survives_the_dead_man_timer() {
             holder_id: officer.clone(),
         }],
     );
-    assert!(engine.world().custody.is_held(&player()), "the hand is on the arm");
+    assert!(
+        engine.world().custody.is_held(&player()),
+        "the hand is on the arm"
+    );
 
     // …and it is still there on the next poll. Nobody has been handed a turn in
     // between — with no cognition nobody can be — which is exactly the starved
@@ -3438,19 +3466,30 @@ fn a_landing_hand_restarts_the_dead_man_clock_which_still_runs_out() {
             .seize(prisoner.clone(), officer.clone(), None, station, 300.0);
         // A pace apart, so neither the leash nor the lapse has anything to say.
         let beside = world.characters[&officer].position_m();
-        world.characters.get_mut(&prisoner).unwrap().state.position_m =
-            Vec3::new(beside.x + 1.0, beside.y, beside.z);
+        world
+            .characters
+            .get_mut(&prisoner)
+            .unwrap()
+            .state
+            .position_m = Vec3::new(beside.x + 1.0, beside.y, beside.z);
     }
 
     // A hundred seconds of nothing. Merely in charge is not held, so the timer
     // has no grip to judge and the custody stands.
     harness.now = 400.0;
     harness.poll();
-    assert!(harness.engine.world().custody.holds(&prisoner), "still in charge");
+    assert!(
+        harness.engine.world().custody.holds(&prisoner),
+        "still in charge"
+    );
 
     // Now the hand lands — the `grab` verb's own call, with the officer's last
     // turn a hundred seconds behind it.
-    harness.engine.world_mut().custody.grab(&prisoner, officer.clone());
+    harness
+        .engine
+        .world_mut()
+        .custody
+        .grab(&prisoner, officer.clone());
     harness.now = 400.1;
     harness.poll();
     assert!(
@@ -3511,7 +3550,12 @@ fn arriving_at_a_station_says_every_hand_came_off() {
             .seize(prisoner.clone(), officer.clone(), None, station, 0.0);
         world.custody.grab(&prisoner, officer.clone());
         world.custody.grab(&prisoner, second_hand.clone());
-        world.characters.get_mut(&second_hand).unwrap().state.position_m = at;
+        world
+            .characters
+            .get_mut(&second_hand)
+            .unwrap()
+            .state
+            .position_m = at;
     }
 
     harness.now = 1.0;
@@ -3527,7 +3571,9 @@ fn arriving_at_a_station_says_every_hand_came_off() {
     );
 
     // Said to the one it happened to, in the second person, once per hand.
-    let inbox = harness.engine.world().characters[&prisoner].inbox().to_vec();
+    let inbox = harness.engine.world().characters[&prisoner]
+        .inbox()
+        .to_vec();
     assert_eq!(
         inbox
             .iter()
@@ -3538,10 +3584,13 @@ fn arriving_at_a_station_says_every_hand_came_off() {
     );
     // …and to the street, in the third person, because it did not happen to
     // them: each holder hears the other's hand leave.
-    let overheard = harness.engine.world().characters[&second_hand].inbox().to_vec();
+    let overheard = harness.engine.world().characters[&second_hand]
+        .inbox()
+        .to_vec();
     assert!(
-        overheard.iter().any(|line| line.contains("lets go of")
-            && !line.contains("your arm")),
+        overheard
+            .iter()
+            .any(|line| line.contains("lets go of") && !line.contains("your arm")),
         "whoever is standing there sees it too: {overheard:?}"
     );
 
@@ -3576,7 +3625,9 @@ fn arriving_at_a_station_says_every_hand_came_off() {
 
 use cathedral_sim::{Item, marks::MarkKind};
 
-fn chalk_standing(messages: &[EngineMessage]) -> Option<(bool, Vec<cathedral_sim::engine::ChalkableHere>)> {
+fn chalk_standing(
+    messages: &[EngineMessage],
+) -> Option<(bool, Vec<cathedral_sim::engine::ChalkableHere>)> {
     messages.iter().find_map(|message| match message {
         EngineMessage::ChalkStanding { pen, anchors } => Some((*pen, anchors.clone())),
         _ => None,
@@ -3740,7 +3791,11 @@ fn chalking_with_no_pen_is_announced_and_refused() {
 
     let (pen, anchors) = chalk_standing(&harness.poll()).expect("losing the pen is a change");
     assert!(!pen, "nothing to write with");
-    assert_eq!(anchors.len(), 2, "the doors are still there to be told about");
+    assert_eq!(
+        anchors.len(),
+        2,
+        "the doors are still there to be told about"
+    );
 
     let messages = harness.send(EngineCommand::PlayerDrawMark {
         kind: MarkKind::ChalkCross,
@@ -3754,4 +3809,38 @@ fn chalking_with_no_pen_is_announced_and_refused() {
         )),
         "and the refusal is logged rather than swallowed: {messages:?}"
     );
+}
+
+#[test]
+fn the_players_real_draw_and_scrub_commands_mint_fixed_stranger_deeds() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    stand_the_player_at_a_door(&mut harness);
+    let before = harness.engine.world().knowledge.len();
+    let drawn = harness.send(EngineCommand::PlayerDrawMark {
+        kind: MarkKind::ChalkCross,
+        anchor: "k0fb1".into(),
+    });
+    assert_eq!(harness.engine.world().knowledge.len(), before + 1);
+    let mark_id = harness.engine.world().marks.iter().next().unwrap().0;
+    let scrubbed = harness.send(EngineCommand::PlayerScrubMark { mark_id: mark_id.0 });
+    assert_eq!(harness.engine.world().knowledge.len(), before + 2);
+    for (kind, messages) in [("draw_mark", drawn), ("scrub_mark", scrubbed)] {
+        let row = cathedral_sim::knowledge::mint::MINT_KINDS
+            .iter()
+            .find(|row| row.kind == kind)
+            .unwrap();
+        let fact = harness
+            .engine
+            .world()
+            .knowledge
+            .facts()
+            .find(|(_, fact)| fact.said == row.said)
+            .unwrap()
+            .1;
+        assert_eq!(fact.topic, cathedral_sim::knowledge::Topic::Stranger);
+        assert_eq!(fact.subject, vec![player()]);
+        assert!(!fact.is_claimed());
+        assert!(messages.iter().any(|m| matches!(m, EngineMessage::Journal { entries, .. } if entries.iter().any(|e| e.word.contains(if kind == "draw_mark" { "chalked" } else { "scrubbed" }) && e.hops == 0 && e.from.is_none() && e.word.starts_with("You ")))), "{messages:?}");
+    }
 }

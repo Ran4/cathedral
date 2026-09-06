@@ -24,6 +24,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::HEARING_RADIUS_M;
+use crate::event::{DomainEvent, EventType};
+use crate::knowledge::OCCASION_MIN_ASSERTION_CHARS;
+use crate::lore::PlanningWard;
+
 use crate::ids::{ActorId, AreaKey, FactId, FactKey};
 use crate::knowledge::source::FactSource;
 use crate::knowledge::{FACTS_MAX_LIVE, Fact, GarbleMask, Topic};
@@ -50,9 +55,8 @@ pub struct MintKind {
     pub said: &'static str,
 }
 
-/// M2: the custody commitment and `raise_notice`, both `Law`. M5 adds the knell
-/// (behind `EngineCommand::Knell`; it has no sim seam today) and the two stranger
-/// deeds.
+/// The custody commitment and `raise_notice`, both `Law`; the knell behind
+/// `EngineCommand::Knell`; and the player's two stranger deeds.
 ///
 /// **A large accepted sale is not used at all**: `inventory.rs` emits `"sale"` with
 /// empty recipients, the price never reaches the event, and a mint inside
@@ -60,7 +64,7 @@ pub struct MintKind {
 /// the riskiest of the three candidate sites and the least anchored in the
 /// schedule.
 ///
-/// The two rows here prove the seam; they are **not** the band measurement. Two
+/// The first two rows prove the Law seam; they are **not** the band measurement. Two
 /// `Law` facts cannot measure nine bands, which is what
 /// [`plant_for_measurement`] is for.
 pub const MINT_KINDS: &[MintKind] = &[
@@ -80,7 +84,48 @@ pub const MINT_KINDS: &[MintKind] = &[
         },
         said: "{subject} stands accused at {place}: {deed}",
     },
+    MintKind {
+        kind: "knell",
+        topic: Topic::Blood,
+        garble: GarbleMask {
+            subject: false,
+            place: false,
+            day: true,
+        },
+        said: "a life of {years} years was counted out of Saint Maren's {day}",
+    },
+    MintKind {
+        kind: "draw_mark",
+        topic: Topic::Stranger,
+        garble: GarbleMask {
+            subject: false,
+            place: true,
+            day: true,
+        },
+        said: "{subject} chalked a mark on a door at {place} {day}",
+    },
+    MintKind {
+        kind: "scrub_mark",
+        topic: Topic::Stranger,
+        garble: GarbleMask {
+            subject: false,
+            place: true,
+            day: true,
+        },
+        said: "{subject} scrubbed a mark off a door at {place} {day}",
+    },
 ];
+
+/// These are the whitelist's only rows conditional on the actor's identity.
+pub const STRANGER_DEED_KINDS: &[&str] = &["draw_mark", "scrub_mark"];
+
+/// The Scold's legal Snuffing and civic summons both remind the city of law.
+/// An exhaustive match makes another rope require an explicit meaning here.
+pub fn peal_topic(rope: crate::engine::CivicRope) -> Option<Topic> {
+    match rope {
+        crate::engine::CivicRope::Curfew | crate::engine::CivicRope::Summons => Some(Topic::Law),
+    }
+}
 
 /// The one installer: allocate the handles, freeze the salience inputs, resolve the
 /// place, stamp the clock, seed everybody in earshot at hops 0, and put the telling
@@ -178,7 +223,7 @@ pub fn mint(
         .characters_within(at, crate::HEARING_RADIUS_M, None)
         .into_iter()
         .collect();
-    install_fact(
+    let key = install_fact(
         world,
         id,
         topic,
@@ -191,7 +236,29 @@ pub fn mint(
         decays,
         source,
         game_days,
-    )
+    )?;
+    // A witnessed event is learned too. Keep the receipt write in `learn`:
+    // its first-hand refusal protects the witness while recording the telling.
+    if let Some(player) = world.player_id().cloned()
+        && world
+            .knowledge
+            .fact(key)
+            .is_some_and(|f| f.seeded.contains(&player))
+    {
+        crate::knowledge::learn(
+            world,
+            &player,
+            key,
+            crate::knowledge::Telling {
+                hops: 0,
+                from: None,
+                heat: 1.0,
+                view: Default::default(),
+            },
+            game_days,
+        );
+    }
+    Some(key)
 }
 
 /// How many mouths the cadence pack is seeded to — `02_numbers.md` §4's **K = 4**,
@@ -284,7 +351,7 @@ pub fn fill_live_for_measurement(world: &mut World, at: Vec3, game_days: Option<
 ///
 /// Sourced on the custody record, so it dies on release ([`FactSource::custody`]) —
 /// carriers simply stop saying it, with no `forget` verb and no LLM cooperation.
-/// Nothing calls the invalidation sweep in M2; that is M5's poll.
+/// The pollen stir sweep invalidates it before the next hearsay reading.
 pub fn mint_commitment(
     world: &mut World,
     prisoner: &ActorId,
@@ -346,14 +413,253 @@ pub fn mint_from_notice(
     )
 }
 
-/// M5, behind `EngineCommand::Knell { years, at }` — the knell has **no sim seam
-/// today** (`bell knell` is a drive action that plays a stroke pattern and emits
-/// nothing the sim reads), which is why it is not one of M2's pair. Topic `Blood`,
-/// garbling subject and day.
-#[allow(clippy::needless_pass_by_ref_mut)]
+/// A life counted out of Saint Maren's, with no person named: one bell is not
+/// a name. Only the day garbles. Equal ages on the same game day deliberately
+/// collapse to one proposition, `knell.<day>.<years>`.
 pub fn mint_knell(world: &mut World, at: Vec3, years: u32, game_days: f64) -> Option<FactKey> {
-    let _ = (world, at, years, game_days);
-    None
+    let row = MINT_KINDS.iter().find(|row| row.kind == "knell")?;
+    mint(
+        world,
+        FactId::from_raw(format!("knell.{}.{years}", game_days.floor() as i64)),
+        row.topic,
+        row.said.replace("{years}", &years.to_string()),
+        Vec::new(),
+        at,
+        row.garble,
+        true,
+        FactSource::event("knell", world.event_sequence),
+        Some(game_days),
+    )
+}
+
+/// The player's hand on the city's walls, in a fixed template, never the
+/// event's free text. An authored hand doing the same work is not a stranger.
+///
+/// The journal records the player's own witnessed deed. Far wards greet them
+/// through the NPC's sheet; the player never deposits news about themselves.
+/// Getting their own account there first means speaking, not a self-subject
+/// exception to `may_carry`.
+pub fn mint_stranger_deed(
+    world: &mut World,
+    event: &DomainEvent,
+    player_id: &ActorId,
+    game_days: f64,
+) -> Option<FactKey> {
+    if !world.knowledge_enabled
+        || event.event_type != EventType::WorldEvent
+        || event.actor_id.as_ref() != Some(player_id)
+        || !world.is_player(player_id)
+        || !STRANGER_DEED_KINDS.contains(&event.kind.as_str())
+    {
+        return None;
+    }
+    let at = event.position_m?;
+    let row = MINT_KINDS.iter().find(|row| row.kind == event.kind)?;
+    let key = mint(
+        world,
+        FactId::from_raw(format!("stranger.{}.{}", event.kind, event.sequence)),
+        row.topic,
+        row.said.to_string(),
+        vec![player_id.clone()],
+        at,
+        row.garble,
+        true,
+        FactSource::event(&event.kind, event.sequence),
+        Some(game_days),
+    )?;
+    if world
+        .knowledge
+        .fact(key)
+        .is_some_and(|f| f.seeded.contains(player_id))
+    {
+        super::record_player_deed(world, player_id, key, Some(game_days));
+    }
+    Some(key)
+}
+
+/// The occasion gate's first limb: somebody asserted a thing to this hearer
+/// that they do not hold, which is the only condition that puts `raise_word` on
+/// a sheet by speech.
+///
+/// The 24-byte / no-`'?'` test is a **pre-filter, not the gate** — it only skips
+/// "Aye." and "What of it?". The gate is a `holds()` lookup: for every live fact
+/// whose subject this line names, does the hearer already have it? If any of
+/// them is held, the gate stays shut, because repetition needs no verb
+/// (`01_facts.md`, "One verb, and why repetition does not get one").
+///
+/// It fires for the player's novel lie precisely because a novel claim names
+/// nobody the store has a fact about, so the lookup is vacuously true.
+/// Bounded by `named.len()` (≤ ~30: the hearer's `knows` plus everyone in
+/// earshot) times their ≤ `HOLDINGS_MAX` holdings, on one `say`.
+pub fn note_assertion(
+    world: &mut World,
+    speaker: &ActorId,
+    hearer: &ActorId,
+    text: &str,
+    game_days: f64,
+) {
+    if !world.knowledge_enabled {
+        return;
+    }
+    if text.contains('?') || text.len() < OCCASION_MIN_ASSERTION_CHARS {
+        return;
+    }
+    if !world
+        .characters
+        .get(hearer)
+        .is_some_and(|h| h.control().is_llm())
+    {
+        return;
+    }
+
+    let named = crate::actions::subjects_named(world, hearer, Some(speaker), text);
+    // When the line names nobody the hearer could place, the thing asserted is
+    // about the speaker — D34's own fallback, and what makes the player's novel
+    // lie vacuously unheld.
+    let about: Vec<ActorId> = if named.is_empty() {
+        vec![speaker.clone()]
+    } else {
+        named.clone()
+    };
+    let already = world.knowledge.facts().any(|(key, fact)| {
+        fact.subject.iter().any(|subject| about.contains(subject))
+            && crate::knowledge::holds_key(world, hearer, key).is_some()
+    });
+    if already {
+        return;
+    }
+    world.knowledge.note_occasion(
+        hearer,
+        named.first().cloned(),
+        Some(speaker.clone()),
+        game_days,
+    );
+}
+
+/// The occasion gate's second limb: they saw something the whitelist does not
+/// cover, so a word about it is theirs to raise.
+///
+/// Restricted to `EventType::WorldEvent` (`event.rs:14-22`) — speech goes
+/// through limb 1, item traffic is not news, and sounds and gestures are not
+/// events *about the world*. Reads `MINT_KINDS` and nothing else, so "a percept
+/// that minted nothing" cannot drift out of agreement with the mints as the
+/// whitelist grows (D33).
+pub fn note_unminted_event(world: &mut World, event: &DomainEvent, game_days: f64) {
+    if !world.knowledge_enabled {
+        return;
+    }
+    // Belt and braces: the one caller already matched this arm, but a second
+    // caller must not be able to arm an occasion off a gesture.
+    if event.event_type != EventType::WorldEvent {
+        return;
+    }
+    // `DomainEvent::kind` is a plain `String` (`event.rs:30`), not an `Option`.
+    if MINT_KINDS.iter().any(|row| row.kind == event.kind) {
+        return;
+    }
+    let Some(at) = event.position_m else { return };
+    for hearer in world.characters_within(at, HEARING_RADIUS_M, None) {
+        if world.characters[&hearer].control().is_llm() {
+            world
+                .knowledge
+                .note_occasion(&hearer, None, None, game_days);
+        }
+    }
+}
+
+/// The **only** constructor for a claimed fact, so no guardrail can be bypassed
+/// by writing a `Fact` literal at a call site. Everything an LLM can reach goes
+/// through here, and so does the drive-mode poke.
+///
+/// Unforgeable, in order. `source` is `FactSource::claimed(speaker)` and is not
+/// a parameter — a model can mint claims; it can never mint truths. `seeded` is
+/// the speaker and nobody else: a claim cannot seat knowledge in other people's
+/// heads. `decays` is always true: nothing said aloud becomes a standing fact of
+/// the world. The speaker gets an `own` line — the claim *is* in their own
+/// words, and without one their own sheet would tell a liar they merely heard
+/// it. **And a claim is a template like every other fact (D58)**: the resolved
+/// subject's display name in `said` becomes `{subject}`, so a reader who does
+/// not know that person reads the role and not the name (the toy's "with your
+/// name filed off"), and the mask is the topic's default narrowed to what the
+/// sentence can actually garble — `subject` only if the substitution happened,
+/// never `place` or `day`, which a free-text claim does not carry. A claim
+/// cannot seal itself against drift, including in the mouth of the person who
+/// made it up.
+///
+/// `from` is the mouth that armed them, so `chain()` walks back past the raiser
+/// to whoever put the words in their head — the player, in the case this exists
+/// for.
+pub fn mint_claim(
+    world: &mut World,
+    speaker: &ActorId,
+    topic: Topic,
+    said: String,
+    subject: Vec<ActorId>,
+    from: Option<ActorId>,
+    game_days: Option<f64>,
+) -> Option<FactKey> {
+    if !world.knowledge_enabled {
+        return None;
+    }
+    let at = world.characters.get(speaker)?.position_m();
+    // The template: the first resolved subject's name → `{subject}`, word
+    // boundary and case-insensitive (`actions::replace_name` — the inverse of
+    // `text_mentions_name`'s matcher, `actions.rs:289`, and one function with it).
+    let (template, subject_named) = match subject.first() {
+        Some(who) => match world.characters.get(who).map(|c| c.name().to_string()) {
+            Some(name) => crate::actions::replace_name(&said, &name, "{subject}"),
+            None => (said.clone(), false),
+        },
+        None => (said.clone(), false),
+    };
+    let garble = GarbleMask {
+        subject: GarbleMask::default_for(topic).subject && subject_named,
+        place: false,
+        day: false,
+    };
+    let own = BTreeMap::from([(speaker.clone(), said)]); // the words they actually said
+    let seeded = BTreeSet::from([speaker.clone()]);
+    let key = install_fact(
+        world,
+        claim_id(world),
+        topic,
+        template,
+        own,
+        subject,
+        seeded,
+        at,
+        garble,
+        true,
+        FactSource::claimed(speaker.clone()),
+        game_days,
+    )?;
+    world.knowledge.seat_claimant(speaker, key, from, game_days);
+    if let Some(ward) = world.ward_at(at)
+        && let Some(row) = world.knowledge.air_mut().get_mut(&(ward, key))
+    {
+        row.via = Some(speaker.clone());
+    }
+    Some(key)
+}
+
+fn claim_id(world: &World) -> FactId {
+    FactId::from_raw(format!("claim.{}", world.knowledge.next_sequence))
+}
+
+/// Structural identity in the raiser's ward, never a comparison of prose.
+pub fn collides_in_air(
+    world: &World,
+    ward: PlanningWard,
+    topic: Topic,
+    subject: Option<&ActorId>,
+    place: Option<AreaKey>,
+    day: Option<i64>,
+) -> bool {
+    world.knowledge.ward_air(ward).any(|(key, _)| {
+        world.knowledge.fact(key).is_some_and(|f| {
+            f.topic == topic && f.subject.first() == subject && f.place == place && f.day == day
+        })
+    })
 }
 
 #[cfg(test)]
@@ -414,7 +720,7 @@ mod tests {
     /// install, so no fourth placeholder can reach a sheet.
     #[test]
     fn every_mint_template_names_what_it_garbles() {
-        const HOOK_FILLED: [&str; 2] = ["station", "deed"];
+        const HOOK_FILLED: [&str; 3] = ["station", "deed", "years"];
         for row in MINT_KINDS {
             for (field, garbled) in [
                 ("subject", row.garble.subject),
@@ -456,13 +762,10 @@ mod tests {
     fn the_whitelist_is_stated_once() {
         assert_eq!(
             MINT_KINDS.len(),
-            2,
-            "M2's mints are the custody commitment and `raise_notice`, both Law \
-             (D32); M5 takes this to 5 with the knell and the two stranger deeds. \
-             Change the count here and in M4's occasion limb together, or the gate \
-             and the mints stop agreeing (D33)"
+            5,
+            "the five coded kinds and the occasion exclusion must be one list"
         );
-        for row in MINT_KINDS {
+        for row in &MINT_KINDS[..2] {
             assert_eq!(
                 row.topic,
                 Topic::Law,
@@ -471,9 +774,12 @@ mod tests {
                 row.kind
             );
         }
-        // And the two kinds are the two the hooks look up by name.
+        // Every kind is the one its hook looks up by name.
         let kinds: Vec<&str> = MINT_KINDS.iter().map(|row| row.kind).collect();
-        assert_eq!(kinds, vec!["commit", "raise_notice"]);
+        assert_eq!(
+            kinds,
+            vec!["commit", "raise_notice", "knell", "draw_mark", "scrub_mark"]
+        );
     }
 
     /// A second commitment of the same person is the same proposition: the id is
@@ -609,15 +915,13 @@ mod tests {
         );
     }
 
-    /// The knell is declared and inert: M5 gives it a body and the
-    /// `EngineCommand::Knell` that is its only caller.
+    /// Same age and same day is the same proposition; another age is new news.
     #[test]
-    fn the_knell_has_no_seam_yet() {
+    fn knells_of_the_same_age_and_day_coalesce() {
         let mut world = law_world();
-        assert_eq!(
-            mint_knell(&mut world, Vec3::new(0.0, 0.91, 0.0), 17, 3.25),
-            None
-        );
-        assert!(world.knowledge.is_empty());
+        assert!(mint_knell(&mut world, Vec3::new(0.0, 0.91, 0.0), 17, 3.25).is_some());
+        assert!(mint_knell(&mut world, Vec3::new(0.0, 0.91, 0.0), 17, 3.25).is_none());
+        assert!(mint_knell(&mut world, Vec3::new(0.0, 0.91, 0.0), 18, 3.25).is_some());
+        assert_eq!(world.knowledge.len(), 2);
     }
 }

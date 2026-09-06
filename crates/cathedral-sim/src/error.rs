@@ -85,6 +85,9 @@ pub enum ActionErrorCode {
     AlreadyMarked,
     /// `scrub_mark` naming a mark that is not there.
     NoSuchMark,
+    NoOccasion,
+    WordAlreadySaid,
+    WordAlreadyInTheAir,
 }
 
 impl ActionErrorCode {
@@ -129,6 +132,9 @@ impl ActionErrorCode {
             Self::UnknownMarkKind => "unknown_kind",
             Self::AlreadyMarked => "already_marked",
             Self::NoSuchMark => "no_such_mark",
+            Self::NoOccasion => "no_occasion",
+            Self::WordAlreadySaid => "word_already_said",
+            Self::WordAlreadyInTheAir => "word_already_in_the_air",
         }
     }
 }
@@ -422,7 +428,10 @@ impl From<ActionErrorCode> for CommandErrorCode {
             | ActionErrorCode::NothingToChalk
             | ActionErrorCode::UnknownMarkKind
             | ActionErrorCode::AlreadyMarked
-            | ActionErrorCode::NoSuchMark => Self::InvalidAction,
+            | ActionErrorCode::NoSuchMark
+            | ActionErrorCode::NoOccasion
+            | ActionErrorCode::WordAlreadySaid
+            | ActionErrorCode::WordAlreadyInTheAir => Self::InvalidAction,
         }
     }
 }

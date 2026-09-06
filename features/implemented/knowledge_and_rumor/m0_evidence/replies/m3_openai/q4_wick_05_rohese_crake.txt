@@ -1,0 +1,1 @@
+say {"target":"player","text":"I can't say it was Grigor Ashe. I heard from a Wick Ward baker that an animal worker of the Weigh Ward was taken at the Wickmarket three days past and lies in the Stone House. Ask the Stone House or the Weigh Ward folk."}

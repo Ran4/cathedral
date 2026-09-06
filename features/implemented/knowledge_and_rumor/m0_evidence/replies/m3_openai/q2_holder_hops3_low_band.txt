@@ -1,0 +1,1 @@
+say {"target":"player","text":"I cannot say what is wrong with Bertran Hobbe's mill; I was not told that name. What reached me was that an unnamed animal-worker's mill sent short weight to the Wickmarket bakehouse, and the flour was cut with bean meal. Ask the miller or the bakehouse."}

@@ -325,7 +325,9 @@ pub(super) fn build_sections(mirror: Option<&WorldMirror>) -> Vec<SectionSpec> {
             let Some(item) = mirror.item(item_id) else {
                 continue;
             };
-            let open_units = item.quantity.saturating_sub(pocketed_units(&player.pockets, item_id));
+            let open_units = item
+                .quantity
+                .saturating_sub(pocketed_units(&player.pockets, item_id));
             if open_units == 0 {
                 continue;
             }
@@ -355,7 +357,11 @@ pub(super) fn build_sections(mirror: Option<&WorldMirror>) -> Vec<SectionSpec> {
                 // Two units of one stack in one cavity are two entries in the
                 // sim; the screen folds them into one tile with a count.
                 if let Some(tile) = tiles.iter_mut().find(|tile| tile.item_id == *item_id) {
-                    let count = tile.label.split_whitespace().next().and_then(|first| first.parse::<u32>().ok());
+                    let count = tile
+                        .label
+                        .split_whitespace()
+                        .next()
+                        .and_then(|first| first.parse::<u32>().ok());
                     let base = mirror.item(item_id).map(|item| item.name.clone());
                     if let (Some(base), Some(count)) = (base, count.or(Some(1))) {
                         tile.label = format!("{} {base}", count + 1);
@@ -419,12 +425,14 @@ pub(super) fn toggle_inventory(
     menu: Option<Res<ConfigMenuState>>,
     chat: Option<Res<ChatInputState>>,
     map: Option<Res<MapState>>,
+    journal: Option<Res<super::journal_ui::JournalUiState>>,
     mut inventory: ResMut<InventoryUiState>,
     cursor: Option<Single<&mut CursorOptions, With<PrimaryWindow>>>,
 ) {
     let menu_open = menu.is_some_and(|menu| menu.open);
     let chat_open = chat.is_some_and(|chat| chat.open);
     let map_open = map.is_some_and(|map| map.fullscreen_open);
+    let journal_open = journal.is_some_and(|journal| journal.open);
 
     // The settings menu takes over the cursor; yield to it without touching
     // the cursor ourselves (it has already released it).
@@ -436,7 +444,7 @@ pub(super) fn toggle_inventory(
     if !keyboard.just_pressed(KeyCode::KeyI) || menu_open || chat_open {
         return;
     }
-    if !inventory.open && map_open {
+    if !inventory.open && (map_open || journal_open) {
         return;
     }
     let open = !inventory.open;
@@ -448,7 +456,7 @@ pub(super) fn toggle_inventory(
     if open {
         cursor.visible = true;
         cursor.grab_mode = CursorGrabMode::None;
-    } else if !map_open {
+    } else if !map_open && !journal_open {
         cursor.visible = false;
         cursor.grab_mode = CursorGrabMode::Locked;
     }
@@ -540,7 +548,10 @@ fn resolve_spit_target(
     }
     let name = mirror
         .and_then(|mirror| mirror.actor(&focused.actor_id))
-        .map_or_else(|| focused.actor_id.0.clone(), |actor| actor.name_for_player.clone());
+        .map_or_else(
+            || focused.actor_id.0.clone(),
+            |actor| actor.name_for_player.clone(),
+        );
     Some((focused.actor_id.clone(), name))
 }
 
@@ -562,7 +573,10 @@ pub(super) fn handle_inventory_actions(
     if !inventory.open {
         return;
     }
-    if close.iter().any(|interaction| *interaction == Interaction::Pressed) {
+    if close
+        .iter()
+        .any(|interaction| *interaction == Interaction::Pressed)
+    {
         inventory.open = false;
         inventory.context_menu = None;
         if let Some(cursor) = cursor.as_deref_mut() {
@@ -828,16 +842,14 @@ fn spawn_section(root: &mut ChildSpawnerCommands, section: &SectionSpec, font: &
             return;
         }
         column
-            .spawn((
-                Node {
-                    width: percent(100),
-                    flex_direction: FlexDirection::Row,
-                    flex_wrap: FlexWrap::Wrap,
-                    column_gap: px(8),
-                    row_gap: px(8),
-                    ..default()
-                },
-            ))
+            .spawn((Node {
+                width: percent(100),
+                flex_direction: FlexDirection::Row,
+                flex_wrap: FlexWrap::Wrap,
+                column_gap: px(8),
+                row_gap: px(8),
+                ..default()
+            },))
             .with_children(|grid| {
                 for tile in &section.tiles {
                     spawn_tile(grid, tile, font);
@@ -929,7 +941,11 @@ mod tests {
         }
     }
 
-    fn mirror_with(holds: &[&str], pockets: &[(BodySlot, &str)], items: Vec<ItemSnapshot>) -> WorldMirror {
+    fn mirror_with(
+        holds: &[&str],
+        pockets: &[(BodySlot, &str)],
+        items: Vec<ItemSnapshot>,
+    ) -> WorldMirror {
         let player = ActorSnapshot {
             id: ActorId(PLAYER_ID.into()),
             name_for_player: "You".into(),
@@ -969,7 +985,9 @@ mod tests {
         let mut root_query = app
             .world_mut()
             .query_filtered::<&Node, With<InventoryUiRoot>>();
-        let root = root_query.single(app.world()).expect("inventory root exists");
+        let root = root_query
+            .single(app.world())
+            .expect("inventory root exists");
         assert_eq!(root.display, Display::None);
 
         let mut sections = app
@@ -1017,7 +1035,11 @@ mod tests {
         let sections = build_sections(Some(&mirror));
         let carried = &sections[0];
         assert_eq!(carried.title, "Carried");
-        assert_eq!(carried.tiles.len(), 1, "the pocketed loaf is gone: {carried:?}");
+        assert_eq!(
+            carried.tiles.len(),
+            1,
+            "the pocketed loaf is gone: {carried:?}"
+        );
         assert_eq!(carried.tiles[0].label, "2 sparks");
 
         let mouth = sections
@@ -1222,7 +1244,9 @@ mod tests {
             });
         app.update();
 
-        let mut names = app.world_mut().query_filtered::<&Name, With<InventoryTile>>();
+        let mut names = app
+            .world_mut()
+            .query_filtered::<&Name, With<InventoryTile>>();
         let name = names.single(app.world()).expect("one tile");
         assert_eq!(name.as_str(), "Inv item: loaf (k3f9x)");
 

@@ -19,7 +19,7 @@
 //! ([`World::update_positions`]), so it neither needs nor triggers that flush.
 
 use std::{
-    collections::{BTreeSet, VecDeque},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     path::PathBuf,
     sync::Arc,
 };
@@ -481,6 +481,19 @@ pub enum EngineCommand {
         sound_id: String,
         position_m: Vec3,
     },
+    /// The host's funeral rope: a new unnamed life, plus older Blood air
+    /// remembered within Smallvoice's own carry. Fire-and-forget.
+    Knell {
+        years: u32,
+        at: Vec3,
+    },
+    /// The host actually rang the civic bell. Reheats matching air but never
+    /// mints; the radius comes from its sound descriptor.
+    CivicPeal {
+        rope: CivicRope,
+        at: Vec3,
+        radius_m: f64,
+    },
     /// Debug carriage write (`features/npc_bodies.md` §8): set a body status on
     /// the named character to a clamped `0..=1` value. The `cathedral-headless
     /// --status` flag and the drive-mode `status` action both arrive as this;
@@ -530,6 +543,18 @@ pub enum EngineCommand {
     DebugChalk {
         kind: String,
         anchor: String,
+    },
+    /// Hand the player an authored telling, or put it in a ward's air.
+    DebugSeedFact {
+        fact: String,
+        ward: Option<String>,
+    },
+    /// A drive poke through the same claim constructor as the actor's verb.
+    /// Bypasses its occasion and cap, while keeping all claim guardrails.
+    DebugRaiseWord {
+        who: String,
+        topic: String,
+        said: String,
     },
     /// CATHEDRAL_DRIVE `scrub`: wipe the nearest live mark off a named anchor.
     DebugScrub {
@@ -835,6 +860,17 @@ pub enum EngineMessage {
         /// The law's hands, while they are on you.
         custody: Option<PlayerCustody>,
     },
+    /// The player's remembered tellings and live standing lines, deduplicated
+    /// on their own hot channel. No heat or private provenance crosses it.
+    Journal {
+        entries: Vec<JournalEntry>,
+        standing: Vec<String>,
+    },
+    /// All eight wards, whole-percent heat only. Dedupe-published on a hot
+    /// channel: the city's talk never enters PublicSnapshot.
+    WardHeat {
+        wards: Vec<WardHeatRow>,
+    },
     /// What the player's own hand could chalk where they are standing
     /// (`features/implemented/chalking_the_walls.md` M3), on the **hot**
     /// channel and for the same reasons [`Self::LawStanding`] is: it is a fact
@@ -875,6 +911,35 @@ pub struct ChalkableHere {
     /// left to draw is dropped from the list instead, so the HUD never offers a
     /// hold that can only come back refused.
     pub kinds: Vec<crate::marks::MarkKind>,
+}
+
+/// Which civic rope rang. The sim owns what its sound means to the city.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CivicRope {
+    Curfew,
+    Summons,
+}
+
+/// The map's whole reading of a ward. No fact, id, or private source crosses.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WardHeatRow {
+    pub ward: crate::lore::PlanningWard,
+    pub label: String,
+    pub at: Vec3,
+    pub heat_pct: u8,
+    pub words: u8,
+}
+
+/// One telling as the player heard it, with observer-resolved attribution.
+#[derive(Debug, Clone, PartialEq)]
+pub struct JournalEntry {
+    pub word: String,
+    pub from: Option<String>,
+    pub place: Option<String>,
+    pub when: String,
+    pub hops: u8,
+    pub tellings: u16,
+    pub wards: u8,
 }
 
 /// One live word against the player, as the HUD reads it.
@@ -1055,6 +1120,12 @@ pub struct Engine {
     /// The last [`EngineMessage::ChalkStanding`] published, on the same terms:
     /// walking a whole street sends nothing until a door comes within reach.
     last_chalk_standing: Option<EngineMessage>,
+    last_ward_heat: Option<EngineMessage>,
+    /// At most one diagnostic per resident/caller pair per game hour.
+    door_shut_until: BTreeMap<(ActorId, ActorId), f64>,
+    last_journal: Option<EngineMessage>,
+    last_journal_receipts: u64,
+    last_journal_at: f64,
 }
 
 impl Engine {
@@ -1288,6 +1359,11 @@ impl Engine {
             ready_emitted: false,
             last_law_standing: None,
             last_chalk_standing: None,
+            last_ward_heat: None,
+            door_shut_until: BTreeMap::new(),
+            last_journal: None,
+            last_journal_receipts: 0,
+            last_journal_at: f64::NEG_INFINITY,
         })
     }
 
@@ -1375,7 +1451,22 @@ impl Engine {
         // self-gated to the stir grid inside, so all but one of the ~60 polls a
         // second costs a single `is_empty` check. It deliberately does **not**
         // touch the public state — facts are prompt state, like notices.
-        crate::knowledge::pollen::sweep(&mut self.world, self.clock.game_days(now));
+        let (_, invalidated) = crate::knowledge::pollen::sweep_with_invalidations(
+            &mut self.world,
+            self.clock.game_days(now),
+        );
+        for id in invalidated {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[knowledge] '{id}' is no longer so; dropped from every mouth"
+            )));
+        }
+        // Invalidation precedes the reading: released custody must not generate
+        // a wrongful new notice from a fact removed on this same stir beat.
+        for line in
+            crate::knowledge::raise_hearsay_words(&mut self.world, self.clock.game_days(now))
+        {
+            out.push(EngineMessage::Diagnostic(line));
+        }
         // The player is not in the round, so their seat at the air is here. Its
         // deadline is game-days like everybody's, and their roll is
         // `PLAYER_CURIOSITY` — never `curiosity_of`, which reads a body with no
@@ -1390,6 +1481,9 @@ impl Engine {
                 player_pollen_game_days,
             );
         }
+        self.world
+            .knowledge
+            .expire_occasions(self.clock.game_days(now));
         // Layer 2 (`features/knowledge_and_rumor/02_rumor_pollen.md`): the wave
         // made granular where somebody can see it. Its own scan, deliberately —
         // see `pollen::hop_on_stage`, and do not "optimise" it onto the `stage`
@@ -1541,6 +1635,33 @@ impl Engine {
                             .admits_idle(&self.world, actor_id, &self.config.idle_curiosity)
                     });
                 }
+                // The door is its own idle gate, outside the novelty cost knob.
+                // `door_is_shut` lets every inbox/knock through; reaction and
+                // priority lanes remain independent of this stage filter.
+                let caller = self.config.player_id.clone();
+                let game_days = self.clock.game_days(now);
+                self.door_shut_until.retain(|(resident, caller), until| {
+                    game_days < *until
+                        && self.world.is_present(resident)
+                        && self.world.is_present(caller)
+                });
+                stage.retain(|actor| {
+                    if !crate::knowledge::door_is_shut(&self.world, actor, &caller) {
+                        return true;
+                    }
+                    let pair = (actor.clone(), caller.clone());
+                    if let std::collections::btree_map::Entry::Vacant(entry) =
+                        self.door_shut_until.entry(pair)
+                    {
+                        entry.insert(game_days + 1.0 / 24.0);
+                        out.push(EngineMessage::Diagnostic(format!(
+                            "[knowledge] {} is at their own door and does not open to {}",
+                            self.world.characters[actor].name(),
+                            self.world.characters[&caller].name()
+                        )));
+                    }
+                    false
+                });
                 Some(stage)
             }
         };
@@ -1666,6 +1787,8 @@ impl Engine {
         self.publish_clock(now, &mut out);
         self.publish_law_standing(&mut out);
         self.publish_chalk_standing(&mut out);
+        self.publish_journal(now, &mut out);
+        self.publish_ward_heat(&mut out);
         out
     }
 
@@ -1720,6 +1843,31 @@ impl Engine {
     /// A one-line census of the cast's hunger for `--trace-food` (food & items M2).
     pub fn food_summary(&self) -> String {
         self.round.food_summary(&self.world)
+    }
+
+    /// M5 consequence caches outside Knowledge, reported separately so the
+    /// established pollen store measurement retains its original meaning.
+    pub fn knowledge_auxiliary_bytes(&self) -> usize {
+        round::knowledge_auxiliary_bytes(&self.round)
+            + std::mem::size_of_val(&self.door_shut_until)
+            + self
+                .door_shut_until
+                .keys()
+                .map(|(resident, caller)| {
+                    std::mem::size_of::<((ActorId, ActorId), f64)>()
+                        + resident.as_str().len()
+                        + caller.as_str().len()
+                        + 48
+                })
+                .sum::<usize>()
+            + std::mem::size_of_val(&self.last_ward_heat)
+            + match &self.last_ward_heat {
+                Some(EngineMessage::WardHeat { wards }) => {
+                    wards.capacity() * std::mem::size_of::<WardHeatRow>()
+                        + wards.iter().map(|row| row.label.capacity()).sum::<usize>()
+                }
+                _ => 0,
+            }
     }
 
     /// One line per (holder, fact) for `--trace-knowledge`, in roster order then
@@ -2179,6 +2327,10 @@ impl Engine {
                 sound_id,
                 position_m,
             } => self.world_sound(now, "world_sound", &sound_id, position_m, out),
+            EngineCommand::Knell { years, at } => self.ring_knell(now, years, at, out),
+            EngineCommand::CivicPeal { rope, at, radius_m } => {
+                self.ring_civic_peal(now, rope, at, radius_m)
+            }
 
             EngineCommand::DebugSetStatus { name, kind, value } => {
                 self.debug_set_status(now, &name, kind, value, out)
@@ -2186,6 +2338,12 @@ impl Engine {
 
             EngineCommand::DebugOwe { who } => self.debug_owe(now, &who, out),
 
+            EngineCommand::DebugSeedFact { fact, ward } => {
+                self.debug_seed_fact(now, &fact, ward.as_deref(), out)
+            }
+            EngineCommand::DebugRaiseWord { who, topic, said } => {
+                self.debug_raise_word(now, &who, &topic, &said, out)
+            }
             EngineCommand::DebugChalk { kind, anchor } => {
                 self.debug_chalk(now, &kind, &anchor, out)
             }
@@ -3510,6 +3668,17 @@ impl Engine {
                     self.nudge_pocket_witness(now, &event);
                     self.nudge_restitution_acceptor(now, &event);
                     self.nudge_custody(now, &event);
+                    crate::knowledge::mint::mint_stranger_deed(
+                        &mut self.world,
+                        &event,
+                        &self.config.player_id,
+                        self.clock.game_days(now),
+                    );
+                    crate::knowledge::mint::note_unminted_event(
+                        &mut self.world,
+                        &event,
+                        self.clock.game_days(now),
+                    );
                     flush_world_event(&event, out);
                 }
                 EventType::Gesture => flush_gesture(&event, out),
@@ -4389,14 +4558,18 @@ impl Engine {
                 rung: notice.rung(),
                 // A brand with a visible door is a story; a brand with no door
                 // is a bug. Say the door out loud, every time.
-                clears_when: match (&notice.taken, &notice.wronged) {
-                    (Some(_), Some(_)) => {
-                        "give back what was taken, or satisfy the law".to_string()
+                clears_when: if notice.hearsay {
+                    "nobody saw this one — answer it, or find who did and say so".to_string()
+                } else {
+                    match (&notice.taken, &notice.wronged) {
+                        (Some(_), Some(_)) => {
+                            "give back what was taken, or satisfy the law".to_string()
+                        }
+                        (_, Some(_)) => {
+                            "make it right with the one you wronged, or satisfy the law".to_string()
+                        }
+                        _ => "only the law can end this one — go and answer for it".to_string(),
                     }
-                    (_, Some(_)) => {
-                        "make it right with the one you wronged, or satisfy the law".to_string()
-                    }
-                    _ => "only the law can end this one — go and answer for it".to_string(),
                 },
             })
             .collect();
@@ -4454,6 +4627,259 @@ impl Engine {
         if self.last_law_standing.as_ref() != Some(&message) {
             self.last_law_standing = Some(message.clone());
             out.push(message);
+        }
+    }
+
+    fn debug_raise_word(
+        &mut self,
+        now: f64,
+        who: &str,
+        topic: &str,
+        said: &str,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        let Some(speaker) = self.world.resolve_debug_handle(who) else {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid raise_word: no character with the name or id '{who}'"
+            )));
+            return;
+        };
+        let topic = crate::knowledge::Topic::parse_or_talk(topic);
+        let game_days = Some(self.clock.game_days(now));
+        let subject = crate::actions::subjects_named(&self.world, &speaker, None, said);
+        let from = Some(self.config.player_id.clone());
+        match crate::knowledge::mint::mint_claim(
+            &mut self.world,
+            &speaker,
+            topic,
+            said.to_string(),
+            subject,
+            from,
+            game_days,
+        ) {
+            Some(_) => {
+                let name = self.world.characters[&speaker].name().to_string();
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[smart actors] {name} starts a word going ({}): \"{said}\"",
+                    topic.as_str()
+                )));
+                self.flush(now, out);
+            }
+            None => out.push(EngineMessage::Diagnostic(
+                "[smart actors] invalid raise_word: the store is full".into(),
+            )),
+        }
+    }
+    fn debug_seed_fact(
+        &mut self,
+        now: f64,
+        id: &str,
+        ward: Option<&str>,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        if !self.world.knowledge_enabled {
+            return;
+        }
+        if ward.is_some_and(|w| crate::lore::PlanningWard::parse(w).is_none()) {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid seed-fact: unknown ward '{}'",
+                ward.unwrap_or_default()
+            )));
+            return;
+        }
+        let game_days = self.clock.game_days(now);
+        // Install the authored row if the world does not already carry it. The
+        // catalog is the source, so a typo names nothing and is diagnosed, not
+        // invented — `no-procedural-characters`, for facts. `FactId::new`
+        // returns `Result` (`ids.rs:51`); `from_raw` (`ids.rs:61`) is the
+        // seed-data constructor (D5).
+        let fact_id = crate::ids::FactId::from_raw(id.to_string());
+        let key = match self.world.knowledge.key_of(&fact_id) {
+            Some(key) => key,
+            None => match self
+                .world
+                .fact_catalog
+                .clone()
+                .seed_one(&mut self.world, &fact_id)
+            {
+                Some(key) => key,
+                None => {
+                    out.push(EngineMessage::Diagnostic(format!(
+                        "[smart actors] invalid seed-fact: no row '{id}' in facts.json"
+                    )));
+                    return;
+                }
+            },
+        };
+        match ward.and_then(crate::lore::PlanningWard::parse) {
+            // Into the air, so a pickup can be watched from the outside.
+            Some(ward) => {
+                crate::knowledge::pollen::debug_seed_air(
+                    &mut self.world,
+                    ward,
+                    key,
+                    Some(game_days),
+                );
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[smart actors] '{id}' is in the air in the {} ward",
+                    ward.as_str()
+                )));
+            }
+            // Straight to the player at one hop from the nearest LLM mouth, so
+            // the journal has an attributed entry to render.
+            None => {
+                let player = self.config.player_id.clone();
+                let at = self.world.characters[&player].position_m();
+                let from = self
+                    .world
+                    .characters_within(at, crate::HEARING_RADIUS_M, Some(&player))
+                    .into_iter()
+                    .find(|id| self.world.characters[id].control().is_llm());
+                crate::knowledge::learn(
+                    &mut self.world,
+                    &player,
+                    key,
+                    crate::knowledge::Telling {
+                        hops: 1,
+                        from,
+                        heat: 1.0,
+                        view: Default::default(),
+                    },
+                    Some(game_days),
+                );
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[smart actors] the player is told '{id}'"
+                )));
+            }
+        }
+        self.flush(now, out);
+    }
+    /// Rebuild on a real-second cadence; receipt writes may publish immediately.
+    /// Compare complete content so cooling alone never flags the host resource.
+    fn ring_knell(&mut self, now: f64, years: u32, at: Vec3, out: &mut Vec<EngineMessage>) {
+        if !at.is_finite() {
+            return;
+        }
+        let day = self.clock.game_days(now);
+        if let Some(key) = crate::knowledge::mint::mint_knell(&mut self.world, at, years, day) {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[knowledge] Maren Smallvoice counts {years}: fact {key:?} minted at the tower"
+            )));
+        }
+        crate::knowledge::pollen::amplify(
+            &mut self.world,
+            at,
+            crate::knowledge::KNELL_CARRY_M,
+            Some(crate::knowledge::Topic::Blood),
+            day,
+        );
+    }
+
+    fn ring_civic_peal(&mut self, now: f64, rope: CivicRope, at: Vec3, radius_m: f64) {
+        crate::knowledge::pollen::amplify(
+            &mut self.world,
+            at,
+            radius_m,
+            crate::knowledge::mint::peal_topic(rope),
+            self.clock.game_days(now),
+        );
+    }
+
+    fn publish_ward_heat(&mut self, out: &mut Vec<EngineMessage>) {
+        let wards = crate::lore::PlanningWard::ALL
+            .into_iter()
+            .map(|ward| {
+                let (heat_pct, words) = if self.world.knowledge_enabled {
+                    self.world
+                        .knowledge
+                        .ward_air(ward)
+                        .fold((0, 0u8), |(heat, words), (_, air)| {
+                            (
+                                heat.max(crate::knowledge::heat_pct(air.heat)),
+                                words.saturating_add(1),
+                            )
+                        })
+                } else {
+                    (0, 0)
+                };
+                WardHeatRow {
+                    ward,
+                    label: crate::prompt::ward_label(ward),
+                    at: crate::knowledge::pollen::ward_centroids()
+                        .get(&ward)
+                        .copied()
+                        .unwrap_or(Vec3::ZERO),
+                    heat_pct,
+                    words,
+                }
+            })
+            .collect();
+        let message = EngineMessage::WardHeat { wards };
+        if self.last_ward_heat.as_ref() != Some(&message) {
+            self.last_ward_heat = Some(message.clone());
+            out.push(message);
+        }
+    }
+
+    fn publish_journal(&mut self, now: f64, out: &mut Vec<EngineMessage>) {
+        let revision = self.world.knowledge.receipts_revision();
+        if revision == self.last_journal_receipts
+            && now - self.last_journal_at < crate::knowledge::JOURNAL_PUBLISH_SECONDS
+        {
+            return;
+        }
+        self.last_journal_receipts = revision;
+        self.last_journal_at = now;
+        let player = &self.config.player_id;
+        let (entries, standing) = if self.world.knowledge_enabled {
+            let mut receipts: Vec<_> = self.world.knowledge.player_learned.iter().collect();
+            receipts.sort_by(|(li, l), (ri, r)| {
+                r.at.unwrap_or(f64::NEG_INFINITY)
+                    .total_cmp(&l.at.unwrap_or(f64::NEG_INFINITY))
+                    .then_with(|| li.cmp(ri))
+            });
+            let entries = receipts
+                .into_iter()
+                .take(crate::knowledge::JOURNAL_ENTRIES_MAX)
+                .map(|(_, receipt)| JournalEntry {
+                    word: receipt.word.clone(),
+                    from: receipt.from.as_ref().map(|id| {
+                        if self.world.characters.contains_key(player)
+                            && self.world.characters.contains_key(id)
+                        {
+                            crate::perception::identify_ids(&self.world, player, id)
+                        } else {
+                            "a stranger".to_string()
+                        }
+                    }),
+                    place: receipt
+                        .place
+                        .and_then(|p| self.world.area_map.label_of_key(p))
+                        .map(str::to_string),
+                    when: crate::knowledge::when_phrase(
+                        receipt.at,
+                        Some(self.clock.game_days(now)),
+                    ),
+                    hops: receipt.hops,
+                    tellings: receipt.tellings,
+                    wards: receipt.wards,
+                })
+                .collect();
+            (
+                entries,
+                crate::knowledge::standing_lines(&self.world, player),
+            )
+        } else {
+            (Vec::new(), Vec::new())
+        };
+        let empty = entries.is_empty() && standing.is_empty();
+        let message = EngineMessage::Journal { entries, standing };
+        if self.last_journal.as_ref() != Some(&message) {
+            // A player nobody has told anything sends no initial empty message.
+            if self.last_journal.is_some() || !empty {
+                out.push(message.clone());
+            }
+            self.last_journal = Some(message);
         }
     }
 

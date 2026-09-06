@@ -194,6 +194,46 @@ fn the_same_view_never_changes_its_mind() {
     }
 }
 
+/// A reconstruction cannot depend on where anybody went, who is present, whose
+/// name the player learned, or what other fact arrived between the two reads.
+#[test]
+fn a_view_survives_movement_presence_and_knowledge_changes() {
+    let mut world = garble_world();
+    let key = seed_one(&mut world, ALL_ROW);
+    let fact = world.knowledge.fact(key).expect("the fact").clone();
+    let carrier = ActorId::from_raw("wick02");
+    let before: Vec<_> = (1..=8)
+        .map(|hops| view_for(&world, &fact, &carrier, hops))
+        .collect();
+    assert!(before.iter().any(|view| view.subject.is_some()));
+    assert!(before.iter().any(|view| view.place.is_some()));
+    assert!(before.iter().any(|view| view.day_offset != 0));
+
+    for (index, body) in world.characters.values_mut().enumerate() {
+        body.state.position_m = Vec3::new(500.0 * index as f64, 20.0, -400.0);
+        body.state.presence = crate::character::Presence::BeyondTheWalls;
+        body.state.knows.extend(world.roster.iter().cloned());
+    }
+    // Generated arrivals do not alter the fixed authored vocabulary, even in a
+    // small fixture where the subject pool has not reached its size cap.
+    world.add_character(body(
+        "x00001",
+        Some(profile(Some("chandler"), PlanningWard::Wick, true)),
+    ));
+    let catalog = FactCatalog::from_json(
+        r#"{"schema_version":1,"facts":[{"id":"test.later", "topic":"law", "said":"a later event"}]}"#,
+    ).unwrap();
+    assert!(catalog.seed(&mut world).is_empty());
+
+    for (hops, expected) in (1..=8).zip(before) {
+        assert_eq!(
+            view_for(&world, &fact, &carrier, hops),
+            expected,
+            "hops {hops}"
+        );
+    }
+}
+
 /// T3. The mask seals a field. With `place` alone the place moves for somebody and
 /// the subject and the day never do — which is what makes "the rest is
 /// load-bearing truth" a property of the type and not a promise.

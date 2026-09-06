@@ -29,6 +29,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use crate::character::Character;
+use crate::clock::Office;
 use crate::ids::{ActorId, AreaKey, FactId, FactKey};
 use crate::lore::PlanningWard;
 use crate::prompt::PromptStrings;
@@ -209,6 +210,14 @@ pub const STAGE_HOP_RADIUS_M: f64 = crate::HEARING_RADIUS_M;
 /// makes the grid an accelerator and not an approximation. At 16 m the ambiguity
 /// is 10.7%; at 4 m it is 2.8% for 37 KB and four times the bake. 8 m is the knee.
 pub const WARD_CELL_M: f64 = 8.0;
+
+/// Maren Smallvoice's 300 m clip radius. `Knell` has no radius argument, so a
+/// host test pins this copy to `SoundscapeSound::SmallvoiceStroke`.
+pub const KNELL_CARRY_M: f64 = 300.0;
+
+/// The authored home idle leash is 10 m in `rounds.json`. A smaller reach
+/// would shut a householder's door only by luck while they mill at home.
+pub const DOOR_SHUT_REACH_M: f64 = 10.0;
 
 /// Whole-percent heat. One cooling step multiplies heat by ~0.944 — twelve orders
 /// of magnitude above `f32::EPSILON` — so a raw-`f32` comparison is true on every
@@ -690,6 +699,41 @@ impl Holding {
     }
 }
 
+/// Two full wards of receipts fit comfortably; oldest `(at, FactId)` leaves first.
+pub const PLAYER_RECEIPTS_MAX: usize = 64;
+/// At three lines per entry this is already more than a screenful.
+pub const JOURNAL_ENTRIES_MAX: usize = 24;
+/// Real seconds, like STAGE_HOP_SECONDS: a legibility cadence, never a roll clock.
+pub const JOURNAL_PUBLISH_SECONDS: f64 = 1.0;
+/// Beyond the garble's three-day range, dates stop counting.
+pub const WHEN_DAYS_MAX: i64 = 7;
+
+/// One permission to coin a word. An offered permission survives its exchange.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Occasion {
+    pub subject: Option<ActorId>,
+    pub from: Option<ActorId>,
+    pub at_game_days: f64,
+    pub offered: bool,
+}
+
+/// The player's remembered telling, kept even after its holding leaves the store.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LearnedHow {
+    pub word: String,
+    pub at: Option<f64>,
+    pub place: Option<AreaKey>,
+    pub from: Option<ActorId>,
+    pub hops: u8,
+    pub tellings: u16,
+    pub wards: u8,
+    wards_seen: u8,
+    /// Distinct mouths, retained across stirs. The receipt cap also bounds each
+    /// receipt's attribution set; once full, its displayed count saturates.
+    mouths_seen: BTreeSet<ActorId>,
+    unattributed_seen: bool,
+}
+
 // ---------------------------------------------------------------------------
 // The store
 // ---------------------------------------------------------------------------
@@ -719,6 +763,21 @@ pub struct Knowledge {
     air: Arc<BTreeMap<(PlanningWard, FactKey), Drift>>,
     /// `f64::NEG_INFINITY` at [`Default`], so the first stir beat always fires.
     last_sweep_game_days: f64,
+    occasions: BTreeMap<ActorId, Occasion>,
+    raises: BTreeMap<ActorId, (i64, Office, u8)>,
+    /// One player in the seed: multiple players would require an ActorId key.
+    pub player_learned: BTreeMap<FactId, LearnedHow>,
+    receipts_revision: u64,
+    seated: Option<(ActorId, Vec<FactKey>)>,
+    /// The successful player-facing pairs on the current game stir. Bounded
+    /// to the live-fact cap times the stage cap; a full set admits no more
+    /// receipts until the next stir, rather than replaying an evicted pair.
+    player_stage_stir: Option<u32>,
+    player_stage_tellings: BTreeSet<(FactKey, ActorId)>,
+    last_hearsay_beat_game_days: f64,
+    /// At most one entry per effective subject per live fact. Removed with
+    /// the fact, so a long-running city's daily notices cannot grow this forever.
+    hearsay_raised: BTreeSet<(FactKey, ActorId)>,
 }
 
 impl Default for Knowledge {
@@ -731,11 +790,184 @@ impl Default for Knowledge {
             holdings: Arc::new(BTreeMap::new()),
             air: Arc::new(BTreeMap::new()),
             last_sweep_game_days: f64::NEG_INFINITY,
+            occasions: BTreeMap::new(),
+            raises: BTreeMap::new(),
+            player_learned: BTreeMap::new(),
+            receipts_revision: 0,
+            seated: None,
+            player_stage_stir: None,
+            player_stage_tellings: BTreeSet::new(),
+            last_hearsay_beat_game_days: f64::NEG_INFINITY,
+            hearsay_raised: BTreeSet::new(),
         }
     }
 }
 
 impl Knowledge {
+    /// An independent daily beat: sharing the chalk beat would starve whichever
+    /// pass ran second. Deadlines are game time, including under the T key.
+    pub fn take_hearsay_beat(&mut self, game_days: f64) -> bool {
+        if !game_days.is_finite()
+            || (self.last_hearsay_beat_game_days.is_finite()
+                && game_days.floor() <= self.last_hearsay_beat_game_days.floor())
+        {
+            return false;
+        }
+        self.last_hearsay_beat_game_days = game_days;
+        true
+    }
+
+    #[doc(hidden)]
+    pub fn rewind_hearsay_beat(&mut self, game_days: f64) {
+        self.last_hearsay_beat_game_days = game_days;
+    }
+
+    pub fn occasion(&self, actor: &ActorId) -> Option<&Occasion> {
+        self.occasions.get(actor)
+    }
+    /// The latest event overwrites an unoffered slot. Once a sheet is in flight
+    /// its subject and source remain that exchange's until it lands or fails.
+    pub fn note_occasion(
+        &mut self,
+        actor: &ActorId,
+        subject: Option<ActorId>,
+        from: Option<ActorId>,
+        game_days: f64,
+    ) {
+        if self.occasions.get(actor).is_some_and(|o| o.offered) {
+            return;
+        }
+        self.occasions.insert(
+            actor.clone(),
+            Occasion {
+                subject,
+                from,
+                at_game_days: game_days,
+                offered: false,
+            },
+        );
+    }
+    pub fn spend_occasion(&mut self, actor: &ActorId) -> bool {
+        self.occasions.remove(actor).is_some()
+    }
+    pub fn expire_occasions(&mut self, game_days: f64) {
+        self.occasions.retain(|_, o| {
+            o.offered || o.at_game_days + OCCASION_LIFE_GAME_HOURS / 24.0 >= game_days
+        });
+    }
+    pub fn offer_occasion(&mut self, actor: &ActorId) {
+        if let Some(o) = self.occasions.get_mut(actor) {
+            o.offered = true;
+        }
+    }
+    pub fn withdraw_offer(&mut self, actor: &ActorId) {
+        if let Some(o) = self.occasions.get_mut(actor) {
+            o.offered = false;
+        }
+    }
+    pub fn note_raise(&mut self, actor: &ActorId, day: i64, office: Office) {
+        let entry = self.raises.entry(actor.clone()).or_insert((day, office, 0));
+        if (entry.0, entry.1) != (day, office) {
+            *entry = (day, office, 0);
+        }
+        entry.2 = entry.2.saturating_add(1);
+    }
+    pub fn raises_left(&self, actor: &ActorId, day: i64, office: Office) -> u8 {
+        match self.raises.get(actor) {
+            Some((d, o, n)) if (*d, *o) == (day, office) => RAISES_PER_OFFICE.saturating_sub(*n),
+            _ => RAISES_PER_OFFICE,
+        }
+    }
+    pub fn receipts_revision(&self) -> u64 {
+        self.receipts_revision
+    }
+    fn bump_receipts_revision(&mut self) {
+        self.receipts_revision = self.receipts_revision.wrapping_add(1);
+    }
+    pub fn note_seated(&mut self, actor: &ActorId, mut keys: Vec<FactKey>) {
+        keys.truncate(KNOWN_SHEET_MAX);
+        self.seated = Some((actor.clone(), keys));
+    }
+    pub fn take_seated(&mut self, actor: &ActorId) -> Vec<FactKey> {
+        if self.seated.as_ref().is_some_and(|(who, _)| who == actor) {
+            self.seated.take().map_or_else(Vec::new, |(_, keys)| keys)
+        } else {
+            Vec::new()
+        }
+    }
+    /// A witness's stored override remains first hand and pristine.
+    pub fn set_heat_at(&mut self, actor: &ActorId, key: FactKey, heat: f32, on: Option<f64>) {
+        let Some(fact) = self.fact(key) else { return };
+        let Some(mut held) = self
+            .stored(actor, key)
+            .or_else(|| fact.seeded.contains(actor).then(|| Held::seeded(fact)))
+        else {
+            return;
+        };
+        held.heat_at_learn = heat.clamp(0.0, 1.0);
+        held.learned_on = on;
+        self.replace_holding(actor, key, held, on);
+    }
+    /// Only the actual claimant can install this first-hand chain link.
+    pub fn seat_claimant(
+        &mut self,
+        speaker: &ActorId,
+        key: FactKey,
+        from: Option<ActorId>,
+        game_days: Option<f64>,
+    ) {
+        let Some(fact) = self
+            .fact(key)
+            .filter(|f| f.claimant() == Some(speaker) && f.seeded.contains(speaker))
+        else {
+            return;
+        };
+        let mut held = Held::seeded(fact);
+        held.from = from;
+        self.replace_holding(speaker, key, held, game_days);
+    }
+    fn replace_holding(
+        &mut self,
+        actor: &ActorId,
+        key: FactKey,
+        held: Held,
+        game_days: Option<f64>,
+    ) {
+        if let Some(row) = Arc::make_mut(&mut self.holdings)
+            .get_mut(actor)
+            .and_then(|rows| rows.iter_mut().find(|r| r.key == key))
+        {
+            *row = Holding::of(key, held);
+        } else {
+            insert_holding(self, actor, Holding::of(key, held), game_days);
+        }
+    }
+    pub(crate) fn player_stage_telling_seen(
+        &self,
+        key: FactKey,
+        mouth: &ActorId,
+        stir: u32,
+    ) -> bool {
+        self.player_stage_stir == Some(stir)
+            && (self.player_stage_tellings.contains(&(key, mouth.clone()))
+                || self.player_stage_tellings.len() >= FACTS_MAX_LIVE * STAGE_HOP_MAX_PAIRS)
+    }
+    pub(crate) fn note_player_stage_telling(
+        &mut self,
+        key: FactKey,
+        mouth: ActorId,
+        stir: u32,
+    ) -> bool {
+        if self.player_stage_stir != Some(stir) {
+            self.player_stage_tellings.clear();
+            self.player_stage_stir = Some(stir);
+        }
+        if self.player_stage_tellings.len() >= FACTS_MAX_LIVE * STAGE_HOP_MAX_PAIRS {
+            return false;
+        }
+        self.player_stage_tellings.insert((key, mouth))
+    }
+
     pub fn fact(&self, key: FactKey) -> Option<&Fact> {
         self.live.get(&key)
     }
@@ -823,11 +1055,12 @@ impl Knowledge {
             .map(|fact| {
                 std::mem::size_of::<Fact>()
                     + fact.id.as_str().len()
-                    + fact.said.len()
+                    + fact.said.capacity()
+                    + fact.source.heap_bytes()
                     + fact
                         .own
                         .iter()
-                        .map(|(who, line)| who.as_str().len() + line.len() + 48)
+                        .map(|(who, line)| who.as_str().len() + line.capacity() + 48)
                         .sum::<usize>()
                     + fact
                         .seeded
@@ -839,6 +1072,12 @@ impl Knowledge {
                         .iter()
                         .map(|who| who.as_str().len() + 24)
                         .sum::<usize>()
+                    + fact
+                        .quiet_among
+                        .iter()
+                        .map(|who| who.as_str().len() + 48)
+                        .sum::<usize>()
+                    + fact.craft_ear.as_ref().map_or(0, |ear| ear.capacity())
                     + 48
             })
             .sum();
@@ -849,6 +1088,7 @@ impl Knowledge {
                 actor.as_str().len()
                     + 48
                     + std::mem::size_of::<Vec<Holding>>()
+                    + rows.capacity() * std::mem::size_of::<Holding>()
                     + rows
                         .iter()
                         .map(|row| {
@@ -856,8 +1096,7 @@ impl Knowledge {
                             // ids: `from` (every carried row has one) and a garbled
                             // `view.subject` (M3) — the same `len + 24` the air's
                             // `via` is counted at below.
-                            std::mem::size_of::<Holding>()
-                                + row.from.as_ref().map_or(0, |from| from.as_str().len() + 24)
+                            row.from.as_ref().map_or(0, |from| from.as_str().len() + 24)
                                 + row
                                     .view
                                     .subject
@@ -883,6 +1122,50 @@ impl Knowledge {
             + fact_bytes
             + holding_bytes
             + air_bytes
+            + self
+                .occasions
+                .iter()
+                .map(|(who, o)| {
+                    std::mem::size_of::<Occasion>()
+                        + 48
+                        + who.as_str().len()
+                        + o.subject.as_ref().map_or(0, |id| id.as_str().len())
+                        + o.from.as_ref().map_or(0, |id| id.as_str().len())
+                })
+                .sum::<usize>()
+            + self
+                .raises
+                .keys()
+                .map(|who| who.as_str().len() + 48 + std::mem::size_of::<(i64, Office, u8)>())
+                .sum::<usize>()
+            + self
+                .player_learned
+                .iter()
+                .map(|(id, r)| {
+                    id.as_str().len()
+                        + r.word.capacity()
+                        + r.from.as_ref().map_or(0, |id| id.as_str().len())
+                        + r.mouths_seen
+                            .iter()
+                            .map(|id| id.as_str().len() + 48)
+                            .sum::<usize>()
+                        + 48
+                        + std::mem::size_of::<LearnedHow>()
+                })
+                .sum::<usize>()
+            + self.seated.as_ref().map_or(0, |(who, keys)| {
+                who.as_str().len() + keys.capacity() * std::mem::size_of::<FactKey>()
+            })
+            + self
+                .player_stage_tellings
+                .iter()
+                .map(|(_, id)| 48 + std::mem::size_of::<(FactKey, ActorId)>() + id.as_str().len())
+                .sum::<usize>()
+            + self
+                .hearsay_raised
+                .iter()
+                .map(|(_, id)| 48 + std::mem::size_of::<(FactKey, ActorId)>() + id.as_str().len())
+                .sum::<usize>()
             + self
                 .by_id
                 .keys()
@@ -922,6 +1205,8 @@ impl Knowledge {
     pub fn invalidate(&mut self, key: FactKey) -> Option<Fact> {
         let fact = self.live.remove(&key)?;
         self.by_id.remove(&fact.id);
+        self.hearsay_raised.retain(|(row, _)| *row != key);
+        self.player_stage_tellings.retain(|(row, _)| *row != key);
         if self.air.keys().any(|(_, row)| *row == key) {
             Arc::make_mut(&mut self.air).retain(|(_, row), _| *row != key);
         }
@@ -1164,10 +1449,9 @@ impl Knowledge {
 
 /// **`None` means they have never heard of it at all.**
 ///
-/// Checks the fact's `seeded` set first — hops 0, heat 1.0, no garble,
-/// `from: None` — and returns without reading the carrier store, so a stray row
-/// can never be read as a garbled first-hand holding. Every consumer goes through
-/// this and nothing else.
+/// A stored first-hand override precedes the seeded default, so a claimant keeps
+/// the mouth behind them and a re-asked witness keeps their renewed heat.
+/// `learn` refuses every arrival to a first-hand holder.
 ///
 /// Always call it fully qualified, `knowledge::holds`, and never `use` it: it is
 /// one letter from [`Character::holds`](crate::character::Character::holds) (the
@@ -1179,30 +1463,32 @@ pub fn holds(world: &World, actor: &ActorId, fact: &FactId) -> Option<Held> {
 
 /// [`holds`], by dense handle.
 pub fn holds_key(world: &World, actor: &ActorId, key: FactKey) -> Option<Held> {
-    let fact = world.knowledge.fact(key)?;
-    if fact.seeded.contains(actor) {
-        return Some(Held::seeded(fact));
+    if !world.knowledge_enabled {
+        return None;
     }
-    world.knowledge.stored(actor, key)
+    let fact = world.knowledge.fact(key)?;
+    world
+        .knowledge
+        .stored(actor, key)
+        .or_else(|| fact.seeded.contains(actor).then(|| Held::seeded(fact)))
 }
 
-/// Everything this person has, seeded rows and carried rows together, ascending
-/// [`FactKey`].
+/// Stored overrides take precedence over seeded defaults, as in `holds_key`.
 pub fn holdings_of(world: &World, actor: &ActorId) -> Vec<(FactKey, Held)> {
-    // Seeded first, then stored — [`holds_key`]'s own order — with the actor's
-    // rows fetched once and searched by key (they are kept ascending), instead
-    // of one `holdings.get` per live fact.
+    if !world.knowledge_enabled {
+        return Vec::new();
+    }
     let rows = world.knowledge.rows_of(actor);
     world
         .knowledge
         .facts()
         .filter_map(|(key, fact)| {
-            if fact.seeded.contains(actor) {
-                return Some((key, Held::seeded(fact)));
-            }
-            rows.binary_search_by(|row| row.key.cmp(&key))
+            let held = rows
+                .binary_search_by(|row| row.key.cmp(&key))
                 .ok()
-                .map(|at| (key, rows[at].held()))
+                .map(|at| rows[at].held())
+                .or_else(|| fact.seeded.contains(actor).then(|| Held::seeded(fact)));
+            held.map(|held| (key, held))
         })
         .collect()
 }
@@ -1238,6 +1524,23 @@ pub fn learn(
     telling: Telling,
     game_days: Option<f64>,
 ) -> Learned {
+    if !world.knowledge_enabled || world.knowledge.fact(key).is_none() {
+        return Learned::Refused;
+    }
+    let outcome = merge_telling(world, actor, key, &telling, game_days);
+    if world.is_player(actor) {
+        record_player_receipt(world, actor, key, &telling, game_days);
+    }
+    outcome
+}
+
+fn merge_telling(
+    world: &mut World,
+    actor: &ActorId,
+    key: FactKey,
+    telling: &Telling,
+    game_days: Option<f64>,
+) -> Learned {
     // An unknown key is nothing to learn — never a silent insert of a row whose
     // fact does not exist, which `holdings_of` would then skip forever.
     if world.knowledge.fact(key).is_none() {
@@ -1248,10 +1551,10 @@ pub fn learn(
     let Some(held) = existing else {
         let fresh = Held::carried(
             telling.hops,
-            telling.from,
+            telling.from.clone(),
             telling.heat,
             game_days,
-            telling.view,
+            telling.view.clone(),
         );
         insert_holding(
             &mut world.knowledge,
@@ -1290,8 +1593,8 @@ pub fn learn(
 
     if closer {
         row.hops = telling.hops;
-        row.from = telling.from;
-        row.view = telling.view;
+        row.from = telling.from.clone();
+        row.view = telling.view.clone();
         return Learned::Corrected;
     }
 
@@ -1366,6 +1669,157 @@ pub fn invalidate_stale(world: &mut World) -> Vec<FactId> {
     dead
 }
 
+/// A word warm enough to repeat is warm enough to act on. The effective
+/// subject decides whom it affects: a wrong name can close the wrong counter.
+/// Lowest `(hops, FactKey)` wins. A caller without a clock argument still uses
+/// the world's current clock, so a cooled word cannot become a permanent ban.
+pub fn holds_about(
+    world: &World,
+    holder: &ActorId,
+    about: &ActorId,
+    topic: Option<Topic>,
+    game_days: Option<f64>,
+) -> Option<(FactKey, Held)> {
+    if !world.knowledge_enabled {
+        return None;
+    }
+    let game_days = game_days.or_else(|| world.current_time.map(|time| time.game_days()));
+    holdings_of(world, holder)
+        .into_iter()
+        .filter(|(key, held)| {
+            world.knowledge.fact(*key).is_some_and(|fact| {
+                topic.is_none_or(|topic| fact.topic == topic)
+                    && effective_is_about(fact, held, about)
+                    && volunteers(world, fact, holder, held, game_days)
+            })
+        })
+        .min_by_key(|(key, held)| (held.hops, *key))
+}
+
+fn effective_is_about(fact: &Fact, held: &Held, who: &ActorId) -> bool {
+    held.view
+        .subject
+        .as_ref()
+        .map_or_else(|| fact.subject.contains(who), |subject| subject == who)
+}
+
+/// Both people are within the authored idle leash of this householder's door.
+/// An inbox line is a knock and always opens it. The engine calls this only
+/// for the stage's idle lane, independently of the novelty cost knob.
+pub fn door_is_shut(world: &World, householder: &ActorId, caller: &ActorId) -> bool {
+    if !world.knowledge_enabled {
+        return false;
+    }
+    let Some(resident) = world.characters.get(householder) else {
+        return false;
+    };
+    if !resident.inbox().is_empty() {
+        return false;
+    }
+    let Some(door) = world.places.home_of(householder).map(|entry| entry.point) else {
+        return false;
+    };
+    let Some(visitor) = world.characters.get(caller) else {
+        return false;
+    };
+    resident.position_m().distance(door) <= DOOR_SHUT_REACH_M
+        && visitor.position_m().distance(door) <= DOOR_SHUT_REACH_M
+        && crate::knowledge::holds_about(world, householder, caller, None, None).is_some()
+}
+
+/// One law officer per game day may raise a word on a warm, wrong-name telling.
+/// The notice is explicitly hearsay, summonable and settleable by the law's
+/// existing path. Calls `Notices::raise_hearsay` directly: going through the
+/// `raise_notice` action would mint a second fact, then garble and raise again
+/// forever. This pass never mints or emits an event that could arm that loop.
+pub fn raise_hearsay_words(world: &mut World, game_days: f64) -> Vec<String> {
+    if !world.knowledge_enabled
+        || world.knowledge.is_empty()
+        || !world.knowledge.take_hearsay_beat(game_days)
+    {
+        return Vec::new();
+    }
+    let candidate = world
+        .characters
+        .iter()
+        .filter(|(id, character)| {
+            world.is_present(id)
+                && character.control().is_llm()
+                && crate::notices::is_law(character)
+        })
+        .flat_map(|(officer, _)| {
+            holdings_of(world, officer)
+                .into_iter()
+                .map(move |(key, held)| (officer.clone(), key, held))
+        })
+        .filter(|(_, _, held)| held.hops >= 1 && held.view.subject.is_some())
+        .filter(|(officer, key, held)| {
+            world.knowledge.fact(*key).is_some_and(|fact| {
+                fact.topic == Topic::Law
+                    && held.view.subject.as_ref().is_some_and(|subject| {
+                        world.is_present(subject)
+                            && subject != officer
+                            && !fact.subject.contains(subject)
+                            && !world
+                                .knowledge
+                                .hearsay_raised
+                                .contains(&(*key, subject.clone()))
+                    })
+                    && volunteers(world, fact, officer, held, Some(game_days))
+            })
+        })
+        .min_by(|(lo, lk, lh), (ro, rk, rh)| (lh.hops, lo, lk).cmp(&(rh.hops, ro, rk)));
+    let Some((officer, key, held)) = candidate else {
+        return Vec::new();
+    };
+    let subject = held
+        .view
+        .subject
+        .as_ref()
+        .expect("candidate has a wrong name")
+        .clone();
+    let Some(deed) = render_plain(world, &officer, key, &held, Some(game_days)) else {
+        return Vec::new();
+    };
+    let about = if world.characters[&officer].knows().contains(&subject) {
+        world.characters[&subject].name().to_string()
+    } else {
+        "a stranger".to_string()
+    };
+    let since = when_phrase(
+        world
+            .knowledge
+            .fact(key)
+            .and_then(|fact| fact.day)
+            .map(|day| day.saturating_add(i64::from(held.view.day_offset)) as f64),
+        Some(game_days),
+    );
+    if world
+        .notices
+        .raise_hearsay(
+            about,
+            deed,
+            None,
+            Some(since),
+            Some(game_days),
+            officer.clone(),
+            Some(subject.clone()),
+            None,
+            None,
+        )
+        .is_none()
+    {
+        return Vec::new();
+    }
+    world
+        .knowledge
+        .hearsay_raised
+        .insert((key, subject.clone()));
+    vec![format!(
+        "[knowledge] {officer} raises a hearsay word against {subject} on something they were told"
+    )]
+}
+
 /// Whether this person can ever carry this fact as news: the subject cannot —
 /// they hold it at hops 0 because they were there, or not at all.
 ///
@@ -1433,11 +1887,24 @@ pub(crate) fn volunteers_with(fact: &Fact, holder: &ActorId, heat: f32, salience
 /// "The hottest thing this actor carries" is a gossip rule and the wrong rule for
 /// an interrogation: ask about the bale while the ward is loud about an arrest and
 /// the one fact you came for is off the sheet.
+#[cfg(test)]
 pub(crate) fn relevance_seated(
     world: &World,
     actor: &Character,
     since: &[&str],
     recent: &[&str],
+) -> Vec<FactKey> {
+    relevance_seated_with_present(world, actor, since, recent, &[])
+}
+
+/// Presence is relevance too: a fourth-hand story about the person in front of
+/// you keeps its ordinary hedge. No greeting prose or extra neighbour scan.
+pub(crate) fn relevance_seated_with_present(
+    world: &World,
+    actor: &Character,
+    since: &[&str],
+    recent: &[&str],
+    present: &[ActorId],
 ) -> Vec<FactKey> {
     if !world.knowledge_enabled {
         return Vec::new();
@@ -1451,24 +1918,30 @@ pub(crate) fn relevance_seated(
         .join("\n");
 
     let mut seated = Vec::new();
-    for (key, _held) in holdings_of(world, reader) {
+    for (key, held) in holdings_of(world, reader) {
         let Some(fact) = world.knowledge.fact(key) else {
             continue;
         };
         // The self-subject filter, before relevance and before heat. A subject who
         // *does* hold an `own` line keeps it: if they hold it, they hold their own
         // line or nothing.
-        if fact.is_about(reader) && !fact.own.contains_key(reader) {
+        if (fact.is_about(reader) || effective_is_about(fact, &held, reader))
+            && !fact.own.contains_key(reader)
+        {
             continue;
         }
-        if relevance_tokens(world, fact)
+        if present
             .iter()
-            .any(|token| haystack.contains(token.as_str()))
+            .any(|who| effective_is_about(fact, &held, who))
+            || relevance_tokens(world, fact)
+                .iter()
+                .any(|token| haystack.contains(token.as_str()))
         {
-            seated.push(key);
+            seated.push((held.hops, key));
         }
     }
-    seated
+    seated.sort_unstable();
+    seated.into_iter().map(|(_, key)| key).collect()
 }
 
 /// The words an asker will use for this fact: its id's own segments, its
@@ -1640,12 +2113,7 @@ pub fn render_line(
         .unwrap_or_else(|| strings.place_unknown.clone());
     let day_word = day_word(world, fact, held, strings);
 
-    let mut sentence = template;
-    if let Some(subject) = subject_word {
-        sentence = sentence.replace("{subject}", &subject);
-    }
-    sentence = sentence.replace("{place}", &place_word);
-    sentence = sentence.replace("{day}", &day_word);
+    let sentence = substitute(&template, subject_word.as_deref(), &place_word, &day_word);
 
     // The rung is substituted last and exactly once, which is why the loader
     // refuses a template naming `%s`.
@@ -1720,6 +2188,22 @@ pub(crate) fn person_word(
     who: &ActorId,
     strings: &PromptStrings,
 ) -> String {
+    person_word_with(
+        world,
+        reader,
+        who,
+        &strings.unknown_person_role,
+        &strings.unknown_person_name,
+    )
+}
+
+fn person_word_with(
+    world: &World,
+    reader: &ActorId,
+    who: &ActorId,
+    unknown_role: &str,
+    unknown_name: &str,
+) -> String {
     let subject = world.characters.get(who);
     let told = who == reader
         || world
@@ -1736,10 +2220,11 @@ pub(crate) fn person_word(
             .map(|display| (profile, display))
     }) {
         let trade = lower_first(display);
-        let role = strings
-            .unknown_person_role
-            .replacen("%s", &trade, 1)
-            .replacen("%s", &crate::prompt::ward_label(profile.planning_ward), 1);
+        let role = unknown_role.replacen("%s", &trade, 1).replacen(
+            "%s",
+            &crate::prompt::ward_label(profile.planning_ward),
+            1,
+        );
         // Five of the 65 occupation displays begin with a vowel ("Anchoress",
         // "Instrument maker", "Executioner", "Animal worker", "Entertainer"), so
         // "a anchoress" would otherwise reach a sheet.
@@ -1750,7 +2235,7 @@ pub(crate) fn person_word(
     }
     // No profile, no `occupation_display` (the no-trade quarter), or an actor this
     // world does not have.
-    strings.unknown_person_name.clone()
+    unknown_name.to_string()
 }
 
 /// Only the first character lowered — all 65 occupation displays in
@@ -1795,6 +2280,325 @@ fn day_word(world: &World, fact: &Fact, held: &Held, strings: &PromptStrings) ->
         },
         _ => strings.day_long_ago.clone(),
     }
+}
+
+fn substitute(template: &str, subject: Option<&str>, place: &str, day: &str) -> String {
+    let sentence = subject.map_or_else(
+        || template.to_string(),
+        |word| template.replace("{subject}", word),
+    );
+    // Area labels are locative phrases ("In …", "Next to …"). A template's
+    // leading "at" must not produce "at In" or "at Next to". Keep labels and
+    // measured hedges intact; only compose the two fragments grammatically.
+    let lowered = lower_first(place);
+    let has_preposition = [
+        "in ", "inside ", "at ", "next to ", "near ", "on ", "beside ", "outside ",
+    ]
+    .iter()
+    .any(|prefix| lowered.starts_with(prefix));
+    let sentence = if has_preposition {
+        sentence
+            .replace("at {place}", &lowered)
+            .replace("At {place}", place)
+    } else {
+        sentence
+    };
+    sentence.replace("{place}", place).replace("{day}", day)
+}
+
+/// The same observer-aware substitution as the sheet, without its hedge wrapper.
+/// A receipt holds this sentence even when the carrier row is evicted.
+pub fn render_plain(
+    world: &World,
+    reader: &ActorId,
+    key: FactKey,
+    held: &Held,
+    game_days: Option<f64>,
+) -> Option<String> {
+    if !world.knowledge_enabled {
+        return None;
+    }
+    let fact = world.knowledge.fact(key)?;
+    let effective = held.view.subject.as_ref().or_else(|| fact.subject.first());
+    let template = if let Some(own) = fact.own.get(reader) {
+        own.as_str()
+    } else if fact.is_about(reader) || effective == Some(reader) {
+        return None;
+    } else {
+        &fact.said
+    };
+    let subject = effective.map(|who| {
+        person_word_with(
+            world,
+            reader,
+            who,
+            "a %s of %s (you don't know their name)",
+            "a stranger",
+        )
+    });
+    let place = held
+        .view
+        .place
+        .or(fact.place)
+        .and_then(|p| world.area_map.label_of_key(p))
+        .unwrap_or("somewhere in the city");
+    let day = when_phrase(
+        fact.day
+            .map(|d| d.saturating_add(i64::from(held.view.day_offset)) as f64),
+        game_days,
+    );
+    Some(substitute(template, subject.as_deref(), place, &day))
+}
+
+/// The calendar age, in words; an undated receipt makes no claim about a day.
+pub fn when_phrase(at: Option<f64>, now: Option<f64>) -> String {
+    match (at, now) {
+        (Some(at), Some(now)) => match (now.floor() as i64).saturating_sub(at.floor() as i64) {
+            d if d <= 0 => "today".into(),
+            1 => "yesterday".into(),
+            d if d <= WHEN_DAYS_MAX => format!(
+                "{} days past",
+                ["two", "three", "four", "five", "six", "seven"][(d - 2) as usize]
+            ),
+            _ => "a long while back".into(),
+        },
+        _ => "at some point".into(),
+    }
+}
+
+fn record_player_receipt(
+    world: &mut World,
+    player: &ActorId,
+    key: FactKey,
+    telling: &Telling,
+    game_days: Option<f64>,
+) {
+    record_player_receipt_inner(world, player, key, telling, game_days, false);
+}
+
+/// Only the fixed player-deed mint calls this. It records "You chalked …" in
+/// the journal without giving a self-subject fact a sheet or deposit exception.
+pub(super) fn record_player_deed(
+    world: &mut World,
+    player: &ActorId,
+    key: FactKey,
+    game_days: Option<f64>,
+) {
+    record_player_receipt_inner(
+        world,
+        player,
+        key,
+        &Telling {
+            hops: 0,
+            from: None,
+            heat: 1.0,
+            view: FactView::default(),
+        },
+        game_days,
+        true,
+    );
+}
+
+fn record_player_receipt_inner(
+    world: &mut World,
+    player: &ActorId,
+    key: FactKey,
+    telling: &Telling,
+    game_days: Option<f64>,
+    own_deed: bool,
+) {
+    let Some(fact) = world.knowledge.fact(key) else {
+        return;
+    };
+    // The self-subject rule still holds on the player's side (M5 owns the
+    // deliberate STRANGER exception). A refused self-subject arrival is no receipt.
+    if !own_deed && !may_carry(fact, player) && !fact.own.contains_key(player) {
+        return;
+    }
+    let id = fact.id.clone();
+    let place = world
+        .characters
+        .get(player)
+        .and_then(|c| mint::area_key_at(world, c.position_m()));
+    let ward = world
+        .characters
+        .get(player)
+        .and_then(|c| world.ward_at(c.position_m()));
+    // Fresh can be its own eviction victim. It was still heard, and that
+    // sentence must survive even when the merge could not keep its holding.
+    let held = holds_key(world, player, key).unwrap_or_else(|| {
+        Held::carried(
+            telling.hops,
+            telling.from.clone(),
+            telling.heat,
+            game_days,
+            telling.view.clone(),
+        )
+    });
+    let word = if own_deed {
+        Some(substitute(
+            &fact.said,
+            Some("You"),
+            fact.place
+                .and_then(|p| world.area_map.label_of_key(p))
+                .unwrap_or("somewhere in the city"),
+            &when_phrase(fact.day.map(|day| day as f64), game_days),
+        ))
+    } else {
+        render_plain(world, player, key, &held, game_days)
+    };
+    let Some(word) = word else {
+        return;
+    };
+    let bit = ward.map_or(0, |ward| {
+        1u8 << PlanningWard::ALL
+            .iter()
+            .position(|w| *w == ward)
+            .unwrap_or(0)
+    });
+    let entry = world
+        .knowledge
+        .player_learned
+        .entry(id)
+        .or_insert_with(|| LearnedHow {
+            word: word.clone(),
+            at: game_days,
+            place,
+            from: held.from.clone(),
+            hops: held.hops,
+            tellings: 0,
+            wards: 0,
+            wards_seen: 0,
+            mouths_seen: BTreeSet::new(),
+            unattributed_seen: false,
+        });
+    let before = entry.clone();
+    // Count who arrived, not the closer stored teller retained by the merge.
+    // An unattributed witnessing/air arrival is one receipt, never a new mouth
+    // on every stir. A -> B -> A is two mouths, including across ward moves.
+    match telling.from.as_ref() {
+        Some(mouth) if entry.mouths_seen.len() < PLAYER_RECEIPTS_MAX => {
+            entry.mouths_seen.insert(mouth.clone());
+        }
+        None => entry.unattributed_seen = true,
+        _ => {}
+    }
+    entry.tellings = (entry.mouths_seen.len() + usize::from(entry.unattributed_seen)) as u16;
+    entry.wards_seen |= bit;
+    entry.wards = entry.wards_seen.count_ones() as u8;
+    if held.hops < entry.hops {
+        entry.hops = held.hops;
+        entry.from = held.from;
+        entry.at = game_days;
+        entry.place = place;
+        entry.word = word;
+    }
+    if *entry != before {
+        world.knowledge.bump_receipts_revision();
+    }
+    while world.knowledge.player_learned.len() > PLAYER_RECEIPTS_MAX {
+        let victim = world
+            .knowledge
+            .player_learned
+            .iter()
+            .min_by(|(li, l), (ri, r)| {
+                l.at.unwrap_or(f64::NEG_INFINITY)
+                    .total_cmp(&r.at.unwrap_or(f64::NEG_INFINITY))
+                    .then_with(|| li.cmp(ri))
+            })
+            .map(|(id, _)| id.clone());
+        if let Some(id) = victim {
+            world.knowledge.player_learned.remove(&id);
+        }
+    }
+}
+
+/// Being asked brings back a cold telling at one absolute heat. Standing
+/// knowledge has no deposit path, so an ask puts just that ward's air in motion.
+pub fn reheat(world: &mut World, actor: &ActorId, key: FactKey, game_days: Option<f64>) {
+    if !world.knowledge_enabled {
+        return;
+    }
+    let Some(held) = holds_key(world, actor, key) else {
+        return;
+    };
+    let Some(fact) = world.knowledge.fact(key) else {
+        return;
+    };
+    if !fact.decays {
+        if let (Some(position), Some(now)) = (
+            world.characters.get(actor).map(Character::position_m),
+            game_days,
+        ) && let Some(ward) = world.ward_at(position)
+            && world
+                .knowledge
+                .drift(ward, key)
+                .is_none_or(|air| heat_pct(air.heat) < heat_pct(REHEAT_TO))
+        {
+            world.knowledge.stir_up(ward, key, REHEAT_TO, now);
+        }
+        return;
+    }
+    if held.heat(game_days) < REHEAT_TO {
+        world
+            .knowledge
+            .set_heat_at(actor, key, REHEAT_TO, game_days);
+    }
+}
+
+/// The live stake the player caused. This Vec is also the future quest clock
+/// slot; no quest state or invented deadline belongs in the journal itself.
+pub fn standing_lines(world: &World, player: &ActorId) -> Vec<String> {
+    if !world.knowledge_enabled {
+        return Vec::new();
+    }
+    // One stake slot, newest live word first. Count the city only for the
+    // selected word, never once per claim. The other slot belongs to a clock.
+    let Some((key, fact)) = world
+        .knowledge
+        .facts()
+        .filter(|(key, fact)| {
+            fact.claimant().is_some_and(|claimant| {
+                claimant == player || chain(world, claimant, *key).contains(player)
+            }) && PlanningWard::ALL
+                .into_iter()
+                .any(|ward| world.knowledge.drift(ward, *key).is_some())
+        })
+        .max_by_key(|(_, fact)| fact.sequence)
+    else {
+        return Vec::new();
+    };
+    let wards: Vec<_> = PlanningWard::ALL
+        .into_iter()
+        .filter(|ward| world.knowledge.drift(*ward, key).is_some())
+        .collect();
+    let mouths = world
+        .characters
+        .keys()
+        .filter(|who| holds_key(world, who, key).is_some())
+        .count();
+    let held = Held::seeded(fact);
+    let Some(word) = render_plain(
+        world,
+        player,
+        key,
+        &held,
+        world.current_time.map(|t| t.game_days()),
+    ) else {
+        return Vec::new();
+    };
+    let places = wards
+        .iter()
+        .map(|ward| crate::prompt::ward_label(*ward))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mouth = if mouths == 1 { "mouth" } else { "mouths" };
+    let ward = if wards.len() == 1 { "ward" } else { "wards" };
+    let have = if mouths == 1 { "has" } else { "have" };
+    vec![format!(
+        "A WORD OF YOURS IS GOING ROUND\n{mouths} {mouth} in {} {ward} {have} it: \"{word}\".\nIn {places}. Say it straight to somebody there and yours is the version they keep.",
+        wards.len()
+    )]
 }
 
 #[cfg(test)]

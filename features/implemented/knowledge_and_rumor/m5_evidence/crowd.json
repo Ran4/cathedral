@@ -1,0 +1,164 @@
+[
+  {
+    "name": "crowd-0-on",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/cathedral-headless",
+      "--fake",
+      "--watch-clock",
+      "1",
+      "--seconds-per-day",
+      "3600",
+      "--start-office",
+      "dayspring",
+      "--trace-pollen",
+      "--pollen-seed",
+      "The Wickmarket",
+      "--extra-ambient",
+      "0",
+      "--pollen-step",
+      "3",
+      "--pollen-saturate"
+    ],
+    "environment": {},
+    "binary_sha256": "771382ee0243cb4c826d28099e25f7a51b3dd0edf5bdc2687bfe83f0db86f331",
+    "returncode": 0,
+    "wall_seconds": 2.801,
+    "pollen_sha256": "a822dd9bb0ea60b45afcb38fae3323e3173575a520b9b793e51a3c0ec90d8141"
+  },
+  {
+    "name": "crowd-0-off",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/cathedral-headless",
+      "--fake",
+      "--watch-clock",
+      "1",
+      "--seconds-per-day",
+      "3600",
+      "--start-office",
+      "dayspring",
+      "--trace-pollen",
+      "--pollen-seed",
+      "The Wickmarket",
+      "--extra-ambient",
+      "0",
+      "--pollen-step",
+      "3",
+      "--pollen-saturate"
+    ],
+    "environment": {
+      "CATHEDRAL_NO_KNOWLEDGE": "1"
+    },
+    "binary_sha256": "771382ee0243cb4c826d28099e25f7a51b3dd0edf5bdc2687bfe83f0db86f331",
+    "returncode": 0,
+    "wall_seconds": 2.486,
+    "pollen_sha256": "60d9f2371f369c53e28006491255c41029b4e43a51dbcf5b98019f112c908518"
+  },
+  {
+    "name": "crowd-1000-on",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/cathedral-headless",
+      "--fake",
+      "--watch-clock",
+      "1",
+      "--seconds-per-day",
+      "3600",
+      "--start-office",
+      "dayspring",
+      "--trace-pollen",
+      "--pollen-seed",
+      "The Wickmarket",
+      "--extra-ambient",
+      "1000",
+      "--pollen-step",
+      "3",
+      "--pollen-saturate"
+    ],
+    "environment": {},
+    "binary_sha256": "771382ee0243cb4c826d28099e25f7a51b3dd0edf5bdc2687bfe83f0db86f331",
+    "returncode": 0,
+    "wall_seconds": 12.041,
+    "pollen_sha256": "4fcc27f7e954a5f5f42604cb6f8c20f53f8e1dc374d44ef23bb28d39233d65b4"
+  },
+  {
+    "name": "crowd-1000-off",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/cathedral-headless",
+      "--fake",
+      "--watch-clock",
+      "1",
+      "--seconds-per-day",
+      "3600",
+      "--start-office",
+      "dayspring",
+      "--trace-pollen",
+      "--pollen-seed",
+      "The Wickmarket",
+      "--extra-ambient",
+      "1000",
+      "--pollen-step",
+      "3",
+      "--pollen-saturate"
+    ],
+    "environment": {
+      "CATHEDRAL_NO_KNOWLEDGE": "1"
+    },
+    "binary_sha256": "771382ee0243cb4c826d28099e25f7a51b3dd0edf5bdc2687bfe83f0db86f331",
+    "returncode": 0,
+    "wall_seconds": 10.934,
+    "pollen_sha256": "50d441f01e0fe0c2da679cd3079f2729fdfe9ff64054f97ef5f611dc4144e230"
+  },
+  {
+    "name": "crowd-20000-on",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/cathedral-headless",
+      "--fake",
+      "--watch-clock",
+      "1",
+      "--seconds-per-day",
+      "3600",
+      "--start-office",
+      "dayspring",
+      "--trace-pollen",
+      "--pollen-seed",
+      "The Wickmarket",
+      "--extra-ambient",
+      "20000",
+      "--pollen-step",
+      "3",
+      "--pollen-saturate"
+    ],
+    "environment": {},
+    "binary_sha256": "771382ee0243cb4c826d28099e25f7a51b3dd0edf5bdc2687bfe83f0db86f331",
+    "returncode": 0,
+    "wall_seconds": 4504.886,
+    "pollen_sha256": "034b71cb483e9ece142e91401aaea38d42d751bc1fffba3f30a2f7d4158bab32"
+  },
+  {
+    "name": "crowd-20000-off",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/cathedral-headless",
+      "--fake",
+      "--watch-clock",
+      "1",
+      "--seconds-per-day",
+      "3600",
+      "--start-office",
+      "dayspring",
+      "--trace-pollen",
+      "--pollen-seed",
+      "The Wickmarket",
+      "--extra-ambient",
+      "20000",
+      "--pollen-step",
+      "3",
+      "--pollen-saturate"
+    ],
+    "environment": {
+      "CATHEDRAL_NO_KNOWLEDGE": "1"
+    },
+    "binary_sha256": "771382ee0243cb4c826d28099e25f7a51b3dd0edf5bdc2687bfe83f0db86f331",
+    "returncode": 0,
+    "wall_seconds": 4241.178,
+    "pollen_sha256": "b8fda6c706cf7744c6d760b041e37722b99f6774fd259419b111c5cdd19337ed"
+  }
+]

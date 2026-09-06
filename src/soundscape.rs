@@ -42,7 +42,8 @@ use crate::{
     smart_actors::{
         AudioActivity, WorldClockState,
         actors::ActorView,
-        model::{ActorId, MovementInbox, WorldMirror},
+        bridge::{BridgeCommand, BridgeHandle},
+        model::{ActorId, MovementInbox, Position, WorldMirror},
         road_carts::RoadCartView,
     },
     weather::{CoverMaterial, PrecipitationOcclusionMap, WeatherLightning, WorldWeatherState},
@@ -328,6 +329,44 @@ fn bell_occupancy(plan: &BellPlan) -> (u64, f64) {
 
 /// Leave the evidence a drive script asserts on: one line per peal, carrying
 /// the count, in `logs/latest_session/logs.jsonl` under source `drive`.
+/// One interpretation for all accepted ring sites. Carry comes from the sound
+/// descriptor; the sim decides which kind of word that rope reminds people of.
+fn bell_bridge_command(pattern: BellPattern) -> Option<BridgeCommand> {
+    let plan = pattern.plan();
+    let at = Position::try_from_vec3(plan.position).ok()?;
+    let radius_m = f64::from(plan.sound.descriptor().radius_m);
+    Some(match pattern {
+        BellPattern::NameKnell { .. } => BridgeCommand::Knell {
+            years: u32::from(plan.strokes),
+            at,
+        },
+        BellPattern::ScoldCurfew => BridgeCommand::CivicPeal {
+            rope: cathedral_sim::CivicRope::Curfew,
+            at,
+            radius_m,
+        },
+        BellPattern::ScoldSummons => BridgeCommand::CivicPeal {
+            rope: cathedral_sim::CivicRope::Summons,
+            at,
+            radius_m,
+        },
+    })
+}
+
+fn send_bell_to_sim(pattern: BellPattern, bridge: Option<&BridgeHandle>) {
+    let Some(command) = bell_bridge_command(pattern) else {
+        return;
+    };
+    match bridge {
+        Some(bridge) => {
+            if let Err(error) = bridge.try_send(command) {
+                warn!("[bell] peal could not reach the sim: {error}");
+            }
+        }
+        None => warn!("[bell] peal has no smart-actor bridge"),
+    }
+}
+
 fn log_bell_peal(plan: &BellPlan, context: &str) {
     let message = format!(
         "[bell] {}: {} strokes at {:.2}s{context}",
@@ -469,7 +508,20 @@ impl Plugin for SoundscapePlugin {
                 .chain(),
         );
 
+        // Cue policy and the law's clock edge are independent of playback.
+        // Headless/silent hosts must still tell the sim which bell was rung.
+        app.add_systems(
+            Update,
+            (
+                ingest_soundscape_cues.in_set(SoundscapeSet::IngestCues),
+                project_well_mechanism_activity.in_set(SoundscapeSet::ProjectActivity),
+                schedule_curfew_bell,
+            )
+                .chain_ignore_deferred(),
+        );
+
         if !app.is_plugin_added::<AudioPlugin>() {
+            app.add_systems(Update, discard_muted_sounds.after(schedule_curfew_bell));
             return;
         }
 
@@ -478,11 +530,10 @@ impl Plugin for SoundscapePlugin {
                 Update,
                 (
                     update_cart_sounds.in_set(SoundscapeSet::EmitCues),
-                    ingest_soundscape_cues.in_set(SoundscapeSet::IngestCues),
-                    project_well_mechanism_activity.in_set(SoundscapeSet::ProjectActivity),
-                    schedule_clock_sounds,
-                    schedule_curfew_bell,
-                    schedule_player_footsteps,
+                    schedule_clock_sounds
+                        .after(project_well_mechanism_activity)
+                        .before(schedule_curfew_bell),
+                    schedule_player_footsteps.after(schedule_curfew_bell),
                     schedule_npc_body_sounds,
                     schedule_weather_thunder,
                     update_weather_audio,
@@ -507,6 +558,15 @@ impl Plugin for SoundscapePlugin {
                     // kept and the barriers go.
                     .chain_ignore_deferred(),
             );
+    }
+}
+
+/// Muted hosts run the same cue/cooldown policy, but have no playback consumer.
+/// Drop the whole scheduled tail, including future strokes, on every frame so
+/// accepted peals and ordinary work cues cannot accumulate for the session.
+fn discard_muted_sounds(mut scheduled: ResMut<ScheduledSounds>) {
+    if !scheduled.0.is_empty() {
+        scheduled.0.clear();
     }
 }
 
@@ -1503,6 +1563,7 @@ struct WorkState {
 #[derive(Resource, Default)]
 struct WorkSoundState(HashMap<WorkActivityKind, WorkState>);
 
+#[allow(clippy::too_many_arguments)]
 fn ingest_soundscape_cues(
     mut cues: MessageReader<SoundscapeCue>,
     time: Res<Time>,
@@ -1511,6 +1572,7 @@ fn ingest_soundscape_cues(
     mut cooldowns: ResMut<CueCooldowns>,
     mut wells: ResMut<WellSoundState>,
     mut work: ResMut<WorkSoundState>,
+    bridge: Option<Res<BridgeHandle>>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let now = time.elapsed_secs_f64();
@@ -1579,11 +1641,8 @@ fn ingest_soundscape_cues(
             SoundscapeCue::GaolDoor { position } => {
                 // Positional, on the same idiom as the keys: two people
                 // committed within a few seconds of each other is one door.
-                let key = positional_cooldown_key(
-                    SoundscapeSound::StoneHouseCellDoor,
-                    position,
-                    3.0,
-                );
+                let key =
+                    positional_cooldown_key(SoundscapeSound::StoneHouseCellDoor, position, 3.0);
                 if cooldowns.allow(key, now, 4.0) {
                     scheduled.push(now, SoundscapeSound::StoneHouseCellDoor, position);
                 }
@@ -1607,6 +1666,7 @@ fn ingest_soundscape_cues(
                         &mut scheduled,
                     );
                     log_bell_peal(&plan, "");
+                    send_bell_to_sim(pattern, bridge.as_deref());
                 }
             }
         }
@@ -1623,6 +1683,7 @@ fn schedule_curfew_bell(
     mut state: ResMut<CivicBellState>,
     mut scheduled: ResMut<ScheduledSounds>,
     mut cooldowns: ResMut<CueCooldowns>,
+    bridge: Option<Res<BridgeHandle>>,
 ) {
     let now = time.elapsed_secs_f64();
     let Some(clock) = clock.filter(|clock| clock.present) else {
@@ -1655,6 +1716,7 @@ fn schedule_curfew_bell(
     let (key, occupies) = bell_occupancy(&plan);
     cooldowns.hold(key, first_stroke_at + occupies);
     log_bell_peal(&plan, &format!(", day {}", clock.day));
+    send_bell_to_sim(BellPattern::ScoldCurfew, bridge.as_deref());
 }
 
 fn begin_well_draw(
@@ -3618,16 +3680,18 @@ fn update_virtualized_loops(
             })
             .take(3)
             .count();
-        (occupancy.lanthorn_occupants, occupancy.saint_maren_occupants) =
-            actors
-                .iter()
-                .fold((0_usize, 0_usize), |(lanthorn, maren), transform| {
-                    let position = transform.translation();
-                    (
-                        lanthorn + usize::from(inside_lanthorn_interior(position)),
-                        maren + usize::from(inside_saint_maren_congregation_area(position)),
-                    )
-                });
+        (
+            occupancy.lanthorn_occupants,
+            occupancy.saint_maren_occupants,
+        ) = actors
+            .iter()
+            .fold((0_usize, 0_usize), |(lanthorn, maren), transform| {
+                let position = transform.translation();
+                (
+                    lanthorn + usize::from(inside_lanthorn_interior(position)),
+                    maren + usize::from(inside_saint_maren_congregation_area(position)),
+                )
+            });
     }
     let wickmarket_population = occupancy.wickmarket_population;
 
@@ -4948,6 +5012,8 @@ mod tests {
             .init_resource::<WellSoundState>()
             .init_resource::<WorkSoundState>()
             .add_systems(Update, ingest_soundscape_cues);
+        let (sender, receiver) = crossbeam_channel::bounded(8);
+        app.insert_resource(BridgeHandle::new(sender, std::path::PathBuf::from("/tmp")));
         let expected = usize::from(BellPattern::ScoldSummons.plan().strokes);
 
         app.world_mut()
@@ -4963,6 +5029,16 @@ mod tests {
             "a second summons on a ringing one would make the strokes uncountable"
         );
 
+        let forwarded: Vec<_> = receiver.try_iter().collect();
+        assert_eq!(forwarded.len(), 1, "only an accepted peal reaches the sim");
+        assert!(matches!(
+            forwarded[0],
+            BridgeCommand::CivicPeal {
+                rope: cathedral_sim::CivicRope::Summons,
+                ..
+            }
+        ));
+
         // The other bell is a different rope and is not blocked by the Scold.
         app.world_mut()
             .write_message(SoundscapeCue::CivicBell(BellPattern::NameKnell {
@@ -4976,6 +5052,127 @@ mod tests {
                 .filter(|sound| sound.sound == SoundscapeSound::SmallvoiceStroke)
                 .count(),
             3
+        );
+    }
+
+    #[test]
+    fn the_knell_carry_matches_the_clip() {
+        assert_eq!(
+            SoundscapeSound::SmallvoiceStroke.descriptor().radius_m,
+            cathedral_sim::knowledge::KNELL_CARRY_M as f32
+        );
+        assert_eq!(SoundscapeSound::ScoldStroke.descriptor().radius_m, 500.0);
+        for pattern in [
+            BellPattern::NameKnell { years: 0 },
+            BellPattern::NameKnell { years: 17 },
+            BellPattern::NameKnell { years: 121 },
+            BellPattern::ScoldCurfew,
+            BellPattern::ScoldSummons,
+        ] {
+            let plan = pattern.plan();
+            match (pattern, bell_bridge_command(pattern).unwrap()) {
+                (BellPattern::NameKnell { .. }, BridgeCommand::Knell { years, at }) => {
+                    assert_eq!(years, u32::from(plan.strokes));
+                    assert_eq!(at, Position::try_from_vec3(plan.position).unwrap());
+                }
+                (
+                    BellPattern::ScoldCurfew | BellPattern::ScoldSummons,
+                    BridgeCommand::CivicPeal { rope, at, radius_m },
+                ) => {
+                    assert_eq!(at, Position::try_from_vec3(plan.position).unwrap());
+                    assert_eq!(radius_m, f64::from(plan.sound.descriptor().radius_m));
+                    assert_eq!(
+                        rope,
+                        if matches!(pattern, BellPattern::ScoldCurfew) {
+                            cathedral_sim::CivicRope::Curfew
+                        } else {
+                            cathedral_sim::CivicRope::Summons
+                        }
+                    );
+                }
+                pair => panic!("wrong bell command: {pair:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn the_silent_soundscape_plugin_forwards_bells_and_discards_playback() {
+        let (sender, receiver) = crossbeam_channel::bounded(8);
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(10),
+            ))
+            .insert_resource(BridgeHandle::new(sender, std::path::PathBuf::from("/tmp")))
+            .insert_resource(clock(Office::Waning, Weekday::Second))
+            .add_plugins(SoundscapePlugin);
+        assert!(!app.is_plugin_added::<AudioPlugin>());
+        app.update();
+        assert!(receiver.is_empty(), "startup is not an office edge");
+
+        for _ in 0..2 {
+            app.world_mut()
+                .write_message(SoundscapeCue::CivicBell(BellPattern::NameKnell {
+                    years: 17,
+                }));
+        }
+        app.update();
+        let commands: Vec<_> = receiver.try_iter().collect();
+        assert_eq!(commands.len(), 1, "the real plugin accepts one peal");
+        assert!(matches!(commands[0], BridgeCommand::Knell { years: 17, at }
+            if at == Position::try_from_vec3(SMALLVOICE_TOWER).unwrap()));
+        assert!(app.world().resource::<ScheduledSounds>().0.is_empty());
+
+        app.world_mut().resource_mut::<WorldClockState>().office = Office::Snuffing;
+        app.update();
+        let commands: Vec<_> = receiver.try_iter().collect();
+        assert_eq!(commands.len(), 1);
+        assert!(matches!(
+            commands[0],
+            BridgeCommand::CivicPeal {
+                rope: cathedral_sim::CivicRope::Curfew,
+                ..
+            }
+        ));
+        assert!(app.world().resource::<ScheduledSounds>().0.is_empty());
+
+        // The muted queue is empty, but the actual rope remains occupied.
+        // Repeated cues and repeated Snuffing projections cannot ring again.
+        // Ordinary playback requests also drain, including delayed sounds.
+        let peak_capacity = app.world().resource::<ScheduledSounds>().0.capacity();
+        for turn in 0..64 {
+            for pattern in [
+                BellPattern::NameKnell { years: 17 },
+                BellPattern::ScoldSummons,
+            ] {
+                app.world_mut()
+                    .write_message(SoundscapeCue::CivicBell(pattern));
+            }
+            app.world_mut()
+                .write_message(SoundscapeCue::StoneGateClosing);
+            app.world_mut().write_message(SoundscapeCue::WorkActivity {
+                kind: WorkActivityKind::Baking,
+                position: Vec3::ZERO,
+                active: turn % 2 == 0,
+            });
+            app.update();
+            assert!(receiver.is_empty(), "duplicate bell on frame {turn}");
+            let scheduled = app.world().resource::<ScheduledSounds>();
+            assert!(scheduled.0.is_empty());
+            assert_eq!(
+                scheduled.0.capacity(),
+                peak_capacity,
+                "muted tails accumulate"
+            );
+        }
+        assert!(!app.world().contains_resource::<Assets<AudioSource>>());
+        assert!(!app.world().contains_resource::<SoundscapeAssets>());
+        assert_eq!(
+            app.world_mut()
+                .query::<&AudioPlayer>()
+                .iter(app.world())
+                .count(),
+            0
         );
     }
 

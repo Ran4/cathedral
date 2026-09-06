@@ -1,0 +1,50 @@
+{
+  "title": "An Alibi in Stone",
+  "status": "DESIGN MODEL ONLY — no actual city geometry or gameplay validated",
+  "units": {"distance": "metres", "elapsed_time": "simulation seconds", "clock": "game hours"},
+  "clock": {"seconds_per_day": 3600, "opening_day": 1, "opening_hour": 7, "retrieval_day": 1, "retrieval_hour": 18, "review_day": 2, "review_hour": 12},
+  "speeds": {"player_walk_mps": 8, "player_sprint_ceiling_mps": 12, "npc_walk_mps": 2.1},
+  "sighting_gap_seconds": {"minimum": 32, "reference": 36, "maximum": 40},
+  "nodes": {"A": "pawn counter", "P": "public lane bend", "C": "comparison room", "U": "upper stair landing", "H": "loft rack"},
+  "edges": [
+    {"from": "A", "to": "P", "metres": 144, "access": "public"},
+    {"from": "P", "to": "C", "metres": 144, "access": "public"},
+    {"from": "A", "to": "U", "metres": 10, "access": "private"},
+    {"from": "U", "to": "C", "metres": 12, "access": "private"},
+    {"from": "C", "to": "H", "metres": 6, "access": "private"},
+    {"from": "H", "to": "A", "metres": 20, "access": "private"}
+  ],
+  "incident": {
+    "departure_seconds": 3,
+    "path": ["A", "U", "C", "H", "A"],
+    "encounter_seconds": 5,
+    "concealment_seconds": 3,
+    "cry_seconds": 17,
+    "intact_catch_observed_seconds": 0,
+    "damaged_catch_observed_seconds": 36,
+    "warin_finds_victim_seconds": 60
+  },
+  "packet_itinerary": [
+    {"when": "before incident", "holder": "Odo", "place": "C"},
+    {"when": "after encounter", "holder": "Corin", "place": "C"},
+    {"when": "after concealment", "holder": "fixture H", "place": "H"},
+    {"when": "day 1 Lamplight, if still in H and retrieval succeeds", "holder": "Corin", "place": "physical retrieval route"},
+    {"when": "after retrieval", "holder": "Corin's locked desk", "place": "pawnshop upper room"}
+  ],
+  "proof_context": "All tokens below mean learned, relevant, independently verified and admissible propositions, not merely owned clue objects. Admission tokens include voluntary confirmation of the specified act. The investigator's findings never read author culprit identity.",
+  "recipes": {
+    "alibi_gap": [["E03", "E04"]],
+    "private_opportunity": [["E03", "E04", "E05", "E08", "historical_access_verified"]],
+    "warin_clear_by_witnesses": [["E01", "E06", "E07", "shared_cry_verified", "independent_observations"]],
+    "property_recovered": [["E02", "E09", "authentication_verified", "custody_admissible"]],
+    "theft_substantiated": [
+      ["E02", "E09", "authentication_verified", "custody_admissible", "E13", "retrieval_identity_continuous", "E15"],
+      ["E02", "E09", "authentication_verified", "custody_admissible", "E14_theft", "admission_voluntary"]
+    ],
+    "assault_substantiated": [
+      ["E01", "E10", "E11", "E12", "fragment_origin_admissible", "fracture_match_verified", "break_interval_verified"],
+      ["E01", "E14_assault", "admission_voluntary", "independent_nonpublic_detail_verified"],
+      ["E01", "E14_assault", "admission_voluntary", "E10", "E11", "E12", "fragment_origin_admissible", "fracture_match_verified", "break_interval_verified"]
+    ]
+  }
+}

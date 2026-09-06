@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Not at the Wickmarket, no. They took him by the Dawn Bearer statue, two days past — or so a chandler of the Wick Ward told me, and he swore he was there. He's in the Stone House now, if it's true."}

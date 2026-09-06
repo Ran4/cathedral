@@ -1,0 +1,422 @@
+[
+  {
+    "carrier": "fe2tn",
+    "from": null,
+    "hops": 3,
+    "pack": {
+      "facts": [
+        {
+          "day": null,
+          "garble": "subject",
+          "id": "hobbe.shortweight",
+          "own": {},
+          "place": null,
+          "said": "the mill of {subject} sent short weight to the Wickmarket bakehouse, and the flour was cut with bean meal",
+          "seeded": [
+            "e7mil"
+          ],
+          "subject": [
+            "e7mil"
+          ],
+          "topic": "craft"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "Passed to you at a remove you cannot account for, the sort of small news that gets carried because there is nothing else to carry: the mill of an animal worker of the Weigh Ward (you don't know their name) sent short weight to the Wickmarket bakehouse, and the flour was cut with bean meal",
+    "sequence": 0,
+    "sheet": "q2_holder_hops3_low_band",
+    "view": {
+      "day_offset": 0,
+      "place": null,
+      "subject": "p007x"
+    }
+  },
+  {
+    "carrier": "fa8tn",
+    "from": null,
+    "hops": 3,
+    "pack": {
+      "facts": [
+        {
+          "day": null,
+          "garble": "subject",
+          "id": "sedge.ferrant",
+          "own": {},
+          "place": null,
+          "said": "{subject} goes in at Doctor Ferrant's door after the Snuffing, and it is not for physic",
+          "seeded": [
+            "bnrse"
+          ],
+          "subject": [
+            "bnrse"
+          ],
+          "topic": "bed"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "It is the common word now, and nobody bothers to say where they had it: Rohese Sedge goes in at Doctor Ferrant's door after the Snuffing, and it is not for physic",
+    "sequence": 0,
+    "sheet": "q2_holder_hops3_top_band",
+    "view": {
+      "day_offset": 0,
+      "place": null,
+      "subject": null
+    }
+  },
+  {
+    "carrier": "fe2tn",
+    "from": null,
+    "hops": 4,
+    "pack": {
+      "facts": [
+        {
+          "day": null,
+          "garble": "subject",
+          "id": "hobbe.shortweight",
+          "own": {},
+          "place": null,
+          "said": "the mill of {subject} sent short weight to the Wickmarket bakehouse, and the flour was cut with bean meal",
+          "seeded": [
+            "e7mil"
+          ],
+          "subject": [
+            "e7mil"
+          ],
+          "topic": "craft"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "Stall talk, handed along so often that its edges are gone, and you have never met anyone who was there: the mill of a cargo worker of the Weigh Ward (you don't know their name) sent short weight to the Wickmarket bakehouse, and the flour was cut with bean meal",
+    "sequence": 0,
+    "sheet": "q2_holder_hops4_low_band",
+    "view": {
+      "day_offset": 0,
+      "place": null,
+      "subject": "fc2hb"
+    }
+  },
+  {
+    "carrier": "fa8tn",
+    "from": null,
+    "hops": 4,
+    "pack": {
+      "facts": [
+        {
+          "day": null,
+          "garble": "subject",
+          "id": "sedge.ferrant",
+          "own": {},
+          "place": null,
+          "said": "{subject} goes in at Doctor Ferrant's door after the Snuffing, and it is not for physic",
+          "seeded": [
+            "bnrse"
+          ],
+          "subject": [
+            "bnrse"
+          ],
+          "topic": "bed"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "This is simply what is known in this city now, whoever said it first: Rohese Sedge goes in at Doctor Ferrant's door after the Snuffing, and it is not for physic",
+    "sequence": 0,
+    "sheet": "q2_holder_hops4_top_band",
+    "view": {
+      "day_offset": 0,
+      "place": null,
+      "subject": null
+    }
+  },
+  {
+    "carrier": "danqn",
+    "from": "dv8ll",
+    "hops": 1,
+    "pack": {
+      "facts": [
+        {
+          "day": 0,
+          "garble": "subject,place,day",
+          "id": "arrest.grigor.wickmarket",
+          "own": {
+            "dv8ll": "I was standing in my own doorway on the Wickmarket when they took {subject} — he did not say one word, and the sergeant had his arm up behind his back"
+          },
+          "place": "wickmarket",
+          "said": "{subject} was taken at {place}, {day}, and lies in the Stone House",
+          "seeded": [
+            "dv8ll",
+            "p0043"
+          ],
+          "subject": [
+            "fg2sh"
+          ],
+          "topic": "law"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "They say — and the one who told you was there: Grigor Ashe was taken at The Wickmarket, yesterday, and lies in the Stone House — you had it from a chandler of the Wick Ward (you don't know their name)",
+    "sequence": 0,
+    "sheet": "q4_wick_01_ansel_quern",
+    "view": {
+      "day_offset": 1,
+      "place": null,
+      "subject": null
+    }
+  },
+  {
+    "carrier": "dsbhb",
+    "from": "dv8ll",
+    "hops": 1,
+    "pack": {
+      "facts": [
+        {
+          "day": 0,
+          "garble": "subject,place,day",
+          "id": "arrest.grigor.wickmarket",
+          "own": {
+            "dv8ll": "I was standing in my own doorway on the Wickmarket when they took {subject} — he did not say one word, and the sergeant had his arm up behind his back"
+          },
+          "place": "wickmarket",
+          "said": "{subject} was taken at {place}, {day}, and lies in the Stone House",
+          "seeded": [
+            "dv8ll",
+            "p0043"
+          ],
+          "subject": [
+            "fg2sh"
+          ],
+          "topic": "law"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "They say — and the one who told you was there: Grigor Ashe was taken at Next to the Dawn Bearer statue, two days past, and lies in the Stone House — you had it from a chandler of the Wick Ward (you don't know their name)",
+    "sequence": 0,
+    "sheet": "q4_wick_02_sibbe_hobbe",
+    "view": {
+      "day_offset": 0,
+      "place": "Next to the Dawn Bearer statue",
+      "subject": null
+    }
+  },
+  {
+    "carrier": "dv8ll",
+    "from": null,
+    "hops": 0,
+    "pack": {
+      "facts": [
+        {
+          "day": 0,
+          "garble": "subject,place,day",
+          "id": "arrest.grigor.wickmarket",
+          "own": {
+            "dv8ll": "I was standing in my own doorway on the Wickmarket when they took {subject} — he did not say one word, and the sergeant had his arm up behind his back"
+          },
+          "place": "wickmarket",
+          "said": "{subject} was taken at {place}, {day}, and lies in the Stone House",
+          "seeded": [
+            "dv8ll",
+            "p0043"
+          ],
+          "subject": [
+            "fg2sh"
+          ],
+          "topic": "law"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "First hand, in your own words: I was standing in my own doorway on the Wickmarket when they took Grigor Ashe — he did not say one word, and the sergeant had his arm up behind his back",
+    "sequence": 0,
+    "sheet": "q4_wick_03_osanne_vell",
+    "view": {
+      "day_offset": 0,
+      "place": null,
+      "subject": null
+    }
+  },
+  {
+    "carrier": "dgskl",
+    "from": "danqn",
+    "hops": 2,
+    "pack": {
+      "facts": [
+        {
+          "day": 0,
+          "garble": "subject,place,day",
+          "id": "arrest.grigor.wickmarket",
+          "own": {
+            "dv8ll": "I was standing in my own doorway on the Wickmarket when they took {subject} — he did not say one word, and the sergeant had his arm up behind his back"
+          },
+          "place": "wickmarket",
+          "said": "{subject} was taken at {place}, {day}, and lies in the Stone House",
+          "seeded": [
+            "dv8ll",
+            "p0043"
+          ],
+          "subject": [
+            "fg2sh"
+          ],
+          "topic": "law"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "The one who told you was not there either — they had it from the one who was: a butcher of the Weigh Ward (you don't know their name) was taken at At Slate Cistern, the Wick Ward rain cistern and fire reserve, two days past, and lies in the Stone House — you had it from a baker of the Wick Ward (you don't know their name)",
+    "sequence": 0,
+    "sheet": "q4_wick_04_gile_skell",
+    "view": {
+      "day_offset": 0,
+      "place": "At Slate Cistern, the Wick Ward rain cistern and fire reserve",
+      "subject": "p0020"
+    }
+  },
+  {
+    "carrier": "drhcr",
+    "from": "danqn",
+    "hops": 2,
+    "pack": {
+      "facts": [
+        {
+          "day": 0,
+          "garble": "subject,place,day",
+          "id": "arrest.grigor.wickmarket",
+          "own": {
+            "dv8ll": "I was standing in my own doorway on the Wickmarket when they took {subject} — he did not say one word, and the sergeant had his arm up behind his back"
+          },
+          "place": "wickmarket",
+          "said": "{subject} was taken at {place}, {day}, and lies in the Stone House",
+          "seeded": [
+            "dv8ll",
+            "p0043"
+          ],
+          "subject": [
+            "fg2sh"
+          ],
+          "topic": "law"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "The one who told you was not there either — they had it from the one who was: an animal worker of the Weigh Ward (you don't know their name) was taken at The Wickmarket, three days past, and lies in the Stone House — you had it from a baker of the Wick Ward (you don't know their name)",
+    "sequence": 0,
+    "sheet": "q4_wick_05_rohese_crake",
+    "view": {
+      "day_offset": -1,
+      "place": null,
+      "subject": "p0087"
+    }
+  },
+  {
+    "carrier": "p0021",
+    "from": "dgskl",
+    "hops": 3,
+    "pack": {
+      "facts": [
+        {
+          "day": 0,
+          "garble": "subject,place,day",
+          "id": "arrest.grigor.wickmarket",
+          "own": {
+            "dv8ll": "I was standing in my own doorway on the Wickmarket when they took {subject} — he did not say one word, and the sergeant had his arm up behind his back"
+          },
+          "place": "wickmarket",
+          "said": "{subject} was taken at {place}, {day}, and lies in the Stone House",
+          "seeded": [
+            "dv8ll",
+            "p0043"
+          ],
+          "subject": [
+            "fg2sh"
+          ],
+          "topic": "law"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "It came to you down a line of mouths, and whoever at the end of it actually saw anything is a stranger to you: a cargo worker of the Weigh Ward (you don't know their name) was taken at At Slate Cistern, the Wick Ward rain cistern and fire reserve, two days past, and lies in the Stone House — you had it from a cook of the Wick Ward (you don't know their name)",
+    "sequence": 0,
+    "sheet": "q4_wick_06_havise_bram",
+    "view": {
+      "day_offset": 0,
+      "place": "At Slate Cistern, the Wick Ward rain cistern and fire reserve",
+      "subject": "dbred"
+    }
+  },
+  {
+    "carrier": "p000x",
+    "from": "p0021",
+    "hops": 4,
+    "pack": {
+      "facts": [
+        {
+          "day": 0,
+          "garble": "subject,place,day",
+          "id": "arrest.grigor.wickmarket",
+          "own": {
+            "dv8ll": "I was standing in my own doorway on the Wickmarket when they took {subject} — he did not say one word, and the sergeant had his arm up behind his back"
+          },
+          "place": "wickmarket",
+          "said": "{subject} was taken at {place}, {day}, and lies in the Stone House",
+          "seeded": [
+            "dv8ll",
+            "p0043"
+          ],
+          "subject": [
+            "fg2sh"
+          ],
+          "topic": "law"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "This has been through a great many mouths before it reached yours, worn smooth in the telling, and nobody can now say who started it: Grigor Ashe was taken at Next to the Seraph statue, yesterday, and lies in the Stone House — you had it from Havise Bram",
+    "sequence": 0,
+    "sheet": "q4_wick_07_petronel_clove",
+    "view": {
+      "day_offset": 1,
+      "place": "Next to the Seraph statue",
+      "subject": null
+    }
+  },
+  {
+    "carrier": "p0043",
+    "from": null,
+    "hops": 0,
+    "pack": {
+      "facts": [
+        {
+          "day": 0,
+          "garble": "subject,place,day",
+          "id": "arrest.grigor.wickmarket",
+          "own": {
+            "dv8ll": "I was standing in my own doorway on the Wickmarket when they took {subject} — he did not say one word, and the sergeant had his arm up behind his back"
+          },
+          "place": "wickmarket",
+          "said": "{subject} was taken at {place}, {day}, and lies in the Stone House",
+          "seeded": [
+            "dv8ll",
+            "p0043"
+          ],
+          "subject": [
+            "fg2sh"
+          ],
+          "topic": "law"
+        }
+      ],
+      "schema_version": 1
+    },
+    "rendered_line": "You saw this yourself: Grigor Ashe was taken at The Wickmarket, two days past, and lies in the Stone House",
+    "sequence": 0,
+    "sheet": "q4_wick_08_ede_kett",
+    "view": {
+      "day_offset": 0,
+      "place": null,
+      "subject": null
+    }
+  }
+]

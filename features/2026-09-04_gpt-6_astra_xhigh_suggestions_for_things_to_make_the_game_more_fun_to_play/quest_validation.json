@@ -1,0 +1,209 @@
+{
+  "scope": "Design arithmetic and illustrative proof recipes only; no Bevy navigation, live NPC run, perception or human enjoyment tested.",
+  "model_sha256": "ed23a36da1323b1f21b92709a7b3cac2ac2f47dff589dcbeec0fba9a83fa87c6",
+  "passed": true,
+  "check_count": 19,
+  "checks": [
+    {
+      "check": "public lower bound",
+      "passed": true,
+      "detail": {
+        "distance_m": 576.0,
+        "seconds_at_sprint_ceiling": 48.0,
+        "largest_gap": 40
+      }
+    },
+    {
+      "check": "private route robustly fits",
+      "passed": true,
+      "detail": {
+        "distance_m": 48,
+        "execution_seconds": 30.857142857142858,
+        "smallest_gap": 32
+      }
+    },
+    {
+      "check": "reference return before second sighting",
+      "passed": true,
+      "detail": {
+        "return_at": 33.85714285714286
+      }
+    },
+    {
+      "check": "cry occurs within encounter",
+      "passed": true,
+      "detail": {
+        "arrival": 13.476190476190476,
+        "departure": 18.476190476190474,
+        "cry": 17
+      }
+    },
+    {
+      "check": "break dated across encounter",
+      "passed": true,
+      "detail": "Intact-before and damaged-after sightings enclose the physical encounter."
+    },
+    {
+      "check": "finder arrives after culprit left",
+      "passed": true,
+      "detail": {
+        "finder_at": 60,
+        "culprit_return_at": 33.85714285714286
+      }
+    },
+    {
+      "check": "appointment arithmetic",
+      "passed": true,
+      "detail": {
+        "retrieval_minutes_after_opening": 27.5,
+        "review_minutes_after_opening": 72.5,
+        "incident_gap_in_game_minutes": 14.4
+      }
+    },
+    {
+      "check": "opportunity does not accuse",
+      "passed": true,
+      "detail": {
+        "alibi_gap": true,
+        "private_opportunity": true,
+        "warin_clear_by_witnesses": false,
+        "property_recovered": false,
+        "theft_substantiated": false,
+        "assault_substantiated": false
+      }
+    },
+    {
+      "check": "shared-location recovery does not accuse",
+      "passed": true,
+      "detail": {
+        "alibi_gap": false,
+        "private_opportunity": false,
+        "warin_clear_by_witnesses": false,
+        "property_recovered": true,
+        "theft_substantiated": false,
+        "assault_substantiated": false
+      }
+    },
+    {
+      "check": "Warin can be cleared independently",
+      "passed": true,
+      "detail": {
+        "alibi_gap": false,
+        "private_opportunity": false,
+        "warin_clear_by_witnesses": true,
+        "property_recovered": false,
+        "theft_substantiated": false,
+        "assault_substantiated": false
+      }
+    },
+    {
+      "check": "rumour and guessed culprit are insufficient",
+      "passed": true,
+      "detail": "No finding from unsupported accusation."
+    },
+    {
+      "check": "possession alone is not assault",
+      "passed": true,
+      "detail": {
+        "expected": {
+          "theft_substantiated": true,
+          "assault_substantiated": false
+        },
+        "actual": {
+          "theft_substantiated": true,
+          "assault_substantiated": false
+        }
+      }
+    },
+    {
+      "check": "undated matching fragment is insufficient",
+      "passed": true,
+      "detail": {
+        "expected": {
+          "assault_substantiated": false
+        },
+        "actual": {
+          "assault_substantiated": false
+        }
+      }
+    },
+    {
+      "check": "dated physical chain supports assault",
+      "passed": true,
+      "detail": {
+        "expected": {
+          "assault_substantiated": true
+        },
+        "actual": {
+          "assault_substantiated": true
+        }
+      }
+    },
+    {
+      "check": "hearsay cannot become a second witness",
+      "passed": true,
+      "detail": {
+        "expected": {
+          "warin_clear_by_witnesses": false
+        },
+        "actual": {
+          "warin_clear_by_witnesses": false
+        }
+      }
+    },
+    {
+      "check": "unidentified bundle is not proven retrieval",
+      "passed": true,
+      "detail": {
+        "expected": {
+          "theft_substantiated": false
+        },
+        "actual": {
+          "theft_substantiated": false
+        }
+      }
+    },
+    {
+      "check": "bare admission is insufficient",
+      "passed": true,
+      "detail": {
+        "expected": {
+          "theft_substantiated": false,
+          "assault_substantiated": false
+        },
+        "actual": {
+          "theft_substantiated": false,
+          "assault_substantiated": false
+        }
+      }
+    },
+    {
+      "check": "corroborated private admission can bypass route",
+      "passed": true,
+      "detail": {
+        "expected": {
+          "theft_substantiated": true,
+          "assault_substantiated": true,
+          "private_opportunity": false
+        },
+        "actual": {
+          "theft_substantiated": true,
+          "assault_substantiated": true,
+          "private_opportunity": false
+        }
+      }
+    },
+    {
+      "check": "today's route does not establish historical access",
+      "passed": true,
+      "detail": {
+        "expected": {
+          "private_opportunity": false
+        },
+        "actual": {
+          "private_opportunity": false
+        }
+      }
+    }
+  ]
+}

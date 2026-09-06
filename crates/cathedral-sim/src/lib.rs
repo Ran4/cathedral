@@ -74,7 +74,10 @@ pub use clock::{
 };
 pub use crowd::{MAX_EXTRA_AMBIENT_NPCS, extra_ambient_sheets, spread_over_walkable};
 pub use dogs::{DOG_SETTLED_MPS, DOG_TROT_MPS, Dog, DogCoat, DogView};
-pub use engine::{ActorMotion, Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};
+pub use engine::{
+    ActorMotion, Capabilities, CivicRope, Engine, EngineCommand, EngineConfig, EngineMessage,
+    JournalEntry, WardHeatRow,
+};
 pub use error::{
     ActionError, ActionErrorCode, CommandError, CommandErrorCode, EngineInitError, PromptError,
     SpatialUpdateError, SpatialUpdateErrorCode,

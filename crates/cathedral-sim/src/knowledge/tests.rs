@@ -352,38 +352,29 @@ fn a_witness_cannot_be_talked_out_of_what_they_saw() {
     );
 }
 
-/// T6. `holds` answers `seeded` before the carrier store, and is pure.
+/// T6. A seeded witness refuses a carried row, and reads remain pure.
 #[test]
 fn holds_answers_seeded_before_the_store_and_is_pure() {
     let (mut world, carrier, key) = merge_world();
     learn(&mut world, &carrier, key, telling(4, 0.2, None), Some(0.0));
 
-    // Plant a stray far-off row for somebody who is **also** seeded. `learn`
-    // refuses it (row four), so it goes in through the private insert — which is
-    // the whole point: a stray row must never be readable as a garbled first-hand
-    // holding, however it got there.
+    // Stored overrides now serve re-heated witnesses and claimants. The
+    // public merge remains the boundary: no farther row can be inserted.
     let witness = actor("c1");
-    let stray = Held::carried(
-        4,
-        Some(actor("mouth")),
-        0.2,
-        Some(0.0),
-        FactView {
-            subject: Some(actor("somebody else")),
-            place: None,
-            day_offset: 2,
-        },
+    assert_eq!(
+        learn(
+            &mut world,
+            &witness,
+            key,
+            telling(4, 0.2, Some("mouth")),
+            Some(0.0)
+        ),
+        Learned::Refused
     );
-    insert_holding(
-        &mut world.knowledge,
-        &witness,
-        Holding::of(key, stray),
-        Some(0.0),
-    );
-    assert_eq!(world.knowledge.holdings_len(&witness), 1);
+    assert_eq!(world.knowledge.holdings_len(&witness), 0);
 
     let held = holds_key(&world, &witness, key).expect("the witness holds it");
-    assert_eq!(held.hops, 0, "seeded is answered before the store");
+    assert_eq!(held.hops, 0, "a witness remains first hand");
     assert_eq!(held.heat(Some(0.0)), 1.0);
     assert_eq!(held.from, None);
     assert!(held.view.is_pristine());
@@ -1620,10 +1611,11 @@ fn relevance_seats_the_fact_the_asker_meant() {
     let seated = relevance_seated(&world, &reader, &["the fish were good"], &["nothing yet"]);
     assert!(seated.is_empty());
 
-    // The layer's own switch gates the reader, not the store.
+    // M4 A4 gates the holding reader too; ablation leaves the raw store intact.
     world.knowledge_enabled = false;
     assert!(relevance_seated(&world, &reader, &["the pitch"], &[]).is_empty());
-    assert!(holds_key(&world, &actor("p000x"), key).is_some());
+    assert!(holds_key(&world, &actor("p000x"), key).is_none());
+    assert!(world.knowledge.fact(key).is_some());
 }
 
 /// A subject with no `own` line is filtered out of relevance before the haystack
@@ -1988,4 +1980,17 @@ fn invalidating_a_fact_clears_it_from_every_ward() {
     }
     assert_eq!(world.knowledge.holdings_len(&carrier), 0);
     assert!(holds_key(&world, &carrier, key).is_none());
+}
+
+#[test]
+fn player_stage_telling_deduplication_has_a_strict_cap() {
+    let mut knowledge = Knowledge::default();
+    let cap = FACTS_MAX_LIVE * STAGE_HOP_MAX_PAIRS;
+    for n in 0..cap {
+        assert!(knowledge.note_player_stage_telling(FactKey(n as u32), actor("mouth"), 7));
+    }
+    assert!(!knowledge.note_player_stage_telling(FactKey(cap as u32), actor("mouth"), 7));
+    assert_eq!(knowledge.player_stage_tellings.len(), cap);
+    assert!(knowledge.note_player_stage_telling(FactKey(cap as u32), actor("mouth"), 8));
+    assert_eq!(knowledge.player_stage_tellings.len(), 1);
 }

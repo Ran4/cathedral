@@ -1,12 +1,5 @@
 Status: SPEC ONLY — unimplemented (2026-08-27)
 
-STALE WHERE IT TOUCHES KNOWLEDGE (2026-08-30): `features/knowledge_and_rumor/` is being built
-end-to-end **first**, on its own, and this spec will be rewritten against the API that actually
-ships. Wherever the text below describes what the knowledge layer owns, when this quest may
-start, or a casebook/receipt store of its own, `features/knowledge_and_rumor/README.md` wins.
-Do not reconcile this file now.
-
-
 # Quest: ring a dead woman's name at Marenstide
 
 Working title: **One Bell Is Not a Name**
@@ -141,7 +134,7 @@ combine them, then gets out of the way.
   weather*;
 - the six seeded memories of Alis on existing sheets;
 - a dated Marenstide six days after the offer, with an authored reading window;
-- the quest's own paid errands, receipts, casebook and outcome packages.
+- the quest’s paid errands, outcome receipts and packages, with learned words in the shared journal.
 
 **The quest must not:**
 
@@ -161,7 +154,7 @@ combine them, then gets out of the way.
 
 - the offer, activation and resolution of this one quest;
 - its six-day clock and the authored Marenstide reading window;
-- the letter, the casebook projection and the quest's leads;
+- the letter, learned leads supplied to the shared journal, and two quest standing lines;
 - the ninety-six and the four purses that can pay it, with their authored costs;
 - the six witness records, their conditions, and their withdrawal reasons;
 - the room, the sitting tenant's counter-claim and the retrospective deed;
@@ -190,8 +183,8 @@ they exist.
 | Persistence | Settings persistence only (`config.ron`); no world or engine checkpoint. | A versioned whole-engine checkpoint. A six-day quest cannot be a single process lifetime, and a quest-only save would restore the ninety-six while inventory, custody, marks, knowledge and NPC positions reset. |
 | Earning money | Nothing. Sparks move only through two-sided offers an NPC chooses to make; there is no wage, workplace, employment or payout path anywhere in the sim. | Either a base-game wage seam, or — as specified here — a small set of **authored quest errands that pay a coded amount on a receipt**. The quest owns the errands; a general hire/wage economy is explicitly out of scope and stays a base-game feature. |
 | Player curfew | The Snuffing changes NPC rounds and the bench sergeants go to bed at it; there is no player-curfew offence or watch-witnessed detection. | Watch-witnessed proximity detection before any route promises curfew consequences. Until then, night play is atmosphere, not a route. |
-| A named-person bell | **Most of it already ships.** `src/soundscape.rs` has `BellPattern::NameKnell { years }`, documented there as *Maren Smallvoice: one slow stroke per year of the life*, with `MAX_KNELL_YEARS` = 120, a 300 m radius taken from `lore/second_sun/design/06` §2, and an evidence line a drive script can assert a stroke count from; `CATHEDRAL_DRIVE`'s `bell knell <years>` rings it today. What is absent is the **sim** side: no action rings it, and no percept carries a name. | One sim-side action that fires the existing pattern with the dead woman's age, chalks a one-slot lintel mark, and emits a percept carrying the name. Genuinely small. |
-| Bounded rumor | `features/knowledge_and_rumor/` (was `features/rumors.md`), SPEC ONLY. | **Status changed 2026-08-30:** facts and propagation now ship as one shared feature and all three quest specs depend on it, so the temporary authored quest fact queue is no longer needed — use `Fact`/`holds()` and delete the interim plan. |
+| A named-person bell | **Most of it already ships.** `src/soundscape.rs` has `BellPattern::NameKnell { years }`, documented there as *Maren Smallvoice: one slow stroke per year of the life*, with `MAX_KNELL_YEARS` = 120, a 300 m radius taken from `lore/second_sun/design/06` §2, and an evidence line a drive script can assert a stroke count from; `CATHEDRAL_DRIVE`'s `bell knell <years>` rings it today. M5 added the host→sim `EngineCommand::Knell { years, at }`: it mints a `Blood` fact with an **empty subject and day-only garble**, then amplifies older Blood air. One bell is not a name; a name-bearing quest act remains to author. | One quest action that fires the existing pattern at the dead woman’s age, allowing the host’s one Knell signal to mint it, chalks the one-slot lintel name, and emits the separately witnessed name percept. See knowledge M5 step 2; do not mint a named fact from the anonymous bell. |
+| Bounded rumor | `features/implemented/knowledge_and_rumor/`, M0–M5 shipped 2026-09-06. | **Satisfied:** facts and propagation shipped together. Load quest JSON with `knowledge::catalog::FactCatalog::extend_from_json`, query `knowledge::holds`, and use shared player receipts/journal. No temporary quest fact queue. |
 
 ### Explicit non-goals
 
@@ -251,7 +244,8 @@ name and a bell, he says, and that is the whole of his politics. He states the t
 He will also tell the player, without being asked and in four words, how long the bell takes: **a stroke a
 year.** Thirty-four of them, slow, and Rue will count every one.
 
-Accepting seeds `quest_hawser_letter` (a quest document), the casebook, three open leads and the crier's daily
+Accepting seeds `quest_hawser_letter` (a quest document), the three actually communicated leads in
+shared `player_learned`, two quest standing strings for `EngineMessage::Journal`, and the crier’s daily
 count. Declining does not freeze anything: Marenstide arrives, the roll is read without her, and the quest
 remains offerable next year — which is exactly what has happened twenty-two times.
 
@@ -451,7 +445,9 @@ Append-only facts with stable ids, the only thing the quest counts:
 - sparks were handed to the sexton, with provenance;
 - the name was read, the bell rung, the lintel chalked, and who was inside 20 m.
 
-Not all receipts are shown. The casebook projects only what the player learned or caused.
+Quest outcome receipts still prove acts; player knowledge is the shared `player_learned` store.
+`EngineMessage::Journal { entries, standing }` projects only words the player heard or events they
+witnessed/caused, never a second quest-owned receipt list.
 
 ## Quest tasks: errands, not a job simulator
 
@@ -474,8 +470,12 @@ no hidden roll, no model-authored completion. The player's skill is route, timin
 
 ## The casebook — the letter
 
-One diegetic surface, a projection of known state and never omniscient. It is the letter, with what the player
-has learned written on the back of it.
+The letter is the fiction for the existing shared journal (`src/smart_actors/journal_ui.rs`), not
+another store or overlay. Learned sentences come from `player_learned` through
+`EngineMessage::Journal { entries, standing }`; the quest supplies its clock and stake strings at
+`knowledge::standing_lines`. The journal renders those strings without knowing this quest exists.
+Quest interaction controls can expose the following already-known state, but must not create a
+second knowledge ledger or make unknown evidence visible.
 
 Always visible after acceptance: days to Marenstide and the reading's office; sparks paid of ninety-six;
 witnesses standing, of those found; the deed's state; and the one or two leads the player pinned.
@@ -492,8 +492,10 @@ Quest facts eligible to become bounded rumor tokens: a public claim about who he
 mark or a custody commit; the player contradicting their own carried words; a witness pledging or withdrawing in
 public; the cell's money being seen.
 
-Until generic propagation exists, M3 may use an authored quest fact queue that transfers only at fixed public
-gatherings and the Night Office, designed for deletion.
+Generic propagation shipped in knowledge M5 (2026-09-06). Author these as catalog facts or explicit
+successful-event mints and use the shared pollen/garbling paths; there is no interim quest queue.
+Night Office settlement remains a named knowledge-layer child, so the quest must implement that
+integration explicitly if it needs it. It is not a currently running generic memory writer.
 
 The Night Office may settle a witnessed event into a Major's memory, expose one morning receipt, and carry the
 hottest fact into a ward mood. It may not withdraw a witness at random or move a spark. Six of the people who
@@ -588,7 +590,7 @@ assets/world/knell_quest.json   # timing, witnesses, conditions, tasks, purses, 
 
 ```text
 crates/cathedral-sim/src/knell_quest.rs
-src/smart_actors/quest_casebook.rs
+src/smart_actors/journal_ui.rs  # already shipped; shared receipts and standing strings
 src/smart_actors/quest_interaction.rs
 ```
 
@@ -611,14 +613,16 @@ enter_deed      {"door_id":"...","person":"..."}      # notary only
 ring_knell      {"name":"...","years":22}             # sexton only
 ```
 
-`ring_knell` hands `BellPattern::NameKnell { years }` — which already exists — the dead woman's age through a
-new `EngineMessage`, chalks a one-slot `LintelName` mark on the charnel door, and emits a percept carrying the
-name. The bell, the mark and the percept are the whole of it; the judgement of pity, price and witness stays the
-model's. Because the pattern already logs its own stroke count, the acceptance test for the finale is a grep for
+`ring_knell` hands `BellPattern::NameKnell { years }` the dead woman’s age through a quest sound cue.
+The existing host funnel sends exactly one `EngineCommand::Knell { years, at }` back to the sim,
+minting the anonymous age/day word. The quest separately chalks `LintelName` and emits the witnessed
+name percept; it must not also mint a second bell fact. The bell, mark and percept are the whole
+of it; the judgement of pity, price and witness stays the model’s. Because the pattern already logs its own stroke count, the acceptance test for the finale is a grep for
 thirty-four strokes.
 
-Project a dedicated `KnellQuestView` into a Bevy `QuestCasebookState` on a quest-only revision. **Do not** put
-the casebook inside the actor/item `PublicSnapshot` or bump the public revision per lead: that republishes the
+Use the existing journal channel for learned words and standing lines. A dedicated `KnellQuestView`
+may carry player-safe interaction state on a quest-only revision, but creates no `QuestCasebookState`
+or receipt store. **Do not** put the journal inside the actor/item `PublicSnapshot` or bump the public revision per lead: that republishes the
 full cast and the configured crowd, and the snapshot's ~160 KiB bound already has little headroom. The Bevy side
 renders player-safe typed state and never re-derives validity. Hidden trust, private objections and unknown
 receipts never enter the view.
@@ -648,7 +652,7 @@ Each milestone is independently playable and testable.
 
 - All six witnesses with authored conditions and withdrawal reasons, including Wyn Alder's objection.
 - The room, the tenant's counter-claim, `enter_deed` and the two-householder rule.
-- All four purses; the errand set; the casebook and its accessible text controls.
+- All four purses; the errand set; quest content in the shared journal and accessible interaction controls.
 - Deterministic fake-backend answers for every witness.
 - Validate that at least three materially different routes reach **Well rung**.
 
@@ -792,7 +796,7 @@ If step 2 to step 6 is not compelling at one witness, do not author the other fi
 - `features/implemented/law_and_order.md` — notices, custody, the Stone House, surety's absence.
 - `features/implemented/chalking_the_walls.md` — marks, forgery, scrubbing, the two-day ward cross.
 - `features/implemented/food_and_items/` — the spark standard, offers, stacks.
-- `features/knowledge_and_rumor/` — the shared knowledge layer (facts + rumour propagation); was `features/rumors.md`.
+- `features/implemented/knowledge_and_rumor/` — the shared knowledge layer (facts + rumour propagation); was `features/rumors.md`.
 - `features/quest_secure_votes_for_a_drainage_funding_plan_before_the_rain/README.md` — the sibling quest, and
   the spec shape this one follows.
 - `crates/cathedral-sim/AGENTS.md` — the sim boundary, prompts, actions and scheduling.

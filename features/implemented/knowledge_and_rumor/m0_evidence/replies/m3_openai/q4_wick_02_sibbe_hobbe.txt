@@ -1,0 +1,1 @@
+say {"target":"player","text":"I heard from a Wick Ward chandler who was there that Grigor Ashe was taken beside the Dawn Bearer statue two days past, not at the Wickmarket. They said he lies in the Stone House."}

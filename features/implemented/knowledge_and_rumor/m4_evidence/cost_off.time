@@ -1,0 +1,23 @@
+	Command being timed: "target/release/cathedral-headless --fake --extra-ambient 20000 --watch-clock 0.05 --seconds-per-day 3600 --start-office dayspring --trace-pollen --pollen-step 3 --pollen-seed The Wickmarket --pollen-saturate"
+	User time (seconds): 175.79
+	System time (seconds): 0.32
+	Percent of CPU this job got: 94%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 3:06.29
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 375340
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 71
+	Minor (reclaiming a frame) page faults: 96254
+	Voluntary context switches: 634
+	Involuntary context switches: 131967
+	Swaps: 0
+	File system inputs: 20832
+	File system outputs: 3808
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

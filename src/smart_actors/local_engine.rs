@@ -917,6 +917,19 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
         BridgeCommand::PlayerStruggling => EngineCommand::PlayerStruggling,
         BridgeCommand::PlayerBrokeFree => EngineCommand::PlayerBrokeFree,
         BridgeCommand::DebugChalk { kind, anchor } => EngineCommand::DebugChalk { kind, anchor },
+        BridgeCommand::DebugSeedFact { fact, ward } => EngineCommand::DebugSeedFact { fact, ward },
+        BridgeCommand::DebugRaiseWord { who, topic, said } => {
+            EngineCommand::DebugRaiseWord { who, topic, said }
+        }
+        BridgeCommand::Knell { years, at } => EngineCommand::Knell {
+            years,
+            at: to_sim(at),
+        },
+        BridgeCommand::CivicPeal { rope, at, radius_m } => EngineCommand::CivicPeal {
+            rope,
+            at: to_sim(at),
+            radius_m,
+        },
         BridgeCommand::PlayerScrubMark { mark_id } => EngineCommand::PlayerScrubMark { mark_id },
         BridgeCommand::PlayerDrawMark { kind, anchor } => {
             EngineCommand::PlayerDrawMark { kind, anchor }

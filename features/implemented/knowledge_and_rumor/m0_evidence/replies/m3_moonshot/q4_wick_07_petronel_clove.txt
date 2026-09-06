@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Nay, not at the Wickmarket. They took him next to the Seraph statue, yesterday — or so Havise Bram had it, and it's been through many mouths since. He lies in the Stone House, they say."}

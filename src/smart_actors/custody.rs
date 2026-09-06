@@ -231,7 +231,11 @@ fn committed_doors(custody: &CustodyView) -> String {
     format!(
         "{bell} {} {} the posted fee — offer it, send for someone to stand surety, or talk them round.",
         custody.fee_sparks,
-        if custody.fee_sparks == 1 { "spark is" } else { "sparks is" },
+        if custody.fee_sparks == 1 {
+            "spark is"
+        } else {
+            "sparks is"
+        },
     )
 }
 
@@ -292,6 +296,7 @@ fn standing_text(
     }
     for notice in notices.iter().take(3) {
         let rung = match notice.rung {
+            cathedral_sim::notices::Rung::Hearsay => "HEARSAY",
             cathedral_sim::notices::Rung::Word => "WORD",
             cathedral_sim::notices::Rung::Summoned => "SUMMONED",
             cathedral_sim::notices::Rung::Warranted => "WARRANT",
@@ -1222,7 +1227,10 @@ mod tests {
 
         assert!(text.contains("HELD AT THE STONE HOUSE — Ede Clove keeps you here"));
         // Booked as a description, never a name — nobody in this city knows you.
-        assert!(text.contains("booked as an outland stranger in a grey hood"), "{text}");
+        assert!(
+            text.contains("booked as an outland stranger in a grey hood"),
+            "{text}"
+        );
         // The sentence in the city's own clock, and the bell rings overhead.
         assert!(text.contains("You go at Lamplight."), "{text}");
         // …and the three doors that do not need waiting for it.
@@ -1240,9 +1248,15 @@ mod tests {
         let custody = state.custody.as_mut().expect("custody is published");
         custody.held = true;
         let while_held = standing_text(&[], state.custody.as_ref(), 0.7);
-        assert!(while_held.contains("HELD AT THE STONE HOUSE"), "{while_held}");
+        assert!(
+            while_held.contains("HELD AT THE STONE HOUSE"),
+            "{while_held}"
+        );
         assert!(while_held.contains("You go at Lamplight."), "{while_held}");
-        assert!(while_held.contains("3 sparks is the posted fee"), "{while_held}");
+        assert!(
+            while_held.contains("3 sparks is the posted fee"),
+            "{while_held}"
+        );
         assert!(
             while_held.contains("Pull away to struggle free  [#######---]"),
             "{while_held}"

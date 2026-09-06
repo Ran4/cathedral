@@ -90,13 +90,24 @@ impl FactSource {
         }
     }
 
+    /// Heap owned by this sealed payload, without exposing its contents.
+    pub(crate) fn heap_bytes(&self) -> usize {
+        match &self.0 {
+            Provenance::Authored => 0,
+            Provenance::Claimed(who) | Provenance::Custody(who) => who.as_str().len(),
+            Provenance::ItemWith { item, holder } => item.as_str().len() + holder.as_str().len(),
+            Provenance::QuestPhase { quest, .. } => quest.capacity(),
+            Provenance::Event { kind, .. } => kind.capacity(),
+        }
+    }
+
     /// Whether the world still bears this out. `false` drops the fact from
     /// `live` and from every holding, which clears it off every sheet on the
     /// next turn with no `forget` and no LLM cooperation.
     ///
     /// M5 wires [`crate::knowledge::invalidate_stale`] into `pollen::sweep`'s
-    /// stir beat; until then only tests call it. Every arm has its body here —
-    /// no later milestone edits this file.
+    /// stir beat. Item existence is checked as well as the holder: a stale
+    /// hand reference cannot keep a removed object true.
     pub(crate) fn still_true(&self, world: &World) -> bool {
         match &self.0 {
             Provenance::Authored | Provenance::Event { .. } => true,
@@ -105,10 +116,13 @@ impl FactSource {
             Provenance::QuestPhase { .. } => true,
             Provenance::Claimed(who) => world.characters.contains_key(who),
             Provenance::Custody(who) => world.custody.holds(who),
-            Provenance::ItemWith { item, holder } => world
-                .characters
-                .get(holder)
-                .is_some_and(|character| character.holds().contains(item)),
+            Provenance::ItemWith { item, holder } => {
+                world.items.contains_key(item)
+                    && world
+                        .characters
+                        .get(holder)
+                        .is_some_and(|character| character.holds().contains(item))
+            }
         }
     }
 }

@@ -798,6 +798,10 @@ impl Runner {
         for line in census.topic_lines() {
             println!("{line}");
         }
+        println!(
+            "[pollen-aux] consequence caches {} bytes",
+            self.engine.knowledge_auxiliary_bytes()
+        );
     }
 
     /// Watch the clock advance `game_days` days with no turns, so every office

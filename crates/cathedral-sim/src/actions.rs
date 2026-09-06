@@ -8,7 +8,9 @@
 //! offer "repair" paths ([`repair_and_fail`]), which delete a stale offer and
 //! bump the public revision *before* failing.
 
+use crate::knowledge::{OCCASION_LIFE_GAME_HOURS, Topic};
 use serde_json::{Map, Value};
+use std::collections::BTreeSet;
 
 use crate::{
     GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, GOAL_MAX_CHARS, GOAL_NONE, HEARING_RADIUS_M,
@@ -131,6 +133,7 @@ fn dispatch(
         "struggle" => struggle(world, actor_id, args),
         "draw_mark" => draw_mark(world, actor_id, args),
         "scrub_mark" => scrub_mark(world, actor_id, args),
+        "raise_word" => raise_word(world, actor_id, args),
         // Checked last, after every verb has had its chance to match.
         unknown => Err(ActionError::new(
             ActionErrorCode::UnknownVerb,
@@ -287,15 +290,112 @@ fn format_g(value: f64) -> String {
 /// speaker's full name case-insensitively at word boundaries so "Nan" does not
 /// match "nanny".
 fn text_mentions_name(text: &str, name: &str) -> bool {
-    let text = text.to_lowercase();
+    !name_ranges(text, name).is_empty()
+}
+
+fn name_ranges(text: &str, name: &str) -> Vec<(usize, usize)> {
+    if name.is_empty() {
+        return Vec::new();
+    }
+    let mut folded = String::new();
+    let mut boundaries = std::collections::BTreeMap::new();
+    for (at, c) in text.char_indices() {
+        boundaries.insert(folded.len(), at);
+        folded.extend(c.to_lowercase());
+    }
+    boundaries.insert(folded.len(), text.len());
     let name = name.to_lowercase();
-    text.match_indices(&name).any(|(start, matched)| {
-        let end = start + matched.len();
-        let before = text[..start].chars().next_back();
-        let after = text[end..].chars().next();
-        before.is_none_or(|character| !character.is_alphanumeric())
-            && after.is_none_or(|character| !character.is_alphanumeric())
-    })
+    folded
+        .match_indices(&name)
+        .filter_map(|(start, m)| {
+            let end = start + m.len();
+            if folded[..start]
+                .chars()
+                .next_back()
+                .is_some_and(char::is_alphanumeric)
+                || folded[end..]
+                    .chars()
+                    .next()
+                    .is_some_and(char::is_alphanumeric)
+            {
+                return None;
+            }
+            Some((*boundaries.get(&start)?, *boundaries.get(&end)?))
+        })
+        .collect()
+}
+
+pub(crate) fn replace_name(text: &str, name: &str, with: &str) -> (String, bool) {
+    let ranges = name_ranges(text, name);
+    let changed = !ranges.is_empty();
+    let mut result = String::new();
+    let mut previous = 0;
+    for (start, end) in ranges {
+        result.push_str(&text[previous..start]);
+        result.push_str(with);
+        previous = end;
+    }
+    result.push_str(&text[previous..]);
+    (result, changed)
+}
+
+/// The actors a line names, as *this hearer* could possibly mean them.
+///
+/// The resolution set is the hearer's **whole sheet** — the names they have
+/// (`knows()`, `character.rs:702`), everyone standing within `HEARING_RADIUS_M`,
+/// and the speaker — and deliberately **not** `knows` alone. `knows` is written
+/// only inside `if !observer.control().is_llm()` (`actions.rs:553-554`), so no
+/// NPC ever learns a name at runtime; the authored cast averages 3.2 names, six
+/// have none, and the generated crowd has none at all. Requiring `knows`
+/// membership would make the occasion gate near-unfireable, and it is the gate
+/// the whole player-lie path runs through.
+///
+/// Word-boundary and case-insensitive through `text_mentions_name` — the same
+/// test `say` already uses to decide when a speaker named themselves
+/// (`actions.rs:545-546`). Returned in `ActorId` order, so it is stable.
+///
+/// `speaker` is added explicitly rather than relied on falling out of `nearby`:
+/// earshot is symmetric in principle, but the boundary is a float compare, and
+/// a gate that opens or shuts on the last bit of a distance is not a gate.
+pub(crate) fn subjects_named(
+    world: &World,
+    hearer: &ActorId,
+    speaker: Option<&ActorId>,
+    text: &str,
+) -> Vec<ActorId> {
+    let Some(reader) = world.characters.get(hearer) else {
+        return Vec::new();
+    };
+    let mut pool: BTreeSet<ActorId> = reader.knows().clone();
+    pool.extend(nearby(world, hearer, HEARING_RADIUS_M));
+    pool.extend(speaker.cloned());
+    pool.remove(hearer);
+    pool.into_iter()
+        .filter(|id| {
+            world
+                .characters
+                .get(id)
+                .is_some_and(|other| text_mentions_name(text, other.name()))
+        })
+        .collect()
+}
+
+/// Who a line was *for*. The explicit `target` when the verb named one;
+/// otherwise the nearest LLM hearer — `characters_within` is ordered by
+/// distance then id (`world.rs:439-449` over `neighbours_by_distance`'s sort at
+/// `world.rs:500-505`), so this is the very person `Engine::player_say` already
+/// hands the reply slot to (`engine.rs:2217-2226`).
+fn addressee(world: &World, target: Option<&ActorId>, hearers: &[ActorId]) -> Option<ActorId> {
+    let is_llm = |id: &ActorId| {
+        world
+            .characters
+            .get(id)
+            .is_some_and(|c| c.control().is_llm())
+    };
+    match target {
+        Some(target) => is_llm(target).then(|| target.clone()),
+        None => hearers.iter().find(|id| is_llm(id)).cloned(),
+    }
 }
 
 // ------------------------------------------------------------------- helpers
@@ -559,6 +659,12 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
         }
     }
 
+    if world.knowledge_enabled
+        && let Some(hearer) = addressee(world, target.as_ref(), &hearers)
+    {
+        let game_days = world.current_time.map_or(0.0, |time| time.game_days());
+        crate::knowledge::mint::note_assertion(world, actor_id, &hearer, &text, game_days);
+    }
     world.emit(DomainEvent::speech(
         actor_id.clone(),
         target,
@@ -3261,7 +3367,7 @@ fn summon(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String,
                 format!("notice {notice_id} is past summoning - a warrant already stands"),
             ));
         }
-        crate::notices::Rung::Word => {}
+        crate::notices::Rung::Hearsay | crate::notices::Rung::Word => {}
     }
     let accused = notice.accused.clone().expect("checked above");
 
@@ -4047,6 +4153,143 @@ fn offer_restitution(world: &mut World, giver_id: &ActorId, acceptor_id: &ActorI
             })
             .collect();
     deliver(world, lines);
+}
+
+/// Whether the sim has put an occasion in front of this actor — the whole of
+/// "how does the model know when to use it?", answered structurally rather than
+/// by a paragraph of prose: *it knows because the verb is not there otherwise.*
+///
+/// O(1), because `render_prompt` asks it for everybody and there may be 20,000
+/// of them. Read by `render_prompt`'s `has_raise_word` **and** by `raise_word`
+/// itself, so advertisement and enforcement cannot come to disagree.
+pub fn may_raise_word(world: &World, actor_id: &ActorId) -> bool {
+    if !world.knowledge_enabled {
+        return false;
+    }
+    let Some(occasion) = world.knowledge.occasion(actor_id) else {
+        return false;
+    };
+    // An offered occasion is live whatever its age: the sheet that carries the
+    // verb is in flight and the reply must be able to use it (D34).
+    if !occasion.offered
+        && let Some(now) = world.current_time.map(|time| time.game_days())
+        && now - occasion.at_game_days > OCCASION_LIFE_GAME_HOURS / 24.0
+    {
+        return false;
+    }
+    let (day, office) = raise_stamp(world);
+    world.knowledge.raises_left(actor_id, day, office) > 0
+}
+
+/// The bucket the per-office raise cap counts in. `(0, Office::Watch)` with no
+/// clock — one bucket for the whole run, so the cap still binds exactly once
+/// and a hermetic test can prove `WordAlreadySaid`. `Office::Watch` is the
+/// first variant (`clock.rs:36`), so this is the enum's own zero.
+fn raise_stamp(world: &World) -> (i64, crate::clock::Office) {
+    world
+        .current_time
+        .map(|time| (time.day, time.office))
+        .unwrap_or((0, crate::clock::Office::Watch))
+}
+
+/// Coin a proposition, here, now, in your own words — the only path by which a
+/// model creates a fact, and everything it creates is a **claim**.
+///
+/// Every guardrail lives in `mint::mint_claim`, which is the single
+/// constructor; this function is the gate, the cap, the collision and the
+/// subject resolution, and nothing else.
+fn raise_word(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    // `topic` is **optional** and `said` is not. An unrecognised tag is never an
+    // error and neither is a missing one — a missing tag is the limiting case of
+    // an unrecognised tag, and the failure direction is deliberately downward: a
+    // mis-tagged fact that under-spreads is a shrug, one that becomes a citywide
+    // scandal is the bug that would make this verb unshippable. Rejecting the
+    // action outright would instead throw the `said` away over three letters.
+    let parsed = args_object(args, &["said"], &["topic"])?;
+    let said = parse_text(&parsed["said"], "said", PLAYER_SPEECH_MAX_CHARS)?;
+    let topic = optional_arg(parsed, "topic")
+        .and_then(Value::as_str)
+        .map_or(Topic::Talk, Topic::parse_or_talk);
+
+    let (day, office) = raise_stamp(world);
+    if world.knowledge_enabled && world.knowledge.raises_left(actor_id, day, office) == 0 {
+        return Err(ActionError::new(
+            ActionErrorCode::WordAlreadySaid,
+            "you have already put one new word about this office — let that one travel, or say this in speech",
+        ));
+    }
+    // Belt and braces: `dispatch` is one table for every actor, so a model can
+    // name a verb its own sheet never listed.
+    if !may_raise_word(world, actor_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::NoOccasion,
+            "nobody has told you a thing you did not already have, and you have seen nothing the \
+             ward has no word for — say it in speech instead",
+        ));
+    }
+    // Whoever the claim names, resolved against this speaker's own sheet and
+    // nobody else: a claim cannot invent a person to be about
+    // (`no-procedural-characters` holds here as everywhere). When it names
+    // nobody the sim can place, it is about whoever was just asserted at them,
+    // which is what `Occasion::subject` is carried for.
+    let occasion_subject = world
+        .knowledge
+        .occasion(actor_id)
+        .and_then(|o| o.subject.clone());
+    let from = world
+        .knowledge
+        .occasion(actor_id)
+        .and_then(|o| o.from.clone());
+    let mut subject = subjects_named(world, actor_id, occasion_subject.as_ref(), &said);
+    if subject.is_empty() {
+        subject = occasion_subject.into_iter().collect();
+    }
+
+    let at = world.characters[actor_id].position_m();
+    if let Some(ward) = world.ward_at(at) {
+        let place = crate::knowledge::mint::area_key_at(world, at);
+        let day_of = world.current_time.map(|time| time.day);
+        // The collision is on the canonical subject and the raiser's place and
+        // day — the same values `install_fact` will stamp (M2 step 16).
+        if crate::knowledge::mint::collides_in_air(
+            world,
+            ward,
+            topic,
+            subject.first(),
+            place,
+            day_of,
+        ) {
+            return Err(ActionError::new(
+                ActionErrorCode::WordAlreadyInTheAir,
+                "that word is already going round here — you would only be repeating it, which \
+                 needs no telling from you",
+            ));
+        }
+    }
+
+    let game_days = world.current_time.map(|time| time.game_days());
+    let Some(_key) = crate::knowledge::mint::mint_claim(
+        world,
+        actor_id,
+        topic,
+        said.clone(),
+        subject,
+        from,
+        game_days,
+    ) else {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            "the ward has all the words it can hold just now",
+        ));
+    };
+    // Spent on **success only**, so a refusal cannot burn an occasion the actor
+    // never got to use.
+    world.knowledge.spend_occasion(actor_id);
+    world.knowledge.note_raise(actor_id, day, office);
+    Ok(format!(
+        "{} starts a word going: \"{said}\"",
+        world.characters[actor_id].name()
+    ))
 }
 
 #[cfg(test)]

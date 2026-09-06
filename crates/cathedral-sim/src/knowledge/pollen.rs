@@ -14,7 +14,7 @@
 //! already derives from it, and the sweep must read that one rather than define
 //! a second λ beside it.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::OnceLock;
 
@@ -97,6 +97,86 @@ pub struct WardGrid {
 pub fn ward_grid() -> &'static WardGrid {
     static GRID: OnceLock<WardGrid> = OnceLock::new();
     GRID.get_or_init(WardGrid::bake)
+}
+
+/// Map markers belong where the ward's people live, so use the mean of its
+/// authored door marks rather than the uninhabited cells it happens to own.
+pub fn ward_centroids() -> &'static BTreeMap<PlanningWard, Vec3> {
+    static CENTROIDS: OnceLock<BTreeMap<PlanningWard, Vec3>> = OnceLock::new();
+    CENTROIDS.get_or_init(|| {
+        let mut sums: BTreeMap<PlanningWard, (Vec3, usize)> = BTreeMap::new();
+        for ([x, z], ward) in crate::crowd::ward_map() {
+            let (sum, count) = sums.entry(ward).or_insert((Vec3::ZERO, 0));
+            *sum += Vec3::new(x, 0.0, z);
+            *count += 1;
+        }
+        sums.into_iter()
+            .map(|(ward, (sum, count))| (ward, sum / count as f64))
+            .collect()
+    })
+}
+
+/// A bell asks about the old word: matching existing air rises to REHEAT_TO,
+/// never to fresh news. Cell centres inside the carry select wards; ambiguous
+/// cells use the exact lookup, and the tower's own ward is always included.
+/// Quantisation precedes `stir_up`: its generic contract bumps every call, but
+/// a repeated bell that changes no heat must hand out no additional coin.
+pub fn amplify(world: &mut World, at: Vec3, radius_m: f64, topic: Option<Topic>, game_days: f64) {
+    if !world.knowledge_enabled || !at.is_finite() || !radius_m.is_finite() || radius_m < 0.0 {
+        return;
+    }
+    let grid = ward_grid();
+    let bound = |value: f64, min: f64, cap: usize| {
+        ((value - min) / WARD_CELL_M).floor().clamp(0.0, cap as f64) as usize
+    };
+    let xmin = bound(at.x - radius_m, CITY_MIN_X, grid.cols);
+    let xmax = bound(at.x + radius_m, CITY_MIN_X, grid.cols.saturating_sub(1));
+    let zmin = bound(at.z - radius_m, CITY_MIN_Z, grid.rows);
+    let zmax = bound(at.z + radius_m, CITY_MIN_Z, grid.rows.saturating_sub(1));
+    let mut wards: BTreeSet<PlanningWard> = world.ward_at(at).into_iter().collect();
+    for x in xmin..=xmax {
+        for z in zmin..=zmax {
+            let centre = Vec3::new(
+                CITY_MIN_X + (x as f64 + 0.5) * WARD_CELL_M,
+                at.y,
+                CITY_MIN_Z + (z as f64 + 0.5) * WARD_CELL_M,
+            );
+            if centre.distance_squared(at) <= radius_m * radius_m {
+                wards.extend(grid.at(centre));
+            }
+        }
+    }
+    let rows: Vec<_> = wards
+        .into_iter()
+        .flat_map(|ward| {
+            world
+                .knowledge
+                .ward_air(ward)
+                .filter(|(key, drift)| {
+                    drift.heat < super::REHEAT_TO
+                        && world
+                            .knowledge
+                            .fact(*key)
+                            .is_some_and(|fact| topic.is_none_or(|topic| fact.topic == topic))
+                })
+                .map(move |(key, drift)| {
+                    (
+                        ward,
+                        key,
+                        heat_pct(drift.heat) != heat_pct(super::REHEAT_TO),
+                    )
+                })
+        })
+        .collect();
+    for (ward, key, changed) in rows {
+        if changed {
+            world
+                .knowledge
+                .stir_up(ward, key, super::REHEAT_TO, game_days);
+        } else if let Some(drift) = world.knowledge.air_mut().get_mut(&(ward, key)) {
+            drift.heat = super::REHEAT_TO;
+        }
+    }
 }
 
 impl WardGrid {
@@ -414,13 +494,10 @@ pub fn poll_person(world: &mut World, actor: &ActorId, game_days: f64) {
         if !fact.decays || !may_carry(fact, actor) {
             continue;
         }
-        let (hops, heat) = if fact.seeded.contains(actor) {
-            (0, Held::seeded(fact).heat(Some(game_days)))
-        } else {
-            match rows.binary_search_by(|row| row.key.cmp(&key)) {
-                Ok(at) => (rows[at].hops, rows[at].heat(Some(game_days))),
-                Err(_) => continue,
-            }
+        let (hops, heat) = match rows.binary_search_by(|row| row.key.cmp(&key)) {
+            Ok(at) => (rows[at].hops, rows[at].heat(Some(game_days))),
+            Err(_) if fact.seeded.contains(actor) => (0, Held::seeded(fact).heat(Some(game_days))),
+            Err(_) => continue,
         };
         let salience = salience_for_listener(world, fact, &listener);
         if !volunteers_with(fact, actor, heat, salience) {
@@ -494,14 +571,19 @@ pub fn poll_player(world: &mut World, player_id: &ActorId, game_days: f64) {
 /// `IdleCognitionMode::All`, which is most runs. The scan is O(N) —
 /// `world.rs`'s `neighbours_by_distance` has no spatial index — so the **caller**
 /// gates it to one pass per [`STAGE_HOP_SECONDS`](super::STAGE_HOP_SECONDS) and
-/// this function bounds what a pass may do: at most nine bodies, so at most
-/// 9 × 8 × [`HOLDINGS_MAX`](super::HOLDINGS_MAX) = 432 rolls, and at most
-/// [`STAGE_HOP_MAX_PAIRS`] hops.
+/// this function bounds what a pass may do: at most nine bodies and
+/// [`STAGE_HOP_MAX_PAIRS`] tellings. Carried rows alone allow at most
+/// 9 × 8 × [`HOLDINGS_MAX`](super::HOLDINGS_MAX) = 432 rolls, but seeded witnesses
+/// are exempt from that holding cap. The absolute bound is therefore
+/// 9 × 8 × [`FACTS_MAX_LIVE`](super::FACTS_MAX_LIVE) = 18,432 candidate rolls,
+/// independent of the crowd size. A pair also has to be within hearing distance
+/// of each other; sharing the player's stage alone does not suffice.
 ///
 /// The roll is keyed on the stir the air's own sweep bumps, so a pair standing
 /// together for a minute gets one chance per half game hour and not one per
 /// pass: idempotence inside a stir *is* the per-pair cooldown, and it needs no
-/// state to store.
+/// state to store for NPCs. Player receipts deduplicate successful pairs on
+/// that same stir, so repeated passes cannot manufacture repeated tellings.
 ///
 /// Every body on the stage is resolved to a [`Listener`] **once per pass**, and
 /// the gate and the rate are then the same two expressions Layer 1 uses
@@ -530,15 +612,19 @@ pub fn hop_on_stage(world: &mut World, player_id: &ActorId, now: f64, game_days:
     let stir = stage_stir(game_days); // the air's own grid, in game time
     let mut tellings: Vec<(ActorId, FactKey, Telling)> = Vec::new();
     {
-        // One `characters.get` per body per pass, not one per (carrier, fact,
-        // listener) triple: `Listener::resolve` is what the roll and the deposit
-        // gate both read, so resolving it here is the only way the innermost loop
-        // pays nothing for it.
-        let bodies: Vec<Listener<'_>> = stage
+        // Resolve the listener and position once per body, not per (carrier,
+        // fact, listener) triple. The stage bounds what the player can hear;
+        // each pair must also be within earshot of each other.
+        let bodies: Vec<(Listener<'_>, Vec3)> = stage
             .iter()
-            .map(|id| Listener::resolve(world, id))
+            .map(|id| {
+                (
+                    Listener::resolve(world, id),
+                    world.characters[id].position_m(),
+                )
+            })
             .collect();
-        'pairs: for carrier in &bodies {
+        'pairs: for (carrier, carrier_at) in &bodies {
             for (key, held) in crate::knowledge::holdings_of(world, carrier.id) {
                 let Some(fact) = world.knowledge.fact(key) else {
                     continue;
@@ -554,15 +640,24 @@ pub fn hop_on_stage(world: &mut World, player_id: &ActorId, now: f64, game_days:
                 }
                 let hops = held.hops.saturating_add(1);
                 let heat = carried_heat * HOP_LOSS;
-                for listener in &bodies {
-                    if listener.id == carrier.id || !may_carry(fact, listener.id) {
+                for (listener, listener_at) in &bodies {
+                    if listener.id == carrier.id
+                        || !may_carry(fact, listener.id)
+                        || carrier_at.distance_squared(*listener_at)
+                            > crate::HEARING_RADIUS_M * crate::HEARING_RADIUS_M
+                    {
                         continue;
                     }
                     if tellings.len() == STAGE_HOP_MAX_PAIRS {
                         break 'pairs;
                     }
-                    if crate::knowledge::holds_key(world, listener.id, key)
-                        .is_some_and(|have| have.hops <= hops)
+                    if (listener.id == player_id
+                        && world
+                            .knowledge
+                            .player_stage_telling_seen(key, carrier.id, stir))
+                        || (listener.id != player_id
+                            && crate::knowledge::holds_key(world, listener.id, key)
+                                .is_some_and(|have| have.hops <= hops))
                     {
                         continue;
                     }
@@ -595,6 +690,14 @@ pub fn hop_on_stage(world: &mut World, player_id: &ActorId, now: f64, game_days:
         }
     }
     for (listener, key, telling) in tellings {
+        if listener == *player_id
+            && let Some(mouth) = telling.from.as_ref()
+            && !world
+                .knowledge
+                .note_player_stage_telling(key, mouth.clone(), stir)
+        {
+            continue;
+        }
         crate::knowledge::learn(world, &listener, key, telling, Some(game_days));
     }
 }
@@ -646,13 +749,23 @@ pub fn picks_up_from(
 /// `Arc::make_mut` instead of N. What must not be done, in either shape, is clone
 /// the air map per pass: that is a 20 Hz allocation.
 pub fn sweep(world: &mut World, game_days: f64) -> bool {
+    sweep_with_invalidations(world, game_days).0
+}
+
+/// The engine consumes the invalidation diagnostics directly, without a retained
+/// queue on World. Public `sweep` keeps its original boolean test/API contract.
+pub(crate) fn sweep_with_invalidations(
+    world: &mut World,
+    game_days: f64,
+) -> (bool, Vec<crate::FactId>) {
     if !world.knowledge_enabled {
-        return false;
+        return (false, Vec::new());
     }
     let previous = world.knowledge.last_sweep_game_days();
     if !world.knowledge.take_stir_beat(game_days) {
-        return false;
+        return (false, Vec::new());
     }
+    let invalidated = super::invalidate_stale(world);
     // On the very first beat nothing has aged: the air was just deposited.
     //
     // Cooling charges the exact elapsed time, and the coin advances by the number
@@ -672,7 +785,7 @@ pub fn sweep(world: &mut World, game_days: f64) -> bool {
     };
     let factor = super::cooling_lambda().powf(elapsed_hours) as f32;
 
-    let mut changed = false;
+    let mut changed = !invalidated.is_empty();
     let mut gone: Vec<(PlanningWard, FactKey)> = Vec::new();
     {
         let air = world.knowledge.air_mut();
@@ -699,7 +812,7 @@ pub fn sweep(world: &mut World, game_days: f64) -> bool {
     // The per-ward cap, coldest out — the same total order the holdings cap evicts
     // by, so there is one eviction rule in the feature and it is reproducible.
     changed |= world.knowledge.trim_air_to_cap();
-    changed
+    (changed, invalidated)
 }
 
 /// One `Drift` row into one ward's air at full heat, for the measurement levers

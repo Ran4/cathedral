@@ -765,6 +765,17 @@ pub fn render_prompt(
     since: Option<&[String]>,
     env: &PromptEnv,
 ) -> Result<String, PromptError> {
+    render_prompt_with_seated(world, actor_id, since, env).map(|(prompt, _)| prompt)
+}
+
+/// Return the actual relevance seats along with the prompt, so the completion
+/// reheats exactly those keys without doing another whole-city neighbour scan.
+fn render_prompt_with_seated(
+    world: &World,
+    actor_id: &ActorId,
+    since: Option<&[String]>,
+    env: &PromptEnv,
+) -> Result<(String, Vec<FactKey>), PromptError> {
     let actor = llm_actor(world, actor_id)?;
     let sheet = build_sheet(world, actor, since, &env.strings);
     // The your_round explainer paragraph renders only when the sheet carries a
@@ -786,6 +797,7 @@ pub fn render_prompt(
     let has_chalk_verbs =
         !sheet.you_could_chalk.is_empty() && crate::actions::holds_a_chalk_pen(world, actor_id);
     let has_scrub_verb = sheet.marks_here.iter().any(|mark| mark.in_reach);
+    let has_raise_word = crate::actions::may_raise_word(world, actor_id);
     let has_law_verbs = crate::notices::is_law(actor);
     // `settle_notice` reaches one person outside the law cast: whoever a live
     // notice names as wronged, who may forgive their own spark (M3.5). They
@@ -846,7 +858,24 @@ pub fn render_prompt(
                 has_frontbutt,
                 has_chalk_verbs,
                 has_scrub_verb,
+                has_raise_word,
             })
+        })
+        .map(|prompt| {
+            let present: Vec<_> = sheet
+                .you_see
+                .people
+                .iter()
+                .map(|person| person.id.clone())
+                .collect();
+            let seated = crate::knowledge::relevance_seated_with_present(
+                world,
+                actor,
+                &sheet.since_your_last_turn,
+                &sheet.recent_history,
+                &present,
+            );
+            (prompt, seated)
         })
         .map_err(|error| PromptError::new(format!("the turn template did not render: {error}")))
 }
@@ -1083,8 +1112,8 @@ fn build_sheet<'a>(
     since: Option<&'a [String]>,
     strings: &'a PromptStrings,
 ) -> Sheet<'a> {
-    let people: Vec<Person<'_>> = world
-        .characters_within(actor.position_m(), HEARING_RADIUS_M, Some(actor.id()))
+    let present = world.characters_within(actor.position_m(), HEARING_RADIUS_M, Some(actor.id()));
+    let people: Vec<Person<'_>> = present
         .iter()
         .map(|other_id| {
             let other = &world.characters[other_id];
@@ -1272,6 +1301,7 @@ fn build_sheet<'a>(
         actor,
         &since_your_last_turn,
         &recent_history,
+        &present,
         strings,
     );
 
@@ -1609,6 +1639,7 @@ fn what_you_know_lines(
     actor: &Character,
     since: &[&str],
     recent: &[&str],
+    present: &[ActorId],
     strings: &PromptStrings,
 ) -> Vec<KnownLine> {
     if !world.knowledge_enabled {
@@ -1616,7 +1647,8 @@ fn what_you_know_lines(
     }
     let reader = actor.id();
     let now = world.current_time.map(|time| time.game_days());
-    let seated_keys = crate::knowledge::relevance_seated(world, actor, since, recent);
+    let seated_keys =
+        crate::knowledge::relevance_seated_with_present(world, actor, since, recent, present);
 
     // Seeded and carried rows together, ascending `FactKey`, each paired with
     // its fact — and dropped where the fact is about the reader and gives them
@@ -2186,8 +2218,17 @@ pub fn render_prompt_and_drain(
     let drained = std::mem::take(&mut actor.state.inbox);
     let presented = actor.take_pending_history();
 
-    match render_prompt(world, actor_id, Some(&drained), env) {
-        Ok(rendered) => Ok((rendered, presented)),
+    let offered = crate::actions::may_raise_word(world, actor_id);
+    match render_prompt_with_seated(world, actor_id, Some(&drained), env) {
+        Ok((rendered, seated)) => {
+            if world.knowledge_enabled {
+                world.knowledge.note_seated(actor_id, seated);
+                if offered {
+                    world.knowledge.offer_occasion(actor_id);
+                }
+            }
+            Ok((rendered, presented))
+        }
         Err(error) => {
             let actor = world
                 .characters

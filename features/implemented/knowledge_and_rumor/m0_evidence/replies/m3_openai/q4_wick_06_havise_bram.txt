@@ -1,0 +1,1 @@
+say {"target":"player","text":"I don't know about Grigor Ashe. I heard only that a cargo worker was taken at Slate Cistern two days past and lies in the Stone House; a Wick Ward cook told me that."}

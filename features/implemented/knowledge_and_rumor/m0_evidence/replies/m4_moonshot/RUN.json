@@ -1,0 +1,36 @@
+{
+  "provider": "moonshot",
+  "model": "kimi-k3",
+  "calls": [
+    {
+      "sheet": "q5b_raise_word_no_occasion.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 4.008,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "moonshot",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m4_topic/q5b_raise_word_no_occasion.txt"
+      ],
+      "sheet_sha256": "7c0432e1314236812670bc06efe0450cccf8e26777a2381ce6da6b7e961a0d96"
+    },
+    {
+      "sheet": "q5b_raise_word_with_occasion.txt",
+      "status": "ok",
+      "returncode": 0,
+      "seconds": 3.39,
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "moonshot",
+        "--one-shot",
+        "/home/ran/src/rust/cathedralbevy/features/knowledge_and_rumor/m0_evidence/sheets/m4_topic/q5b_raise_word_with_occasion.txt"
+      ],
+      "sheet_sha256": "8d7d8e341843f15d1850b385a649d98e577d28d6c2849378762d2c5af687860f"
+    }
+  ],
+  "git_commit": "f830ff6969d1dc1611afe4cc6db953ffc9f44658",
+  "previous": null
+}

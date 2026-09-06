@@ -221,6 +221,8 @@ const TALLY_METRES_PER_STROKE: f64 = 6.0;
 /// that one refusal is one scene rather than a loop, short enough that a cross
 /// scrubbed in the morning lets them eat by evening.
 const CHALK_REFUSAL_GAME_DAYS: f64 = 0.5;
+/// The same half-day pause as chalk: one behaviour, one duration to tune.
+const KNOWLEDGE_REFUSAL_GAME_DAYS: f64 = CHALK_REFUSAL_GAME_DAYS;
 
 /// The share of the ambient cast whose evening the nightly code roll moves to a
 /// tavern hearth (movement M6). Deliberately small: the payoff is that the
@@ -1151,6 +1153,13 @@ pub struct Round {
     /// (`nearest_open_stall`) has no `now`: pruned at the top of the tick,
     /// tested with a bare `contains_key`.
     chalk_refused_until: BTreeMap<ActorId, f64>,
+    /// Game-days, unlike the older chalk deadline. Pruned once per round tick.
+    knowledge_refused_until: BTreeMap<ActorId, f64>,
+    /// Buyers who have experienced a word refusal. Bounded by the population;
+    /// after their pause they avoid every currently refusing vendor. Without
+    /// this memory, the nearest counter would refuse them again forever, and
+    /// filtering before the first visit would erase the visible refusal scene.
+    knowledge_refused_buyers: BTreeSet<ActorId>,
     /// A person's next turn at the ward's air, in **game-days** — never real
     /// seconds (`features/knowledge_and_rumor/`, M2).
     ///
@@ -5756,6 +5765,23 @@ fn active_leg(legs: &[RoundLeg], office: Office, weekday: Weekday) -> Option<&Ro
     pick(&|leg| leg.from <= office && eligible(leg)).or_else(|| pick(&eligible))
 }
 
+/// Side caches introduced by word refusals, separate from the fact store.
+/// Node overhead follows Knowledge::footprint_bytes's conservative estimate.
+pub(crate) fn knowledge_auxiliary_bytes(round: &Round) -> usize {
+    std::mem::size_of_val(&round.knowledge_refused_until)
+        + std::mem::size_of_val(&round.knowledge_refused_buyers)
+        + round
+            .knowledge_refused_until
+            .keys()
+            .map(|who| std::mem::size_of::<(ActorId, f64)>() + who.as_str().len() + 48)
+            .sum::<usize>()
+        + round
+            .knowledge_refused_buyers
+            .iter()
+            .map(|who| std::mem::size_of::<ActorId>() + who.as_str().len() + 48)
+            .sum::<usize>()
+}
+
 /// Advance the round one poll: decay thirst, resolve arrivals, drive the `go_to`
 /// intents, work the well queues, and run the ladder. A no-op until
 /// [`Round::seed`] has run. `player_id` is who the well sounds play *for*.
@@ -5789,6 +5815,12 @@ pub fn tick(
     }
     round.lightning_reflex_until.retain(|_, until| now < *until);
     round.chalk_refused_until.retain(|_, until| now < *until);
+    round.knowledge_refused_until.retain(|who, until| {
+        world.knowledge_enabled && world.is_present(who) && clock.game_days(now) < *until
+    });
+    round
+        .knowledge_refused_buyers
+        .retain(|who| world.knowledge_enabled && world.is_present(who));
     // Before anything reads a leg: a `set_round` recorded since the last tick
     // is part of the day this tick runs, not the next one.
     apply_round_edits(round, world, now);
@@ -6857,6 +6889,33 @@ fn service_stalls(
                         .entry(buyer.clone())
                         .and_modify(|deadline| *deadline = deadline.max(until))
                         .or_insert(until);
+                } else if chalked.is_none()
+                    && !round.knowledge_refused_until.contains_key(&buyer)
+                    && let Some((_, held)) = round.stalls[s].vendor.as_ref().and_then(|vendor| {
+                        crate::knowledge::holds_about(
+                            world,
+                            vendor,
+                            &buyer,
+                            Some(crate::knowledge::Topic::Coin),
+                            Some(clock.game_days(now)),
+                        )
+                    })
+                {
+                    let stall_name = round.stalls[s].name.clone();
+                    if let Some(character) = world.characters.get_mut(&buyer) {
+                        character.notify_percept(format!(
+                            "You reached the counter at {stall_name} and were refused: the vendor has heard something of you, and will not have your coin today."
+                        ));
+                    }
+                    round.push_food_log(format!(
+                        "refused_on_word; stall {stall_name}, buyer {buyer}, hops {}",
+                        held.hops
+                    ));
+                    round.knowledge_refused_until.insert(
+                        buyer.clone(),
+                        clock.game_days(now) + KNOWLEDGE_REFUSAL_GAME_DAYS,
+                    );
+                    round.knowledge_refused_buyers.insert(buyer.clone());
                 }
                 round.people.get_mut(&buyer).expect("buyer exists").food = None;
                 if let Some(character) = world.characters.get_mut(&buyer) {
@@ -6938,6 +6997,19 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
         return None;
     }
     let vendor = round.stalls[s].vendor.clone()?;
+    // Read the world's current clock when this helper has no explicit one:
+    // heat at learn is not the heat the vendor is acting on this morning.
+    if crate::knowledge::holds_about(
+        world,
+        &vendor,
+        buyer,
+        Some(crate::knowledge::Topic::Coin),
+        None,
+    )
+    .is_some()
+    {
+        return None;
+    }
     let trade_key = round.stalls[s].trade.clone();
     let trade = round.food_trades.get(&trade_key)?.clone();
     let buyer_sparks = world.spendable_sparks(buyer);
@@ -7199,6 +7271,9 @@ fn nearest_open_stall(
     if round.chalk_refused_until.contains_key(id) {
         return None;
     }
+    if world.knowledge_enabled && round.knowledge_refused_until.contains_key(id) {
+        return None;
+    }
     // Counting the purse means a whole-cast pocket walk per spark stack
     // (`World::uncommitted_quantity`), and the code's own note above says the
     // whole cast is famished by dawn — but most of them are nowhere near a
@@ -7228,6 +7303,23 @@ fn nearest_open_stall(
             continue;
         }
         let sparks = *purse.get_or_insert_with(|| world.spendable_sparks(id));
+        // After the first refusal, shop elsewhere. Re-evaluate the vendor's
+        // actual warm holding, so cooling/invalidation makes them eligible
+        // again; when nobody accepts, the normal hearth/need path remains.
+        if round.knowledge_refused_buyers.contains(id)
+            && stall.vendor.as_ref().is_some_and(|vendor| {
+                crate::knowledge::holds_about(
+                    world,
+                    vendor,
+                    id,
+                    Some(crate::knowledge::Topic::Coin),
+                    None,
+                )
+                .is_some()
+            })
+        {
+            continue;
+        }
         if !stall_has_affordable(round, world, stall, sparks) {
             continue;
         }

@@ -41,7 +41,9 @@ use cathedral_sim::WALK_Y;
 use crate::controller::{PlayerController, TeleportPlayer};
 use crate::fonts::CathedralFonts;
 use crate::nav_overlay::Navigation;
-use crate::smart_actors::{AreaDebugState, ChatInputState, ConfigMenuState, InventoryUiState};
+use crate::smart_actors::{
+    AreaDebugState, ChatInputState, ConfigMenuState, InventoryUiState, JournalUiState,
+};
 
 // --- The baked crop, mirrored from scripts/render_map_texture.py ------------ //
 // (The building bounding box; the script prints these when it re-bakes.)
@@ -108,6 +110,15 @@ pub struct MapState {
     pub fullscreen_open: bool,
 }
 
+/// The sim's whole-percent projection. Kept out of WorldMirror/PublicSnapshot.
+#[derive(Resource, Default, PartialEq)]
+pub struct WardHeatState {
+    pub wards: Vec<cathedral_sim::WardHeatRow>,
+}
+
+#[derive(Component)]
+struct WardHeatDot(cathedral_sim::lore::PlanningWard);
+
 /// The fullscreen overlay root; its [`Visibility`] follows [`MapState`].
 #[derive(Component)]
 struct FullscreenMapRoot;
@@ -136,19 +147,33 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MapState>()
+            .init_resource::<WardHeatState>()
             .add_systems(Startup, setup_map)
             .add_systems(
                 Update,
                 (
-                    (toggle_fullscreen_map, handle_map_teleport_click, sync_map_state).chain(),
+                    (
+                        toggle_fullscreen_map,
+                        handle_map_teleport_click,
+                        sync_map_state,
+                    )
+                        .chain(),
                     // `update_map_markers` only touches the marker of the map
                     // that is up, so it has to read this frame's toggle — an
                     // unordered run could place the opening map's marker a
                     // frame late.
                     update_map_markers.after(toggle_fullscreen_map),
+                    update_ward_heat.after(toggle_fullscreen_map),
                 ),
             );
     }
+}
+
+/// Runs the production overlay handlers without loading the map artwork.
+#[cfg(test)]
+pub(crate) fn add_overlay_input_for_tests(app: &mut App) {
+    app.init_resource::<MapState>()
+        .add_systems(Update, (toggle_fullscreen_map, sync_map_state).chain());
 }
 
 fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, fonts: Res<CathedralFonts>) {
@@ -248,7 +273,75 @@ fn spawn_map_image(parent: &mut ChildSpawnerCommands, image: Handle<Image>, clic
         image_node.insert((MapClickArea, RelativeCursorPosition::default()));
     }
     // `clickable` is the fullscreen map: the two flags always move together.
-    image_node.with_children(|marker| spawn_marker(marker, clickable));
+    image_node.with_children(|marker| {
+        // Eight translucent dots are legible on the full map; on the 1/6-width
+        // minimap they are mush. Spawn below the player arrow in sibling order.
+        if clickable {
+            for ward in cathedral_sim::lore::PlanningWard::ALL {
+                marker.spawn((
+                    Name::new(format!("Ward talk: {}", ward.as_str())),
+                    WardHeatDot(ward),
+                    Node {
+                        position_type: PositionType::Absolute,
+                        border_radius: BorderRadius::MAX,
+                        ..default()
+                    },
+                    UiTransform::from_translation(Val2::percent(-50.0, -50.0)),
+                    BackgroundColor(Color::NONE),
+                    Visibility::Hidden,
+                ));
+            }
+        }
+        spawn_marker(marker, clickable);
+    });
+}
+
+/// Layout writes happen only when the quantised projection or map visibility
+/// changes. Each comparison also protects the map's subtree on opening.
+fn update_ward_heat(
+    state: Res<WardHeatState>,
+    map: Res<MapState>,
+    mut dots: Query<(
+        &WardHeatDot,
+        &mut Node,
+        &mut BackgroundColor,
+        &mut Visibility,
+    )>,
+) {
+    if !map.fullscreen_open || (!state.is_changed() && !map.is_changed()) {
+        return;
+    }
+    for (dot, mut node, mut color, mut visibility) in &mut dots {
+        let Some(row) = state
+            .wards
+            .iter()
+            .find(|row| row.ward == dot.0 && row.heat_pct > 0)
+        else {
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
+            }
+            continue;
+        };
+        let uv = world_to_uv(row.at.x as f32, row.at.z as f32);
+        let heat = f32::from(row.heat_pct.min(100)) / 100.0;
+        let diameter = px(10.0 + 22.0 * heat);
+        let left = percent(uv.x * 100.0);
+        let top = percent(uv.y * 100.0);
+        if node.left != left || node.top != top || node.width != diameter || node.height != diameter
+        {
+            node.left = left;
+            node.top = top;
+            node.width = diameter;
+            node.height = diameter;
+        }
+        let tint = BackgroundColor(Color::srgba(0.93, 0.53, 0.13, 0.18 + heat * 0.55));
+        if *color != tint {
+            *color = tint;
+        }
+        if *visibility != Visibility::Inherited {
+            *visibility = Visibility::Inherited;
+        }
+    }
 }
 
 /// The "you are here" marker: a round dot with an arrow "prow" pointing in the
@@ -314,23 +407,30 @@ fn spawn_marker(parent: &mut ChildSpawnerCommands, on_fullscreen: bool) {
 
 /// `M` toggles the fullscreen map (ignored while typing chat or in the settings
 /// menu); the map also closes itself if the settings menu opens.
-fn toggle_fullscreen_map(
+pub(crate) fn toggle_fullscreen_map(
     keyboard: Res<ButtonInput<KeyCode>>,
     menu: Option<Res<ConfigMenuState>>,
     chat: Option<Res<ChatInputState>>,
     inventory: Option<Res<InventoryUiState>>,
+    journal: Option<Res<JournalUiState>>,
     mut map_state: ResMut<MapState>,
 ) {
     let menu_open = menu.map(|m| m.open).unwrap_or(false);
     let chat_open = chat.map(|c| c.open).unwrap_or(false);
     let inventory_open = inventory.map(|i| i.open).unwrap_or(false);
+    let journal_open = journal.is_some_and(|journal| journal.open);
 
     if menu_open && map_state.fullscreen_open {
         // The settings menu takes over the cursor; yield the map to it.
         map_state.fullscreen_open = false;
         return;
     }
-    if keyboard.just_pressed(KeyCode::KeyM) && !menu_open && !chat_open && !inventory_open {
+    if keyboard.just_pressed(KeyCode::KeyM)
+        && !menu_open
+        && !chat_open
+        && !inventory_open
+        && !journal_open
+    {
         map_state.fullscreen_open = !map_state.fullscreen_open;
     }
 }
@@ -351,10 +451,12 @@ fn set_visibility<F: bevy::ecs::query::QueryFilter>(
 /// Applies `fullscreen_open`: shows/hides the overlay and, on the open/close
 /// edge, releases or recaptures the mouse cursor (like the settings menu). The
 /// cursor is only recaptured when the settings menu is not the one holding it.
+#[allow(clippy::too_many_arguments)] // Independent Bevy resources and filtered queries.
 fn sync_map_state(
     map_state: Res<MapState>,
     menu: Option<Res<ConfigMenuState>>,
     inventory: Option<Res<InventoryUiState>>,
+    journal: Option<Res<JournalUiState>>,
     mut previous_open: Local<Option<bool>>,
     mut fullscreen: Query<&mut Visibility, (With<FullscreenMapRoot>, Without<MinimapRoot>)>,
     mut minimap: Query<&mut Visibility, (With<MinimapRoot>, Without<FullscreenMapRoot>)>,
@@ -364,8 +466,22 @@ fn sync_map_state(
     let open = map_state.fullscreen_open;
     // The fullscreen map shows only when open; the corner minimap hides then, so
     // the two never stack.
-    set_visibility(&mut fullscreen, if open { Visibility::Visible } else { Visibility::Hidden });
-    set_visibility(&mut minimap, if open { Visibility::Hidden } else { Visibility::Visible });
+    set_visibility(
+        &mut fullscreen,
+        if open {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        },
+    );
+    set_visibility(
+        &mut minimap,
+        if open {
+            Visibility::Hidden
+        } else {
+            Visibility::Visible
+        },
+    );
 
     if *previous_open == Some(open) {
         return;
@@ -380,6 +496,7 @@ fn sync_map_state(
         cursor.grab_mode = CursorGrabMode::None;
     } else if !menu.map(|m| m.open).unwrap_or(false)
         && !inventory.map(|i| i.open).unwrap_or(false)
+        && !journal.is_some_and(|journal| journal.open)
     {
         cursor.visible = false;
         cursor.grab_mode = CursorGrabMode::Locked;
@@ -477,7 +594,11 @@ fn handle_map_teleport_click(
 /// 2. otherwise the exact point, if it is walkable;
 /// 3. otherwise the nearest graph node, if within [`NODE_SNAP_M`];
 /// 4. otherwise `None` (the click has no reachable ground nearby).
-fn resolve_teleport_target(nav: &cathedral_sim::NavData, x: f64, z: f64) -> Option<cathedral_sim::Vec3> {
+fn resolve_teleport_target(
+    nav: &cathedral_sim::NavData,
+    x: f64,
+    z: f64,
+) -> Option<cathedral_sim::Vec3> {
     let mut nearest_place: Option<(f64, usize)> = None;
     for place in nav.places() {
         let [px, pz] = nav.node_xz(place.node);
@@ -511,6 +632,81 @@ mod tests {
     use std::f32::consts::PI;
 
     use super::*;
+
+    #[test]
+    fn ward_heat_dots_are_fullscreen_only_and_do_not_rewrite_quiet_layout() {
+        #[derive(Resource, Default)]
+        struct Writes(usize);
+        fn spawn(mut commands: Commands) {
+            commands.spawn(Node::default()).with_children(|p| {
+                spawn_map_image(p, Handle::default(), false);
+                spawn_map_image(p, Handle::default(), true);
+            });
+        }
+        fn writes(nodes: Query<(), (With<WardHeatDot>, Changed<Node>)>, mut count: ResMut<Writes>) {
+            count.0 = nodes.iter().count();
+        }
+        let mut app = App::new();
+        app.init_resource::<MapState>()
+            .init_resource::<WardHeatState>()
+            .init_resource::<Writes>()
+            .add_systems(Startup, spawn)
+            .add_systems(Update, update_ward_heat)
+            .add_systems(Last, writes);
+        app.update();
+        let mut dots = app
+            .world_mut()
+            .query::<(&WardHeatDot, &Node, &Visibility, &ChildOf)>();
+        assert_eq!(
+            dots.iter(app.world()).count(),
+            8,
+            "the minimap adds no second set"
+        );
+        for (_, _, visible, parent) in dots.iter(app.world()) {
+            assert_eq!(*visible, Visibility::Hidden);
+            assert!(app.world().get::<MapClickArea>(parent.parent()).is_some());
+        }
+        app.world_mut().resource_mut::<MapState>().fullscreen_open = true;
+        let ward = cathedral_sim::PlanningWard::Fabric;
+        let at = cathedral_sim::Vec3::new(10.0, 0.0, 20.0);
+        app.world_mut()
+            .resource_mut::<WardHeatState>()
+            .wards
+            .push(cathedral_sim::WardHeatRow {
+                ward,
+                label: "Fabric".into(),
+                at,
+                heat_pct: 50,
+                words: 3,
+            });
+        app.update();
+        let uv = world_to_uv(at.x as f32, at.z as f32);
+        for (dot, node, visible, _) in dots.iter(app.world()) {
+            if dot.0 == ward {
+                assert_eq!(*visible, Visibility::Inherited);
+                assert_eq!(node.left, percent(uv.x * 100.0));
+                assert_eq!(node.top, percent(uv.y * 100.0));
+                assert_eq!((node.width, node.height), (px(21), px(21)));
+            } else {
+                assert_eq!(*visible, Visibility::Hidden);
+            }
+        }
+        assert_eq!(app.world().resource::<Writes>().0, 1);
+        app.update();
+        assert_eq!(app.world().resource::<Writes>().0, 0);
+        // Even an identical hot-channel assignment must not alter the layout.
+        app.world_mut()
+            .resource_mut::<WardHeatState>()
+            .set_changed();
+        app.update();
+        assert_eq!(app.world().resource::<Writes>().0, 0);
+        app.world_mut().resource_mut::<WardHeatState>().wards[0].heat_pct = 0;
+        app.update();
+        assert!(
+            dots.iter(app.world())
+                .all(|(_, _, v, _)| *v == Visibility::Hidden)
+        );
+    }
 
     const NAV_JSON: &str = include_str!("../assets/world/navigation.json");
     const NAV_BIN: &[u8] = include_bytes!("../assets/world/navigation.bin");
@@ -592,7 +788,10 @@ mod tests {
         // east-right map; after turning right the player faces +X (north),
         // which is *down* here. Right -> down is clockwise, as it should be.
         let rest = marker_rotation(0.0) * Vec2::new(0.0, -1.0);
-        assert!((rest - Vec2::new(1.0, 0.0)).length() < 1e-5, "yaw 0 => {rest:?}");
+        assert!(
+            (rest - Vec2::new(1.0, 0.0)).length() < 1e-5,
+            "yaw 0 => {rest:?}"
+        );
 
         let turned_right = marker_rotation(-FRAC_PI_2) * Vec2::new(0.0, -1.0);
         assert!(
@@ -615,7 +814,10 @@ mod tests {
             let aspect = Vec2::new(VX1 - VX0, VY1 - VY0);
             let moved = ((after - before) * aspect).normalize();
             let arrow = (marker_rotation(yaw) * Vec2::new(0.0, -1.0)).normalize();
-            assert!((moved - arrow).length() < 1e-4, "yaw {yaw}: moved {moved:?} arrow {arrow:?}");
+            assert!(
+                (moved - arrow).length() < 1e-4,
+                "yaw {yaw}: moved {moved:?} arrow {arrow:?}"
+            );
         }
     }
 
@@ -663,7 +865,10 @@ mod tests {
                 }
             }
         }
-        assert!(resolved > 100, "most in-city clicks should resolve, got {resolved}");
+        assert!(
+            resolved > 100,
+            "most in-city clicks should resolve, got {resolved}"
+        );
     }
 
     #[test]
