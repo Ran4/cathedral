@@ -2202,6 +2202,107 @@ fn the_players_own_sound_is_confirmed_and_rate_limited() {
     assert!(command_results(&messages).is_empty());
 }
 
+#[test]
+fn identified_commands_replay_before_pose_and_reject_conflicts_and_cooldown_truthfully() {
+    use cathedral_sim::receipts::{HOST_PRODUCER, OperationId, ReceiptState};
+    let mut h = Builder::default().build();
+    h.ready();
+    let speech_id = OperationId {
+        producer: HOST_PRODUCER,
+        sequence: 1,
+    }
+    .command(0);
+    let speech = |request: &str, text: &str, position_m: Vec3| {
+        EngineCommand::PlayerSay {
+            request_id: request.into(),
+            text: text.into(),
+            position_m,
+            spatial_seq: 1,
+        }
+        .identified(speech_id)
+    };
+    let first = h.send(speech("first", "Hello there", PLAYER_SPAWN));
+    let receipt = first
+        .iter()
+        .find_map(|message| match message {
+            EngineMessage::ActionReceipt(r) if r.id == speech_id => Some(r.clone()),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(receipt.outcome.state, ReceiptState::Completed);
+    let moved = PLAYER_SPAWN + Vec3::X;
+    h.send(EngineCommand::SpatialUpdate {
+        spatial_seq: 2,
+        updates: vec![cathedral_sim::SpatialActorUpdate::new(
+            player(),
+            moved,
+            None,
+        )],
+    });
+    let history = h.engine.transcript().to_vec();
+    let replay = h.send(speech("retry-correlation", "Hello there", PLAYER_SPAWN));
+    assert!(
+        replay
+            .iter()
+            .any(|message| matches!(message, EngineMessage::ActionReceipt(r) if *r == receipt))
+    );
+    assert!(replay.iter().any(|message| matches!(message, EngineMessage::CommandResult { request_id, success: true, .. } if request_id == "retry-correlation")));
+    assert_eq!(h.engine.world().characters[&player()].position_m(), moved);
+    assert_eq!(h.engine.transcript(), history);
+    let conflict = h.send(speech("conflict", "Changed text", moved + Vec3::X));
+    assert!(conflict.iter().any(|message| matches!(message, EngineMessage::CommandAdmissionRefused { reason, .. } if reason.code == "payload_conflict")));
+    assert_eq!(h.engine.world().characters[&player()].position_m(), moved);
+    let sound = |sequence| {
+        EngineCommand::PlayerSound {
+            sound_id: "fart".into(),
+        }
+        .identified(
+            OperationId {
+                producer: HOST_PRODUCER,
+                sequence,
+            }
+            .command(0),
+        )
+    };
+    let first_sound = h.send(sound(2));
+    assert_eq!(sounds(&first_sound).len(), 1);
+    assert!(sounds(&h.send(sound(2))).is_empty());
+    let rejected = h.send(sound(3));
+    assert!(rejected.iter().any(|message| matches!(message, EngineMessage::ActionReceipt(r) if r.outcome.state == ReceiptState::Rejected && r.outcome.code == "cooldown")));
+    h.now = 3.0;
+    assert!(
+        sounds(&h.send(sound(3))).is_empty(),
+        "a rejected input cannot become a delayed effect"
+    );
+}
+
+#[test]
+fn raw_nonfinite_and_oversized_commands_refuse_before_semantic_projection() {
+    let mut h = Builder::default().build();
+    h.ready();
+    let original = h.engine.world().characters[&player()].position_m();
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        let out = h.send(EngineCommand::PlayerSay {
+            request_id: "bad".into(),
+            text: "hello".into(),
+            position_m: Vec3::new(value, 0.0, 0.0),
+            spatial_seq: 1,
+        });
+        assert!(out.iter().any(|m| matches!(m, EngineMessage::CommandAdmissionRefused { reason, .. } if reason.code == "invalid_payload")));
+        assert_eq!(
+            h.engine.world().characters[&player()].position_m(),
+            original
+        );
+    }
+    let out = h.send(EngineCommand::PlayerSay {
+        request_id: "large".into(),
+        text: "x".repeat(1_000_000),
+        position_m: original,
+        spatial_seq: 1,
+    });
+    assert!(out.iter().any(|m| matches!(m, EngineMessage::CommandAdmissionRefused { reason, .. } if reason.code == "invalid_payload")));
+}
+
 /// 48. `test_player_sound_nudges_the_nearest_witness`
 #[test]
 fn a_sound_nudges_the_nearest_llm_reactor_exactly_once() {

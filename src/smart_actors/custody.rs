@@ -549,6 +549,7 @@ mod tests {
     /// but one passes the same point twice, because the two only diverge once
     /// somebody walks.
     struct CustodyApp {
+        received: std::cell::Cell<u64>,
         app: App,
         commands: Receiver<BridgeCommand>,
     }
@@ -575,7 +576,11 @@ mod tests {
         ));
         // The plugin's own order, minus the HUD line, which needs a HUD.
         app.add_systems(Update, (grab_reflex, strain_meter).chain());
-        CustodyApp { app, commands }
+        CustodyApp {
+            app,
+            commands,
+            received: std::cell::Cell::new(0),
+        }
     }
 
     impl CustodyApp {
@@ -609,7 +614,14 @@ mod tests {
         }
 
         fn sent(&self) -> Vec<BridgeCommand> {
-            self.commands.try_iter().collect()
+            self.commands
+                .try_iter()
+                .map(|command| {
+                    let sequence = self.received.get() + 1;
+                    self.received.set(sequence);
+                    crate::smart_actors::bridge::expect_host_command(command, sequence)
+                })
+                .collect()
         }
     }
 

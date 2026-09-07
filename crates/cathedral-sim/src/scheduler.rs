@@ -24,19 +24,18 @@
 //! The scheduler is clock-free. Every `time.monotonic()` in Python is a `now`
 //! parameter here.
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 
 use serde_json::{Map, Value};
 
 use crate::{
-    MAX_LLM_REPLY_CHARS,
-    actions::apply_action,
     attention::IdleGate,
     character::Control,
     ids::{ActorId, RequestId},
     lore::Significance,
     prompt::{PromptEnv, parse_reply, render_prompt_and_drain},
     pyfmt::py_repr_map,
+    receipts::{self, AffectedRef, BatchAdmission, OperationId, Outcome, TURN_PRODUCER, Ticket},
     status::{STATE_DEGRADED, STATE_IDLE, STATE_THINKING, StatusEvent},
     traits::{Cognition, CognitionError, Completion},
     world::World,
@@ -73,6 +72,12 @@ const SYSTEM_WORKER_BUSY: &str = "system: the cognition worker is busy";
 /// the tests stay assertable.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SchedulerEvent {
+    ActionReceipt(crate::receipts::Receipt),
+    CommandAdmissionRefused {
+        id: crate::receipts::CommandId,
+        reason: Outcome,
+        retryable: bool,
+    },
     /// Forwarded to the HUD as today's `status` message.
     Status(StatusEvent),
     /// A former stderr line; the host logs it via `tracing`.
@@ -116,6 +121,8 @@ struct InFlight {
     /// act on a later visit by the same stable actor id.
     presence_epoch: u64,
     request_id: RequestId,
+    /// Durable semantic obligation; a retry may replace only request_id.
+    semantic: OperationId,
     lane: TurnLane,
     /// The inbox as it was *before* the prompt drained it — restored on failure.
     drained_events: Vec<String>,
@@ -124,6 +131,12 @@ struct InFlight {
     presented: Vec<String>,
     /// Kept sim-side so a *failed* exchange can still be archived.
     prompt: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct RetryWork {
+    semantic: OperationId,
+    presence_epoch: u64,
 }
 
 pub struct NpcScheduler {
@@ -153,6 +166,8 @@ pub struct NpcScheduler {
     /// two pops would spend two provider calls on the one turn's worth of news.
     player_reactions: VecDeque<ActorId>,
     in_flight: Option<InFlight>,
+    /// Unfinished obligations retained across failed external attempts.
+    retry_work: BTreeMap<ActorId, RetryWork>,
     /// A finished turn the floor would not let us apply yet.
     held_result: Option<Completion>,
     next_turn_at: f64,
@@ -189,6 +204,7 @@ impl NpcScheduler {
             priority_handoffs: VecDeque::new(),
             player_reactions: VecDeque::new(),
             in_flight: None,
+            retry_work: BTreeMap::new(),
             held_result: None,
             // The first turn is eligible immediately.
             next_turn_at: now,
@@ -407,6 +423,20 @@ impl NpcScheduler {
         env: &PromptEnv,
     ) -> Vec<SchedulerEvent> {
         let mut events: Vec<SchedulerEvent> = Vec::new();
+        let obsolete: Vec<_> = self
+            .retry_work
+            .iter()
+            .filter(|(id, work)| {
+                !world.is_present(id)
+                    || world.characters[*id].control() != Control::Llm
+                    || world.characters[*id].state.presence_epoch != work.presence_epoch
+            })
+            .map(|(id, _)| id.clone())
+            .collect();
+        for actor in obsolete {
+            let work = self.retry_work.remove(&actor).expect("collected work");
+            receipts::release_finished_root(world, work.semantic);
+        }
 
         // 1. Harvest. A held result outranks the queue — and, given the single
         //    in-flight invariant, excludes it.
@@ -460,6 +490,10 @@ impl NpcScheduler {
         events
     }
 
+    fn reply_payload(flight: &InFlight, reply: &str) -> serde_json::Value {
+        serde_json::json!({"service":"npc_turn", "actor":flight.actor_id.as_str(), "presence_epoch":flight.presence_epoch, "reply_version":receipts::PROVIDER_REPLY_VERSION, "reply_digest":receipts::provider_reply_digest(reply)})
+    }
+
     fn apply_result(
         &mut self,
         now: f64,
@@ -468,6 +502,110 @@ impl NpcScheduler {
         completion: Completion,
         events: &mut Vec<SchedulerEvent>,
     ) {
+        let flight = self
+            .in_flight
+            .as_ref()
+            .expect("completion belongs to a flight");
+        let semantic = flight.semantic;
+        if world.command_ledger.get(semantic.command(0)).is_some()
+            && !world.command_ledger.operation_pending(semantic)
+        {
+            // An execution retry cannot spend an already committed semantic
+            // reply again, even if the new execution failed or returned junk.
+            let admission = match &completion.result {
+                Ok(reply) if receipts::provider_reply_within_limit(reply) => world
+                    .command_ledger
+                    .begin_batch(&[(semantic.command(0), Self::reply_payload(flight, reply))]),
+                _ => BatchAdmission::Refused(Outcome::rejected(
+                    "semantic_reply_committed",
+                    "this semantic reply already has a committed result",
+                )),
+            };
+            self.in_flight = None;
+            receipts::release_finished_root(world, semantic);
+            match admission {
+                BatchAdmission::Replay(receipt) => {
+                    events.push(SchedulerEvent::ActionReceipt(receipt))
+                }
+                BatchAdmission::Refused(reason) => {
+                    events.push(SchedulerEvent::CommandAdmissionRefused {
+                        id: semantic.command(0),
+                        reason,
+                        retryable: false,
+                    })
+                }
+                _ => unreachable!("existing committed root cannot require new admission"),
+            }
+            return;
+        }
+
+        let mut reserved = None;
+        let mut completion = completion;
+        let current_subject = self.in_flight.as_ref().is_some_and(|flight| {
+            world.is_present(&flight.actor_id)
+                && world.characters.get(&flight.actor_id).is_some_and(|actor| {
+                    actor.control() == Control::Llm
+                        && actor.state.presence_epoch == flight.presence_epoch
+                })
+        });
+        if let Ok(reply) = &completion.result
+            && receipts::provider_reply_within_limit(reply)
+            && current_subject
+        {
+            let flight = self.in_flight.as_ref().expect("matching flight");
+            let semantic = flight.semantic;
+            let (actions, _) = parse_reply(reply);
+            let mut rows = vec![(semantic.command(0), Self::reply_payload(flight, reply))];
+            for (index, (verb, args)) in actions.into_iter().enumerate() {
+                if index >= usize::from(receipts::MAX_STEPS) {
+                    break;
+                }
+                rows.push((semantic.command(index as u16 + 1), serde_json::json!({
+                    "service": "actor_action", "actor": flight.actor_id.as_str(), "verb": verb, "args": args,
+                })));
+            }
+            let admission = if parse_reply(reply).0.len() > usize::from(receipts::MAX_STEPS) {
+                BatchAdmission::Refused(Outcome::rejected(
+                    "reply_action_limit",
+                    "reply exceeds its bounded action count",
+                ))
+            } else {
+                world.command_ledger.begin_batch(&rows)
+            };
+            match admission {
+                BatchAdmission::New(tickets) => reserved = Some(tickets),
+                BatchAdmission::Replay(receipt) => {
+                    self.in_flight = None;
+                    receipts::release_finished_root(world, semantic);
+                    events.push(SchedulerEvent::ActionReceipt(receipt));
+                    return;
+                }
+                BatchAdmission::Deferred(reason) => {
+                    events.push(SchedulerEvent::CommandAdmissionRefused {
+                        id: semantic.command(0),
+                        reason,
+                        retryable: true,
+                    });
+                    self.held_result = Some(completion);
+                    return;
+                }
+                BatchAdmission::Refused(reason) => {
+                    events.push(SchedulerEvent::CommandAdmissionRefused {
+                        id: semantic.command(0),
+                        reason,
+                        retryable: false,
+                    });
+                    if world.command_ledger.get(semantic.command(0)).is_some() {
+                        // A changed delivery of an already committed reply is
+                        // refused before restoring any consumed inputs/history.
+                        self.in_flight = None;
+                        receipts::release_finished_root(world, semantic);
+                        return;
+                    }
+                    completion.result = Err(CognitionError::new("InvalidSemanticReply"));
+                }
+            }
+        }
         // In-flight is cleared before any validation, exactly as in Python: even
         // a discarded result ends the turn.
         let mut flight = self
@@ -480,7 +618,7 @@ impl NpcScheduler {
         // The size limit is a provider failure, not a turn (D17). Enforced
         // before the archive so an oversized reply is logged as the error it is.
         let result = match completion.result {
-            Ok(reply) if reply.chars().count() > MAX_LLM_REPLY_CHARS => {
+            Ok(reply) if !receipts::provider_reply_within_limit(&reply) => {
                 Err(CognitionError::new(REPLY_TOO_LARGE))
             }
             other => other,
@@ -520,6 +658,21 @@ impl NpcScheduler {
         // subsumed — but the world can still have changed under the request, so
         // the actor-exists / still-LLM revalidation stays (scheduler.md §4.2.d).
         if !is_current_llm {
+            if let Some(tickets) = reserved.take() {
+                for ticket in tickets {
+                    let receipt = world.command_ledger.finish(
+                        ticket,
+                        now,
+                        Outcome::rejected(
+                            "actor_departed",
+                            "the prompted actor is no longer present in that lifetime",
+                        ),
+                        vec![],
+                    );
+                    events.push(SchedulerEvent::ActionReceipt(receipt));
+                }
+            }
+            receipts::release_finished_root(world, flight.semantic);
             world.knowledge.take_seated(&flight.actor_id);
             world.knowledge.withdraw_offer(&flight.actor_id);
             // The drained percepts die with the result. Defensible: the actor is
@@ -535,7 +688,15 @@ impl NpcScheduler {
 
         match result {
             Err(error) => self.apply_failure(now, world, &flight, &actor_name, &error, events),
-            Ok(reply) => self.apply_reply(now, world, transcript, &flight, &reply, events),
+            Ok(reply) => self.apply_reply(
+                now,
+                world,
+                transcript,
+                &flight,
+                &reply,
+                reserved.expect("successful reply batch reserved"),
+                events,
+            ),
         }
     }
 
@@ -549,6 +710,13 @@ impl NpcScheduler {
         error: &CognitionError,
         events: &mut Vec<SchedulerEvent>,
     ) {
+        self.retry_work.insert(
+            flight.actor_id.clone(),
+            RetryWork {
+                semantic: flight.semantic,
+                presence_epoch: flight.presence_epoch,
+            },
+        );
         world.knowledge.take_seated(&flight.actor_id);
         world.knowledge.withdraw_offer(&flight.actor_id);
         let backoff = self.backoff_after_failure();
@@ -605,8 +773,11 @@ impl NpcScheduler {
         transcript: &mut Vec<String>,
         flight: &InFlight,
         reply: &str,
+        tickets: Vec<Ticket>,
         events: &mut Vec<SchedulerEvent>,
     ) {
+        let mut tickets = tickets.into_iter();
+        let root = tickets.next().expect("whole reply ticket");
         self.provider_failures = 0;
         // A player reaction may have arrived while this request was in flight.
         // Preserve its immediate wake-up instead of replacing it with the
@@ -650,7 +821,16 @@ impl NpcScheduler {
 
         for (verb, args) in actions {
             let value = Value::Object(args.clone());
-            let line = match apply_action(world, &flight.actor_id, &verb, &value) {
+            let (result, receipt) = receipts::commit_actor_action(
+                world,
+                now,
+                tickets.next().expect("reserved action step"),
+                &flight.actor_id,
+                &verb,
+                &value,
+            );
+            events.push(SchedulerEvent::ActionReceipt(receipt));
+            let line = match result {
                 Ok(line) => line,
                 Err(error) => {
                     // The final boundary: arbitrary model output never takes the
@@ -721,6 +901,16 @@ impl NpcScheduler {
             Some(flight.actor_id.clone()),
             None,
         )));
+        let receipt = world.command_ledger.finish(
+            root,
+            now,
+            Outcome::completed("semantic reply and its action results committed"),
+            AffectedRef::new("actor", flight.actor_id.as_str())
+                .into_iter()
+                .collect(),
+        );
+        events.push(SchedulerEvent::ActionReceipt(receipt));
+        receipts::release_finished_root(world, flight.semantic);
     }
 
     fn submit_next_turn(
@@ -761,6 +951,30 @@ impl NpcScheduler {
         // Taken before the render, because the render is what empties the inbox.
         let drained_events = actor.inbox().to_vec();
 
+        let semantic = match self.retry_work.get(&actor_id).copied() {
+            Some(work) => work.semantic,
+            None => match world.command_ledger.reserve_operation(TURN_PRODUCER) {
+                Ok(id) => {
+                    self.retry_work.insert(
+                        actor_id.clone(),
+                        RetryWork {
+                            semantic: id,
+                            presence_epoch,
+                        },
+                    );
+                    id
+                }
+                Err(reason) => {
+                    self.requeue_unspent_turn(&actor_id, lane);
+                    self.next_turn_at = now + 1.0;
+                    events.push(SchedulerEvent::Diagnostic(format!(
+                        "[action] turn admission deferred: {}",
+                        reason.code
+                    )));
+                    return;
+                }
+            },
+        };
         let (prompt, presented) = match render_prompt_and_drain(world, &actor_id, env) {
             Ok(rendered) => rendered,
             Err(error) => {
@@ -795,7 +1009,9 @@ impl NpcScheduler {
                 // has just answered the player has been shown the same world an
                 // idle turn would have shown them.
                 self.submitted = Some(actor_id.clone());
+                self.retry_work.remove(&actor_id);
                 self.in_flight = Some(InFlight {
+                    semantic,
                     actor_id: actor_id.clone(),
                     presence_epoch,
                     request_id,
@@ -1638,5 +1854,322 @@ mod tests {
         assert_eq!(cognition.requests.len(), 2);
         assert!(cognition.requests[1].0.contains("the cart is stuck"));
         assert!(cognition.requests[1].0.contains(SYSTEM_PROVIDER_FAILED));
+    }
+    fn receipt_fixture() -> (World, NpcScheduler, ActorId, InFlight) {
+        let actor = ActorId::from_raw("reply");
+        let mut world = World::new();
+        world.add_character(lore_character("reply", Significance::Major));
+        let semantic = world
+            .command_ledger
+            .reserve_operation(TURN_PRODUCER)
+            .unwrap();
+        let flight = InFlight {
+            actor_id: actor.clone(),
+            presence_epoch: 0,
+            request_id: RequestId(1),
+            semantic,
+            lane: TurnLane::Idle,
+            drained_events: vec!["owed percept".into()],
+            presented: vec!["owed percept".into()],
+            prompt: "bounded fixture prompt".into(),
+        };
+        let mut scheduler = NpcScheduler::new(vec![actor.clone()], 0.0, 60.0, 0.0);
+        scheduler.in_flight = Some(flight.clone());
+        (world, scheduler, actor, flight)
+    }
+
+    #[test]
+    fn semantic_reply_replay_under_new_execution_does_not_repeat_history_or_actions() {
+        let (mut world, mut scheduler, actor, mut flight) = receipt_fixture();
+        let reply = "remember {\"memory\":\"A committed memory\"}\nsay {\"text\":\"A committed utterance\"}\nnot_a_verb {}";
+        let mut transcript = Vec::new();
+        scheduler.apply_result(
+            0.0,
+            &mut world,
+            &mut transcript,
+            Completion {
+                request_id: RequestId(1),
+                result: Ok(reply.into()),
+                duration_seconds: 0.1,
+            },
+            &mut Vec::new(),
+        );
+        let character = world.characters[&actor].clone();
+        let original_transcript = transcript.clone();
+        assert!(!original_transcript.is_empty());
+        world
+            .knowledge
+            .note_occasion(&actor, Some(actor.clone()), None, 0.1);
+        world.knowledge.offer_occasion(&actor);
+        let knowledge = world.knowledge.clone();
+        let committed_world = world.clone();
+        let queue = (
+            scheduler.priority_handoffs.clone(),
+            scheduler.player_reactions.clone(),
+        );
+        let root = world
+            .command_ledger
+            .get(flight.semantic.command(0))
+            .unwrap()
+            .clone();
+        flight.request_id = RequestId(999);
+        scheduler.in_flight = Some(flight.clone());
+        let mut events = Vec::new();
+        scheduler.apply_result(
+            1.0,
+            &mut world,
+            &mut transcript,
+            Completion {
+                request_id: RequestId(999),
+                result: Ok(reply.into()),
+                duration_seconds: 2.0,
+            },
+            &mut events,
+        );
+        assert_eq!(world.characters[&actor], character);
+        assert_eq!(transcript, original_transcript);
+        assert_eq!(
+            world.knowledge, knowledge,
+            "replay cannot withdraw a newer offered occasion"
+        );
+        assert_eq!(
+            (
+                scheduler.priority_handoffs.clone(),
+                scheduler.player_reactions.clone()
+            ),
+            queue
+        );
+        assert_eq!(events, [SchedulerEvent::ActionReceipt(root.clone())]);
+        // Changed comments are changed semantic content even when the parsed
+        // action list is identical.
+        scheduler.in_flight = Some(flight.clone());
+        let mut conflict = Vec::new();
+        scheduler.apply_result(
+            2.0,
+            &mut world,
+            &mut transcript,
+            Completion {
+                request_id: RequestId(1000),
+                result: Ok(format!("{reply}\n# changed comment")),
+                duration_seconds: 0.1,
+            },
+            &mut conflict,
+        );
+        assert!(conflict.iter().any(|event| matches!(event, SchedulerEvent::CommandAdmissionRefused { reason, .. } if reason.code == "payload_conflict")));
+        assert_eq!(
+            world.command_ledger.get(flight.semantic.command(0)),
+            Some(&root)
+        );
+        assert_eq!(transcript, original_transcript);
+        assert_eq!(world.characters[&actor], character);
+        assert_eq!(world.knowledge, knowledge);
+        let retry_work = scheduler.retry_work.clone();
+        let failures = scheduler.provider_failures;
+        let next_turn = scheduler.next_turn_at;
+        for (index, result) in [
+            Err(CognitionError::new("TimeoutError")),
+            Ok("é".repeat(crate::MAX_LLM_REPLY_CHARS + 1)),
+            Ok("x".repeat(crate::MAX_LLM_REPLY_CHARS * 4 + 1)),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            flight.request_id = RequestId(2000 + index as u64);
+            scheduler.in_flight = Some(flight.clone());
+            let mut events = Vec::new();
+            scheduler.apply_result(
+                3.0,
+                &mut world,
+                &mut transcript,
+                Completion {
+                    request_id: flight.request_id,
+                    result,
+                    duration_seconds: 0.1,
+                },
+                &mut events,
+            );
+            assert!(matches!(
+                events.as_slice(),
+                [SchedulerEvent::CommandAdmissionRefused {
+                    retryable: false,
+                    ..
+                }]
+            ));
+            assert_eq!(world, committed_world);
+            assert_eq!(transcript, original_transcript);
+            assert_eq!(scheduler.retry_work, retry_work);
+            assert_eq!(scheduler.provider_failures, failures);
+            assert_eq!(scheduler.next_turn_at, next_turn);
+            assert_eq!(
+                (
+                    scheduler.priority_handoffs.clone(),
+                    scheduler.player_reactions.clone()
+                ),
+                queue
+            );
+        }
+    }
+
+    #[test]
+    fn provider_batch_saturation_holds_exact_reply_before_any_surrounding_effect() {
+        use crate::receipts::{Admission, LEGACY_PRODUCER, MAX_STEPS, RECENT_CAPACITY};
+        let (mut world, mut scheduler, actor, flight) = receipt_fixture();
+        let blocker = world
+            .command_ledger
+            .reserve_operation(receipts::NIGHT_PRODUCER)
+            .unwrap();
+        for step in 0..=MAX_STEPS {
+            let Admission::New(ticket) = world
+                .command_ledger
+                .begin(blocker.command(step), &serde_json::json!(step))
+            else {
+                panic!("fill")
+            };
+            world
+                .command_ledger
+                .finish(ticket, 0.0, Outcome::completed("held"), Vec::new());
+        }
+        for _ in 0..RECENT_CAPACITY - 1 {
+            let id = world
+                .command_ledger
+                .issue(LEGACY_PRODUCER)
+                .unwrap()
+                .command(0);
+            let Admission::New(ticket) = world.command_ledger.begin(id, &serde_json::json!(null))
+            else {
+                panic!("fill")
+            };
+            world
+                .command_ledger
+                .finish(ticket, 0.0, Outcome::completed("traffic"), Vec::new());
+        }
+        assert_eq!(world.command_ledger.retained_len(), 256);
+        let completion = Completion {
+            request_id: RequestId(1),
+            result: Ok("remember {\"memory\":\"Not lost under pressure\"}".into()),
+            duration_seconds: 0.123,
+        };
+        let original = world.characters[&actor].clone();
+        let mut transcript = Vec::new();
+        scheduler.apply_result(
+            1.0,
+            &mut world,
+            &mut transcript,
+            completion.clone(),
+            &mut Vec::new(),
+        );
+        assert_eq!(scheduler.held_result, Some(completion));
+        assert_eq!(scheduler.in_flight, Some(flight.clone()));
+        assert_eq!(world.characters[&actor], original);
+        assert!(transcript.is_empty());
+        assert!(
+            world
+                .command_ledger
+                .get(flight.semantic.command(0))
+                .is_none()
+        );
+        assert!(world.command_ledger.is_at_boundary());
+        world.command_ledger.unprotect(blocker);
+        let held = scheduler.held_result.take().unwrap();
+        scheduler.apply_result(2.0, &mut world, &mut transcript, held, &mut Vec::new());
+        assert!(
+            world.characters[&actor]
+                .memories()
+                .iter()
+                .any(|line| line == "Not lost under pressure")
+        );
+        assert_eq!(
+            world
+                .command_ledger
+                .get(flight.semantic.command(0))
+                .unwrap()
+                .outcome
+                .state,
+            receipts::ReceiptState::Completed
+        );
+        assert!(scheduler.in_flight.is_none());
+    }
+
+    #[test]
+    fn duplicate_failed_execution_is_consumed_once_and_retry_preserves_semantic_work() {
+        let (mut world, mut scheduler, actor, flight) = receipt_fixture();
+        let mut transcript = Vec::new();
+        let error = Completion {
+            request_id: flight.request_id,
+            result: Err(CognitionError::new("TimeoutError")),
+            duration_seconds: 0.1,
+        };
+        scheduler.apply_result(
+            0.0,
+            &mut world,
+            &mut transcript,
+            error.clone(),
+            &mut Vec::new(),
+        );
+        assert_eq!(scheduler.retry_work[&actor].semantic, flight.semantic);
+        let original = world.characters[&actor].clone();
+        let failures = scheduler.provider_failures;
+        let env = PromptEnv::new(
+            include_str!("../../../assets/prompts/turn.j2"),
+            include_str!("../../../assets/prompts/night.j2"),
+            include_str!("../../../assets/prompts/strings.toml"),
+        )
+        .unwrap();
+        let mut cognition = BudgetCognition::default();
+        scheduler.poll(
+            0.1,
+            &mut world,
+            &mut transcript,
+            &mut vec![error],
+            false,
+            IdleGate::All,
+            &mut cognition,
+            &env,
+        );
+        assert_eq!(world.characters[&actor], original);
+        assert_eq!(scheduler.provider_failures, failures);
+        scheduler.start(2.0);
+        scheduler.poll(
+            2.0,
+            &mut world,
+            &mut transcript,
+            &mut Vec::new(),
+            false,
+            IdleGate::All,
+            &mut cognition,
+            &env,
+        );
+        assert_eq!(
+            scheduler.in_flight.as_ref().unwrap().semantic,
+            flight.semantic
+        );
+        let execution = scheduler.in_flight.as_ref().unwrap().request_id;
+        scheduler.apply_result(
+            3.0,
+            &mut world,
+            &mut transcript,
+            Completion {
+                request_id: execution,
+                result: Ok("remember {\"memory\":\"Recovered obligation\"}".into()),
+                duration_seconds: 0.1,
+            },
+            &mut Vec::new(),
+        );
+        assert_eq!(
+            world
+                .command_ledger
+                .get(flight.semantic.command(0))
+                .unwrap()
+                .outcome
+                .state,
+            receipts::ReceiptState::Completed
+        );
+        assert!(
+            world.characters[&actor]
+                .memories()
+                .iter()
+                .any(|memory| memory == "Recovered obligation")
+        );
+        assert!(scheduler.retry_work.is_empty());
     }
 }

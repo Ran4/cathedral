@@ -40,12 +40,16 @@
 //! a diagnostic and nothing more; it never lands in an inbox, because a private
 //! thought at midnight must not become the morning's news.
 
+use crate::receipts::{
+    self, AffectedRef, BatchAdmission, NIGHT_PRODUCER, OperationId, Outcome, Ticket,
+};
+
 use std::collections::{BTreeMap, VecDeque};
 
 use serde_json::Value;
 
 use crate::{
-    actions::{apply_action, set_round_leg},
+    actions::set_round_leg,
     attention::{StageConfig, on_stage},
     character::Control,
     clock::{Office, WorldClock},
@@ -134,6 +138,8 @@ impl Subject {
 /// A reflection that is owed, and the night it is owed for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Due {
+    semantic: Option<OperationId>,
+    presence_epoch: Option<u64>,
     subject: Subject,
     /// The game day the bedtime fell on. A reflection still queued when the day
     /// rolls over is dropped where it stands — the night ended without it, and
@@ -144,6 +150,9 @@ struct Due {
 /// The one outstanding night request.
 #[derive(Debug, Clone, PartialEq)]
 struct Flight {
+    semantic: OperationId,
+    owed_day: i64,
+    presence_epoch: Option<u64>,
     subject: Subject,
     request_id: RequestId,
     /// Kept so a *failed* exchange can still be archived, exactly as the
@@ -222,6 +231,8 @@ pub struct NightOffice {
     config: NightOfficeConfig,
     queue: VecDeque<Due>,
     in_flight: Option<Flight>,
+    /// Exact completion retained when the complete receipt batch cannot fit.
+    held_result: Option<Completion>,
     /// The game day each subject last reflected on, so a bedtime crossed twice
     /// (a paused game, a debug time-scale) still buys one reflection.
     last_reflected: BTreeMap<Subject, i64>,
@@ -252,6 +263,7 @@ impl NightOffice {
             config,
             queue: VecDeque::new(),
             in_flight: None,
+            held_result: None,
             last_reflected: BTreeMap::new(),
             bedtimes: BTreeMap::new(),
             last_office_days: clock.game_days(now),
@@ -356,9 +368,12 @@ impl NightOffice {
     pub fn could_submit(&self, now: f64, completions: &[Completion]) -> bool {
         let slot_free = match &self.in_flight {
             None => true,
-            Some(flight) => completions
-                .iter()
-                .any(|completion| completion.request_id == flight.request_id),
+            Some(flight) => {
+                self.held_result.is_some()
+                    || completions
+                        .iter()
+                        .any(|completion| completion.request_id == flight.request_id)
+            }
         };
         self.enabled() && slot_free && !self.queue.is_empty() && now >= self.next_attempt_at
     }
@@ -404,13 +419,15 @@ impl NightOffice {
         // Harvest ours and ours only, before the scheduler drains the rest —
         // it discards anything it is not waiting on, so a night completion left
         // in the vec would be logged as a stale result and lost.
-        if let Some(flight) = &self.in_flight
+        if let Some(completion) = self.held_result.take() {
+            self.apply(now, world, completion, &mut events);
+        } else if let Some(flight) = &self.in_flight
             && let Some(index) = completions
                 .iter()
                 .position(|completion| completion.request_id == flight.request_id)
         {
             let completion = completions.remove(index);
-            self.apply(world, completion, &mut events);
+            self.apply(now, world, completion, &mut events);
         }
 
         if self.wants_slot(now) {
@@ -492,7 +509,12 @@ impl NightOffice {
         // re-offered it every crossing would spend the whole next day catching
         // up on a night that is over.
         self.last_reflected.insert(subject.clone(), day);
-        self.queue.push_back(Due { subject, day });
+        self.queue.push_back(Due {
+            subject,
+            day,
+            semantic: None,
+            presence_epoch: None,
+        });
     }
 
     /// Take the next reflection still owed *tonight* and send it.
@@ -509,10 +531,14 @@ impl NightOffice {
         // Rule 3, and the only place it needs stating: everything the night
         // outran is dropped here, silently, with no percept and no retry.
         while self.queue.front().is_some_and(|due| due.day != today) {
-            self.queue.pop_front();
+            if let Some(due) = self.queue.pop_front()
+                && let Some(work) = due.semantic
+            {
+                receipts::release_finished_root(world, work);
+            }
             self.dropped += 1;
         }
-        let Some(due) = self.queue.pop_front() else {
+        let Some(mut due) = self.queue.pop_front() else {
             return;
         };
 
@@ -521,8 +547,17 @@ impl NightOffice {
                 // Presence, control and enrolment can all have changed since
                 // the bell: a Major who left the city, or one the round never
                 // enrolled, has no day for a reflection to alter.
-                if !world.is_present(actor_id) {
+                if !world.is_present(actor_id)
+                    || (due.semantic.is_some()
+                        && world
+                            .characters
+                            .get(actor_id)
+                            .is_none_or(|a| Some(a.state.presence_epoch) != due.presence_epoch))
+                {
                     self.dropped += 1;
+                    if let Some(id) = due.semantic {
+                        receipts::release_finished_root(world, id);
+                    }
                     return;
                 }
                 render_night_prompt(world, actor_id, env)
@@ -537,10 +572,38 @@ impl NightOffice {
                     "[night] prompt for {} failed: {error}",
                     due.subject.label(world)
                 )));
+                if let Some(id) = due.semantic {
+                    receipts::release_finished_root(world, id);
+                }
                 return;
             }
         };
 
+        let semantic = match due.semantic {
+            Some(id) => id,
+            None => match world.command_ledger.reserve_operation(NIGHT_PRODUCER) {
+                Ok(id) => {
+                    due.semantic = Some(id);
+                    due.presence_epoch = match &due.subject {
+                        Subject::Person(actor) => {
+                            world.characters.get(actor).map(|a| a.state.presence_epoch)
+                        }
+                        Subject::Ward(_) => None,
+                    };
+                    id
+                }
+                Err(reason) => {
+                    self.queue.push_front(due);
+                    self.next_attempt_at = now + RETRY_SECONDS;
+                    events.push(SchedulerEvent::Diagnostic(format!(
+                        "[action] night admission deferred: {}",
+                        reason.code
+                    )));
+                    return;
+                }
+            },
+        };
+        let presence_epoch = due.presence_epoch;
         match cognition.request_night(prompt.clone(), due.subject.output_token_budget(world)) {
             Ok(request_id) => {
                 // Trickle rather than burst: the next reflection waits out a
@@ -548,6 +611,9 @@ impl NightOffice {
                 // thirty-eight requests at the same second of it.
                 self.next_attempt_at = now + pace_seconds(clock);
                 self.in_flight = Some(Flight {
+                    semantic,
+                    owed_day: due.day,
+                    presence_epoch,
                     subject: due.subject,
                     request_id,
                     prompt,
@@ -565,12 +631,125 @@ impl NightOffice {
     }
 
     /// Archive the exchange and carry out whatever the reflection decided.
+    fn reply_payload(flight: &Flight, reply: &str) -> serde_json::Value {
+        serde_json::json!({"service":"night_reflection", "subject":match &flight.subject { Subject::Person(id) => id.as_str(), Subject::Ward(ward) => ward.as_str() }, "owed_day":flight.owed_day, "presence_epoch":flight.presence_epoch, "reply_version":receipts::PROVIDER_REPLY_VERSION, "reply_digest":receipts::provider_reply_digest(reply)})
+    }
+
     fn apply(
         &mut self,
+        now: f64,
         world: &mut World,
         completion: Completion,
         events: &mut Vec<SchedulerEvent>,
     ) {
+        let flight = self
+            .in_flight
+            .as_ref()
+            .expect("completion belongs to a flight");
+        let semantic = flight.semantic;
+        if world.command_ledger.get(semantic.command(0)).is_some()
+            && !world.command_ledger.operation_pending(semantic)
+        {
+            // An execution retry cannot spend an already committed semantic
+            // reply again, even if the new execution failed or returned junk.
+            let admission = match &completion.result {
+                Ok(reply) if receipts::provider_reply_within_limit(reply) => world
+                    .command_ledger
+                    .begin_batch(&[(semantic.command(0), Self::reply_payload(flight, reply))]),
+                _ => BatchAdmission::Refused(Outcome::rejected(
+                    "semantic_reply_committed",
+                    "this semantic reply already has a committed result",
+                )),
+            };
+            self.in_flight = None;
+            receipts::release_finished_root(world, semantic);
+            match admission {
+                BatchAdmission::Replay(receipt) => {
+                    events.push(SchedulerEvent::ActionReceipt(receipt))
+                }
+                BatchAdmission::Refused(reason) => {
+                    events.push(SchedulerEvent::CommandAdmissionRefused {
+                        id: semantic.command(0),
+                        reason,
+                        retryable: false,
+                    })
+                }
+                _ => unreachable!("existing committed root cannot require new admission"),
+            }
+            return;
+        }
+
+        let mut completion = completion;
+        if completion
+            .result
+            .as_ref()
+            .is_ok_and(|reply| !receipts::provider_reply_within_limit(reply))
+        {
+            completion.result = Err(crate::traits::CognitionError::new("ReplyTooLarge"));
+        }
+        let mut reserved = None;
+        let flight = self.in_flight.as_ref().expect("matching night flight");
+        let current = match &flight.subject {
+            Subject::Person(id) => {
+                world.is_present(id)
+                    && world.characters.get(id).is_some_and(|actor| {
+                        actor.control() == Control::Llm
+                            && Some(actor.state.presence_epoch) == flight.presence_epoch
+                    })
+            }
+            Subject::Ward(_) => true,
+        };
+        if current && let Ok(reply) = &completion.result {
+            let semantic = flight.semantic;
+            let (actions, _) = parse_reply(reply);
+            let mut rows = vec![(semantic.command(0), Self::reply_payload(flight, reply))];
+            for (index, (verb, args)) in actions
+                .iter()
+                .take(usize::from(receipts::MAX_STEPS))
+                .enumerate()
+            {
+                rows.push((semantic.command(index as u16 + 1), serde_json::json!({
+                    "service": "night_action", "subject": match &flight.subject { Subject::Person(id) => id.as_str(), Subject::Ward(ward) => ward.as_str() }, "verb": verb, "args": args,
+                })));
+            }
+            let admission = if actions.len() > usize::from(receipts::MAX_STEPS) {
+                BatchAdmission::Refused(Outcome::rejected(
+                    "reply_action_limit",
+                    "reflection exceeds its bounded action count",
+                ))
+            } else {
+                world.command_ledger.begin_batch(&rows)
+            };
+            match admission {
+                BatchAdmission::New(tickets) => reserved = Some(tickets),
+                BatchAdmission::Replay(receipt) => {
+                    self.in_flight = None;
+                    receipts::release_finished_root(world, semantic);
+                    events.push(SchedulerEvent::ActionReceipt(receipt));
+                    return;
+                }
+                BatchAdmission::Deferred(reason) => {
+                    events.push(SchedulerEvent::CommandAdmissionRefused {
+                        id: semantic.command(0),
+                        reason,
+                        retryable: true,
+                    });
+                    self.held_result = Some(completion);
+                    return;
+                }
+                BatchAdmission::Refused(reason) => {
+                    self.in_flight = None;
+                    self.dropped += 1;
+                    receipts::release_finished_root(world, semantic);
+                    events.push(SchedulerEvent::CommandAdmissionRefused {
+                        id: semantic.command(0),
+                        reason,
+                        retryable: false,
+                    });
+                    return;
+                }
+            }
+        }
         let flight = self
             .in_flight
             .take()
@@ -606,6 +785,7 @@ impl NightOffice {
                 // is a night that did not happen, and the morning must not be
                 // told about it.
                 self.dropped += 1;
+                receipts::release_finished_root(world, flight.semantic);
                 events.push(SchedulerEvent::Diagnostic(format!(
                     "[night] {actor_name}'s reflection failed: {error}"
                 )));
@@ -613,10 +793,23 @@ impl NightOffice {
             }
         };
 
+        if !current {
+            self.dropped += 1;
+            receipts::release_finished_root(world, flight.semantic);
+            return;
+        }
+        let mut tickets = reserved
+            .expect("successful reflection batch reserved")
+            .into_iter();
+        let root = tickets.next().expect("reflection root");
         self.reflected += 1;
         let done = match &flight.subject {
-            Subject::Person(actor_id) => self.apply_person(world, actor_id, &reply, events),
-            Subject::Ward(ward) => self.apply_ward(world, *ward, &reply, events),
+            Subject::Person(actor_id) => {
+                self.apply_person(now, world, actor_id, &reply, tickets.collect(), events)
+            }
+            Subject::Ward(ward) => {
+                self.apply_ward(now, world, *ward, &reply, tickets.collect(), events)
+            }
         };
         events.push(SchedulerEvent::Diagnostic(format!(
             "[night] {actor_name} reflected: {}",
@@ -626,6 +819,14 @@ impl NightOffice {
                 done.join(", ")
             }
         )));
+        let receipt = world.command_ledger.finish(
+            root,
+            now,
+            Outcome::completed("reflection and action results committed"),
+            vec![],
+        );
+        events.push(SchedulerEvent::ActionReceipt(receipt));
+        receipts::release_finished_root(world, flight.semantic);
     }
 
     /// One Major's reflection. Everything runs through the ordinary action
@@ -634,9 +835,11 @@ impl NightOffice {
     /// through, and nothing it says reaches an inbox.
     fn apply_person(
         &mut self,
+        now: f64,
         world: &mut World,
         actor_id: &ActorId,
         reply: &str,
+        tickets: Vec<Ticket>,
         events: &mut Vec<SchedulerEvent>,
     ) -> Vec<String> {
         let mut done: Vec<String> = Vec::new();
@@ -646,23 +849,32 @@ impl NightOffice {
                 "[night] {actor_id}: {error}"
             )));
         }
-        // The world can have changed under a request that was out for seconds;
-        // a Major who left the city while reflecting has no state left to edit.
-        if !world.is_present(actor_id) || world.characters[actor_id].control() != Control::Llm {
-            return done;
-        }
-        for (verb, args) in actions {
+        for ((verb, args), ticket) in actions.into_iter().zip(tickets) {
             if !is_night_verb(&verb) {
+                let reason = Outcome::rejected(
+                    "not_night_verb",
+                    format!("{verb} is not a night verb; ignored"),
+                );
                 events.push(SchedulerEvent::Diagnostic(format!(
-                    "[night] {actor_id}: {verb} is not a night verb; ignored"
+                    "[night] {actor_id}: {}",
+                    reason.message
                 )));
+                let receipt = world.command_ledger.finish(ticket, now, reason, vec![]);
+                events.push(SchedulerEvent::ActionReceipt(receipt));
                 continue;
             }
-            if verb == "wait" {
-                continue;
-            }
-            match apply_action(world, actor_id, &verb, &Value::Object(args)) {
-                Ok(_) => done.push(verb),
+            let (result, receipt) = receipts::commit_actor_action(
+                world,
+                now,
+                ticket,
+                actor_id,
+                &verb,
+                &Value::Object(args),
+            );
+            events.push(SchedulerEvent::ActionReceipt(receipt));
+            match result {
+                Ok(_) if verb != "wait" => done.push(verb),
+                Ok(_) => {}
                 Err(error) => events.push(SchedulerEvent::Diagnostic(format!(
                     "[night] {actor_id}: {verb} failed: {error}"
                 ))),
@@ -674,7 +886,7 @@ impl NightOffice {
     /// One ward's reflection: a mood every Minor of the ward will carry, and up
     /// to [`WARD_EDITS_MAX`] rounds moved.
     ///
-    /// These are not [`apply_action`] verbs, because there is no acting actor —
+    /// These are not [`crate::actions::apply_action`] verbs, because there is no acting actor —
     /// a ward has no hands. `ward_mood` is the ward's alone; `set_round` here
     /// names somebody else, and the ward's decision *teaches* them the way as
     /// part of making it, exactly as `tell_way` would have. That is the one
@@ -683,12 +895,14 @@ impl NightOffice {
     /// would make the verb almost always fail.
     fn apply_ward(
         &mut self,
+        now: f64,
         world: &mut World,
         ward: PlanningWard,
         reply: &str,
+        tickets: Vec<Ticket>,
         events: &mut Vec<SchedulerEvent>,
     ) -> Vec<String> {
-        let mut done: Vec<String> = Vec::new();
+        let mut done = Vec::new();
         let (actions, errors) = parse_reply(reply);
         for error in errors {
             events.push(SchedulerEvent::Diagnostic(format!(
@@ -696,96 +910,116 @@ impl NightOffice {
                 ward.as_str()
             )));
         }
-        let mut edits = 0usize;
-        for (verb, args) in actions {
-            match verb.as_str() {
-                "wait" => {}
-                "ward_mood" => {
-                    let mood = args.get("mood").and_then(Value::as_str).map(str::trim);
-                    match mood.filter(|mood| !mood.is_empty()) {
-                        Some(mood) => {
-                            let mood: String = mood.chars().take(WARD_MOOD_MAX_CHARS).collect();
-                            world.ward_moods.insert(ward, mood);
-                            done.push("ward_mood".to_string());
-                        }
-                        None => events.push(SchedulerEvent::Diagnostic(format!(
-                            "[night] {} ward: ward_mood needs a non-empty \"mood\"",
-                            ward.as_str()
-                        ))),
+        let mut edits = 0;
+        for ((verb, args), ticket) in actions.into_iter().zip(tickets) {
+            let result = if verb == "set_round"
+                && world.travel_actions.len() + world.round_actions.len()
+                    >= receipts::PROTECTED_CAPACITY
+            {
+                Err("active action receipt capacity is full".to_owned())
+            } else {
+                self.apply_ward_action(world, ward, &verb, &args, &mut edits)
+            };
+            let outcome = match result {
+                Ok(Some(line)) => {
+                    done.push(line.clone());
+                    if verb == "set_round" {
+                        let actor =
+                            ActorId::new(args["person"].as_str().expect("validated person"))
+                                .expect("validated identity");
+                        receipts::bind_round_edit(world, &actor, ticket.id, now, true);
+                        Outcome::new(
+                            receipts::ReceiptState::Accepted,
+                            "round_edit_accepted",
+                            &line,
+                        )
+                    } else {
+                        Outcome::completed(line)
                     }
                 }
-                // The ward's sign (`features/implemented/chalking_the_walls.md` M4): one
-                // new match arm, not a new key on a struct and not a second
-                // prompt — no extra tokens beyond the line itself. The place
-                // is authored per ward in `assets/world/marks.json`, because
-                // `places.json` has no shrines and three wards have nothing
-                // devotional to name (§0 C8); naming any other place is a
-                // logged skip, exactly as `ward_mood` handles a bad argument.
-                "chalk_ward_sign" => {
-                    let want = args.get("place").and_then(Value::as_str).map(str::trim);
-                    // Owned: `draw_or_refresh` needs `&mut world` and the
-                    // catalog lives inside it.
-                    let authored = world
-                        .mark_catalog
-                        .ward_sign_place(ward.as_str())
-                        .map(str::to_string);
-                    match (want.filter(|place| !place.is_empty()), authored.as_deref()) {
-                        (Some(place), Some(authored)) if place.eq_ignore_ascii_case(authored) => {
-                            let game_days = world.current_time.map_or(0.0, |time| time.game_days());
-                            match crate::marks::draw_or_refresh(
-                                world,
-                                crate::marks::MarkKind::WardSign,
-                                crate::marks::MarkAnchor::Place(authored.to_string()),
-                                None,
-                                game_days,
-                            ) {
-                                Some(_) => done.push(format!("chalk_ward_sign {authored}")),
-                                None => events.push(SchedulerEvent::Diagnostic(format!(
-                                    "[night] {} ward: chalk_ward_sign could not chalk {authored}",
-                                    ward.as_str()
-                                ))),
-                            }
-                        }
-                        (Some(place), Some(authored)) => {
-                            events.push(SchedulerEvent::Diagnostic(format!(
-                                "[night] {} ward: chalk_ward_sign named {place:?}; this ward's \
-                                 place of resort is {authored:?}",
-                                ward.as_str()
-                            )));
-                        }
-                        (_, None) => events.push(SchedulerEvent::Diagnostic(format!(
-                            "[night] {} ward: chalk_ward_sign has no authored place",
-                            ward.as_str()
-                        ))),
-                        (None, _) => events.push(SchedulerEvent::Diagnostic(format!(
-                            "[night] {} ward: chalk_ward_sign needs a non-empty \"place\"",
-                            ward.as_str()
-                        ))),
-                    }
-                }
-                "set_round" if edits >= WARD_EDITS_MAX => {
+                Ok(None) => Outcome::completed("no world action requested"),
+                Err(error) => {
                     events.push(SchedulerEvent::Diagnostic(format!(
-                        "[night] {} ward: more than {WARD_EDITS_MAX} set_round edits; ignored",
+                        "[night] {} ward: {error}",
                         ward.as_str()
                     )));
+                    Outcome::rejected("invalid_ward_action", error)
                 }
-                "set_round" => {
-                    edits += 1;
-                    match self.ward_set_round(world, ward, &args) {
-                        Ok(line) => done.push(line),
-                        Err(error) => events.push(SchedulerEvent::Diagnostic(format!(
-                            "[night] {} ward: set_round failed: {error}",
-                            ward.as_str()
-                        ))),
-                    }
-                }
-                other => events.push(SchedulerEvent::Diagnostic(format!(
-                    "[night] {} ward: {other} is not a ward verb; ignored",
-                    ward.as_str()
-                ))),
-            }
+            };
+            let receipt = world.command_ledger.finish(
+                ticket,
+                now,
+                outcome,
+                AffectedRef::new("ward", ward.as_str())
+                    .into_iter()
+                    .collect(),
+            );
+            events.push(SchedulerEvent::ActionReceipt(receipt));
         }
         done
+    }
+
+    fn apply_ward_action(
+        &self,
+        world: &mut World,
+        ward: PlanningWard,
+        verb: &str,
+        args: &serde_json::Map<String, Value>,
+        edits: &mut usize,
+    ) -> Result<Option<String>, String> {
+        match verb {
+            "wait" => Ok(None),
+            "ward_mood" => {
+                let mood = args
+                    .get("mood")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|mood| !mood.is_empty())
+                    .ok_or_else(|| "ward_mood needs a non-empty \"mood\"".to_string())?;
+                world
+                    .ward_moods
+                    .insert(ward, mood.chars().take(WARD_MOOD_MAX_CHARS).collect());
+                Ok(Some("ward_mood".to_owned()))
+            }
+            "chalk_ward_sign" => {
+                let place = args
+                    .get("place")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|place| !place.is_empty())
+                    .ok_or_else(|| "chalk_ward_sign needs a non-empty \"place\"".to_string())?;
+                let authored = world
+                    .mark_catalog
+                    .ward_sign_place(ward.as_str())
+                    .map(str::to_owned)
+                    .ok_or_else(|| "chalk_ward_sign has no authored place".to_string())?;
+                if !place.eq_ignore_ascii_case(&authored) {
+                    return Err(format!(
+                        "chalk_ward_sign named {place:?}; this ward's place of resort is {authored:?}"
+                    ));
+                }
+                let day = world.current_time.map_or(0.0, |time| time.game_days());
+                crate::marks::draw_or_refresh(
+                    world,
+                    crate::marks::MarkKind::WardSign,
+                    crate::marks::MarkAnchor::Place(authored.clone()),
+                    None,
+                    day,
+                )
+                .ok_or_else(|| format!("chalk_ward_sign could not chalk {authored}"))?;
+                Ok(Some(format!("chalk_ward_sign {authored}")))
+            }
+            "set_round" if *edits >= WARD_EDITS_MAX => Err(format!(
+                "more than {WARD_EDITS_MAX} set_round edits; ignored"
+            )),
+            "set_round" => {
+                *edits += 1;
+                self.ward_set_round(world, ward, args)
+                    .map(Some)
+                    .map_err(|error| format!("set_round failed: {error}"))
+            }
+            other => Err(format!("{other} is not a ward verb; ignored")),
+        }
     }
 
     /// `set_round {"person": …, "leg": …, "place_id": …}` from a ward batch.
@@ -826,16 +1060,8 @@ impl NightOffice {
         // else's `places_known`, and a route nobody ever told them would
         // outlive the diagnostic by the rest of the game.
         let line = set_round_leg(world, &person, &leg, &place_id).map_err(|error| error.message)?;
-        // The ward decided it, so the ward tells them the way (see the doc
-        // comment above): without this the whitelist would reject nearly every
-        // edit a ward could make.
-        world
-            .characters
-            .get_mut(&person)
-            .expect("checked by ward_minors")
-            .state
-            .places_known
-            .insert(place_id);
+        // The receipt adapter asks Round to teach only after its trade and
+        // enrollment checks accept the pending edit.
         Ok(line)
     }
 }
@@ -853,7 +1079,7 @@ fn pace_seconds(clock: &WorldClock) -> f64 {
 
 /// The four verbs a person's reflection may use, plus `wait`. Everything else —
 /// `say`, `go_to`, `offer_item`, a hallucinated verb — is refused here rather
-/// than by [`apply_action`], because the refusal is about *when*, not about
+/// than by [`crate::actions::apply_action`], because the refusal is about *when*, not about
 /// whether the verb exists.
 fn is_night_verb(verb: &str) -> bool {
     matches!(

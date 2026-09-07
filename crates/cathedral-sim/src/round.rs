@@ -1875,6 +1875,7 @@ impl Round {
         world: &mut World,
         office: Office,
         time: crate::clock::WorldTime,
+        now: f64,
         nudges: &mut Vec<ActorId>,
     ) {
         let ids: Vec<PartyId> = self.road_parties.keys().cloned().collect();
@@ -1890,7 +1891,7 @@ impl Round {
                 self.trigger_road_entry(world, &id, time.day);
             }
             if office == self.road_parties[&id].return_at {
-                self.begin_road_return(world, &id, time.day, nudges);
+                self.begin_road_return(world, &id, time.day, now, nudges);
             }
         }
     }
@@ -1900,6 +1901,7 @@ impl Round {
         world: &mut World,
         id: &PartyId,
         day: i64,
+        now: f64,
         nudges: &mut Vec<ActorId>,
     ) {
         let mut party = self
@@ -1955,6 +1957,8 @@ impl Round {
                     self,
                     world,
                     member,
+                    now,
+                    crate::receipts::ReceiptState::Interrupted,
                     format!(
                         "The road turned you back before you reached {destination} — the party is leaving for the gate."
                     ),
@@ -6244,10 +6248,12 @@ fn tick_intents(
         // percept and the nudge; `notice` is a percept alone (losing sight
         // degrades the follow, it does not end it).
         let mut ending: Option<String> = None;
+        let mut ending_state = crate::receipts::ReceiptState::Interrupted;
         let mut notice: Option<String> = None;
         match &mut intent.target {
             IntentTarget::Place { name, point, .. } => {
                 if position.distance(*point) <= PLACE_ARRIVE_RADIUS_M {
+                    ending_state = crate::receipts::ReceiptState::Completed;
                     ending = Some(format!("You have arrived at {name}."));
                 }
             }
@@ -6268,6 +6274,7 @@ fn tick_intents(
                         *last_seen = target_position;
                         *visible = true;
                         if position.distance(target_position) <= PERSON_ARRIVE_RADIUS_M {
+                            ending_state = crate::receipts::ReceiptState::Completed;
                             ending = Some(format!(
                                 "You have caught up with {}.",
                                 identify_ids(world, &id, target_id)
@@ -6292,7 +6299,7 @@ fn tick_intents(
         }
 
         if let Some(line) = ending {
-            end_intent(round, world, &id, line, nudges);
+            end_intent(round, world, &id, now, ending_state, line, nudges);
             continue;
         }
         if now >= deadline {
@@ -6308,7 +6315,15 @@ fn tick_intents(
                     identify_ids(world, &id, target_id)
                 ),
             };
-            end_intent(round, world, &id, line, nudges);
+            end_intent(
+                round,
+                world,
+                &id,
+                now,
+                crate::receipts::ReceiptState::Interrupted,
+                line,
+                nudges,
+            );
             continue;
         }
         if let Some(line) = notice {
@@ -6385,6 +6400,7 @@ fn tick_intents(
             && let Some(path) = route_path_to_point(nav, &id, position, target)
         {
             set_route(world, &id, path);
+            crate::receipts::progress_travel(world, &id, now);
             let person = round.people.get_mut(&id).expect("person exists");
             person.phase = Phase::Travelling;
             person.travel_target = Some(target);
@@ -6401,9 +6417,23 @@ fn end_intent(
     round: &mut Round,
     world: &mut World,
     id: &ActorId,
+    now: f64,
+    state: crate::receipts::ReceiptState,
     line: String,
     nudges: &mut Vec<ActorId>,
 ) {
+    crate::receipts::end_travel(
+        world,
+        id,
+        now,
+        state,
+        if state == crate::receipts::ReceiptState::Completed {
+            "travel_arrived"
+        } else {
+            "travel_lapsed"
+        },
+        &line,
+    );
     if let Some(character) = world.characters.get_mut(id) {
         character.state.intent = None;
         character.notify_percept(line);
@@ -6658,7 +6688,7 @@ fn tick_food_economy(
     for (instant, office) in crossings {
         let time = crate::clock::WorldTime::from_game_days(instant);
         let day = time.day;
-        round.trigger_road_office(world, office, time, nudges);
+        round.trigger_road_office(world, office, time, now, nudges);
         match office {
             Office::Watch => round.dispatch_household_settlement(world, day),
             Office::Kindling if !round.stalls.is_empty() => {
@@ -7882,6 +7912,8 @@ fn run_ladder(
                 round,
                 world,
                 &id,
+                now,
+                crate::receipts::ReceiptState::Interrupted,
                 format!("{cause} turned you back before you reached {destination}."),
                 nudges,
             );
@@ -9051,7 +9083,32 @@ fn apply_round_edits(round: &mut Round, world: &mut World, now: f64) {
         }
     }
     for (id, edit) in edits {
+        if edit.receipt.is_some()
+            && (!world.is_present(&id)
+                || world
+                    .characters
+                    .get(&id)
+                    .is_none_or(|a| edit.presence_epoch != Some(a.state.presence_epoch)))
+        {
+            crate::receipts::end_round_edit(
+                world,
+                &id,
+                now,
+                crate::receipts::ReceiptState::Interrupted,
+                "actor_departed",
+                "the schedule edit belongs to an earlier presence",
+            );
+            continue;
+        }
         let Some(entry) = world.places.get(&edit.place_id) else {
+            crate::receipts::end_round_edit(
+                world,
+                &id,
+                now,
+                crate::receipts::ReceiptState::Rejected,
+                "place_missing",
+                "the edited place no longer exists",
+            );
             continue;
         };
         let (label, point) = (entry.name.clone(), entry.point);
@@ -9066,13 +9123,37 @@ fn apply_round_edits(round: &mut Round, world: &mut World, now: f64) {
                 .characters
                 .get_mut(&id)
                 .expect("the author is in the world")
-                .notify_percept(reason);
+                .notify_percept(reason.clone());
+            crate::receipts::end_round_edit(
+                world,
+                &id,
+                now,
+                crate::receipts::ReceiptState::Rejected,
+                "round_trade_bound",
+                &reason,
+            );
             continue;
         }
         let Some(person) = round.people.get_mut(&id) else {
+            crate::receipts::end_round_edit(
+                world,
+                &id,
+                now,
+                crate::receipts::ReceiptState::Rejected,
+                "round_unenrolled",
+                "the actor has no enrolled round",
+            );
             continue;
         };
         let Some(leg) = person.legs.get_mut(edit.leg) else {
+            crate::receipts::end_round_edit(
+                world,
+                &id,
+                now,
+                crate::receipts::ReceiptState::Rejected,
+                "round_leg_missing",
+                "the edited leg no longer exists",
+            );
             continue;
         };
         leg.at = point;
@@ -9092,6 +9173,23 @@ fn apply_round_edits(round: &mut Round, world: &mut World, now: f64) {
             .expect("the author is in the world")
             .state
             .daily_round = lines;
+        if edit.teach_place_on_commit {
+            world
+                .characters
+                .get_mut(&id)
+                .expect("author exists")
+                .state
+                .places_known
+                .insert(edit.place_id);
+        }
+        crate::receipts::end_round_edit(
+            world,
+            &id,
+            now,
+            crate::receipts::ReceiptState::Completed,
+            "round_edit_applied",
+            "the Round applied the accepted schedule edit",
+        );
     }
 }
 

@@ -867,6 +867,9 @@ impl LocalEngine {
 /// builds the engine) and is the only command that translates to nothing.
 fn translate(command: BridgeCommand) -> Option<EngineCommand> {
     Some(match command {
+        BridgeCommand::Identified { id, command } => {
+            return translate(*command).map(|command| command.identified(id));
+        }
         BridgeCommand::SpatialUpdate {
             position_m,
             spatial_seq,

@@ -44,6 +44,7 @@ pub mod prompt;
 /// CPython text semantics (`str.strip`, `float.__repr__`, `repr`) — internal,
 /// but shared by the action validators, the reply parser and the scheduler.
 mod pyfmt;
+pub mod receipts;
 pub mod round;
 pub mod scheduler;
 pub mod seed;

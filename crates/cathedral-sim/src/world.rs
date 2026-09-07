@@ -75,6 +75,13 @@ pub struct NeedleClaim {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct World {
+    /// Private authoritative replay state, shared by explicit commands and
+    /// provider action services. Never projected into PublicSnapshot.
+    pub command_ledger: crate::receipts::CommandLedger,
+    /// Existing go_to undertakings bound to protected receipt identities.
+    /// At most 256; none of these private references enters the snapshot.
+    pub(crate) round_actions: BTreeMap<ActorId, crate::receipts::CommandId>,
+    pub(crate) travel_actions: BTreeMap<ActorId, crate::receipts::CommandId>,
     /// Authoritative named geography used whenever a prompt is rendered.
     pub area_map: AreaMap,
     pub characters: BTreeMap<ActorId, Character>,
@@ -246,6 +253,9 @@ impl Default for World {
             legacy_restock_shares: BTreeMap::new(),
             transform_jobs: BTreeMap::new(),
             completed_transform_jobs: BTreeMap::new(),
+            command_ledger: crate::receipts::CommandLedger::default(),
+            travel_actions: BTreeMap::new(),
+            round_actions: BTreeMap::new(),
             world_revision: 0,
             event_sequence: 0,
             spatial_sequence: -1,

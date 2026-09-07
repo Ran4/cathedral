@@ -1,4 +1,4 @@
-Status: Continued implementation authorized by the developer (2026-09-07).
+Status: Finish and commit M1b, then pause, as instructed by the developer (2026-09-07).
 
 # Continue from the delivered M0 baseline
 
@@ -11,3 +11,11 @@ This instruction authorizes proceeding with M1 and the remaining implementation 
 Continue sequentially under the existing milestone ownership and technical handoffs. Review and commit each coherent leg, including the M1–M3 subcuts already defined in OWNERSHIP_AND_GATES. A dependent implementation must consume its predecessor's actual working interfaces. Fix discovered defects and run the applicable deterministic, backend and host checks before advancing.
 
 Unavailable renderer measurements, full-population stress, live-provider acceptance and human play evidence remain explicit acceptance items wherever applicable. They do not justify stopping independent implementation work or claiming that unperformed checks succeeded. The final delivery record must distinguish implemented behavior from any external acceptance still outstanding.
+
+## Subsequent stopping point — 2026-09-07
+
+While M1b was undergoing final verification, the developer instructed:
+
+> hm, finish to the next leg then pause
+
+The coordinator confirmed that this means completing and committing the current M1b leg, then pausing before M1c. This replaces the earlier instruction to continue automatically through subsequent legs. The remaining roadmap and recorded acceptance limitations are unchanged.

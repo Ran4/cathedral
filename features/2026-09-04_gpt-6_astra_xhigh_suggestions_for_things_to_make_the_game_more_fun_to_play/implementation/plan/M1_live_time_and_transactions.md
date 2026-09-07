@@ -1,4 +1,4 @@
-Status: In progress (2026-09-07). M1a implemented and coordinator reviewed. Combined current-tree verification passes 1,791 tests (eight ignored). M1b–M1d remain. Renderer/focus performance remains unavailable.
+Status: Partial; paused after M1b at the developer's request (2026-09-07). M1a–M1b implemented and coordinator reviewed; combined M1b verification passes 1,810 tests (eight ignored). M1c–M1d remain. Renderer/focus performance remains unavailable.
 
 # M1 — Live time and committed actions
 
@@ -8,11 +8,17 @@ Make advancing time and clear, idempotent action results foundational. Every lat
 
 `timeline::AcceptedTime` and host `LiveTimePlugin` own the production accepted stream: 100 ms maximum per frame, retained ordinary debt, no overlay/focus exception. Controller fixed steps, engine elapsed/calendar deadlines and physical gates consume that stream. The normal local pump freezes a finite command cohort, appends the newest authoritative `PhysicalPosition.current`/yaw sample, flushes events and verifies the matching sim sample/watermark. Engine, Round and Night Office crossing cursors now store calendar days; Night has an explicit ambient day guard. Exclusive expiry precedes same-instant provider actions.
 
-[The M1a record](evidence/m1a/README.md) gives interfaces, field dispositions, test commands and limitations. Direct legacy coarse `Engine::poll` calls remain an explicit debug/test API and now diagnose discarded physical spans; both headless clock watching and ordinary turn stepping use at most 50 ms. Production gameplay admission retains debt instead of entering that legacy path. Save/load and command replay are still the next cuts' work.
+[The M1a record](evidence/m1a/README.md) gives interfaces, field dispositions, test commands and limitations. Direct legacy coarse `Engine::poll` calls remain an explicit debug/test API and now diagnose discarded physical spans; both headless clock watching and ordinary turn stepping use at most 50 ms. Production gameplay admission retains debt instead of entering that legacy path. M1b supplies command replay below; save/load remains M2/M3 work.
+
+## M1b implementation handoff — 2026-09-07
+
+The production host assigns ordered command identities, and the sim checks replay/conflict before carried position or domain effects. All 48 existing command variants have an exhaustive policy; 36 consequential variants share receipts, including voice recording submission and fire-and-forget sounds/settings/debug effects. Provider turns and Night reflections reserve complete bounded reply batches using semantic identities independent of provider execution IDs. Travel and schedule edits publish acceptance, then the existing movement/round consumers publish their actual final results. Voice speaks once through its retained recording receipt.
+
+[The M1b record](evidence/m1b/README.md) tracks current verification, policy coverage and M2 owner obligations. Combined verification passes 1,810 tests with eight ignored, with final source hashes and per-target replacement details recorded. Coordinator review accepts this implementation cut. The user requested a pause after M1b; generation fences and the generic operation/duty kernel remain M1c/M1d.
 
 ## Entry
 
-M0 is accepted. The shared knowledge feature has shipped. Existing fake/headless tests pass on the actual implementation baseline.
+The M0 baseline is delivered and the shared knowledge feature has shipped. The developer [authorized continuing despite M0's recorded renderer/full-stress gaps](EXECUTION_AUTHORITY.md). Existing fake/headless tests pass on the implementation baseline; unavailable measurements remain pending.
 
 ## Existing seams
 

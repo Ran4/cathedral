@@ -536,6 +536,84 @@ fn a_streamed_utterance_resolves_from_its_held_transcript() {
     assert!(timing[0].contains("endpoint->say="), "{}", timing[0]);
 }
 
+#[test]
+fn identified_voice_submission_completes_synchronously_and_replays_without_speaking() {
+    use cathedral_sim::receipts::{HOST_PRODUCER, OperationId, ReceiptState};
+    let mut h = Builder::default()
+        .fake()
+        .speech(SpeechProbe::cloud())
+        .build();
+    h.stream_utterance();
+    h.transcribed(h.speech.job(0), "Hello there");
+    let id = OperationId {
+        producer: HOST_PRODUCER,
+        sequence: 1,
+    }
+    .command(0);
+    let command = EngineCommand::PlayerRecording {
+        request_id: "voice".into(),
+        wav_basename: WAV.into(),
+        stt_backend: SttBackendKind::Cloud,
+        position_m: PLAYER_SPAWN,
+        spatial_seq: 1,
+    }
+    .identified(id);
+    let first = h.send(command.clone());
+    assert_eq!(speeches(&first).len(), 1);
+    let states: Vec<_> = first
+        .iter()
+        .filter_map(|m| match m {
+            EngineMessage::ActionReceipt(r) if r.id == id => Some(r.outcome.state),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(states, [ReceiptState::Accepted, ReceiptState::Completed]);
+    let receipt = h.engine.world().command_ledger.get(id).unwrap().clone();
+    let transcript = h.engine.transcript().to_vec();
+    let second = h.send(command);
+    assert!(speeches(&second).is_empty());
+    assert_eq!(h.speech.batch_jobs().len(), 1);
+    assert_eq!(h.engine.transcript(), transcript);
+    assert_eq!(h.engine.world().command_ledger.get(id), Some(&receipt));
+}
+
+#[test]
+fn identified_voice_failure_is_terminal_and_duplicate_backend_delivery_is_inert() {
+    use cathedral_sim::receipts::{HOST_PRODUCER, OperationId, ReceiptState};
+    let mut h = Builder::default().speech(SpeechProbe::cloud()).build();
+    let id = OperationId {
+        producer: HOST_PRODUCER,
+        sequence: 1,
+    }
+    .command(0);
+    let command = EngineCommand::PlayerRecording {
+        request_id: "voice".into(),
+        wav_basename: WAV.into(),
+        stt_backend: SttBackendKind::Cloud,
+        position_m: PLAYER_SPAWN,
+        spatial_seq: 1,
+    }
+    .identified(id);
+    h.send(command.clone());
+    let job = h.speech.job(0);
+    h.transcribed(job, "   ");
+    assert_eq!(
+        h.engine
+            .world()
+            .command_ledger
+            .get(id)
+            .unwrap()
+            .outcome
+            .state,
+        ReceiptState::Rejected
+    );
+    let transcript = h.engine.transcript().to_vec();
+    assert!(speeches(&h.transcribed(job, "late changed text")).is_empty());
+    assert!(speeches(&h.send(command)).is_empty());
+    assert_eq!(h.engine.transcript(), transcript);
+    assert_eq!(h.speech.batch_jobs().len(), 1);
+}
+
 /// Python unlinked the recording on **every** resolution path
 /// (`_resolve_transcription`, `server.py:1594-1602`). The streamed roads — a held
 /// transcript, and a parked recording the socket answers — hand the WAV to no

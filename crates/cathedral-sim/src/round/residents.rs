@@ -802,6 +802,8 @@ pub(super) fn tick(
                 round,
                 world,
                 &id,
+                now,
+                crate::receipts::ReceiptState::Interrupted,
                 "The curfew turned you back toward your household frontage.".into(),
                 nudges,
             );

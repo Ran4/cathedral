@@ -5029,7 +5029,13 @@ mod tests {
             "a second summons on a ringing one would make the strokes uncountable"
         );
 
-        let forwarded: Vec<_> = receiver.try_iter().collect();
+        let forwarded: Vec<_> = receiver
+            .try_iter()
+            .enumerate()
+            .map(|(i, command)| {
+                crate::smart_actors::bridge::expect_host_command(command, i as u64 + 1)
+            })
+            .collect();
         assert_eq!(forwarded.len(), 1, "only an accepted peal reaches the sim");
         assert!(matches!(
             forwarded[0],
@@ -5117,7 +5123,13 @@ mod tests {
                 }));
         }
         app.update();
-        let commands: Vec<_> = receiver.try_iter().collect();
+        let commands: Vec<_> = receiver
+            .try_iter()
+            .enumerate()
+            .map(|(i, command)| {
+                crate::smart_actors::bridge::expect_host_command(command, i as u64 + 1)
+            })
+            .collect();
         assert_eq!(commands.len(), 1, "the real plugin accepts one peal");
         assert!(matches!(commands[0], BridgeCommand::Knell { years: 17, at }
             if at == Position::try_from_vec3(SMALLVOICE_TOWER).unwrap()));
@@ -5125,7 +5137,13 @@ mod tests {
 
         app.world_mut().resource_mut::<WorldClockState>().office = Office::Snuffing;
         app.update();
-        let commands: Vec<_> = receiver.try_iter().collect();
+        let commands: Vec<_> = receiver
+            .try_iter()
+            .enumerate()
+            .map(|(i, command)| {
+                crate::smart_actors::bridge::expect_host_command(command, i as u64 + 2)
+            })
+            .collect();
         assert_eq!(commands.len(), 1);
         assert!(matches!(
             commands[0],

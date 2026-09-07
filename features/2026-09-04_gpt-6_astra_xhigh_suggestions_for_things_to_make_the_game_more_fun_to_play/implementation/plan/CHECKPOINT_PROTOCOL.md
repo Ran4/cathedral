@@ -1,4 +1,4 @@
-Status: M1a ordinary host/time boundary implemented (2026-09-07), review pending; capture/hydration/adoption/storage remain M2–M3 implementation contracts.
+Status: M1a host/time boundary and M1b semantic/replay identities implemented and reviewed (2026-09-07). Runtime generations remain M1c; capture/hydration/adoption/storage remain M2–M3 implementation contracts. Work is paused after M1b at the developer's request.
 
 # Capturing and resuming one coherent city
 

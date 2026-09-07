@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; continued implementation authorized (2026-09-07). M1a implemented and reviewed; M1b–M1d and M2–M19 remain. Reference-renderer/full-stress acceptance is pending.
+Status: M0 baseline delivered; M1a–M1b implemented and reviewed (2026-09-07). Paused at the developer's request after M1b; M1c–M1d and M2–M19 remain. Reference-renderer/full-stress acceptance is pending.
 
 # An Alibi in Stone
 
@@ -18,7 +18,7 @@ The [implementation plan](implementation/plan/README.md) records the 2026-09-05 
 systems-first M0–M19 delivery. Its [decision record](implementation/plan/DECISIONS.md) and
 [case contract](implementation/plan/CASE_CONTRACT.md) supersede conflicting GDD recommendations,
 including pausing, save/load scope, dynamic enforcement and the repaired evidence/timing routes.
-The original DOCX/PDF and model remain the earlier proposal. [M0’s execution record](implementation/plan/M0_baseline_and_prerequisites.md) and [baseline reconciliation](implementation/plan/BASELINE_RECONCILIATION.md) explain the completed audit, real measurements and remaining acceptance items. The developer has [authorized continued implementation](implementation/plan/EXECUTION_AUTHORITY.md) through the remaining milestones. No quest gameplay has shipped from this plan yet.
+The original DOCX/PDF and model remain the earlier proposal. [M0’s execution record](implementation/plan/M0_baseline_and_prerequisites.md) and [baseline reconciliation](implementation/plan/BASELINE_RECONCILIATION.md) explain the completed audit, real measurements and remaining acceptance items. The [execution instructions](implementation/plan/EXECUTION_AUTHORITY.md) record the developer's authorization to continue and subsequent request to pause after M1b. No quest gameplay has shipped from this plan yet.
 
 | File | Purpose |
 |---|---|

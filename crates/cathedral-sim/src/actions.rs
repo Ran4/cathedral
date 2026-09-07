@@ -2899,6 +2899,7 @@ fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
                 format!("no way through the streets leads to {name} from where you stand"),
             )?;
             TravelIntent {
+                receipt: None,
                 target: IntentTarget::Place {
                     place_id,
                     name,
@@ -2946,6 +2947,7 @@ fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
                 ),
             )?;
             TravelIntent {
+                receipt: None,
                 target: IntentTarget::Person {
                     actor_id: target_id,
                     last_seen,
@@ -3090,11 +3092,14 @@ pub(crate) fn set_round_leg(
         .get_mut(actor_id)
         .expect("the actor is in the world");
     actor.state.round_edit = Some(RoundEdit {
+        receipt: None,
+        presence_epoch: None,
+        teach_place_on_commit: false,
         leg: number as usize - 1,
         place_id: place_id.clone(),
     });
     Ok(format!(
-        "{} makes {place_name} leg {number} of their round",
+        "{} requests {place_name} for leg {number} of their round",
         actor.name()
     ))
 }
@@ -3645,6 +3650,13 @@ pub(crate) fn take_into_charge(
     let station_place = station.place_id.clone();
     let station_point = station.point;
 
+    let budget_seconds = route_budget(
+        world,
+        officer_id,
+        station_point,
+        format!("no way through the streets leads to {station_name} from where you stand"),
+    )?;
+
     // The action layer has no clock, so `seized_at` is zero here exactly as a
     // clock-less world raises an undated notice. The one stamp that is *read*
     // against real seconds — the dead-man timer's `officer_last_turn` — is
@@ -3666,18 +3678,13 @@ pub(crate) fn take_into_charge(
     // required — this walk is the sim's decision, not the model's, and an
     // officer who cannot say where they are taking somebody is worse than one
     // who learns the name on the way.
-    let budget_seconds = route_budget(
-        world,
-        officer_id,
-        station_point,
-        format!("no way through the streets leads to {station_name} from where you stand"),
-    )?;
     let officer = world
         .characters
         .get_mut(officer_id)
         .expect("the officer is in the world");
     officer.state.places_known.insert(station_place.clone());
     officer.state.intent = Some(TravelIntent {
+        receipt: None,
         target: IntentTarget::Place {
             place_id: station_place,
             name: station_name.clone(),

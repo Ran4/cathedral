@@ -15,7 +15,7 @@
 use std::{
     path::{Path, PathBuf},
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
 };
@@ -67,6 +67,11 @@ impl TtsBackend {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BridgeCommand {
+    /// Stable identity allocated once by the ordinary host producer.
+    Identified {
+        id: cathedral_sim::receipts::CommandId,
+        command: Box<BridgeCommand>,
+    },
     /// The player's spawn. It is what starts the engine: the world needs the
     /// real position before it renders its first snapshot.
     Hello {
@@ -307,8 +312,60 @@ pub enum BridgeCommand {
 }
 
 impl BridgeCommand {
+    /// Mirrors the sim's exhaustive admission policy at the producer.
+    fn is_consequential(&self) -> bool {
+        match self {
+            Self::Identified { command, .. } => command.is_consequential(),
+            Self::Hello { .. } => false,
+            Self::SpatialUpdate { .. } => false,
+            Self::PlayerRecording { .. } => true,
+            Self::PlayerAttention { .. } => false,
+            Self::PlayerUtteranceStarted { .. } => false,
+            Self::PlayerAudioBegin { .. } => false,
+            Self::PlayerAudioChunk { .. } => false,
+            Self::PlayerAudioEnd { .. } => false,
+            Self::PlayerAudioAbort { .. } => false,
+            Self::DebugPlayerSay { .. } => true,
+            Self::PlayerSay { .. } => true,
+            Self::PlayerOffer { .. } => true,
+            Self::PlayerAccept { .. } => true,
+            Self::PlayerDecline { .. } => true,
+            Self::PlayerRetract { .. } => true,
+            Self::PlayerPocket { .. } => true,
+            Self::PlayerRetrieve { .. } => true,
+            Self::PlayerSwallow { .. } => true,
+            Self::PlayerSpit { .. } => true,
+            Self::PlayerGargle { .. } => true,
+            Self::PlayerExpel { .. } => true,
+            Self::PlayerEat { .. } => true,
+            Self::PlayerSound { .. } => true,
+            Self::PlayerGrabbed { .. } => true,
+            Self::PlayerScrubMark { .. } => true,
+            Self::PlayerDrawMark { .. } => true,
+            Self::PlayerStruggling => true,
+            Self::PlayerBrokeFree => true,
+            Self::DebugChalk { .. } => true,
+            Self::DebugSeedFact { .. } => true,
+            Self::DebugRaiseWord { .. } => true,
+            Self::Knell { .. } => true,
+            Self::CivicPeal { .. } => true,
+            Self::DebugScrub { .. } => true,
+            Self::DebugSeize { .. } => true,
+            Self::DebugCommit { .. } => true,
+            Self::DebugSound { .. } => true,
+            Self::WorldSound { .. } => true,
+            Self::DebugStatus { .. } => true,
+            Self::CycleTimeScale => true,
+            Self::SetWeatherOverride { .. } => true,
+            Self::ClearWeatherOverride => true,
+            Self::SpeechPresented { .. } => false,
+            Self::SetTtsBackend { .. } => true,
+        }
+    }
+
     pub(super) fn spatial_sequence(&self) -> Option<u64> {
         match self {
+            Self::Identified { command, .. } => command.spatial_sequence(),
             Self::Hello { spatial_seq, .. }
             | Self::SpatialUpdate { spatial_seq, .. }
             | Self::PlayerRecording { spatial_seq, .. }
@@ -349,6 +406,9 @@ pub enum BridgeEvent {
 pub struct BridgeHandle {
     commands: Sender<BridgeCommand>,
     runtime_dir: PathBuf,
+    /// Sequence publication and enqueue share this small critical section.
+    /// A refused enqueue consumes no identity and cannot create unlimited holes.
+    issued: Mutex<u64>,
 }
 
 impl BridgeHandle {
@@ -360,6 +420,7 @@ impl BridgeHandle {
         Self {
             commands,
             runtime_dir,
+            issued: Mutex::new(0),
         }
     }
 
@@ -376,8 +437,51 @@ impl BridgeHandle {
 
     /// Enqueue without ever waiting on the engine.
     pub fn try_send(&self, command: BridgeCommand) -> Result<(), String> {
+        let mut issued = self
+            .issued
+            .lock()
+            .map_err(|_| "command producer is unavailable".to_string())?;
+        let allocate =
+            command.is_consequential() && !matches!(command, BridgeCommand::Identified { .. });
+        let explicit = match &command {
+            BridgeCommand::Identified { id, command } => {
+                if id.operation.producer != cathedral_sim::receipts::HOST_PRODUCER
+                    || id.step != 0
+                    || id.operation.sequence == 0
+                    || matches!(**command, BridgeCommand::Identified { .. })
+                    || id.operation.sequence.saturating_sub(*issued)
+                        > cathedral_sim::receipts::RECENT_CAPACITY as u64
+                {
+                    return Err("invalid host command identity".to_owned());
+                }
+                Some(id.operation.sequence)
+            }
+            _ => None,
+        };
+        let command = if allocate {
+            let sequence = issued
+                .checked_add(1)
+                .ok_or_else(|| "command identities exhausted".to_string())?;
+            BridgeCommand::Identified {
+                id: cathedral_sim::receipts::OperationId {
+                    producer: cathedral_sim::receipts::HOST_PRODUCER,
+                    sequence,
+                }
+                .command(0),
+                command: Box::new(command),
+            }
+        } else {
+            command
+        };
         self.commands
             .try_send(command)
+            .map(|()| {
+                if allocate {
+                    *issued += 1;
+                } else if let Some(sequence) = explicit {
+                    *issued = (*issued).max(sequence);
+                }
+            })
             .map_err(|error| match error {
                 TrySendError::Full(command) if command.is_redundant_spatial() => {
                     "spatial update coalesced because the bridge is busy".into()
@@ -423,6 +527,24 @@ impl BridgeInbox {
             }
         }
     }
+}
+
+/// Host fixture boundary: check the real transport identity before asserting
+/// the domain command body. Kept out of production code.
+#[cfg(test)]
+pub(crate) fn expect_host_command(command: BridgeCommand, sequence: u64) -> BridgeCommand {
+    let BridgeCommand::Identified { id, command } = command else {
+        panic!("consequential host command was not identified")
+    };
+    assert_eq!(
+        id,
+        cathedral_sim::receipts::OperationId {
+            producer: cathedral_sim::receipts::HOST_PRODUCER,
+            sequence
+        }
+        .command(0)
+    );
+    *command
 }
 
 #[cfg(test)]
@@ -515,5 +637,48 @@ mod tests {
             Some(BridgeEvent::Disconnected(_))
         ));
         assert!(inbox.try_recv().is_none());
+    }
+    #[test]
+    fn explicit_host_retry_advances_allocator_only_after_successful_enqueue() {
+        use cathedral_sim::receipts::{HOST_PRODUCER, OperationId};
+        let (sender, receiver) = bounded(1);
+        let handle = BridgeHandle::new(sender, PathBuf::from("/tmp"));
+        let explicit = |sequence| BridgeCommand::Identified {
+            id: OperationId {
+                producer: HOST_PRODUCER,
+                sequence,
+            }
+            .command(0),
+            command: Box::new(BridgeCommand::PlayerSound {
+                sound_id: "fart".into(),
+            }),
+        };
+        handle.try_send(explicit(7)).unwrap();
+        assert!(handle.try_send(explicit(9)).is_err());
+        assert_eq!(*handle.issued.lock().unwrap(), 7);
+        receiver.recv().unwrap();
+        handle
+            .try_send(BridgeCommand::PlayerSound {
+                sound_id: "fart".into(),
+            })
+            .unwrap();
+        let BridgeCommand::Identified { id, .. } = receiver.recv().unwrap() else {
+            panic!("ordinary consequential command is identified")
+        };
+        assert_eq!(id.operation.sequence, 8);
+        handle.try_send(explicit(7)).unwrap();
+        receiver.recv().unwrap();
+        assert_eq!(*handle.issued.lock().unwrap(), 8);
+        let foreign = BridgeCommand::Identified {
+            id: OperationId {
+                producer: 2,
+                sequence: 1,
+            }
+            .command(0),
+            command: Box::new(BridgeCommand::PlayerSound {
+                sound_id: "fart".into(),
+            }),
+        };
+        assert!(handle.try_send(foreign).is_err());
     }
 }

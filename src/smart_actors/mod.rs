@@ -1273,6 +1273,24 @@ fn process_engine_message(
     received_at_seconds: f64,
 ) {
     match message {
+        EngineMessage::ActionReceipt(receipt) => {
+            // Private service output: the existing request-correlated UI result
+            // remains its projection. Do not expose NPC private refs in a HUD.
+            debug!(
+                "[action] {:?}: {:?} {}",
+                receipt.id, receipt.outcome.state, receipt.outcome.code
+            );
+        }
+        EngineMessage::CommandAdmissionRefused {
+            id,
+            reason,
+            retryable,
+        } => {
+            debug!(
+                "[action] admission {:?}: {} retryable={retryable}",
+                id, reason.code
+            );
+        }
         EngineMessage::Ready {
             capabilities,
             snapshot,
@@ -2718,7 +2736,7 @@ mod tests {
             Ok(bridge::BridgeCommand::PlayerAttention { actor_id: None })
         ));
         assert!(
-            matches!(commands.try_recv(), Ok(bridge::BridgeCommand::PlayerSay { text, .. }) if text == "How will you trade?")
+            matches!(bridge::expect_host_command(commands.try_recv().unwrap(), 1), bridge::BridgeCommand::PlayerSay { text, .. } if text == "How will you trade?")
         );
     }
 

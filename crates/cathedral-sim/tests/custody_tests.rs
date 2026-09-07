@@ -208,6 +208,33 @@ fn say_and_seize(world: &mut World, officer: &str, target: &str) -> Result<Strin
     apply_action(world, &actor(officer), "seize", &json!({"person": target}))
 }
 
+#[test]
+fn an_unrouteable_seizure_refuses_before_custody_or_either_body_changes() {
+    let mut world = law_world();
+    raise_word(&mut world, "srgnt", "tamrd");
+    apply_action(
+        &mut world,
+        &actor("srgnt"),
+        "say",
+        &json!({"text":"Stand still. You are coming with me."}),
+    )
+    .unwrap();
+    world.nav = None;
+    let original = world.clone();
+    let error = apply_action(
+        &mut world,
+        &actor("srgnt"),
+        "seize",
+        &json!({"person":"tamrd"}),
+    )
+    .unwrap_err();
+    assert_eq!(error.code.as_str(), "no_route");
+    assert_eq!(
+        world, original,
+        "route refusal cannot seize, teach a station, clear a target intent, or write custody percepts"
+    );
+}
+
 /// The gaol (M5), the one station that holds longer and the one the picker
 /// never reaches by distance.
 fn stone_house() -> Station {
@@ -1595,6 +1622,7 @@ fn a_committed_body_keeps_no_errand_and_no_path_for_a_mover_to_follow() {
     {
         let character = world.characters.get_mut(&actor("tamrd")).unwrap();
         character.state.intent = Some(cathedral_sim::TravelIntent {
+            receipt: None,
             // The follow, which is the one that re-lays: `apply_intents` re-routes
             // to a *visible* person every tick they move.
             target: IntentTarget::Person {

@@ -2836,7 +2836,13 @@ mod tests {
                 .announced_boil_night
         };
         let drain = |commands: &Receiver<BridgeCommand>| -> Vec<BridgeCommand> {
-            commands.try_iter().collect()
+            commands
+                .try_iter()
+                .enumerate()
+                .map(|(i, command)| {
+                    crate::smart_actors::bridge::expect_host_command(command, i as u64 + 1)
+                })
+                .collect()
         };
 
         // Density 0 empties every colony but keeps all the authored records.

@@ -236,6 +236,7 @@ impl StreamState {
 /// One `player_recording` on its way to a transcript.
 #[derive(Debug, Clone, PartialEq)]
 struct TranscriptionTask {
+    semantic: Option<crate::receipts::CommandId>,
     request_id: String,
     basename: String,
     /// Where the player stood when he *started* the utterance — the say is
@@ -285,6 +286,8 @@ pub struct SpeechRouter {
     /// The voice backend each in-flight utterance was queued with (test 19).
     tts_backends: Vec<(SpeechEventId, TtsBackendKind)>,
     next_job: u64,
+    /// Same-command synchronous transcripts wait only until the receipt ticket commits.
+    resolved: Vec<(TranscriptionTask, Result<String, SpeechError>)>,
 }
 
 impl SpeechRouter {
@@ -586,6 +589,7 @@ impl SpeechRouter {
     pub fn on_recording(
         &mut self,
         now: f64,
+        semantic: Option<crate::receipts::CommandId>,
         request_id: &str,
         basename: &str,
         stt_backend: SttBackendKind,
@@ -593,9 +597,10 @@ impl SpeechRouter {
         spatial_seq: i64,
         ctx: &mut SpeechContext<'_>,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> crate::receipts::Outcome {
         match self.accept_recording(
             now,
+            semantic,
             request_id,
             basename,
             stt_backend,
@@ -604,7 +609,11 @@ impl SpeechRouter {
             ctx,
             out,
         ) {
-            Ok(()) => {}
+            Ok(()) => crate::receipts::Outcome::new(
+                crate::receipts::ReceiptState::Accepted,
+                "utterance_accepted",
+                "the recording is awaiting its speech result",
+            ),
             Err(error) => {
                 self.take_capture(basename);
                 out.push(EngineMessage::TranscriptionResult {
@@ -616,6 +625,7 @@ impl SpeechRouter {
                     )),
                 });
                 out.push(command_failure(request_id, error.code, &error.message));
+                crate::receipts::Outcome::rejected(error.code.as_str(), &error.message)
             }
         }
     }
@@ -624,6 +634,7 @@ impl SpeechRouter {
     fn accept_recording(
         &mut self,
         now: f64,
+        semantic: Option<crate::receipts::CommandId>,
         request_id: &str,
         basename: &str,
         stt_backend: SttBackendKind,
@@ -633,6 +644,13 @@ impl SpeechRouter {
         out: &mut Vec<EngineMessage>,
     ) -> Result<(), CommandError> {
         check_basename(basename)?;
+        if self.recording_jobs.len() + self.parked.len() + self.resolved.len() >= MAX_ACTIVE_STREAMS
+        {
+            return Err(CommandError::new(
+                CommandErrorCode::Overloaded,
+                "pending utterance capacity is full",
+            ));
+        }
         // The WAV's existence, its confinement to the runtime directory and its
         // ownership by another audio task are file facts: cathedral-backends
         // owns them (ARCHITECTURE §1.2). What is *not* a file fact — can this
@@ -661,6 +679,7 @@ impl SpeechRouter {
         let utterance_position = ctx.world.characters[ctx.player_id].position_m();
 
         let task = TranscriptionTask {
+            semantic,
             request_id: request_id.to_string(),
             basename: basename.to_string(),
             position_m: utterance_position,
@@ -933,8 +952,84 @@ impl SpeechRouter {
         // that file, and it is a recording of the player's voice.
         let recording = ctx.runtime_dir.join(&basename);
         ctx.transcription.discard_recording(&recording);
-        self.resolve_transcription(now, task, result, ctx, out);
+        if task
+            .semantic
+            .is_some_and(|id| ctx.world.command_ledger.operation_pending(id.operation))
+        {
+            self.resolved.push((task, result));
+        } else {
+            self.commit_transcription(now, task, result, ctx, out);
+        }
         self.log_timing(now, &basename, out);
+    }
+
+    pub(crate) fn finish_resolved(
+        &mut self,
+        now: f64,
+        ctx: &mut SpeechContext<'_>,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        let ready = std::mem::take(&mut self.resolved);
+        for (task, result) in ready {
+            self.commit_transcription(now, task, result, ctx, out);
+        }
+    }
+
+    fn commit_transcription(
+        &mut self,
+        now: f64,
+        task: TranscriptionTask,
+        result: Result<String, SpeechError>,
+        ctx: &mut SpeechContext<'_>,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        use crate::receipts::{Outcome, ReceiptState};
+        let semantic = task.semantic;
+        let request_id = task.request_id.clone();
+        if let Some(id) = semantic {
+            match ctx.world.command_ledger.get(id) {
+                Some(receipt)
+                    if matches!(
+                        receipt.outcome.state,
+                        ReceiptState::Accepted | ReceiptState::InProgress
+                    ) => {}
+                Some(receipt) => {
+                    Self::project_speech_result(request_id, &receipt.outcome, out);
+                    out.push(EngineMessage::ActionReceipt(receipt.clone()));
+                    return;
+                }
+                None => {
+                    out.push(EngineMessage::CommandAdmissionRefused {
+                        id: Some(id),
+                        reason: Outcome::rejected(
+                            "old_command",
+                            "the utterance receipt is no longer retained",
+                        ),
+                        retryable: false,
+                    });
+                    return;
+                }
+            }
+        }
+        let outcome = self.resolve_transcription(now, task, result, ctx, out);
+        Self::project_speech_result(request_id, &outcome, out);
+        if let Some(id) = semantic {
+            let _ = ctx.world.command_ledger.advance(id, now, outcome);
+            crate::receipts::release_finished_root(ctx.world, id.operation);
+        }
+    }
+
+    fn project_speech_result(
+        request_id: String,
+        outcome: &crate::receipts::Outcome,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        out.push(EngineMessage::CommandResult {
+            request_id,
+            success: outcome.succeeded(),
+            error_code: (!outcome.succeeded()).then(|| outcome.code.clone()),
+            message: outcome.message.clone(),
+        });
     }
 
     /// `_resolve_transcription` (`server.py:1585-1749`).
@@ -945,7 +1040,7 @@ impl SpeechRouter {
         result: Result<String, SpeechError>,
         ctx: &mut SpeechContext<'_>,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> crate::receipts::Outcome {
         // Whatever the outcome, the player's utterance is no longer pending: on
         // success the applied say plus the NPC floor govern pacing from here; on
         // failure nothing will be said, so NPC turns may resume at once.
@@ -964,12 +1059,10 @@ impl SpeechRouter {
                     Some(message.clone()),
                     Some(backend),
                 )));
-                out.push(command_failure(
-                    &task.request_id,
-                    CommandErrorCode::TranscriptionFailed,
+                return crate::receipts::Outcome::rejected(
+                    CommandErrorCode::TranscriptionFailed.as_str(),
                     &message,
-                ));
-                return;
+                );
             }
             Ok(text) => text,
         };
@@ -982,12 +1075,10 @@ impl SpeechRouter {
                 Some("no speech detected".to_string()),
                 Some(backend),
             )));
-            out.push(command_failure(
-                &task.request_id,
-                CommandErrorCode::EmptyTranscription,
+            return crate::receipts::Outcome::rejected(
+                CommandErrorCode::EmptyTranscription.as_str(),
                 "no speech detected",
-            ));
-            return;
+            );
         }
         if text.chars().count() > PLAYER_SPEECH_MAX_CHARS {
             let message =
@@ -998,12 +1089,10 @@ impl SpeechRouter {
                 None,
                 Some(backend),
             )));
-            out.push(command_failure(
-                &task.request_id,
-                CommandErrorCode::TextTooLong,
+            return crate::receipts::Outcome::rejected(
+                CommandErrorCode::TextTooLong.as_str(),
                 &message,
-            ));
-            return;
+            );
         }
         if has_unsupported_characters(text) {
             let message = "transcription contains unsupported characters";
@@ -1013,12 +1102,10 @@ impl SpeechRouter {
                 None,
                 Some(backend),
             )));
-            out.push(command_failure(
-                &task.request_id,
-                CommandErrorCode::InvalidTranscription,
+            return crate::receipts::Outcome::rejected(
+                CommandErrorCode::InvalidTranscription.as_str(),
                 message,
-            ));
-            return;
+            );
         }
 
         out.push(EngineMessage::TranscriptionResult {
@@ -1059,12 +1146,7 @@ impl SpeechRouter {
                     Some(backend),
                 )));
                 let error: CommandError = error.into();
-                out.push(command_failure(
-                    &task.request_id,
-                    error.code,
-                    &error.message,
-                ));
-                return;
+                return crate::receipts::Outcome::rejected(error.code.as_str(), &error.message);
             }
         };
         ctx.transcript.push(line.clone());
@@ -1074,12 +1156,7 @@ impl SpeechRouter {
             None,
             Some(backend),
         )));
-        out.push(EngineMessage::CommandResult {
-            request_id: task.request_id,
-            success: true,
-            error_code: None,
-            message: truncate_chars(&line, MAX_COMMAND_MESSAGE_CHARS),
-        });
+        crate::receipts::Outcome::completed(&line)
     }
 
     // -------------------------------------------------------------------- voices

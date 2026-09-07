@@ -716,7 +716,7 @@ fn a_reflection_may_settle_memory_goal_and_one_leg_but_may_not_act() {
         r#"go_to {"place_id": "pl_bbbb"}"#,
     );
     let mut events = Vec::new();
-    night.apply_person(&mut world, &major, reply, &mut events);
+    night.apply_test_person(&mut world, &major, reply, &mut events);
 
     let actor = &world.characters[&major];
     assert_eq!(actor.memories(), ["I sold the last loaf to a stranger."]);
@@ -724,6 +724,15 @@ fn a_reflection_may_settle_memory_goal_and_one_leg_but_may_not_act() {
     assert_eq!(
         actor.state.round_edit,
         Some(crate::character::RoundEdit {
+            receipt: Some(
+                OperationId {
+                    producer: NIGHT_PRODUCER,
+                    sequence: 1
+                }
+                .command(3)
+            ),
+            presence_epoch: Some(0),
+            teach_place_on_commit: false,
             leg: 1,
             place_id: PlaceId::from_raw("pl_bbbb"),
         }),
@@ -762,7 +771,7 @@ fn set_round_refuses_a_place_the_actor_does_not_know_the_way_to() {
     let minor = ActorId::from_raw("mnr01");
 
     let mut events = Vec::new();
-    night.apply_person(
+    night.apply_test_person(
         &mut world,
         &minor,
         r#"set_round {"leg": 1, "place_id": "pl_bbbb"}"#,
@@ -786,7 +795,7 @@ fn set_round_refuses_a_leg_number_that_is_not_on_the_sheet() {
 
     for bad in ["0", "3", "-1", r#""two""#] {
         let mut events = Vec::new();
-        night.apply_person(
+        night.apply_test_person(
             &mut world,
             &major,
             &format!(r#"set_round {{"leg": {bad}, "place_id": "pl_aaaa"}}"#),
@@ -808,7 +817,7 @@ fn a_ward_mood_is_carried_by_that_wards_minors_alone() {
     let env = env();
 
     let mut events = Vec::new();
-    night.apply_ward(
+    night.apply_test_ward(
         &mut world,
         PlanningWard::Weigh,
         r#"ward_mood {"mood": "The rain has not let up and people are short with one another."}"#,
@@ -845,7 +854,7 @@ fn a_ward_mood_is_bounded() {
     let mut night = office(all_tiers(), &world, 0.0);
     let long = "a".repeat(WARD_MOOD_MAX_CHARS * 3);
     let mut events = Vec::new();
-    night.apply_ward(
+    night.apply_test_ward(
         &mut world,
         PlanningWard::Weigh,
         &format!(r#"ward_mood {{"mood": "{long}"}}"#),
@@ -862,7 +871,7 @@ fn a_ward_mood_is_bounded() {
 /// make the verb useless. It may not reach outside its own people, and it may
 /// not make more than [`WARD_EDITS_MAX`] edits.
 #[test]
-fn a_ward_moves_its_own_peoples_rounds_and_teaches_them_the_way() {
+fn a_ward_queues_its_own_peoples_rounds_and_defers_teaching_until_commit() {
     let mut world = world_with_cast();
     let mut night = office(all_tiers(), &world, 0.0);
     let minor = ActorId::from_raw("mnr01");
@@ -875,7 +884,7 @@ fn a_ward_moves_its_own_peoples_rounds_and_teaches_them_the_way() {
     );
 
     let mut events = Vec::new();
-    night.apply_ward(
+    night.apply_test_ward(
         &mut world,
         PlanningWard::Weigh,
         concat!(
@@ -892,16 +901,25 @@ fn a_ward_moves_its_own_peoples_rounds_and_teaches_them_the_way() {
     assert_eq!(
         world.characters[&minor].state.round_edit,
         Some(crate::character::RoundEdit {
+            receipt: Some(
+                OperationId {
+                    producer: NIGHT_PRODUCER,
+                    sequence: 1
+                }
+                .command(1)
+            ),
+            presence_epoch: Some(0),
+            teach_place_on_commit: true,
             leg: 0,
             place_id: PlaceId::from_raw("pl_bbbb"),
         })
     );
     assert!(
-        world.characters[&minor]
+        !world.characters[&minor]
             .state
             .places_known
             .contains(&PlaceId::from_raw("pl_bbbb")),
-        "the ward told them the way as part of deciding it"
+        "teaching waits for the Round to accept the queued edit"
     );
     assert!(
         world.characters[&ActorId::from_raw("mnr02")]
@@ -939,7 +957,7 @@ fn a_refused_ward_set_round_does_not_teach_the_way() {
         .insert(known.clone());
 
     let mut events = Vec::new();
-    night.apply_ward(
+    night.apply_test_ward(
         &mut world,
         PlanningWard::Weigh,
         concat!(
@@ -981,7 +999,7 @@ fn a_ward_may_make_no_more_than_three_edits() {
         .join("\n");
 
     let mut events = Vec::new();
-    night.apply_ward(&mut world, PlanningWard::Weigh, &reply, &mut events);
+    night.apply_test_ward(&mut world, PlanningWard::Weigh, &reply, &mut events);
     assert_eq!(
         diagnostics(&events)
             .iter()
@@ -1110,6 +1128,15 @@ fn the_offline_fake_moves_a_leg_it_read_off_the_night_sheet() {
         // `places_you_know` is sorted by name, so the sheet's first handle —
         // and the one the fake reads — is The Hungry Ox, not The Tallage.
         Some(crate::character::RoundEdit {
+            receipt: Some(
+                OperationId {
+                    producer: NIGHT_PRODUCER,
+                    sequence: 1
+                }
+                .command(2)
+            ),
+            presence_epoch: Some(0),
+            teach_place_on_commit: false,
             leg: 0,
             place_id: PlaceId::from_raw("pl_bbbb"),
         }),
@@ -1167,4 +1194,207 @@ fn rate_changes_preserve_owed_nights_and_ambient_day_across_midnight() {
         night.ring(next_night, &mut world, &mut round, &clock, &mut events);
         assert_eq!(night.last_ambient_reroll_day, Some(1));
     }
+}
+
+// Exercise the same whole-response admission as production, including the
+// surrounding reflection bookkeeping, instead of bypassing it in verb tests.
+impl NightOffice {
+    fn apply_test_subject(
+        &mut self,
+        world: &mut World,
+        subject: Subject,
+        reply: &str,
+        events: &mut Vec<SchedulerEvent>,
+    ) {
+        let semantic = world
+            .command_ledger
+            .reserve_operation(NIGHT_PRODUCER)
+            .unwrap();
+        let presence_epoch = match &subject {
+            Subject::Person(actor) => Some(world.characters[actor].state.presence_epoch),
+            Subject::Ward(_) => None,
+        };
+        self.in_flight = Some(Flight {
+            semantic,
+            owed_day: 0,
+            presence_epoch,
+            subject,
+            request_id: RequestId(1),
+            prompt: String::new(),
+        });
+        self.apply(
+            0.0,
+            world,
+            Completion {
+                request_id: RequestId(1),
+                result: Ok(reply.to_owned()),
+                duration_seconds: 0.0,
+            },
+            events,
+        );
+    }
+    fn apply_test_person(
+        &mut self,
+        world: &mut World,
+        actor: &ActorId,
+        reply: &str,
+        events: &mut Vec<SchedulerEvent>,
+    ) {
+        self.apply_test_subject(world, Subject::Person(actor.clone()), reply, events);
+    }
+    fn apply_test_ward(
+        &mut self,
+        world: &mut World,
+        ward: PlanningWard,
+        reply: &str,
+        events: &mut Vec<SchedulerEvent>,
+    ) {
+        self.apply_test_subject(world, Subject::Ward(ward), reply, events);
+    }
+}
+
+#[test]
+fn ward_semantic_replay_keeps_newer_mood_and_reflection_bookkeeping() {
+    let mut world = world_with_cast();
+    let mut night = office(all_tiers(), &world, 0.0);
+    let reply = r#"ward_mood {"mood":"First reflection"}"#;
+    night.apply_test_ward(&mut world, PlanningWard::Weigh, reply, &mut Vec::new());
+    let totals = night.totals();
+    world
+        .ward_moods
+        .insert(PlanningWard::Weigh, "Newer mood".into());
+    let original = world.clone();
+    night.in_flight = Some(Flight {
+        semantic: OperationId {
+            producer: NIGHT_PRODUCER,
+            sequence: 1,
+        },
+        owed_day: 0,
+        presence_epoch: None,
+        subject: Subject::Ward(PlanningWard::Weigh),
+        request_id: RequestId(999),
+        prompt: "new execution".into(),
+    });
+    let mut events = Vec::new();
+    night.apply(
+        1.0,
+        &mut world,
+        Completion {
+            request_id: RequestId(999),
+            result: Ok(reply.into()),
+            duration_seconds: 0.2,
+        },
+        &mut events,
+    );
+    assert_eq!(world, original);
+    assert_eq!(night.totals(), totals);
+    assert!(matches!(
+        events.as_slice(),
+        [SchedulerEvent::ActionReceipt(_)]
+    ));
+    for (index, result) in [
+        Err(CognitionError::new("TimeoutError")),
+        Ok(format!("{reply}\n# conflicting comment")),
+        Ok("x".repeat(crate::MAX_LLM_REPLY_CHARS + 1)),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        night.in_flight = Some(Flight {
+            semantic: OperationId {
+                producer: NIGHT_PRODUCER,
+                sequence: 1,
+            },
+            owed_day: 0,
+            presence_epoch: None,
+            subject: Subject::Ward(PlanningWard::Weigh),
+            request_id: RequestId(2000 + index as u64),
+            prompt: "new execution".into(),
+        });
+        let mut events = Vec::new();
+        night.apply(
+            2.0,
+            &mut world,
+            Completion {
+                request_id: RequestId(2000 + index as u64),
+                result,
+                duration_seconds: 0.2,
+            },
+            &mut events,
+        );
+        assert_eq!(world, original);
+        assert_eq!(
+            night.totals(),
+            totals,
+            "a conflicting execution cannot spend a duty twice"
+        );
+        assert!(matches!(
+            events.as_slice(),
+            [SchedulerEvent::CommandAdmissionRefused {
+                retryable: false,
+                ..
+            }]
+        ));
+    }
+}
+
+#[test]
+fn busy_night_obligation_does_not_rebind_after_departure_and_reentry() {
+    struct Busy;
+    impl Cognition for Busy {
+        fn request(&mut self, _: String) -> Result<RequestId, CognitionBusy> {
+            Err(CognitionBusy)
+        }
+    }
+    let mut world = world_with_cast();
+    let actor = ActorId::from_raw("mjr01");
+    let mut night = office(all_tiers(), &world, 0.0);
+    night.queue.push_back(Due {
+        subject: Subject::Person(actor.clone()),
+        day: 0,
+        semantic: None,
+        presence_epoch: None,
+    });
+    night.submit(
+        0.0,
+        &mut world,
+        &clock(),
+        &mut Busy,
+        &env(),
+        &mut Vec::new(),
+    );
+    let due = night.queue.front().unwrap().clone();
+    assert!(due.semantic.is_some());
+    assert_eq!(due.presence_epoch, Some(0));
+    world
+        .transition_presence(
+            std::slice::from_ref(&actor),
+            crate::Presence::BeyondTheWalls,
+            &Default::default(),
+        )
+        .unwrap();
+    world
+        .transition_presence(
+            std::slice::from_ref(&actor),
+            crate::Presence::InCity,
+            &[(actor.clone(), Vec3::ZERO)].into_iter().collect(),
+        )
+        .unwrap();
+    night.submit(
+        1.0,
+        &mut world,
+        &clock(),
+        &mut Busy,
+        &env(),
+        &mut Vec::new(),
+    );
+    assert!(night.queue.is_empty());
+    assert!(night.in_flight.is_none());
+    assert!(
+        !world
+            .command_ledger
+            .protected
+            .contains(&due.semantic.unwrap())
+    );
+    assert_eq!(night.totals().1, 1);
 }

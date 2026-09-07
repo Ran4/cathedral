@@ -381,6 +381,8 @@ pub enum IntentTarget {
 /// pressing needs preempt it, and both endings are percepts.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TravelIntent {
+    /// Present for a receipted provider undertaking. Routine duties use None.
+    pub receipt: Option<crate::receipts::CommandId>,
     pub target: IntentTarget,
     /// Real-seconds lifetime, priced from the route at intent time
     /// ([`crate::GO_TO_BUDGET_FACTOR`] × expected travel time, floored) —
@@ -401,6 +403,10 @@ pub struct TravelIntent {
 /// sees a person who has changed their habits.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RoundEdit {
+    pub receipt: Option<crate::receipts::CommandId>,
+    pub presence_epoch: Option<u64>,
+    /// Ward teaching commits only when the Round accepts the edit.
+    pub teach_place_on_commit: bool,
     /// Zero-based index into [`CharacterState::daily_round`] — which is exactly
     /// the round's resolved leg list, one prose line per leg. The *model* names
     /// legs from 1, because the sheet numbers them that way; the verb subtracts

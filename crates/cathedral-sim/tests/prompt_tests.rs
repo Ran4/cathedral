@@ -146,6 +146,7 @@ fn the_sheet_says_where_the_current_walk_is_going() {
             choke_wait: 0.0,
         });
         state.intent = Some(TravelIntent {
+            receipt: None,
             target: IntentTarget::Place {
                 place_id: PlaceId::from_raw("pl_x9k2"),
                 name: "the Chandlery".into(),

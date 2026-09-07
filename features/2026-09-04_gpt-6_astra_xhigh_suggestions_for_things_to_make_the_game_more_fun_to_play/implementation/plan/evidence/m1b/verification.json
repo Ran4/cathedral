@@ -1,0 +1,538 @@
+{
+  "schema": 1,
+  "head": "2697a0a9b1a0d3d08bd25c9d4bd64dddf9b7993c",
+  "scope": "Combined per-target verification: full workspace, replacing all sim/host targets, then replacing final changed semantic-root targets. Unrelated backend targets retain full-workspace result.",
+  "runs": [
+    {
+      "log": "workspace-first.log",
+      "targets": {
+        "cathedral_backends": {
+          "passed": 148,
+          "failed": 0,
+          "ignored": 0
+        },
+        "cathedral_headless": {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        "curiosity_walk": {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        "knowledge_consequences": {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        "knowledge_provider_probe": {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 2
+        },
+        "place_estimates_evidence": {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 1
+        },
+        "pollen_cadence": {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 1
+        },
+        "cathedral_sim": {
+          "passed": 589,
+          "failed": 0,
+          "ignored": 0
+        },
+        "attention_tests": {
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        "conversation_tests": {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 0
+        },
+        "custody_tests": {
+          "passed": 26,
+          "failed": 0,
+          "ignored": 0
+        },
+        "dogs_tests": {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        "e2e_fake": {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        "engine_tests": {
+          "passed": 69,
+          "failed": 0,
+          "ignored": 0
+        },
+        "floor_tests": {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        "golden_prompts": {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 1
+        },
+        "knowledge_tests": {
+          "passed": 103,
+          "failed": 0,
+          "ignored": 0
+        },
+        "marks_tests": {
+          "passed": 43,
+          "failed": 0,
+          "ignored": 0
+        },
+        "parse_tests": {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        "place_estimates": {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        "prompt_quirks": {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        "prompt_tests": {
+          "passed": 30,
+          "failed": 0,
+          "ignored": 0
+        },
+        "receipt_allocation_tests": {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        "scheduler_tests": {
+          "passed": 26,
+          "failed": 1,
+          "ignored": 0
+        },
+        "seed_tests": {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        "sim_tests": {
+          "passed": 41,
+          "failed": 0,
+          "ignored": 0
+        },
+        "sounds_tests": {
+          "passed": 19,
+          "failed": 0,
+          "ignored": 0
+        },
+        "speech_router_tests": {
+          "passed": 47,
+          "failed": 0,
+          "ignored": 0
+        },
+        "supply_chain_tests": {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        "cathedralbevy": {
+          "passed": 517,
+          "failed": 11,
+          "ignored": 3
+        },
+        "supply_chain_host_tests": {
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        "doc:cathedral_backends": {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        "doc:cathedral_sim": {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      }
+    },
+    {
+      "log": "sim-host-final.log",
+      "targets": {
+        "cathedral_sim": {
+          "passed": 589,
+          "failed": 0,
+          "ignored": 0
+        },
+        "attention_tests": {
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        "conversation_tests": {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 0
+        },
+        "custody_tests": {
+          "passed": 26,
+          "failed": 0,
+          "ignored": 0
+        },
+        "dogs_tests": {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        "e2e_fake": {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        "engine_tests": {
+          "passed": 69,
+          "failed": 0,
+          "ignored": 0
+        },
+        "floor_tests": {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        "golden_prompts": {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 1
+        },
+        "knowledge_tests": {
+          "passed": 103,
+          "failed": 0,
+          "ignored": 0
+        },
+        "marks_tests": {
+          "passed": 43,
+          "failed": 0,
+          "ignored": 0
+        },
+        "parse_tests": {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        "place_estimates": {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        "prompt_quirks": {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        "prompt_tests": {
+          "passed": 30,
+          "failed": 0,
+          "ignored": 0
+        },
+        "receipt_allocation_tests": {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        "scheduler_tests": {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 0
+        },
+        "seed_tests": {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        "sim_tests": {
+          "passed": 41,
+          "failed": 0,
+          "ignored": 0
+        },
+        "sounds_tests": {
+          "passed": 19,
+          "failed": 0,
+          "ignored": 0
+        },
+        "speech_router_tests": {
+          "passed": 47,
+          "failed": 0,
+          "ignored": 0
+        },
+        "supply_chain_tests": {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        "cathedralbevy": {
+          "passed": 528,
+          "failed": 0,
+          "ignored": 3
+        },
+        "supply_chain_host_tests": {
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        "doc:cathedral_sim": {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      }
+    },
+    {
+      "log": "committed-root-final.log",
+      "targets": {
+        "cathedral_sim": {
+          "passed": 589,
+          "failed": 0,
+          "ignored": 0
+        },
+        "engine_tests": {
+          "passed": 69,
+          "failed": 0,
+          "ignored": 0
+        },
+        "scheduler_tests": {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 0
+        },
+        "speech_router_tests": {
+          "passed": 47,
+          "failed": 0,
+          "ignored": 0
+        }
+      }
+    }
+  ],
+  "combined_targets": {
+    "cathedral_backends": {
+      "passed": 148,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "workspace-first.log"
+    },
+    "cathedral_headless": {
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "workspace-first.log"
+    },
+    "curiosity_walk": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "workspace-first.log"
+    },
+    "knowledge_consequences": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "workspace-first.log"
+    },
+    "knowledge_provider_probe": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 2,
+      "verified_by": "workspace-first.log"
+    },
+    "place_estimates_evidence": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 1,
+      "verified_by": "workspace-first.log"
+    },
+    "pollen_cadence": {
+      "passed": 15,
+      "failed": 0,
+      "ignored": 1,
+      "verified_by": "workspace-first.log"
+    },
+    "cathedral_sim": {
+      "passed": 589,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "committed-root-final.log"
+    },
+    "attention_tests": {
+      "passed": 16,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "conversation_tests": {
+      "passed": 15,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "custody_tests": {
+      "passed": 26,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "dogs_tests": {
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "e2e_fake": {
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "engine_tests": {
+      "passed": 69,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "committed-root-final.log"
+    },
+    "floor_tests": {
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "golden_prompts": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 1,
+      "verified_by": "sim-host-final.log"
+    },
+    "knowledge_tests": {
+      "passed": 103,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "marks_tests": {
+      "passed": 43,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "parse_tests": {
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "place_estimates": {
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "prompt_quirks": {
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "prompt_tests": {
+      "passed": 30,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "receipt_allocation_tests": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "scheduler_tests": {
+      "passed": 27,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "committed-root-final.log"
+    },
+    "seed_tests": {
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "sim_tests": {
+      "passed": 41,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "sounds_tests": {
+      "passed": 19,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "speech_router_tests": {
+      "passed": 47,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "committed-root-final.log"
+    },
+    "supply_chain_tests": {
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "cathedralbevy": {
+      "passed": 528,
+      "failed": 0,
+      "ignored": 3,
+      "verified_by": "sim-host-final.log"
+    },
+    "supply_chain_host_tests": {
+      "passed": 20,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    },
+    "doc:cathedral_backends": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "workspace-first.log"
+    },
+    "doc:cathedral_sim": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "verified_by": "sim-host-final.log"
+    }
+  },
+  "totals": {
+    "passed": 1810,
+    "failed": 0,
+    "ignored": 8
+  },
+  "target_count": 33
+}

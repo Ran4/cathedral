@@ -18,6 +18,11 @@
 //! rides the hot channel and no longer bumps the revision at all
 //! ([`World::update_positions`]), so it neither needs nor triggers that flush.
 
+mod command_policy;
+pub use command_policy::CommandPolicy;
+
+use crate::receipts::{Admission, LEGACY_PRODUCER, Outcome, Receipt};
+
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     path::PathBuf,
@@ -368,6 +373,12 @@ impl Default for EngineConfig {
 /// Everything the host asks the engine to do, in one ordered queue (D27).
 #[derive(Debug, Clone, PartialEq)]
 pub enum EngineCommand {
+    /// Stable producer identity, assigned once before transport. Nested wrappers
+    /// are refused; raw legacy calls use an explicit one-shot engine producer.
+    Identified {
+        id: crate::receipts::CommandId,
+        command: Box<EngineCommand>,
+    },
     // -------- player / game (formerly the `BridgeCommand` wire types)
     SpatialUpdate {
         spatial_seq: i64,
@@ -696,6 +707,15 @@ pub struct LampView {
 /// Everything the engine tells the host.
 #[derive(Debug, Clone, PartialEq)]
 pub enum EngineMessage {
+    /// Private command-service receipt; never a PublicSnapshot field.
+    ActionReceipt(crate::receipts::Receipt),
+    /// Transport admission failed before a domain dispatch. A retryable refusal
+    /// is not a committed Rejected receipt; the same envelope may be resent.
+    CommandAdmissionRefused {
+        id: Option<crate::receipts::CommandId>,
+        reason: Outcome,
+        retryable: bool,
+    },
     /// Once, first, on the first poll — the handshake's `ready`.
     Ready {
         capabilities: Capabilities,
@@ -1786,6 +1806,7 @@ impl Engine {
 
         // The scheduler's turn produced domain events in this same poll; the
         // floor they acquire here gates the *next* one.
+        crate::receipts::reconcile_travel(&mut self.world, now);
         self.flush(now, &mut out);
 
         // Last: the clock, reflecting any `CycleTimeScale` applied above, and
@@ -2156,11 +2177,171 @@ impl Engine {
         completions: &mut Vec<Completion>,
         out: &mut Vec<EngineMessage>,
     ) {
-        match command {
+        let (id, command) = match command {
+            EngineCommand::Identified { id, command } => (Some(id), *command),
+            command => (None, command),
+        };
+        if matches!(command, EngineCommand::Identified { .. }) {
+            if let Some(id) = id {
+                out.push(EngineMessage::CommandAdmissionRefused {
+                    id: Some(id),
+                    reason: Outcome::rejected(
+                        "nested_identity",
+                        "nested command envelopes are invalid",
+                    ),
+                    retryable: false,
+                });
+            }
+            return;
+        }
+        if command.policy() != CommandPolicy::Consequential {
+            self.dispatch_command(now, None, command, completions, out);
+            return;
+        }
+        let correlation = command
+            .correlation()
+            .filter(|id| id.len() <= 128)
+            .map(str::to_owned);
+        let id = match id {
+            Some(id) => id,
+            None => match self.world.command_ledger.issue(LEGACY_PRODUCER) {
+                Ok(operation) => operation.command(0),
+                Err(reason) => {
+                    Self::refuse_admission(None, correlation, reason, false, out);
+                    return;
+                }
+            },
+        };
+        if !command.valid_numbers()
+            || !command.bounded_raw_payload()
+            || command.correlation().is_some_and(|id| id.len() > 128)
+        {
+            Self::refuse_admission(
+                Some(id),
+                correlation,
+                Outcome::rejected(
+                    "invalid_payload",
+                    "command numbers or payload size are invalid",
+                ),
+                false,
+                out,
+            );
+            return;
+        }
+        let affected = command.affected(&self.world);
+        let payload = command.payload().expect("consequential payload");
+        let receipt = match self.world.command_ledger.begin(id, &payload) {
+            Admission::New(ticket) => {
+                let recording = matches!(command, EngineCommand::PlayerRecording { .. });
+                let outcome = if recording {
+                    match self.world.command_ledger.protect(id.operation) {
+                        Ok(()) => self
+                            .dispatch_command(now, Some(id), command, completions, out)
+                            .expect("consequential outcome"),
+                        Err(reason) => {
+                            Self::refuse_admission(
+                                Some(id),
+                                correlation.clone(),
+                                reason.clone(),
+                                false,
+                                out,
+                            );
+                            reason
+                        }
+                    }
+                } else {
+                    self.dispatch_command(now, Some(id), command, completions, out)
+                        .expect("consequential outcome")
+                };
+                let rejected = !outcome.succeeded();
+                let receipt = self
+                    .world
+                    .command_ledger
+                    .finish(ticket, now, outcome, affected);
+                if recording && rejected {
+                    self.world.command_ledger.unprotect(id.operation);
+                }
+                receipt
+            }
+            Admission::Replay(receipt) => {
+                Self::project_receipt(&receipt, correlation.as_deref(), out);
+                receipt
+            }
+            Admission::Refused(reason) | Admission::Deferred(reason) => {
+                if let Some(request_id) = correlation {
+                    out.push(EngineMessage::CommandResult {
+                        request_id,
+                        success: false,
+                        error_code: Some(reason.code.clone()),
+                        message: reason.message.clone(),
+                    });
+                }
+                let retryable =
+                    reason.code == "replay_capacity" || reason.code == "dispatch_pending";
+                out.push(EngineMessage::CommandAdmissionRefused {
+                    id: Some(id),
+                    reason,
+                    retryable,
+                });
+                return;
+            }
+        };
+        out.push(EngineMessage::ActionReceipt(receipt));
+        self.speech_router
+            .finish_resolved(now, &mut speech_context!(self), out);
+    }
+
+    fn refuse_admission(
+        id: Option<crate::receipts::CommandId>,
+        correlation: Option<String>,
+        reason: Outcome,
+        retryable: bool,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        if let Some(request_id) = correlation {
+            out.push(EngineMessage::CommandResult {
+                request_id,
+                success: false,
+                error_code: Some(reason.code.clone()),
+                message: reason.message.clone(),
+            });
+        }
+        out.push(EngineMessage::CommandAdmissionRefused {
+            id,
+            reason,
+            retryable,
+        });
+    }
+
+    fn project_receipt(receipt: &Receipt, correlation: Option<&str>, out: &mut Vec<EngineMessage>) {
+        if let Some(request_id) = correlation {
+            let outcome = &receipt.outcome;
+            out.push(EngineMessage::CommandResult {
+                request_id: request_id.to_owned(),
+                success: outcome.succeeded(),
+                error_code: (!outcome.succeeded()).then(|| outcome.code.clone()),
+                message: outcome.message.clone(),
+            });
+        }
+    }
+
+    fn dispatch_command(
+        &mut self,
+        now: f64,
+        semantic: Option<crate::receipts::CommandId>,
+        command: EngineCommand,
+        completions: &mut Vec<Completion>,
+        out: &mut Vec<EngineMessage>,
+    ) -> Option<Outcome> {
+        let outcome = match command {
+            EngineCommand::Identified { .. } => unreachable!("envelope removed before dispatch"),
             EngineCommand::SpatialUpdate {
                 spatial_seq,
                 updates,
-            } => self.spatial_update(spatial_seq, &updates, out),
+            } => {
+                self.spatial_update(spatial_seq, &updates, out);
+                return None;
+            }
 
             EngineCommand::PlayerOffer {
                 request_id,
@@ -2332,7 +2513,8 @@ impl Engine {
             } => self.player_say(now, &request_id, &text, position_m, spatial_seq, out),
 
             EngineCommand::PlayerAttention { actor_id } => {
-                self.conversation.observe_focus(now, actor_id)
+                self.conversation.observe_focus(now, actor_id);
+                return None;
             }
             EngineCommand::PlayerUtteranceStarted { wav_basename } => {
                 self.speech_router.capture_utterance(
@@ -2340,6 +2522,7 @@ impl Engine {
                     &wav_basename,
                     &mut speech_context!(self),
                 );
+                return None;
             }
 
             EngineCommand::PlayerGrabbed { holder_id } => self.player_grabbed(now, &holder_id),
@@ -2391,14 +2574,18 @@ impl Engine {
                     Ok(line) => {
                         out.push(EngineMessage::Diagnostic(format!("[marks] {line}")));
                         self.flush(now, out);
+                        Outcome::completed(line)
                     }
                     // Out of reach, or somebody else scrubbed it first: the
                     // hold simply produced nothing, which is what releasing
                     // early does too.
-                    Err(error) => out.push(EngineMessage::Diagnostic(format!(
-                        "[marks] scrub refused: {}",
-                        error.message
-                    ))),
+                    Err(error) => {
+                        out.push(EngineMessage::Diagnostic(format!(
+                            "[marks] scrub refused: {}",
+                            error.message
+                        )));
+                        Outcome::rejected(error.code.as_str(), &error.message)
+                    }
                 }
             }
 
@@ -2413,15 +2600,19 @@ impl Engine {
                     Ok(line) => {
                         out.push(EngineMessage::Diagnostic(format!("[marks] {line}")));
                         self.flush(now, out);
+                        Outcome::completed(line)
                     }
                     // The pen pocketed, a step taken, or somebody chalked the
                     // same sign a moment ago: the hold produced nothing, which
                     // is what releasing early does too. The next
                     // `ChalkStanding` tells the HUD why.
-                    Err(error) => out.push(EngineMessage::Diagnostic(format!(
-                        "[marks] chalk refused: {}",
-                        error.message
-                    ))),
+                    Err(error) => {
+                        out.push(EngineMessage::Diagnostic(format!(
+                            "[marks] chalk refused: {}",
+                            error.message
+                        )));
+                        Outcome::rejected(error.code.as_str(), &error.message)
+                    }
                 }
             }
 
@@ -2440,41 +2631,55 @@ impl Engine {
                     "[clock] debug time scale ×{}",
                     self.clock.scale()
                 )));
+                Outcome::completed("calendar rate changed")
             }
 
             EngineCommand::SetWeatherOverride { kind, intensity } => {
                 let game_days = self.clock.game_days(now);
                 self.weather.set_override(kind, intensity, game_days);
                 self.update_weather(now, false, out);
+                Outcome::completed("weather override set")
             }
 
             EngineCommand::ClearWeatherOverride => {
                 let game_days = self.clock.game_days(now);
                 self.weather.clear_override(game_days);
                 self.update_weather(now, false, out);
+                Outcome::completed("weather override cleared")
             }
 
             // Fire-and-forget, and idempotent by contract (D26): duplicates and
             // ids whose failsafe already expired are legitimately unknown.
-            EngineCommand::SpeechPresented { event_id } => self.floor.release(now, &event_id),
+            EngineCommand::SpeechPresented { event_id } => {
+                self.floor.release(now, &event_id);
+                return None;
+            }
 
             EngineCommand::SetTtsBackend {
                 request_id,
                 backend,
             } => self.set_tts_backend(&request_id, backend, out),
 
-            EngineCommand::LlmCompletion(completion) => completions.push(completion),
+            EngineCommand::LlmCompletion(completion) => {
+                completions.push(completion);
+                return None;
+            }
 
-            EngineCommand::BackendStatus(status) => out.push(EngineMessage::Status(status)),
+            EngineCommand::BackendStatus(status) => {
+                out.push(EngineMessage::Status(status));
+                return None;
+            }
 
             EngineCommand::Tts(outcome) => {
                 self.speech_router
-                    .on_tts(now, outcome, &mut speech_context!(self), out)
+                    .on_tts(now, outcome, &mut speech_context!(self), out);
+                return None;
             }
 
             EngineCommand::Transcription(outcome) => {
                 self.speech_router
-                    .on_transcription(now, outcome, &mut speech_context!(self), out)
+                    .on_transcription(now, outcome, &mut speech_context!(self), out);
+                return None;
             }
 
             EngineCommand::PlayerRecording {
@@ -2485,6 +2690,7 @@ impl Engine {
                 spatial_seq,
             } => self.speech_router.on_recording(
                 now,
+                semantic,
                 &request_id,
                 &wav_basename,
                 stt_backend,
@@ -2497,44 +2703,56 @@ impl Engine {
             EngineCommand::PlayerAudioBegin {
                 wav_basename,
                 sample_rate,
-            } => self.speech_router.on_audio_begin(
-                now,
-                &wav_basename,
-                sample_rate,
-                &mut speech_context!(self),
-                out,
-            ),
+            } => {
+                self.speech_router.on_audio_begin(
+                    now,
+                    &wav_basename,
+                    sample_rate,
+                    &mut speech_context!(self),
+                    out,
+                );
+                return None;
+            }
 
             EngineCommand::PlayerAudioChunk {
                 wav_basename,
                 seq,
                 samples,
-            } => self.speech_router.on_audio_chunk(
-                now,
-                &wav_basename,
-                seq,
-                &samples,
-                &mut speech_context!(self),
-                out,
-            ),
+            } => {
+                self.speech_router.on_audio_chunk(
+                    now,
+                    &wav_basename,
+                    seq,
+                    &samples,
+                    &mut speech_context!(self),
+                    out,
+                );
+                return None;
+            }
 
             EngineCommand::PlayerAudioEnd {
                 wav_basename,
                 chunk_count,
                 silent,
-            } => self.speech_router.on_audio_end(
-                now,
-                &wav_basename,
-                chunk_count,
-                silent,
-                &mut speech_context!(self),
-                out,
-            ),
+            } => {
+                self.speech_router.on_audio_end(
+                    now,
+                    &wav_basename,
+                    chunk_count,
+                    silent,
+                    &mut speech_context!(self),
+                    out,
+                );
+                return None;
+            }
 
-            EngineCommand::PlayerAudioAbort { wav_basename } => self
-                .speech_router
-                .on_audio_abort(&wav_basename, &mut speech_context!(self)),
-        }
+            EngineCommand::PlayerAudioAbort { wav_basename } => {
+                self.speech_router
+                    .on_audio_abort(&wav_basename, &mut speech_context!(self));
+                return None;
+            }
+        };
+        Some(outcome)
     }
 
     /// `_handle_spatial_update` (`server.py:907-946`). Fire-and-forget: a bad
@@ -2583,9 +2801,9 @@ impl Engine {
         args: Value,
         position: Option<(i64, Vec3)>,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         let result = self.apply_player_action(verb, &args, position);
-        self.finish_player_action(now, request_id, result, out);
+        self.finish_player_action(now, request_id, result, out)
     }
 
     fn apply_player_action(
@@ -2614,7 +2832,11 @@ impl Engine {
         request_id: &str,
         result: Result<String, CommandError>,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
+        let outcome = match &result {
+            Ok(line) => Outcome::completed(line),
+            Err(error) => Outcome::rejected(error.code.as_str(), &error.message),
+        };
         match result {
             Ok(line) => {
                 self.transcript.push(line.clone());
@@ -2631,6 +2853,7 @@ impl Engine {
                 out.push(command_failure(request_id, error.code, &error.message));
             }
         }
+        outcome
     }
 
     /// The player answering an offer (`accept_offered_item` / `decline_offer`),
@@ -2652,7 +2875,7 @@ impl Engine {
         position_m: Vec3,
         spatial_seq: i64,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         // Resolved before the apply: a successful accept removes the offer.
         let offerer_id = self
             .world
@@ -2670,7 +2893,7 @@ impl Engine {
             self.scheduler
                 .prioritize(&self.world, offerer_id, false, now);
         }
-        self.finish_player_action(now, request_id, result, out);
+        self.finish_player_action(now, request_id, result, out)
     }
 
     /// `_handle_debug_player_say` (`server.py:1027-1064`) — fake mode only, full
@@ -2686,14 +2909,17 @@ impl Engine {
         position_m: Vec3,
         spatial_seq: i64,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         if !self.config.fake_mode {
             out.push(command_failure(
                 request_id,
                 CommandErrorCode::Forbidden,
                 "debug_player_say is available only in fake mode",
             ));
-            return;
+            return Outcome::rejected(
+                "forbidden",
+                "debug_player_say is available only in fake mode",
+            );
         }
         let args = json!({
             "text": text,
@@ -2706,7 +2932,7 @@ impl Engine {
             self.scheduler
                 .prioritize(&self.world, target_id, false, now);
         }
-        self.finish_player_action(now, request_id, result, out);
+        self.finish_player_action(now, request_id, result, out)
     }
 
     /// The typed-chat `say` (the Enter box), available in every mode. From the
@@ -2722,7 +2948,7 @@ impl Engine {
         position_m: Vec3,
         spatial_seq: i64,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         let result = (|| -> Result<String, CommandError> {
             let player_id = self.config.player_id.clone();
             self.world.update_positions(
@@ -2750,11 +2976,11 @@ impl Engine {
             )));
             Ok(line)
         })();
-        self.finish_player_action(now, request_id, result, out);
+        self.finish_player_action(now, request_id, result, out)
     }
 
     /// `_handle_player_sound` (`server.py:1066-1092`) — the F key.
-    fn player_sound(&mut self, now: f64, sound_id: &str, out: &mut Vec<EngineMessage>) {
+    fn player_sound(&mut self, now: f64, sound_id: &str, out: &mut Vec<EngineMessage>) -> Outcome {
         let sound = self
             .world
             .sound_catalog
@@ -2768,21 +2994,25 @@ impl Engine {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid player_sound: there is no player-emittable sound '{sound_id}'"
             )));
-            return;
+            return Outcome::rejected(
+                "unknown_sound",
+                "there is no player-emittable sound with that identity",
+            );
         };
         if !self.world.sounds_enabled {
-            return;
+            return Outcome::rejected("sounds_disabled", "sounds are disabled");
         }
         // Dropped silently, not queued: percepts are prompt tokens, and holding
         // F must not become a denial-of-service on the LLM bill.
         if now - self.last_player_sound_at < self.config.sound_cooldown_seconds {
-            return;
+            return Outcome::rejected("cooldown", "the player sound is still cooling down");
         }
         self.last_player_sound_at = now;
         let player_id = self.config.player_id.clone();
         let line = emit_sound(&mut self.world, Some(&player_id), &sound, None);
         self.transcript.push(line);
         self.flush(now, out);
+        Outcome::completed("player sound emitted")
     }
 
     /// `_handle_debug_sound` (`server.py:1094-1112`) — the drive-mode town bell,
@@ -2798,19 +3028,20 @@ impl Engine {
         sound_id: &str,
         position_m: Vec3,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         let Some(sound) = self.world.sound_catalog.get(sound_id).cloned() else {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid {verb}: there is no sound '{sound_id}'"
             )));
-            return;
+            return Outcome::rejected("unknown_sound", "there is no sound with that identity");
         };
         if !self.world.sounds_enabled {
-            return;
+            return Outcome::rejected("sounds_disabled", "sounds are disabled");
         }
         let line = emit_sound(&mut self.world, None, &sound, Some(position_m));
         self.transcript.push(line);
         self.flush(now, out);
+        Outcome::completed("world sound emitted")
     }
 
     /// Debug carriage write (`features/npc_bodies.md` §8): set a body status on
@@ -2825,9 +3056,10 @@ impl Engine {
         kind: StatusKind,
         value: f64,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         if self.world.debug_set_status(who, kind, value) {
             self.flush(now, out);
+            Outcome::completed("body status set")
         } else {
             // A poke at nobody is a logged Diagnostic (host: `logs.jsonl` source
             // `engine` + stderr; headless: stderr), never a fault — a typo must
@@ -2835,17 +3067,18 @@ impl Engine {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid debug_status: no character with the name or id '{who}'"
             )));
+            Outcome::rejected("unknown_actor", "no character matches that handle")
         }
     }
 
     /// Back-date a restitution notice against somebody so the ward's chalking
     /// beat has something to find (`features/implemented/chalking_the_walls.md` M1).
-    fn debug_owe(&mut self, now: f64, who: &str, out: &mut Vec<EngineMessage>) {
+    fn debug_owe(&mut self, now: f64, who: &str, out: &mut Vec<EngineMessage>) -> Outcome {
         let Some(id) = self.world.resolve_debug_handle(who) else {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid debug_owe: no character with the name or id '{who}'"
             )));
-            return;
+            return Outcome::rejected("unknown_actor", "no character matches that handle");
         };
         let name = self
             .world
@@ -2855,7 +3088,7 @@ impl Engine {
         // Back-dated past the age gate, so the very next beat chalks the door
         // rather than making a scripted run wait out two game days.
         let raised = self.clock.game_days(now) - crate::notices::CROSS_AFTER_GAME_DAYS - 0.5;
-        self.world.notices.raise(
+        let raised_id = self.world.notices.raise(
             format!("{name}"),
             "owes for goods taken and has not paid".into(),
             None,
@@ -2866,9 +3099,13 @@ impl Engine {
             None,
             None,
         );
+        if raised_id.is_none() {
+            return Outcome::rejected("notice_capacity", "the notice store is full");
+        }
         out.push(EngineMessage::Diagnostic(format!(
             "[smart actors] {name} owes and has not paid; the ward will chalk their door"
         )));
+        Outcome::completed("restitution notice raised")
     }
 
     /// Resolve a drive-mode anchor handle: a person's name or id names their
@@ -2886,19 +3123,25 @@ impl Engine {
     }
 
     /// CATHEDRAL_DRIVE `chalk <kind> -> <anchor>`.
-    fn debug_chalk(&mut self, now: f64, kind: &str, handle: &str, out: &mut Vec<EngineMessage>) {
+    fn debug_chalk(
+        &mut self,
+        now: f64,
+        kind: &str,
+        handle: &str,
+        out: &mut Vec<EngineMessage>,
+    ) -> Outcome {
         let Some(kind) = crate::marks::MarkKind::parse(kind) else {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid chalk: there is no mark kind '{kind}'"
             )));
-            return;
+            return Outcome::rejected("unknown_kind", "there is no mark kind with that name");
         };
         let Some(anchor) = self.resolve_mark_anchor(handle) else {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid chalk: nothing called '{handle}' has a door or is a \
                  registered place"
             )));
-            return;
+            return Outcome::rejected("unknown_anchor", "nothing matches that chalkable anchor");
         };
         // Authored as the *player's* hand, because the forged cross is the case
         // worth eyeballing — and because no reader may branch on it anyway.
@@ -2917,21 +3160,25 @@ impl Engine {
                     drawn.id
                 )));
                 self.flush(now, out);
+                Outcome::completed("mark drawn or refreshed")
             }
-            None => out.push(EngineMessage::Diagnostic(format!(
-                "[smart actors] invalid chalk: a {kind} does not belong on '{handle}'"
-            ))),
+            None => {
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[smart actors] invalid chalk: a {kind} does not belong on '{handle}'"
+                )));
+                Outcome::rejected("invalid_anchor", "that mark does not belong on that anchor")
+            }
         }
     }
 
     /// CATHEDRAL_DRIVE `scrub <anchor>` — the nearest live mark there.
-    fn debug_scrub(&mut self, now: f64, handle: &str, out: &mut Vec<EngineMessage>) {
+    fn debug_scrub(&mut self, now: f64, handle: &str, out: &mut Vec<EngineMessage>) -> Outcome {
         let Some(anchor) = self.resolve_mark_anchor(handle) else {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid scrub: nothing called '{handle}' has a door or is a \
                  registered place"
             )));
-            return;
+            return Outcome::rejected("unknown_anchor", "nothing matches that chalkable anchor");
         };
         let found = self
             .world
@@ -2946,10 +3193,14 @@ impl Engine {
                     "[smart actors] the player scrubs {label} off {handle} (mark {id})"
                 )));
                 self.flush(now, out);
+                Outcome::completed("mark scrubbed")
             }
-            None => out.push(EngineMessage::Diagnostic(format!(
-                "[smart actors] invalid scrub: there is no chalk on '{handle}'"
-            ))),
+            None => {
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[smart actors] invalid scrub: there is no chalk on '{handle}'"
+                )));
+                Outcome::rejected("no_such_mark", "there is no chalk on that anchor")
+            }
         }
     }
 
@@ -2964,12 +3215,12 @@ impl Engine {
         officer: &str,
         target: Option<&str>,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         let Some(officer_id) = self.world.resolve_debug_handle(officer) else {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid debug_seize: no character with the name or id '{officer}'"
             )));
-            return;
+            return Outcome::rejected("unknown_actor", "no officer matches that handle");
         };
         let target_id = match target {
             Some(target) => match self.world.resolve_debug_handle(target) {
@@ -2978,11 +3229,12 @@ impl Engine {
                     out.push(EngineMessage::Diagnostic(format!(
                         "[smart actors] invalid debug_seize: no character with the name or id '{target}'"
                     )));
-                    return;
+                    return Outcome::rejected("unknown_target", "no target matches that handle");
                 }
             },
             None => self.config.player_id.clone(),
         };
+        let original_officer = self.world.characters[&officer_id].state.clone();
         // Put the officer at arm's reach first. Not a convenience: the verb
         // requires four metres precisely *because* an officer has to close on
         // foot, and `tick_custody` frees anyone whose escort is more than
@@ -3020,10 +3272,19 @@ impl Engine {
                 self.scheduler
                     .prioritize(&self.world, &officer_id, false, now);
                 self.flush(now, out);
+                Outcome::completed("custody taken; escort remains pending")
             }
-            Err(error) => out.push(EngineMessage::Diagnostic(format!(
-                "[smart actors] debug_seize refused: {error}"
-            ))),
+            Err(error) => {
+                self.world
+                    .characters
+                    .get_mut(&officer_id)
+                    .expect("officer exists")
+                    .state = original_officer;
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[smart actors] debug_seize refused: {error}"
+                )));
+                Outcome::rejected(error.code.as_str(), &error.message)
+            }
         }
     }
 
@@ -3038,7 +3299,12 @@ impl Engine {
     /// because the gaol is the thing being looked at; everything after that is
     /// the same `Custody::commit` + [`Self::announce_commitment`] a real arrival
     /// runs, so what it stages is not a special case.
-    fn debug_commit(&mut self, now: f64, target: Option<&str>, out: &mut Vec<EngineMessage>) {
+    fn debug_commit(
+        &mut self,
+        now: f64,
+        target: Option<&str>,
+        out: &mut Vec<EngineMessage>,
+    ) -> Outcome {
         let target_id = match target {
             Some(target) => match self.world.resolve_debug_handle(target) {
                 Some(id) => id,
@@ -3046,7 +3312,7 @@ impl Engine {
                     out.push(EngineMessage::Diagnostic(format!(
                         "[smart actors] invalid debug_commit: no character with the name or id '{target}'"
                     )));
-                    return;
+                    return Outcome::rejected("unknown_target", "no target matches that handle");
                 }
             },
             None => self.config.player_id.clone(),
@@ -3056,7 +3322,7 @@ impl Engine {
                 "[smart actors] debug_commit refused: nobody has them in charge - `seize` first"
                     .to_string(),
             ));
-            return;
+            return Outcome::rejected("not_in_custody", "nobody has them in charge");
         }
         if self.world.custody.is_confined(&target_id) {
             // Refuse *before* rewriting the station and walking people around:
@@ -3066,14 +3332,14 @@ impl Engine {
             out.push(EngineMessage::Diagnostic(
                 "[smart actors] debug_commit refused: they are already committed".to_string(),
             ));
-            return;
+            return Outcome::rejected("already_committed", "they are already committed");
         }
         let Some(gaol) = custody::stone_house(&self.world.places) else {
             out.push(EngineMessage::Diagnostic(
                 "[smart actors] debug_commit refused: there is no Stone House in the registry"
                     .to_string(),
             ));
-            return;
+            return Outcome::rejected("no_station", "there is no Stone House in the registry");
         };
         // The keeper stands at the threshold — confinement here is a person, and
         // a station whose keeper is twenty metres off keeps nobody. A prisoner
@@ -3111,6 +3377,7 @@ impl Engine {
             )));
             self.flush(now, out);
         }
+        Outcome::completed("prisoner committed to the Stone House")
     }
 
     /// Due-expiry adapter registration seam. Called before any same-instant
@@ -3363,7 +3630,7 @@ impl Engine {
         request_id: &str,
         backend: TtsBackendKind,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         if backend != TtsBackendKind::Off && !self.tts.available(backend) {
             // State unchanged — a failed selection must not silence the cast.
             out.push(command_failure(
@@ -3371,7 +3638,10 @@ impl Engine {
                 CommandErrorCode::TtsUnavailable,
                 &format!("{} NPC voice backend is unavailable", backend.as_str()),
             ));
-            return;
+            return Outcome::rejected(
+                "tts_unavailable",
+                format!("{} NPC voice backend is unavailable", backend.as_str()),
+            );
         }
         self.tts_selected = backend;
         self.capabilities.tts_selected = backend;
@@ -3392,6 +3662,7 @@ impl Engine {
             message: Some(backend.as_str().to_string()),
             backend: Some(backend.as_str().to_string()),
         }));
+        Outcome::completed(format!("NPC voice backend set to {}", backend.as_str()))
     }
 
     // ------------------------------------------------------------- fan-out
@@ -3733,6 +4004,13 @@ impl Engine {
                 EventType::Gesture => flush_gesture(&event, out),
             }
         }
+        out.extend(
+            self.world
+                .command_ledger
+                .drain_updates()
+                .into_iter()
+                .map(EngineMessage::ActionReceipt),
+        );
         let residents = self.round.drain_resident_updates(&self.world);
         if self.world.world_revision > self.last_snapshot_revision {
             out.push(EngineMessage::Snapshot(self.snapshot()));
@@ -4209,6 +4487,7 @@ impl Engine {
             if let Some(officer) = self.world.characters.get_mut(&officer_id) {
                 officer.state.places_known.insert(station.place_id.clone());
                 officer.state.intent = Some(TravelIntent {
+                    receipt: None,
                     target: IntentTarget::Place {
                         place_id: station.place_id,
                         name: station.name,
@@ -4242,6 +4521,7 @@ impl Engine {
             let budget = actions::route_budget_for(&self.world, &officer_id, last_seen);
             if let Some(officer) = self.world.characters.get_mut(&officer_id) {
                 officer.state.intent = Some(TravelIntent {
+                    receipt: None,
                     target: IntentTarget::Person {
                         actor_id: prisoner_id,
                         last_seen,
@@ -4497,16 +4777,16 @@ impl Engine {
     /// The host's grab reflex fired (M4c). It is this command — never a sim-side
     /// distance check — that earns the holder their percept and priority turn,
     /// because the host is the only place a 3 m radius can be decided exactly.
-    fn player_grabbed(&mut self, now: f64, holder_id: &ActorId) {
+    fn player_grabbed(&mut self, now: f64, holder_id: &ActorId) -> Outcome {
         let player_id = self.config.player_id.clone();
         let Some(record) = self.world.custody.get(&player_id) else {
-            return;
+            return Outcome::rejected("not_in_custody", "nobody has the player in charge");
         };
         if record.officer.as_ref() != Some(holder_id) && !record.holders.contains(holder_id) {
-            return;
+            return Outcome::rejected("not_holder", "this actor has no grip authority");
         }
         if record.holders.contains(holder_id) {
-            return;
+            return Outcome::rejected("already_held", "this actor already holds the player");
         }
         self.world.custody.grab(&player_id, holder_id.clone());
         // The holder needs the turn here, not the prisoner: against the player
@@ -4516,6 +4796,7 @@ impl Engine {
         self.scheduler
             .prioritize(&self.world, holder_id, false, now);
         self.world.touch_public_state();
+        Outcome::completed("player grip committed")
     }
 
     /// The player has begun to pull — the first of the struggle's two moments.
@@ -4525,13 +4806,13 @@ impl Engine {
     /// *succeeded*. Both go through [`actions::announce_struggle`], the same
     /// call the NPC `struggle` verb makes: one prose implementation, one wake-up
     /// rule, and the cast and the player heard the same way.
-    fn player_struggling(&mut self, _now: f64) {
+    fn player_struggling(&mut self, _now: f64) -> Outcome {
         let player_id = self.config.player_id.clone();
         let Some(record) = self.world.custody.get(&player_id) else {
-            return;
+            return Outcome::rejected("not_in_custody", "nobody has the player in charge");
         };
         if !record.is_held() {
-            return;
+            return Outcome::rejected("not_held", "the player is not held");
         }
         let holders = record.holders.clone();
         actions::announce_struggle(
@@ -4540,19 +4821,20 @@ impl Engine {
             &holders,
             actions::StruggleMoment::Started,
         );
+        Outcome::completed("struggle onset announced")
     }
 
     /// …and once if it succeeds. The escape notice both paths raise is
     /// [`actions::raise_escape_notice`]'s, unanswerable by restitution — escape
     /// closes the "you could have just paid the fee" door, and that is the cost
     /// that makes the choice a choice.
-    fn player_broke_free(&mut self, _now: f64) {
+    fn player_broke_free(&mut self, _now: f64) -> Outcome {
         let player_id = self.config.player_id.clone();
         let Some(record) = self.world.custody.get(&player_id) else {
-            return;
+            return Outcome::rejected("not_in_custody", "nobody has the player in charge");
         };
         if !record.is_held() {
-            return;
+            return Outcome::rejected("not_held", "the player is not held");
         }
         let holders = record.holders.clone();
         self.world.custody.release(&player_id);
@@ -4564,6 +4846,7 @@ impl Engine {
             actions::StruggleMoment::BrokeFree,
         );
         self.world.touch_public_state();
+        Outcome::completed("player released after breaking free")
     }
 
     /// The wake-up every rung of custody owes somebody (`law_and_order.md`
@@ -4691,12 +4974,12 @@ impl Engine {
         topic: &str,
         said: &str,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         let Some(speaker) = self.world.resolve_debug_handle(who) else {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid raise_word: no character with the name or id '{who}'"
             )));
-            return;
+            return Outcome::rejected("unknown_actor", "no character matches that handle");
         };
         let topic = crate::knowledge::Topic::parse_or_talk(topic);
         let game_days = Some(self.clock.game_days(now));
@@ -4718,10 +5001,14 @@ impl Engine {
                     topic.as_str()
                 )));
                 self.flush(now, out);
+                Outcome::completed("word raised")
             }
-            None => out.push(EngineMessage::Diagnostic(
-                "[smart actors] invalid raise_word: the store is full".into(),
-            )),
+            None => {
+                out.push(EngineMessage::Diagnostic(
+                    "[smart actors] invalid raise_word: the store is full".into(),
+                ));
+                Outcome::rejected("knowledge_capacity", "the knowledge store is full")
+            }
         }
     }
     fn debug_seed_fact(
@@ -4730,16 +5017,16 @@ impl Engine {
         id: &str,
         ward: Option<&str>,
         out: &mut Vec<EngineMessage>,
-    ) {
+    ) -> Outcome {
         if !self.world.knowledge_enabled {
-            return;
+            return Outcome::rejected("unavailable_fact", "knowledge is disabled");
         }
         if ward.is_some_and(|w| crate::lore::PlanningWard::parse(w).is_none()) {
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] invalid seed-fact: unknown ward '{}'",
                 ward.unwrap_or_default()
             )));
-            return;
+            return Outcome::rejected("unavailable_fact", "the named ward is unknown");
         }
         let game_days = self.clock.game_days(now);
         // Install the authored row if the world does not already carry it. The
@@ -4761,7 +5048,10 @@ impl Engine {
                     out.push(EngineMessage::Diagnostic(format!(
                         "[smart actors] invalid seed-fact: no row '{id}' in facts.json"
                     )));
-                    return;
+                    return Outcome::rejected(
+                        "unavailable_fact",
+                        "the authored fact is unavailable",
+                    );
                 }
             },
         };
@@ -4807,15 +5097,27 @@ impl Engine {
             }
         }
         self.flush(now, out);
+        Outcome::completed("authored fact delivered")
     }
     /// Rebuild on a real-second cadence; receipt writes may publish immediately.
     /// Compare complete content so cooling alone never flags the host resource.
-    fn ring_knell(&mut self, now: f64, years: u32, at: Vec3, out: &mut Vec<EngineMessage>) {
+    fn ring_knell(
+        &mut self,
+        now: f64,
+        years: u32,
+        at: Vec3,
+        out: &mut Vec<EngineMessage>,
+    ) -> Outcome {
         if !at.is_finite() {
-            return;
+            return Outcome::rejected("invalid_position", "the knell position is not finite");
         }
+        if !self.world.knowledge_enabled {
+            return Outcome::rejected("knowledge_disabled", "knowledge is disabled");
+        }
+        let mut minted = false;
         let day = self.clock.game_days(now);
         if let Some(key) = crate::knowledge::mint::mint_knell(&mut self.world, at, years, day) {
+            minted = true;
             out.push(EngineMessage::Diagnostic(format!(
                 "[knowledge] Maren Smallvoice counts {years}: fact {key:?} minted at the tower"
             )));
@@ -4827,9 +5129,24 @@ impl Engine {
             Some(crate::knowledge::Topic::Blood),
             day,
         );
+        Outcome::completed(if minted {
+            "knell counted and existing air amplified"
+        } else {
+            "existing air amplified; no new knell fact admitted"
+        })
     }
 
-    fn ring_civic_peal(&mut self, now: f64, rope: CivicRope, at: Vec3, radius_m: f64) {
+    fn ring_civic_peal(&mut self, now: f64, rope: CivicRope, at: Vec3, radius_m: f64) -> Outcome {
+        if !self.world.knowledge_enabled
+            || !at.is_finite()
+            || !radius_m.is_finite()
+            || radius_m < 0.0
+        {
+            return Outcome::rejected(
+                "invalid_peal",
+                "knowledge is disabled or the peal geometry is invalid",
+            );
+        }
         crate::knowledge::pollen::amplify(
             &mut self.world,
             at,
@@ -4837,6 +5154,7 @@ impl Engine {
             crate::knowledge::mint::peal_topic(rope),
             self.clock.game_days(now),
         );
+        Outcome::completed("civic peal amplification applied to matching air")
     }
 
     fn publish_ward_heat(&mut self, out: &mut Vec<EngineMessage>) {
@@ -5150,6 +5468,16 @@ fn flush_world_event(event: &DomainEvent, out: &mut Vec<EngineMessage>) {
 
 fn scheduler_message(event: SchedulerEvent) -> EngineMessage {
     match event {
+        SchedulerEvent::ActionReceipt(receipt) => EngineMessage::ActionReceipt(receipt),
+        SchedulerEvent::CommandAdmissionRefused {
+            id,
+            reason,
+            retryable,
+        } => EngineMessage::CommandAdmissionRefused {
+            id: Some(id),
+            reason,
+            retryable,
+        },
         SchedulerEvent::Status(status) => EngineMessage::Status(status),
         SchedulerEvent::Diagnostic(line) => EngineMessage::Diagnostic(line),
         SchedulerEvent::PromptExchange {

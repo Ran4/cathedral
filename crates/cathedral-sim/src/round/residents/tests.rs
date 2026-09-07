@@ -86,6 +86,7 @@ fn fresh_explicit_travel_owns_replaced_feet_then_returns_once_without_teleport()
         })
         .unwrap();
     world.characters.get_mut(&id).unwrap().state.intent = Some(crate::TravelIntent {
+        receipt: None,
         target: IntentTarget::Place {
             place_id: crate::PlaceId::from_raw("fixture"),
             name: "the test visit".into(),
@@ -465,6 +466,7 @@ fn lightning_and_curfew_preempt_resident_feet_without_optional_recall() {
     // while a conversation holds the ordinary routine.
     assert!(round.people[&id].home.is_some());
     world.characters.get_mut(&id).unwrap().state.intent = Some(crate::TravelIntent {
+        receipt: None,
         target: IntentTarget::Place {
             place_id: crate::PlaceId::from_raw("fixture"),
             name: "a visit".into(),

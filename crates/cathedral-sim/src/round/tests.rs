@@ -1650,6 +1650,7 @@ fn an_escort_is_not_marched_to_food_mid_delivery() {
         .custody
         .seize(taken.clone(), officer.clone(), Some(1), station, 0.0);
     world.characters.get_mut(&officer).unwrap().state.intent = Some(TravelIntent {
+        receipt: None,
         target: IntentTarget::Place {
             place_id: PlaceId::from_raw("pl_gaol"),
             name: crate::custody::STONE_HOUSE_PLACE_NAME.into(),
@@ -3459,13 +3460,22 @@ fn go_to_walks_there_and_arrival_is_a_percept_and_a_nudge() {
     round.seed(&mut world, &nav, 0.0, &clock);
 
     let target = world.places.named("The Gradine").expect("baked").id.clone();
-    let line = apply_action(
-        &mut world,
-        &id,
-        "go_to",
-        &json!({"place_id": target.as_str()}),
-    )
-    .unwrap();
+    let operation = world
+        .command_ledger
+        .reserve_operation(crate::receipts::TURN_PRODUCER)
+        .unwrap();
+    let args = json!({"place_id": target.as_str()});
+    let command = operation.command(1);
+    let crate::receipts::Admission::New(ticket) = world.command_ledger.begin(command, &args) else {
+        panic!("fresh action")
+    };
+    let (line, receipt) =
+        crate::receipts::commit_actor_action(&mut world, 0.0, ticket, &id, "go_to", &args);
+    let line = line.unwrap();
+    assert_eq!(
+        receipt.outcome.state,
+        crate::receipts::ReceiptState::Accepted
+    );
     assert_eq!(line, "WALKR sets off for The Gradine");
     assert!(
         world.characters[&id]
@@ -3483,10 +3493,20 @@ fn go_to_walks_there_and_arrival_is_a_percept_and_a_nudge() {
         "a fresh errand walks the tick the round first sees it"
     );
 
+    assert_eq!(
+        world.command_ledger.get(command).unwrap().outcome.state,
+        crate::receipts::ReceiptState::InProgress
+    );
     let gradine = world.places.named("The Gradine").unwrap().point;
     let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.1, 2000, |world| {
         world.characters[&id].state.intent.is_none()
     });
+    assert_eq!(
+        world.command_ledger.get(command).unwrap().outcome.state,
+        crate::receipts::ReceiptState::Completed
+    );
+    assert!(world.travel_actions.is_empty());
+    assert!(world.command_ledger.protected.is_empty());
     let walker = &world.characters[&id];
     assert!(
         walker.position_m().distance(gradine) <= PLACE_ARRIVE_RADIUS_M + 0.5,
@@ -3540,6 +3560,7 @@ fn a_second_go_to_replaces_and_stop_halts_the_walk() {
     .unwrap();
     match &world.characters[&id].state.intent {
         Some(TravelIntent {
+            receipt: None,
             target: IntentTarget::Place { place_id, .. },
             ..
         }) => {
@@ -5558,6 +5579,7 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         },
     );
     world.characters.get_mut(&leader).unwrap().state.intent = Some(TravelIntent {
+        receipt: None,
         target: IntentTarget::Place {
             place_id: PlaceId::from_raw("somewhere"),
             name: "somewhere".into(),
@@ -5598,7 +5620,7 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         .push("A durable road line".into());
 
     let revision = world.world_revision;
-    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    round.begin_road_return(&mut world, &party_id, 2, 0.0, &mut Vec::new());
     assert_eq!(
         world.world_revision,
         revision + 1,
@@ -6077,7 +6099,7 @@ fn a_held_member_stays_behind_and_the_party_departs_without_them() {
     let officer = ActorId::from_raw("srgnt");
     let gate = round.road_parties[&party_id].gate_point;
 
-    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    round.begin_road_return(&mut world, &party_id, 2, 0.0, &mut Vec::new());
     for member in round.road_parties[&party_id].members.clone() {
         world.characters.get_mut(&member).unwrap().state.position_m = gate;
     }
@@ -6160,7 +6182,7 @@ fn a_party_whose_leader_the_law_holds_waits_and_departs_whole_on_release() {
     let officer = ActorId::from_raw("srgnt");
     let gate = round.road_parties[&party_id].gate_point;
 
-    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    round.begin_road_return(&mut world, &party_id, 2, 0.0, &mut Vec::new());
     for member in round.road_parties[&party_id].members.clone() {
         world.characters.get_mut(&member).unwrap().state.position_m = gate;
     }
@@ -6221,7 +6243,7 @@ fn a_member_left_behind_is_enrolled_in_the_round_and_walks_once_released() {
         "a crew still on the road belongs to the party, not to the round"
     );
 
-    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    round.begin_road_return(&mut world, &party_id, 2, 0.0, &mut Vec::new());
     for member in round.road_parties[&party_id].members.clone() {
         world.characters.get_mut(&member).unwrap().state.position_m = gate;
     }
@@ -6613,6 +6635,7 @@ fn the_road_return_ends_a_live_intent_with_the_why_percept() {
 
     let errand = |name: &str| {
         Some(TravelIntent {
+            receipt: None,
             target: IntentTarget::Place {
                 place_id: PlaceId::from_raw(name),
                 name: name.into(),
@@ -6632,7 +6655,7 @@ fn the_road_return_ends_a_live_intent_with_the_why_percept() {
         .seize(carter.clone(), officer.clone(), Some(1), station, 0.0);
 
     let mut nudges = Vec::new();
-    round.begin_road_return(&mut world, &party_id, 2, &mut nudges);
+    round.begin_road_return(&mut world, &party_id, 2, 0.0, &mut nudges);
 
     assert!(world.characters[&leader].state.intent.is_none());
     assert!(
@@ -6690,7 +6713,7 @@ fn gate_expired_offers_lapse_with_percepts_and_the_event() {
     )
     .unwrap();
 
-    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    round.begin_road_return(&mut world, &party_id, 2, 0.0, &mut Vec::new());
     for member in round.road_parties[&party_id].members.clone() {
         world.characters.get_mut(&member).unwrap().state.position_m = gate;
     }
@@ -6750,7 +6773,7 @@ fn a_conversing_carrier_is_pressured_and_granted_one_grace_beat() {
     let away = round.counters["brede_grain_seven_lofts"].pitch;
     world.characters.get_mut(&carter).unwrap().state.position_m = away;
 
-    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    round.begin_road_return(&mut world, &party_id, 2, 0.0, &mut Vec::new());
     let held = warm(&carter);
     let pressure_lines = |world: &World| {
         world.characters[&carter]
@@ -7113,6 +7136,9 @@ fn a_round_edit_that_would_strand_a_live_transform_is_refused_with_the_reason() 
         .unwrap()
         .state
         .round_edit = Some(RoundEdit {
+        receipt: None,
+        presence_epoch: None,
+        teach_place_on_commit: false,
         leg: 0,
         place_id: bellstand.clone(),
     });
@@ -7142,6 +7168,9 @@ fn a_round_edit_that_would_strand_a_live_transform_is_refused_with_the_reason() 
         .unwrap()
         .state
         .round_edit = Some(RoundEdit {
+        receipt: None,
+        presence_epoch: None,
+        teach_place_on_commit: false,
         leg: 1,
         place_id: bellstand,
     });
@@ -7186,6 +7215,9 @@ fn a_round_edit_that_would_unstaff_a_stall_is_refused_with_the_reason() {
     );
 
     world.characters.get_mut(&keeper).unwrap().state.round_edit = Some(RoundEdit {
+        receipt: None,
+        presence_epoch: None,
+        teach_place_on_commit: false,
         leg: 0,
         place_id: bellstand,
     });
@@ -7475,6 +7507,7 @@ fn an_interrupted_follow_waits_out_the_answers_beat() {
     // A live follow already under way (the stamped deadline marks it un-fresh),
     // walking when the player's line lands.
     world.characters.get_mut(&chaser).unwrap().state.intent = Some(TravelIntent {
+        receipt: None,
         target: IntentTarget::Person {
             actor_id: ActorId::from_raw("quarry"),
             last_seen: quarry_at,
@@ -9095,5 +9128,57 @@ fn skipped_round_tick_across_rate_change_preserves_actual_restock_once() {
                 "actual stock after {old_rate} to {new_rate}, processed={already_processed}"
             );
         }
+    }
+}
+
+#[test]
+fn receipted_round_edit_reports_refusal_then_completion_and_teaches_only_committed_place() {
+    use crate::receipts::{Admission, NIGHT_PRODUCER, Outcome, ReceiptState};
+    let (mut world, mut round, actor, _) = active_production_fixture(240);
+    let destination = register_place(
+        &mut world,
+        "pl_bell",
+        "The Bellstand",
+        Vec3::new(30.0, WALK_Y, 30.0),
+    );
+    world.characters.get_mut(&actor).unwrap().state.daily_round =
+        round.people[&actor].legs.iter().map(leg_line).collect();
+    for (leg, expected) in [(1, ReceiptState::Rejected), (2, ReceiptState::Completed)] {
+        let op = world
+            .command_ledger
+            .reserve_operation(NIGHT_PRODUCER)
+            .unwrap();
+        let id = op.command(1);
+        let Admission::New(ticket) = world.command_ledger.begin(id, &json!({"leg":leg})) else {
+            panic!("fresh edit")
+        };
+        crate::actions::set_round_leg(&mut world, &actor, &json!(leg), &destination).unwrap();
+        crate::receipts::bind_round_edit(&mut world, &actor, id, 0.0, true);
+        world.command_ledger.finish(
+            ticket,
+            0.0,
+            Outcome::new(ReceiptState::Accepted, "round_edit_accepted", "queued"),
+            Vec::new(),
+        );
+        assert!(
+            !world.characters[&actor]
+                .state
+                .places_known
+                .contains(&destination)
+        );
+        apply_round_edits(&mut round, &mut world, 0.1);
+        assert_eq!(
+            world.command_ledger.get(id).unwrap().outcome.state,
+            expected
+        );
+        assert_eq!(
+            world.characters[&actor]
+                .state
+                .places_known
+                .contains(&destination),
+            expected == ReceiptState::Completed
+        );
+        assert!(world.round_actions.is_empty());
+        assert!(world.command_ledger.protected.is_empty());
     }
 }
