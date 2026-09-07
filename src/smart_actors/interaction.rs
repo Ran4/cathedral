@@ -22,6 +22,10 @@ use super::{
 
 #[derive(Message, Debug, Clone, PartialEq)]
 pub enum PlayerIntent {
+    InGeneration {
+        generation: cathedral_sim::RuntimeGeneration,
+        intent: Box<PlayerIntent>,
+    },
     SpatialUpdate {
         spatial_seq: u64,
         position: Vec3,
@@ -118,6 +122,29 @@ pub enum PlayerIntent {
         spatial_seq: u64,
         position: Vec3,
     },
+}
+
+/// Bind pending UI input when it is produced, before another frame can adopt
+/// a replacement runtime. Forwarding never stamps it with a newer identity.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct PlayerIntentWriter<'w> {
+    messages: MessageWriter<'w, PlayerIntent>,
+    handle: Option<Res<'w, BridgeHandle>>,
+}
+
+impl PlayerIntentWriter<'_> {
+    pub fn write(&mut self, intent: PlayerIntent) {
+        let generation = self
+            .handle
+            .as_ref()
+            .map_or(cathedral_sim::RuntimeGeneration::INITIAL, |handle| {
+                handle.generation()
+            });
+        self.messages.write(PlayerIntent::InGeneration {
+            generation,
+            intent: Box::new(intent),
+        });
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -440,7 +467,7 @@ pub fn sync_player_position(
     runtime: Res<SmartActorRuntime>,
     players: Query<(&GlobalTransform, &PlayerController)>,
     mut spatial: ResMut<PlayerSpatialState>,
-    mut intents: MessageWriter<PlayerIntent>,
+    mut intents: super::interaction::PlayerIntentWriter,
 ) {
     if !runtime.interactions_enabled() {
         return;
@@ -615,7 +642,7 @@ pub fn collect_item_interaction_input(
     mut spatial: ResMut<PlayerSpatialState>,
     mut state: ResMut<InteractionState>,
     mut hud: ResMut<SmartActorHudState>,
-    mut intents: MessageWriter<PlayerIntent>,
+    mut intents: super::interaction::PlayerIntentWriter,
 ) {
     if !runtime.interactions_enabled()
         || cursor
@@ -781,7 +808,7 @@ pub fn collect_sound_input(
     cursor: Query<&CursorOptions, With<PrimaryWindow>>,
     config: Res<SmartActorsConfig>,
     runtime: Res<SmartActorRuntime>,
-    mut intents: MessageWriter<PlayerIntent>,
+    mut intents: super::interaction::PlayerIntentWriter,
 ) {
     if !config.sounds.enabled
         || !keyboard.just_pressed(KeyCode::KeyF)
@@ -885,12 +912,15 @@ pub fn poll_microphone(
     mut microphone_input: ResMut<MicrophoneInputState>,
     mut interaction: ResMut<InteractionState>,
     mut hud: ResMut<SmartActorHudState>,
-    mut intents: MessageWriter<PlayerIntent>,
+    mut intents: super::interaction::PlayerIntentWriter,
     mut stop_speech: MessageWriter<StopNpcSpeech>,
 ) {
     let Some(microphone) = microphone else { return };
+    if microphone.generation() != handle.generation() {
+        return;
+    }
     let mut recording_started_this_poll = false;
-    loop {
+    for _ in 0..microphone.pending_events().max(1) {
         let event = match microphone.poll() {
             MicrophonePoll::Event(event) => event,
             MicrophonePoll::Empty => break,
@@ -1054,7 +1084,9 @@ pub fn poll_microphone(
         recording_started_this_poll,
         microphone_input.recording.is_some(),
     ) {
-        stop_speech.write(StopNpcSpeech);
+        stop_speech.write(StopNpcSpeech {
+            generation: handle.generation(),
+        });
     }
 }
 
@@ -1336,6 +1368,175 @@ mod tests {
     use crate::smart_actors::model::{
         ActorControl, ActorSnapshot, ItemSnapshot, OfferSnapshot, Position, WorldSnapshot,
     };
+
+    #[test]
+    fn every_microphone_event_is_fenced_before_touching_a_matching_current_recording() {
+        use cathedral_sim::RuntimeGeneration;
+        for kind in 0..7 {
+            let current = RuntimeGeneration(42);
+            let (commands, received) = crossbeam_channel::bounded(128);
+            let (old, old_events) =
+                MicrophoneService::event_harness_for_generation(RuntimeGeneration(41));
+            let event = || match kind {
+                0 => MicrophoneEvent::Available,
+                1 => MicrophoneEvent::Unavailable("old device".into()),
+                2 => MicrophoneEvent::RecordingStarted {
+                    wav_basename: "same.wav".into(),
+                },
+                3 => MicrophoneEvent::RecordingFinished {
+                    wav_basename: "same.wav".into(),
+                    silent: false,
+                },
+                4 => MicrophoneEvent::RecordingCancelled {
+                    wav_basename: "same.wav".into(),
+                },
+                _ => MicrophoneEvent::RecordingFailed("old capture".into()),
+            };
+            if kind != 6 {
+                old_events.send(event()).unwrap();
+            }
+            drop(old_events);
+            let mut app = App::new();
+            app.insert_resource(BridgeHandle::new_for_generation(
+                commands,
+                "/tmp".into(),
+                current,
+            ))
+            .insert_resource(old)
+            .insert_resource(SmartActorRuntime {
+                connected: true,
+                ready: true,
+                mirror_revision: Some(1),
+                ..SmartActorRuntime::starting(false)
+            })
+            .init_resource::<PlayerSpatialState>()
+            .init_resource::<InteractionState>()
+            .insert_resource(MicrophoneInputState {
+                recording: Some(RecordingContext {
+                    wav_basename: "same.wav".into(),
+                    stt_backend: TranscriptionBackend::Cloud,
+                }),
+                ..Default::default()
+            })
+            .init_resource::<SmartActorHudState>()
+            .add_message::<PlayerIntent>()
+            .add_message::<StopNpcSpeech>()
+            .add_systems(
+                Update,
+                (poll_microphone, super::super::forward_player_intents).chain(),
+            );
+            app.world_mut()
+                .spawn((PlayerController::default(), GlobalTransform::default()));
+            app.update();
+            assert!(
+                received.is_empty(),
+                "old microphone kind {kind} produced a current command"
+            );
+            assert_eq!(
+                app.world()
+                    .resource::<MicrophoneInputState>()
+                    .recording
+                    .as_ref()
+                    .unwrap()
+                    .wav_basename,
+                "same.wav"
+            );
+            assert!(
+                !app.world()
+                    .resource::<SmartActorHudState>()
+                    .microphone_unavailable
+            );
+            // Reuse the exact basename against a current service and prove its
+            // lifecycle input reaches the same actual consumer.
+            let (new, new_events) = MicrophoneService::event_harness_for_generation(current);
+            app.insert_resource(new);
+            if kind != 6 {
+                new_events.send(event()).unwrap();
+            }
+            if kind == 6 {
+                drop(new_events);
+            }
+            app.update();
+            match kind {
+                0 => assert!(
+                    app.world()
+                        .resource::<SmartActorHudState>()
+                        .microphone_available
+                ),
+                2 => assert!(
+                    matches!(received.try_recv().map(|c| super::super::bridge::expect_generation(c, current)), Ok(BridgeCommand::PlayerUtteranceStarted { wav_basename }) if wav_basename == "same.wav")
+                ),
+                3 => assert!(
+                    matches!(received.try_recv().map(|c| super::super::bridge::expect_generation(c, current)), Ok(BridgeCommand::Identified { command, .. }) if matches!(&*command, BridgeCommand::PlayerRecording { wav_basename, .. } if wav_basename == "same.wav"))
+                ),
+                _ => assert!(
+                    app.world()
+                        .resource::<MicrophoneInputState>()
+                        .recording
+                        .is_none()
+                ),
+            }
+        }
+    }
+
+    #[test]
+    fn queued_ui_generation_is_checked_before_pending_resolution_and_host_identity() {
+        use cathedral_sim::RuntimeGeneration;
+        let (sender, received) = crossbeam_channel::bounded(128);
+        let current = RuntimeGeneration(8);
+        let mut app = App::new();
+        app.insert_resource(BridgeHandle::new_for_generation(
+            sender,
+            "/tmp".into(),
+            current,
+        ))
+        .insert_resource(SmartActorRuntime {
+            connected: true,
+            ready: true,
+            mirror_revision: Some(1),
+            ..SmartActorRuntime::starting(false)
+        })
+        .init_resource::<PlayerSpatialState>()
+        .init_resource::<InteractionState>()
+        .init_resource::<SmartActorHudState>()
+        .add_message::<PlayerIntent>()
+        .add_systems(Update, super::super::forward_player_intents);
+        app.world_mut()
+            .resource_mut::<InteractionState>()
+            .insert_pending("same-request".into(), PendingKind::Say, 1);
+        let intent = || PlayerIntent::Say {
+            request_id: "same-request".into(),
+            text: "current choice".into(),
+            spatial_seq: 1,
+            position: Vec3::ZERO,
+        };
+        app.world_mut().write_message(PlayerIntent::InGeneration {
+            generation: RuntimeGeneration(7),
+            intent: Box::new(intent()),
+        });
+        app.update();
+        assert!(received.is_empty());
+        assert!(
+            app.world()
+                .resource::<InteractionState>()
+                .pending
+                .contains_key("same-request")
+        );
+        app.world_mut().write_message(PlayerIntent::InGeneration {
+            generation: current,
+            intent: Box::new(intent()),
+        });
+        app.update();
+        let BridgeCommand::Identified { id, command } =
+            super::super::bridge::expect_generation(received.try_recv().unwrap(), current)
+        else {
+            panic!("missing identity");
+        };
+        assert_eq!(id.operation.sequence, 1);
+        assert!(
+            matches!(*command, BridgeCommand::PlayerSay { request_id, .. } if request_id == "same-request")
+        );
+    }
 
     #[test]
     fn effective_streaming_requires_cloud_selected_available_and_configured() {

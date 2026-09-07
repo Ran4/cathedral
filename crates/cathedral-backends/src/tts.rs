@@ -37,7 +37,7 @@ pub const TTS_QUEUE_CAPACITY: usize = 32;
 /// `speech_client.py:95` — the cap the sim enforces on player speech too.
 pub const MAX_SPEECH_TEXT_CHARS: usize = 500;
 /// A resolved provider voice may not be a path, a flag, or a novel.
-const MAX_VOICE_CHARS: usize = 64;
+pub(crate) const MAX_VOICE_CHARS: usize = 64;
 
 /// One decoded mono PCM chunk, ready for the game's streaming audio sink.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,13 +135,14 @@ pub fn resolve_openai_voice(
 // ------------------------------------------------------------------- the engine
 
 enum Job {
-    Synthesize(TtsRequest),
+    Synthesize(TtsRequest, BackendSender),
     /// Load the model before the first line, not during it.
     Warm,
 }
 
 /// The [`Tts`] the engine speaks through.
 pub struct TtsEngine {
+    events: BackendSender,
     cloud: Option<Arc<CloudTts>>,
     local: Option<Arc<PocketTts>>,
     jobs: Sender<Job>,
@@ -183,6 +184,7 @@ impl TtsEngine {
         let in_flight: Arc<Mutex<HashSet<SpeechEventId>>> = Arc::new(Mutex::new(HashSet::new()));
 
         let worker = {
+            let events = events.clone();
             let cloud = cloud.clone();
             let local = local.clone();
             let in_flight = Arc::clone(&in_flight);
@@ -193,14 +195,18 @@ impl TtsEngine {
                     for job in inbox {
                         match job {
                             Job::Warm => warm(local.as_deref(), &events),
-                            Job::Synthesize(request) => {
+                            Job::Synthesize(request, delivery) => {
                                 let event_id = request.event_id.clone();
+                                if !delivery.is_active() {
+                                    in_flight.lock().expect("tts in flight").remove(&event_id);
+                                    continue;
+                                }
                                 synthesize(
                                     &runtime,
                                     cloud.as_deref(),
                                     local.as_deref(),
                                     request,
-                                    &events,
+                                    &delivery,
                                 );
                                 in_flight.lock().expect("tts in flight").remove(&event_id);
                             }
@@ -211,6 +217,7 @@ impl TtsEngine {
         };
 
         Self {
+            events,
             cloud,
             local,
             jobs,
@@ -360,15 +367,36 @@ impl Tts for TtsEngine {
             return Err(TtsSubmitError::Unavailable);
         }
         let event_id = request.event_id.clone();
+        if request.text.capacity() > MAX_SPEECH_TEXT_CHARS * 4
+            || request.text.chars().count() > MAX_SPEECH_TEXT_CHARS
+            || request.voice_key.capacity() > MAX_VOICE_CHARS * 4
+            || request.voice_key.chars().count() > MAX_VOICE_CHARS
+            || event_id.0.capacity() > 256
+        {
+            return Err(TtsSubmitError::Unavailable);
+        }
+        let Some(delivery) = self.events.reserve(BackendEvent::TtsDone {
+            event_id: event_id.clone(),
+            result: Err(SpeechError::new(
+                "voice producer ended or delivery exceeded capacity",
+            )),
+        }) else {
+            return Err(TtsSubmitError::QueueFull);
+        };
         {
             let mut in_flight = self.in_flight.lock().expect("tts in flight");
             if !in_flight.insert(event_id.clone()) {
+                delivery.cancel_reservation();
                 return Err(TtsSubmitError::PathInUse);
             }
         }
-        match self.jobs.try_send(Job::Synthesize(request)) {
+        match self
+            .jobs
+            .try_send(Job::Synthesize(request, delivery.clone()))
+        {
             Ok(()) => Ok(()),
             Err(TrySendError::Full(_)) => {
+                delivery.cancel_reservation();
                 self.in_flight
                     .lock()
                     .expect("tts in flight")
@@ -376,6 +404,7 @@ impl Tts for TtsEngine {
                 Err(TtsSubmitError::QueueFull)
             }
             Err(TrySendError::Disconnected(_)) => {
+                delivery.cancel_reservation();
                 self.in_flight
                     .lock()
                     .expect("tts in flight")
@@ -419,7 +448,6 @@ mod tests {
         events::backend_channel,
         worker::tests::StubWorker,
     };
-    use crossbeam_channel::Receiver;
     use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 
     fn settings(pairs: &[(&str, &str)], workers_dir: PathBuf, uv: &str) -> SpeechSettings {
@@ -472,7 +500,7 @@ mod tests {
         bytes
     }
 
-    fn next(events: &Receiver<BackendEvent>) -> BackendEvent {
+    fn next(events: &crate::events::BackendReceiver) -> BackendEvent {
         events
             .recv_timeout(Duration::from_secs(10))
             .expect("a backend event")

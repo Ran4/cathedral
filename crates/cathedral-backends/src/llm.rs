@@ -116,6 +116,36 @@ const RETRY_BACKOFF: Duration = Duration::from_millis(500);
 const MAX_RETRY_AFTER: Duration = Duration::from_secs(20);
 /// How much of an error body reaches the log.
 const BODY_SNIPPET_CHARS: usize = 200;
+/// Allows the supported 100,000 Unicode scalars even with JSON surrogate-pair
+/// escaping, plus response metadata. Checked before retaining response chunks.
+pub const MAX_LLM_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
+pub const MAX_PROMPT_BYTES: usize = 1024 * 1024;
+
+pub(crate) async fn read_response(response: &mut reqwest::Response) -> Result<Vec<u8>, LlmError> {
+    if response
+        .content_length()
+        .is_some_and(|size| size > MAX_LLM_RESPONSE_BYTES as u64)
+    {
+        return Err(LlmError::Transport(
+            "completion response exceeded byte limit".into(),
+        ));
+    }
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|e| LlmError::Transport(e.to_string()))?
+    {
+        if chunk.len() > MAX_LLM_RESPONSE_BYTES.saturating_sub(bytes.len()) {
+            return Err(LlmError::Transport(
+                "completion response exceeded byte limit".into(),
+            ));
+        }
+        bytes.reserve_exact(chunk.len());
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
+}
 
 // ---------------------------------------------------------------------- errors
 
@@ -485,7 +515,7 @@ impl LlmClient {
             max_completion_tokens: max_output_tokens,
         };
 
-        let response = self
+        let mut response = self
             .http
             .post(self.settings.chat_completions_url())
             .bearer_auth(&self.settings.api_key)
@@ -508,18 +538,28 @@ impl LlmClient {
                     .get(reqwest::header::RETRY_AFTER)
                     .and_then(|value| value.to_str().ok()),
             );
-            let body = response.text().await.unwrap_or_default();
+            let body_snippet = match read_response(&mut response).await {
+                Ok(body) => snippet(&String::from_utf8_lossy(&body)),
+                Err(error) => snippet(&error.to_string()),
+            };
             return Err(Attempt {
                 retryable: is_retryable_status(status.as_u16()),
                 retry_after,
                 error: LlmError::Http {
                     status: status.as_u16(),
-                    body_snippet: snippet(&body),
+                    body_snippet,
                 },
             });
         }
 
-        let payload: ChatResponse = response.json().await.map_err(|error| Attempt {
+        let body = read_response(&mut response)
+            .await
+            .map_err(|error| Attempt {
+                retryable: false,
+                retry_after: None,
+                error,
+            })?;
+        let payload: ChatResponse = serde_json::from_slice(&body).map_err(|error| Attempt {
             retryable: false,
             retry_after: None,
             error: LlmError::Transport(error.to_string()),
@@ -658,10 +698,10 @@ impl HttpCognition {
         self.usage().run_cost_usd()
     }
 
-    fn take_request_id(&mut self) -> RequestId {
+    fn take_request_id(&mut self) -> Result<RequestId, CognitionBusy> {
         let request_id = RequestId(self.next_request_id);
-        self.next_request_id += 1;
-        request_id
+        self.next_request_id = self.next_request_id.checked_add(1).ok_or(CognitionBusy)?;
+        Ok(request_id)
     }
 
     fn submit(
@@ -682,16 +722,32 @@ impl HttpCognition {
         prompt: String,
         max_output_tokens: Option<u32>,
     ) -> Result<RequestId, CognitionBusy> {
-        if lane.swap(true, Ordering::SeqCst) {
+        if prompt.capacity() > MAX_PROMPT_BYTES
+            || !self.events.is_active()
+            || self.next_request_id == u64::MAX
+            || lane.swap(true, Ordering::SeqCst)
+        {
             return Err(CognitionBusy);
         }
-        let request_id = self.take_request_id();
+        let request_id = RequestId(self.next_request_id);
+        let fallback = crate::BackendEvent::LlmCompletion(Completion {
+            request_id,
+            result: Err(CognitionError::new(
+                "completion producer ended or delivery exceeded capacity",
+            )),
+            duration_seconds: 0.0,
+        });
+        let Some(events) = self.events.reserve(fallback) else {
+            lane.store(false, Ordering::SeqCst);
+            return Err(CognitionBusy);
+        };
+        self.take_request_id()?;
 
         let client = match &self.client {
             Ok(client) => Arc::clone(client),
             Err(error) => {
                 lane.store(false, Ordering::SeqCst);
-                self.events.send(Completion {
+                events.send(Completion {
                     request_id,
                     result: Err(CognitionError::from(error)),
                     duration_seconds: 0.0,
@@ -700,12 +756,18 @@ impl HttpCognition {
             }
         };
 
-        let events = self.events.clone();
+        // Construct before spawning: even a task dropped before its first poll
+        // releases the lane and spends exactly its reserved failure record.
+        let guard = LaneGuard::new(lane, events, request_id);
         self.runtime.spawn(async move {
-            let guard = LaneGuard::new(lane, events, request_id);
             let started = Instant::now();
-            let result = client.complete_with_budget(prompt, max_output_tokens).await;
-            guard.finish(result, started.elapsed().as_secs_f64());
+            let result = tokio::select! {
+                result = client.complete_with_budget(prompt, max_output_tokens) => Some(result),
+                () = guard.events.retired() => None,
+            };
+            if let Some(result) = result {
+                guard.finish(result, started.elapsed().as_secs_f64());
+            }
         });
         Ok(request_id)
     }
@@ -811,7 +873,6 @@ mod tests {
         events::{BackendEvent, backend_channel},
         testing::MockServer,
     };
-    use crossbeam_channel::Receiver;
     use serde_json::Value;
 
     fn settings(provider: Provider, base_url: &str) -> LlmSettings {
@@ -828,7 +889,7 @@ mod tests {
     /// Submit one prompt and wait for its completion off the channel.
     fn complete_once(
         settings: LlmSettings,
-        events: (crate::events::BackendSender, Receiver<BackendEvent>),
+        events: (crate::events::BackendSender, crate::events::BackendReceiver),
     ) -> Completion {
         let runtime = BackendRuntime::new().expect("runtime");
         let mut cognition = HttpCognition::new(runtime, Ok(settings), events.0);
@@ -843,6 +904,89 @@ mod tests {
             panic!("expected a completion");
         };
         completion
+    }
+
+    #[test]
+    fn synchronous_failure_reserves_until_consumed_and_refuses_before_spending_ids() {
+        let runtime = BackendRuntime::new().unwrap();
+        let (sender, receiver) = crate::backend_channel_for(cathedral_sim::RuntimeGeneration(5));
+        let mut cognition = HttpCognition::new(
+            runtime,
+            Err(LlmConfigError("deliberately unconfigured".into())),
+            sender.clone(),
+        );
+        let mut spare = String::with_capacity(MAX_PROMPT_BYTES + 1);
+        spare.push('x');
+        assert_eq!(cognition.request(spare), Err(CognitionBusy));
+        for id in 0..crate::mailbox::TERMINAL_CAPACITY {
+            assert_eq!(
+                cognition.request("bounded failure".into()).unwrap(),
+                RequestId(id as u64)
+            );
+        }
+        assert_eq!(
+            cognition.request_night("full".into(), None),
+            Err(CognitionBusy)
+        );
+        assert_eq!(
+            cognition.next_request_id,
+            crate::mailbox::TERMINAL_CAPACITY as u64
+        );
+        let envelope = receiver.try_recv_envelope().unwrap();
+        assert_eq!(envelope.generation, cathedral_sim::RuntimeGeneration(5));
+        assert!(matches!(
+            envelope.value,
+            BackendEvent::LlmCompletion(Completion { result: Err(_), .. })
+        ));
+        assert!(
+            cognition
+                .request_night("space recovered".into(), None)
+                .is_ok()
+        );
+        sender.retire();
+        assert_eq!(cognition.request("retired".into()), Err(CognitionBusy));
+        let (new_sender, new_receiver) =
+            crate::backend_channel_for(cathedral_sim::RuntimeGeneration(6));
+        let mut current = HttpCognition::new(
+            BackendRuntime::new().unwrap(),
+            Err(LlmConfigError("current".into())),
+            new_sender,
+        );
+        assert_eq!(
+            current.request("reused numeric ID".into()).unwrap(),
+            RequestId(0)
+        );
+        assert_eq!(
+            new_receiver.try_recv_envelope().unwrap().generation,
+            cathedral_sim::RuntimeGeneration(6)
+        );
+        current.next_request_id = u64::MAX;
+        assert_eq!(current.request("exhausted".into()), Err(CognitionBusy));
+        assert_eq!(current.next_request_id, u64::MAX);
+    }
+
+    #[test]
+    fn oversized_http_bodies_fail_before_json_or_error_text_is_retained() {
+        for status in [200, 400] {
+            let server = MockServer::start(vec![
+                MockServer::status(
+                    status,
+                    &"x".repeat(MAX_LLM_RESPONSE_BYTES + 1)
+                );
+                2
+            ]);
+            let completion = complete_once(
+                settings(Provider::Moonshot, &server.base_url()),
+                backend_channel(),
+            );
+            assert!(
+                completion
+                    .result
+                    .unwrap_err()
+                    .detail()
+                    .contains("byte limit")
+            );
+        }
     }
 
     #[test]

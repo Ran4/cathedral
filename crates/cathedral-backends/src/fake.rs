@@ -100,8 +100,19 @@ impl Transcription for FakeSpeech {
         _wav_path: std::path::PathBuf,
         _kind: SttBackendKind,
     ) -> Result<(), SttSubmitError> {
+        if self.transcript.capacity() > 8000 || self.transcript.chars().count() > 2000 {
+            return Err(SttSubmitError::Unavailable);
+        }
         // The WAV is never opened: the fake microphone's "audio" carries no words.
-        self.events.send(BackendEvent::TranscriptionDone {
+        let Some(delivery) = self.events.reserve(BackendEvent::TranscriptionDone {
+            job,
+            result: Err(cathedral_sim::SpeechError::new(
+                "fake transcription delivery cancelled",
+            )),
+        }) else {
+            return Err(SttSubmitError::QueueFull);
+        };
+        delivery.send(BackendEvent::TranscriptionDone {
             job,
             result: Ok(self.transcript.clone()),
         });
@@ -131,6 +142,25 @@ impl Tts for FakeSpeech {
     }
 
     fn submit(&mut self, request: TtsRequest) -> Result<(), TtsSubmitError> {
+        if request.kind == TtsBackendKind::Off {
+            return Err(TtsSubmitError::Unavailable);
+        }
+        if request.text.capacity() > crate::tts::MAX_SPEECH_TEXT_CHARS * 4
+            || request.text.chars().count() > crate::tts::MAX_SPEECH_TEXT_CHARS
+            || request.voice_key.capacity() > crate::tts::MAX_VOICE_CHARS * 4
+            || request.voice_key.chars().count() > crate::tts::MAX_VOICE_CHARS
+            || request.event_id.0.capacity() > 256
+        {
+            return Err(TtsSubmitError::Unavailable);
+        }
+        let Some(delivery) = self.events.reserve(BackendEvent::TtsDone {
+            event_id: request.event_id.clone(),
+            result: Err(cathedral_sim::SpeechError::new(
+                "fake voice delivery cancelled or exceeded capacity",
+            )),
+        }) else {
+            return Err(TtsSubmitError::QueueFull);
+        };
         let TtsRequest {
             event_id,
             text,
@@ -140,7 +170,7 @@ impl Tts for FakeSpeech {
         match kind {
             TtsBackendKind::Cloud => {
                 let samples = silent_sample_count(&text, CLOUD_SAMPLE_RATE);
-                self.events.send(BackendEvent::TtsDone {
+                delivery.send(BackendEvent::TtsDone {
                     event_id,
                     result: Ok(silent_wav(samples, CLOUD_SAMPLE_RATE)),
                 });
@@ -150,13 +180,13 @@ impl Tts for FakeSpeech {
                 // One chunk, then the stream end — the shape the local Pocket
                 // worker produces, minus the model.
                 let samples = silent_sample_count(&text, LOCAL_SAMPLE_RATE);
-                self.events.send(BackendEvent::TtsChunk {
+                delivery.send(BackendEvent::TtsChunk {
                     event_id: event_id.clone(),
                     seq: 0,
                     sample_rate: LOCAL_SAMPLE_RATE,
                     samples: Arc::from(vec![0i16; samples].as_slice()),
                 });
-                self.events.send(BackendEvent::TtsStreamEnd {
+                delivery.send(BackendEvent::TtsStreamEnd {
                     event_id,
                     chunk_count: 1,
                     first_chunk_ms: 1,
@@ -180,6 +210,64 @@ mod tests {
     use super::*;
     use crate::events::backend_channel;
     use std::path::PathBuf;
+
+    #[test]
+    fn synchronous_fake_voice_is_bounded_and_keeps_its_producer_generation() {
+        let (sender, receiver) = crate::backend_channel_for(cathedral_sim::RuntimeGeneration(4));
+        let mut fake = FakeSpeech::with_transcript(sender.clone(), "bounded voice");
+        for n in 0..3 {
+            fake.submit(TtsRequest {
+                event_id: SpeechEventId(format!("speech-{n}")),
+                text: "x".repeat(500),
+                voice_key: "test".into(),
+                kind: TtsBackendKind::Local,
+            })
+            .unwrap();
+        }
+        assert_eq!(
+            fake.submit(TtsRequest {
+                event_id: SpeechEventId("speech-full".into()),
+                text: "normal".into(),
+                voice_key: "test".into(),
+                kind: TtsBackendKind::Local
+            }),
+            Err(TtsSubmitError::QueueFull)
+        );
+        assert_eq!(receiver.len(), 6, "no partial fourth stream was published");
+        for n in 0..3 {
+            let chunk = receiver.try_recv_envelope().unwrap();
+            assert_eq!(chunk.generation, cathedral_sim::RuntimeGeneration(4));
+            assert!(
+                matches!(chunk.value, BackendEvent::TtsChunk { samples, .. } if samples.len() == 6000)
+            );
+            let end = receiver.try_recv_envelope().unwrap();
+            assert!(
+                matches!(end.value, BackendEvent::TtsStreamEnd { event_id, chunk_count: 1, .. } if event_id.0 == format!("speech-{n}"))
+            );
+        }
+        assert_eq!(sender.usage().terminals, 0);
+        sender.retire();
+        assert_eq!(
+            fake.submit_batch(
+                TranscriptionJobId(1),
+                "same.wav".into(),
+                SttBackendKind::Cloud
+            ),
+            Err(SttSubmitError::QueueFull)
+        );
+        let (current, events) = crate::backend_channel_for(cathedral_sim::RuntimeGeneration(5));
+        FakeSpeech::with_transcript(current, "current")
+            .submit_batch(
+                TranscriptionJobId(1),
+                "same.wav".into(),
+                SttBackendKind::Cloud,
+            )
+            .unwrap();
+        assert_eq!(
+            events.try_recv_envelope().unwrap().generation,
+            cathedral_sim::RuntimeGeneration(5)
+        );
+    }
 
     #[test]
     fn a_recording_transcribes_to_the_canned_line() {

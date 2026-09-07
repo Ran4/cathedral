@@ -5,14 +5,10 @@
 //! host holds an [`Arc<BackendRuntime>`] inside its `BackendsHandle` and drops
 //! it on shutdown, which stops the workers.
 
-use std::{future::Future, io, sync::Arc, time::Duration};
+use std::{future::Future, io, sync::Arc};
 
 use tokio::runtime::{Builder, Handle, Runtime};
 use tokio::task::JoinHandle;
-
-/// How long a drop waits for in-flight tasks before abandoning them. A provider
-/// call must never hold the game's exit open.
-const SHUTDOWN_GRACE: Duration = Duration::from_millis(500);
 
 /// A multi-threaded tokio runtime with a small, named worker pool.
 ///
@@ -79,7 +75,7 @@ impl Drop for BackendRuntime {
         if let Some(runtime) = self.runtime.take() {
             // Abandon anything still running rather than blocking the caller
             // (a 45 s provider timeout must not delay quitting the game).
-            runtime.shutdown_timeout(SHUTDOWN_GRACE);
+            runtime.shutdown_background();
         }
     }
 }
@@ -87,6 +83,7 @@ impl Drop for BackendRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn spawned_tasks_run_and_block_on_returns_their_value() {

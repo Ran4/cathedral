@@ -7,11 +7,11 @@
 
 use std::sync::Arc;
 
+pub use crate::mailbox::{BackendReceiver, BackendSender, backend_channel, backend_channel_for};
 use cathedral_sim::{
-    Completion, RealtimeResult, SpeechError, SpeechEventId, StatusEvent, TranscriptionJobId,
-    TranscriptionOutcome, TtsOutcome,
+    CognitionError, Completion, RealtimeResult, SpeechError, SpeechEventId, StatusEvent,
+    TranscriptionJobId, TranscriptionOutcome, TtsOutcome,
 };
-use crossbeam_channel::{Receiver, Sender, unbounded};
 
 /// One finished piece of backend work.
 ///
@@ -46,6 +46,131 @@ pub enum BackendEvent {
 }
 
 impl BackendEvent {
+    pub(crate) fn is_terminal(&self) -> bool {
+        !matches!(self, Self::TtsChunk { .. } | Self::Status(_))
+    }
+
+    pub(crate) fn terminal_budget(&self) -> usize {
+        match self {
+            Self::LlmCompletion(_) => 401_024,
+            Self::TtsDone { .. } | Self::TtsStreamEnd { .. } => crate::wav::MAX_WAV_BYTES + 1024,
+            _ => 16 * 1024,
+        }
+    }
+
+    pub(crate) fn retained_bytes(&self) -> usize {
+        let text = |value: &String| value.capacity();
+        let error = |value: &SpeechError| value.presentable.capacity();
+        std::mem::size_of::<Self>()
+            + match self {
+                Self::LlmCompletion(c) => match &c.result {
+                    Ok(reply) => reply.capacity(),
+                    Err(error) => error.allocated_bytes(),
+                },
+                Self::TranscriptionDone { result, .. } => match result {
+                    Ok(t) => text(t),
+                    Err(e) => error(e),
+                },
+                Self::RealtimeResult(RealtimeResult::Transcript { key, text: value }) => {
+                    text(key) + text(value)
+                }
+                Self::RealtimeResult(RealtimeResult::Failure { key, reason }) => {
+                    key.as_ref().map_or(0, text) + text(reason)
+                }
+                Self::TtsChunk {
+                    event_id, samples, ..
+                } => {
+                    event_id.0.capacity()
+                        + 2 * std::mem::size_of::<usize>()
+                        + std::mem::size_of_val(samples.as_ref())
+                }
+                Self::TtsStreamEnd { event_id, .. } => event_id.0.capacity(),
+                Self::TtsDone { event_id, result } => {
+                    event_id.0.capacity()
+                        + match result {
+                            Ok(wav) => wav.len() + 2 * std::mem::size_of::<usize>(),
+                            Err(e) => error(e),
+                        }
+                }
+                Self::Status(status) => {
+                    status.state.capacity()
+                        + status.message.as_ref().map_or(0, text)
+                        + status.backend.as_ref().map_or(0, text)
+                        + status
+                            .actor_id
+                            .as_ref()
+                            .map_or(0, |id| id.allocated_bytes())
+                }
+            }
+    }
+
+    pub(crate) fn valid_nonterminal(&self) -> bool {
+        match self {
+            Self::TtsChunk {
+                event_id,
+                samples,
+                sample_rate,
+                ..
+            } => {
+                event_id.0.len() <= 256
+                    && std::mem::size_of_val(samples.as_ref()) <= crate::wav::MAX_PCM_CHUNK_BYTES
+                    && (8_000..=192_000).contains(sample_rate)
+            }
+            Self::Status(_) => self.retained_bytes() <= 4096,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn same_job(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::LlmCompletion(a), Self::LlmCompletion(b)) => a.request_id == b.request_id,
+            (Self::TranscriptionDone { job: a, .. }, Self::TranscriptionDone { job: b, .. }) => {
+                a == b
+            }
+            (Self::RealtimeResult(a), Self::RealtimeResult(b)) => {
+                let key = |r: &RealtimeResult| match r {
+                    RealtimeResult::Transcript { key, .. } => Some(key.clone()),
+                    RealtimeResult::Failure { key, .. } => key.clone(),
+                };
+                key(a) == key(b)
+            }
+            (
+                Self::TtsDone { event_id: a, .. }
+                | Self::TtsStreamEnd { event_id: a, .. }
+                | Self::TtsChunk { event_id: a, .. },
+                Self::TtsDone { event_id: b, .. } | Self::TtsStreamEnd { event_id: b, .. },
+            ) => a == b,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn cancellation(&self) -> Self {
+        let message = "backend delivery cancelled: producer ended or result exceeded capacity";
+        match self {
+            Self::LlmCompletion(c) => Self::LlmCompletion(Completion {
+                request_id: c.request_id,
+                result: Err(CognitionError::new(message)),
+                duration_seconds: 0.0,
+            }),
+            Self::TranscriptionDone { job, .. } => Self::TranscriptionDone {
+                job: *job,
+                result: Err(SpeechError::new(message)),
+            },
+            Self::RealtimeResult(result) => Self::RealtimeResult(RealtimeResult::Failure {
+                key: match result {
+                    RealtimeResult::Transcript { key, .. } => Some(key.clone()),
+                    RealtimeResult::Failure { key, .. } => key.clone(),
+                },
+                reason: message.into(),
+            }),
+            Self::TtsDone { event_id, .. } | Self::TtsStreamEnd { event_id, .. } => Self::TtsDone {
+                event_id: event_id.clone(),
+                result: Err(SpeechError::new(message)),
+            },
+            _ => self.clone(),
+        }
+    }
+
     /// The speech-input half, ready for `EngineCommand::Transcription`.
     pub fn into_transcription_outcome(self) -> Option<TranscriptionOutcome> {
         match self {
@@ -132,26 +257,6 @@ impl From<TtsOutcome> for BackendEvent {
             },
             TtsOutcome::Done { event_id, result } => Self::TtsDone { event_id, result },
         }
-    }
-}
-
-/// Unbounded on purpose: a backend must never block (or drop a completion)
-/// because the game skipped a frame. Volume is bounded by the work in flight —
-/// one LLM turn, one utterance, a few hundred PCM chunks.
-pub fn backend_channel() -> (BackendSender, Receiver<BackendEvent>) {
-    let (sender, receiver) = unbounded();
-    (BackendSender(sender), receiver)
-}
-
-/// The producer half, cloned into every backend task.
-#[derive(Debug, Clone)]
-pub struct BackendSender(Sender<BackendEvent>);
-
-impl BackendSender {
-    /// Fire-and-forget: a closed receiver means the host is shutting down, and
-    /// a backend task that is mid-flight then has nothing useful to do about it.
-    pub fn send(&self, event: impl Into<BackendEvent>) {
-        let _ = self.0.send(event.into());
     }
 }
 

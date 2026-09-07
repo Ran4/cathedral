@@ -498,6 +498,8 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         .collect::<Result<Vec<String>, String>>()?;
     let engine = Engine::new(
         EngineConfig {
+            // This process owns one world and has no adoption/rebinding path.
+            runtime_generation: cathedral_sim::RuntimeGeneration::INITIAL,
             player_id: ActorId::from_raw(PLAYER_ID),
             fake_mode: args.fake,
             sounds_enabled: true,

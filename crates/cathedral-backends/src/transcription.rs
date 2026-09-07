@@ -36,7 +36,7 @@ use std::{
 use cathedral_sim::{
     SpeechError, SttBackendKind, SttSubmitError, Transcription, TranscriptionJobId,
 };
-use crossbeam_channel::{Sender, TrySendError, bounded, unbounded};
+use crossbeam_channel::{Sender, TrySendError, bounded};
 
 use crate::{
     config::SpeechSettings,
@@ -50,6 +50,7 @@ use crate::{
 
 /// `server.py:585-587` — the batch queue.
 pub const STT_QUEUE_CAPACITY: usize = 4;
+pub const DISCARD_QUEUE_CAPACITY: usize = 64;
 
 /// How much of a recording [`SttEngine::recording_seconds`] reads before it
 /// gives up on the short road. The microphone's own header is 44 bytes; a page
@@ -59,6 +60,7 @@ pub const STT_QUEUE_CAPACITY: usize = 4;
 const HEADER_PROBE_BYTES: usize = 4096;
 
 struct Job {
+    delivery: BackendSender,
     id: TranscriptionJobId,
     path: PathBuf,
     kind: SttBackendKind,
@@ -117,6 +119,7 @@ fn read_prefix(file: &mut std::fs::File, buffer: &mut [u8]) -> std::io::Result<u
 
 /// The [`Transcription`] the engine listens through.
 pub struct SttEngine {
+    events: BackendSender,
     cloud: Option<Arc<CloudTranscriber>>,
     local: Option<Arc<CanaryTranscriber>>,
     realtime: Option<RealtimeSttHandle>,
@@ -160,11 +163,14 @@ impl SttEngine {
         let worker = {
             let cloud = Arc::clone(&cloud);
             let local = Arc::clone(&local);
-            let events = events.clone();
             std::thread::Builder::new()
                 .name("cathedral-stt".to_string())
                 .spawn(move || {
                     for job in inbox {
+                        if !job.delivery.is_active() {
+                            remove_recording(&job.path);
+                            continue;
+                        }
                         let result = match job.kind {
                             SttBackendKind::Cloud => runtime.block_on(cloud.transcribe(&job.path)),
                             SttBackendKind::Local => local.transcribe(&job.path),
@@ -172,7 +178,7 @@ impl SttEngine {
                         // The recording has been heard (or failed to be): it is a
                         // file with the player's voice in it, and it goes now.
                         let _ = std::fs::remove_file(&job.path);
-                        events.send(BackendEvent::TranscriptionDone {
+                        job.delivery.send(BackendEvent::TranscriptionDone {
                             job: job.id,
                             result,
                         });
@@ -181,7 +187,7 @@ impl SttEngine {
                 .expect("a transcription thread")
         };
 
-        let (discards, disposals) = unbounded::<Discard>();
+        let (discards, disposals) = bounded::<Discard>(DISCARD_QUEUE_CAPACITY);
         std::thread::Builder::new()
             .name("cathedral-stt-discard".to_string())
             .spawn(move || {
@@ -198,6 +204,7 @@ impl SttEngine {
             .expect("a recording-disposal thread");
 
         Self {
+            events,
             cloud: Some(cloud),
             local: Some(local),
             realtime,
@@ -256,13 +263,25 @@ impl Transcription for SttEngine {
         wav_path: PathBuf,
         kind: SttBackendKind,
     ) -> Result<(), SttSubmitError> {
+        if wav_path.capacity() > 4096 {
+            return Err(SttSubmitError::Unavailable);
+        }
         if !self.available(kind) {
             return Err(SttSubmitError::Unavailable);
         }
         let Ok(path) = self.resolve(wav_path) else {
             return Err(SttSubmitError::Unavailable);
         };
+        let Some(delivery) = self.events.reserve(BackendEvent::TranscriptionDone {
+            job,
+            result: Err(SpeechError::new(
+                "transcription producer ended or delivery exceeded capacity",
+            )),
+        }) else {
+            return Err(SttSubmitError::QueueFull);
+        };
         match self.jobs.try_send(Job {
+            delivery: delivery.clone(),
             id: job,
             path,
             kind,
@@ -270,8 +289,14 @@ impl Transcription for SttEngine {
             Ok(()) => Ok(()),
             // Four recordings are already waiting: the player is speaking faster
             // than the machine can listen.
-            Err(TrySendError::Full(_)) => Err(SttSubmitError::QueueFull),
-            Err(TrySendError::Disconnected(_)) => Err(SttSubmitError::Unavailable),
+            Err(TrySendError::Full(_)) => {
+                delivery.cancel_reservation();
+                Err(SttSubmitError::QueueFull)
+            }
+            Err(TrySendError::Disconnected(_)) => {
+                delivery.cancel_reservation();
+                Err(SttSubmitError::Unavailable)
+            }
         }
     }
 
@@ -339,17 +364,22 @@ impl Transcription for SttEngine {
     /// deletes recordings — and `SessionDir` removes whatever a crash leaves
     /// behind when the process ends.
     fn discard_recording(&mut self, wav_path: &Path) {
+        if wav_path.as_os_str().len() > 4096 {
+            return;
+        }
         let Ok(path) = self.resolve(wav_path.to_path_buf()) else {
             return;
         };
-        if let Err(undelivered) = self.discards.send(Discard::File(path)) {
-            // No disposal thread left to hand it to: better a blocked frame
-            // than the player's voice staying on disk.
-            match undelivered.into_inner() {
-                Discard::File(path) => remove_recording(&path),
-                #[cfg(test)]
-                Discard::Barrier(_) => {}
-            }
+        if self.discards.try_send(Discard::File(path)).is_err() {
+            // The private SessionDir still owns the file. Its retirement cleanup
+            // removes deferred discards; never perform filesystem IO on the host.
+            self.events.send(cathedral_sim::StatusEvent {
+                subsystem: cathedral_sim::Subsystem::Stt,
+                state: "degraded".into(),
+                actor_id: None,
+                backend: None,
+                message: Some("recording disposal deferred to private session cleanup".into()),
+            });
         }
     }
 }
@@ -385,7 +415,6 @@ mod tests {
         testing::MockServer,
         worker::tests::StubWorker,
     };
-    use crossbeam_channel::Receiver;
     use std::{collections::BTreeMap, path::Path, time::Duration};
 
     fn settings(pairs: &[(&str, &str)], workers_dir: PathBuf, uv: &str) -> SpeechSettings {
@@ -411,7 +440,7 @@ mod tests {
         path
     }
 
-    fn next(events: &Receiver<BackendEvent>) -> BackendEvent {
+    fn next(events: &crate::events::BackendReceiver) -> BackendEvent {
         loop {
             match events
                 .recv_timeout(Duration::from_secs(10))
@@ -574,7 +603,10 @@ mod tests {
             .recording_seconds(Path::new("player-recording-8.wav"))
             .expect("the walk continues past the prefix it started with");
         assert!((seconds - 0.5).abs() < 1e-9, "{seconds}");
-        assert_eq!(stt.recording_seconds(Path::new("player-recording-7.wav")), None);
+        assert_eq!(
+            stt.recording_seconds(Path::new("player-recording-7.wav")),
+            None
+        );
 
         std::fs::remove_dir_all(&session).ok();
     }

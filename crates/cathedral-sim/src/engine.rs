@@ -191,6 +191,8 @@ impl Capabilities {
 /// Everything the host configures (`config.ron` → here; no env reads in the sim).
 #[derive(Debug, Clone, PartialEq)]
 pub struct EngineConfig {
+    /// Ephemeral execution fence, supplied by the host, never restored from disk.
+    pub runtime_generation: crate::RuntimeGeneration,
     /// `"player"`. The engine refuses to start without this character.
     pub player_id: ActorId,
     /// Gates `DebugPlayerSay` (`server.py:1028-1031`).
@@ -327,6 +329,7 @@ pub struct EngineConfig {
 impl Default for EngineConfig {
     fn default() -> Self {
         Self {
+            runtime_generation: crate::RuntimeGeneration::INITIAL,
             player_id: ActorId::from_raw("player"),
             fake_mode: false,
             sounds_enabled: true,
@@ -373,6 +376,12 @@ impl Default for EngineConfig {
 /// Everything the host asks the engine to do, in one ordered queue (D27).
 #[derive(Debug, Clone, PartialEq)]
 pub enum EngineCommand {
+    /// Outer transport envelope. Rejected before identity, carried position or
+    /// domain mutation if it belongs to another runtime.
+    InGeneration {
+        generation: crate::RuntimeGeneration,
+        command: Box<EngineCommand>,
+    },
     /// Stable producer identity, assigned once before transport. Nested wrappers
     /// are refused; raw legacy calls use an explicit one-shot engine producer.
     Identified {
@@ -2177,11 +2186,25 @@ impl Engine {
         completions: &mut Vec<Completion>,
         out: &mut Vec<EngineMessage>,
     ) {
+        let command = match command {
+            EngineCommand::InGeneration {
+                generation,
+                command,
+            } if generation == self.config.runtime_generation => *command,
+            EngineCommand::InGeneration { .. } => return,
+            command if self.config.runtime_generation == crate::RuntimeGeneration::INITIAL => {
+                command
+            }
+            _ => return,
+        };
         let (id, command) = match command {
             EngineCommand::Identified { id, command } => (Some(id), *command),
             command => (None, command),
         };
-        if matches!(command, EngineCommand::Identified { .. }) {
+        if matches!(
+            command,
+            EngineCommand::Identified { .. } | EngineCommand::InGeneration { .. }
+        ) {
             if let Some(id) = id {
                 out.push(EngineMessage::CommandAdmissionRefused {
                     id: Some(id),
@@ -2334,7 +2357,9 @@ impl Engine {
         out: &mut Vec<EngineMessage>,
     ) -> Option<Outcome> {
         let outcome = match command {
-            EngineCommand::Identified { .. } => unreachable!("envelope removed before dispatch"),
+            EngineCommand::Identified { .. } | EngineCommand::InGeneration { .. } => {
+                unreachable!("envelope removed before dispatch")
+            }
             EngineCommand::SpatialUpdate {
                 spatial_seq,
                 updates,

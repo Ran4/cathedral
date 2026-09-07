@@ -74,6 +74,10 @@ impl CognitionError {
         &self.detail
     }
 
+    pub fn allocated_bytes(&self) -> usize {
+        self.kind.capacity() + self.detail.capacity()
+    }
+
     pub fn as_str(&self) -> &str {
         &self.kind
     }

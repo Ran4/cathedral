@@ -1829,10 +1829,20 @@ pub(crate) fn track_reflex_signals(
     time: Res<Time>,
     mut state: ResMut<ReflexState>,
     mut speech: MessageReader<super::speech::PresentSpeech>,
+    handle: Option<Res<super::bridge::BridgeHandle>>,
     mut sounds: MessageReader<super::sound::PlaySoundEffect>,
 ) {
     let now = time.elapsed_secs_f64();
     for line in speech.read() {
+        if line.generation
+            != handle
+                .as_ref()
+                .map_or(cathedral_sim::RuntimeGeneration::INITIAL, |h| {
+                    h.generation()
+                })
+        {
+            continue;
+        }
         state.note_speech(
             line.speaker_id.clone(),
             line.target_id.clone(),
@@ -4762,6 +4772,7 @@ mod tests {
 
         // The talker speaks to the player: a 3 s (floor) deadline opens.
         app.world_mut().write_message(PresentSpeech {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             event_seq: 1,
             event_id: "speech-1".into(),
             speaker_id: ActorId("talker".into()),

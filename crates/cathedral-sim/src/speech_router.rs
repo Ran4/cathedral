@@ -541,7 +541,10 @@ impl SpeechRouter {
             // and the result completes the stream exactly as a realtime
             // transcript would (`server.py:1293-1304`).
             stream.commit_at = Some(now);
-            let job = self.next_job();
+            let Ok(job) = self.next_job() else {
+                self.degrade(basename, DegradeReason::FakeTranscriptionFailed, out);
+                return;
+            };
             let path = ctx.runtime_dir.join(basename);
             match ctx
                 .transcription
@@ -771,7 +774,7 @@ impl SpeechRouter {
                     ),
                     None => ("batch".to_string(), measured, None),
                 };
-                let job = self.next_job();
+                let job = self.next_job()?;
                 submit_batch(ctx, job, wav_path, stt_backend)?;
                 self.recording_jobs.push((job, task));
                 // A batch round-trip can take seconds; keep NPC turns held until
@@ -920,7 +923,13 @@ impl SpeechRouter {
         if let Some(timing) = self.timing_mut(&task.basename) {
             timing.path = format!("batch(fallback:{reason})");
         }
-        let job = self.next_job();
+        let job = match self.next_job() {
+            Ok(job) => job,
+            Err(error) => {
+                self.resolve(now, task, Err(SpeechError::new(error.message)), ctx, out);
+                return;
+            }
+        };
         let wav_path = ctx.runtime_dir.join(&task.basename);
         match submit_batch(ctx, job, wav_path, task.backend) {
             Ok(()) => self.recording_jobs.push((job, task)),
@@ -1428,9 +1437,14 @@ impl SpeechRouter {
         Some(self.parked.remove(index).1)
     }
 
-    fn next_job(&mut self) -> TranscriptionJobId {
-        self.next_job += 1;
-        TranscriptionJobId(self.next_job)
+    fn next_job(&mut self) -> Result<TranscriptionJobId, CommandError> {
+        self.next_job = self.next_job.checked_add(1).ok_or_else(|| {
+            CommandError::new(
+                CommandErrorCode::Overloaded,
+                "transcription execution identities exhausted",
+            )
+        })?;
+        Ok(TranscriptionJobId(self.next_job))
     }
 
     // ------------------------------------------------------------ timing probe
@@ -1649,6 +1663,14 @@ fn truncate_chars(value: &str, limit: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn transcription_job_ids_refuse_exhaustion_without_reuse() {
+        let mut router = SpeechRouter::default();
+        router.next_job = u64::MAX;
+        assert!(router.next_job().is_err());
+        assert_eq!(router.next_job, u64::MAX);
+    }
 
     #[test]
     fn the_control_character_predicate_allows_newline_and_tab_only() {

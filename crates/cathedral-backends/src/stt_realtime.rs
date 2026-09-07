@@ -50,6 +50,9 @@ use crate::{
 /// `speech_client.py:1000` — the writer's bounded action queue. A full queue is
 /// backpressure, and backpressure is a degrade to batch.
 const ACTION_QUEUE_CAPACITY: usize = 512;
+pub const MAX_REALTIME_JOBS: usize = 32;
+pub const MAX_REALTIME_CHUNK_SAMPLES: usize = 2400;
+pub const MAX_REALTIME_FRAME_BYTES: usize = 64 * 1024;
 /// `speech_client.py:1198` — the connect-backoff ceiling.
 const MAX_BACKOFF_SECONDS: f64 = 30.0;
 /// `speech_client.py:1266` — a provider transcript is not a novel.
@@ -91,6 +94,7 @@ pub fn monotonic_clock() -> Clock {
 
 #[derive(Debug, Default)]
 struct SessionState {
+    deliveries: HashMap<String, BackendSender>,
     /// The utterance currently appending audio.
     active_key: Option<String>,
     /// Committed, awaiting the provider's `item_id` acknowledgement (FIFO).
@@ -124,6 +128,7 @@ enum Action {
 /// The sync side. Every method is non-blocking and answers `bool`: `false`
 /// means "not streaming — use batch", never an error.
 pub struct RealtimeSttHandle {
+    events: BackendSender,
     state: Arc<Mutex<SessionState>>,
     actions: mpsc::Sender<Action>,
     closing: Arc<AtomicBool>,
@@ -181,7 +186,7 @@ impl RealtimeSttHandle {
         let (actions, inbox) = mpsc::channel(ACTION_QUEUE_CAPACITY);
         let state = Arc::new(Mutex::new(SessionState::default()));
         let closing = Arc::new(AtomicBool::new(false));
-        let max_in_flight = settings.max_in_flight;
+        let max_in_flight = settings.max_in_flight.min(MAX_REALTIME_JOBS);
 
         let task = SessionTask {
             state: Arc::clone(&state),
@@ -190,11 +195,12 @@ impl RealtimeSttHandle {
             settings,
             api_key,
             factory,
-            events,
+            events: events.clone(),
         };
         runtime.spawn(task.run(inbox));
 
         Self {
+            events,
             state,
             actions,
             closing,
@@ -205,6 +211,9 @@ impl RealtimeSttHandle {
 
     /// Start streaming one utterance. `false` = fall straight back to batch.
     pub fn begin(&self, key: &str) -> bool {
+        if key.is_empty() || key.len() > 256 || !self.events.is_active() {
+            return false;
+        }
         let now = (self.clock)();
         {
             let mut state = self.state.lock().expect("realtime state");
@@ -216,14 +225,40 @@ impl RealtimeSttHandle {
             if !state.connected && now < state.retry_at {
                 return false;
             }
+            if state.deliveries.contains_key(key) || state.deliveries.len() >= MAX_REALTIME_JOBS {
+                return false;
+            }
+            let Some(delivery) = self.events.reserve(crate::BackendEvent::RealtimeResult(
+                RealtimeResult::Failure {
+                    key: Some(key.to_owned()),
+                    reason: "realtime producer ended or delivery exceeded capacity".into(),
+                },
+            )) else {
+                return false;
+            };
+            if let Some(old) = state.active_key.take() {
+                state.deliveries.remove(&old);
+            }
+            state.deliveries.insert(key.to_owned(), delivery);
             state.active_key = Some(key.to_string());
             state.last_used = now;
         }
-        self.enqueue(json!({"type": "input_audio_buffer.clear"}))
+        if self.enqueue(json!({"type": "input_audio_buffer.clear"})) {
+            return true;
+        }
+        let mut state = self.state.lock().expect("realtime state");
+        state.active_key = None;
+        if let Some(delivery) = state.deliveries.remove(key) {
+            delivery.cancel_reservation();
+        }
+        false
     }
 
     /// One 24 kHz mono chunk. Base64 lives on this wire and nowhere else.
     pub fn append(&self, key: &str, samples: &[i16]) -> bool {
+        if samples.len() > MAX_REALTIME_CHUNK_SAMPLES || !self.events.is_active() {
+            return false;
+        }
         {
             let state = self.state.lock().expect("realtime state");
             if self.closing.load(Ordering::SeqCst) || state.active_key.as_deref() != Some(key) {
@@ -250,6 +285,7 @@ impl RealtimeSttHandle {
             }
             state.active_key = None;
             if state.in_flight() >= self.max_in_flight {
+                state.deliveries.remove(key);
                 return false;
             }
             state.pending_commits.push_back(key.to_string());
@@ -264,6 +300,7 @@ impl RealtimeSttHandle {
         if let Some(position) = state.pending_commits.iter().position(|entry| entry == key) {
             state.pending_commits.remove(position);
         }
+        state.deliveries.remove(key);
         false
     }
 
@@ -287,6 +324,11 @@ impl RealtimeSttHandle {
                 slot.clear();
             }
             state.items.retain(|_, item_key| item_key != key);
+            if let Some(delivery) = state.deliveries.remove(key) {
+                // Explicit caller cancellation/fallback already owns the
+                // utterance; it is not an unexpected producer loss.
+                delivery.cancel_reservation();
+            }
             was_active
         };
         if was_active {
@@ -339,11 +381,15 @@ impl SessionTask {
         loop {
             let next = match transport.as_mut() {
                 Some(socket) => tokio::select! {
+                    () = self.events.retired() => Next::Action(None),
                     action = inbox.recv() => Next::Action(action),
                     frame = socket.recv() => Next::Frame(frame),
                     () = tokio::time::sleep(IDLE_TICK) => Next::Tick,
                 },
-                None => Next::Action(inbox.recv().await),
+                None => tokio::select! {
+                    () = self.events.retired() => Next::Action(None),
+                    action = inbox.recv() => Next::Action(action),
+                },
             };
 
             match next {
@@ -473,6 +519,10 @@ impl SessionTask {
 
     /// `_handle_provider_event` (`speech_client.py:1237-1274`).
     fn handle_provider_event(&self, raw: &str) {
+        if raw.len() > MAX_REALTIME_FRAME_BYTES {
+            self.fail_pending("response byte limit");
+            return;
+        }
         let Ok(Value::Object(event)) = serde_json::from_str::<Value>(raw) else {
             return;
         };
@@ -490,7 +540,7 @@ impl SessionTask {
                         // bind nothing.
                         return;
                     }
-                    match item_id.filter(|id| !id.is_empty()) {
+                    match item_id.filter(|id| !id.is_empty() && id.len() <= 256) {
                         Some(item_id) => {
                             state.items.insert(item_id.to_string(), key);
                             None
@@ -555,7 +605,12 @@ impl SessionTask {
                 keys.push(active);
             }
             // Tombstones from `clear()` name no utterance.
-            keys.extend(state.pending_commits.drain(..).filter(|key| !key.is_empty()));
+            keys.extend(
+                state
+                    .pending_commits
+                    .drain(..)
+                    .filter(|key| !key.is_empty()),
+            );
             keys.extend(state.items.values().cloned());
             state.items.clear();
             state.connected = false;
@@ -609,8 +664,20 @@ impl SessionTask {
     }
 
     fn result(&self, result: RealtimeResult) {
-        self.events
-            .send(crate::events::BackendEvent::RealtimeResult(result));
+        let key = match &result {
+            RealtimeResult::Transcript { key, .. } => Some(key.as_str()),
+            RealtimeResult::Failure { key, .. } => key.as_deref(),
+        };
+        let delivery = key.and_then(|key| {
+            self.state
+                .lock()
+                .expect("realtime state")
+                .deliveries
+                .remove(key)
+        });
+        if let Some(delivery) = delivery {
+            delivery.send(crate::BackendEvent::RealtimeResult(result));
+        }
     }
 
     fn status(&self, state: &str, message: &str) {
@@ -621,6 +688,17 @@ impl SessionTask {
             message: Some(truncate(message, MAX_MESSAGE_CHARS)),
             backend: Some("cloud".to_string()),
         });
+    }
+}
+
+impl Drop for SessionTask {
+    fn drop(&mut self) {
+        self.fail_pending("realtime task ended");
+        self.state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .deliveries
+            .clear();
     }
 }
 
@@ -646,9 +724,13 @@ impl WebsocketTransport {
             .map_err(|_| "InvalidHeader: the API key is not a valid header value".to_string())?;
         request.headers_mut().insert(AUTHORIZATION, bearer);
 
-        let (socket, _response) = tokio_tungstenite::connect_async(request)
-            .await
-            .map_err(|error| format!("{}: {error}", error_kind(&error)))?;
+        let socket_config = tokio_tungstenite::tungstenite::protocol::WebSocketConfig::default()
+            .max_message_size(Some(MAX_REALTIME_FRAME_BYTES))
+            .max_frame_size(Some(MAX_REALTIME_FRAME_BYTES));
+        let (socket, _response) =
+            tokio_tungstenite::connect_async_with_config(request, Some(socket_config), false)
+                .await
+                .map_err(|error| format!("{}: {error}", error_kind(&error)))?;
         Ok(Box::new(Self { socket }))
     }
 }
@@ -698,7 +780,6 @@ impl RealtimeTransport for WebsocketTransport {
 mod tests {
     use super::*;
     use crate::events::{BackendEvent, backend_channel};
-    use crossbeam_channel::Receiver;
 
     /// A scripted duplex transport: sends are recorded, `recv` blocks on a
     /// queue. The whole realtime state machine runs against it — in-process, no
@@ -871,7 +952,7 @@ mod tests {
     /// A session with a fake clock the test moves by hand.
     struct Session {
         handle: RealtimeSttHandle,
-        events: Receiver<BackendEvent>,
+        events: crate::events::BackendReceiver,
         now: Arc<Mutex<f64>>,
         _runtime: Arc<BackendRuntime>,
     }

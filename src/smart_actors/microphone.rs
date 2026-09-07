@@ -25,7 +25,7 @@ use super::{
 };
 
 const AUDIO_BUFFER_COUNT: usize = 64;
-const WORKER_SHUTDOWN_GRACE: Duration = Duration::from_millis(300);
+const MAX_CAPTURE_SAMPLES: usize = 65_536;
 const PRE_ROLL: Duration = Duration::from_millis(250);
 const START_CONFIRMATION: Duration = Duration::from_millis(80);
 const MINIMUM_VOICE: Duration = Duration::from_millis(140);
@@ -93,6 +93,42 @@ pub enum MicrophoneEvent {
     RecordingFailed(String),
 }
 
+// Keep native error metadata within the lifecycle queue's retained byte
+// allowance. Stable recording basenames are validated, never shortened.
+fn bounded_microphone_event(event: MicrophoneEvent) -> MicrophoneEvent {
+    let reason = |value: String| {
+        value
+            .chars()
+            .take(1024)
+            .collect::<String>()
+            .into_boxed_str()
+            .into_string()
+    };
+    match event {
+        MicrophoneEvent::Unavailable(text) => MicrophoneEvent::Unavailable(reason(text)),
+        MicrophoneEvent::RecordingFailed(text) => MicrophoneEvent::RecordingFailed(reason(text)),
+        MicrophoneEvent::RecordingStarted { ref wav_basename }
+        | MicrophoneEvent::RecordingFinished {
+            ref wav_basename, ..
+        }
+        | MicrophoneEvent::RecordingCancelled { ref wav_basename }
+            if wav_basename.capacity() > 128 =>
+        {
+            MicrophoneEvent::RecordingFailed("recording identity exceeded byte limit".into())
+        }
+        event => event,
+    }
+}
+
+fn send_microphone_event(
+    events: &Sender<MicrophoneEvent>,
+    event: MicrophoneEvent,
+) -> Result<(), crossbeam_channel::SendError<MicrophoneEvent>> {
+    // Worker-only blocking send: M3 must drain/drop this receiver before
+    // waiting for a retained worker's stopped acknowledgement.
+    events.send(bounded_microphone_event(event))
+}
+
 pub enum MicrophonePoll {
     Event(MicrophoneEvent),
     Empty,
@@ -102,6 +138,7 @@ pub enum MicrophonePoll {
 /// Handle used by Bevy systems. Sending and polling are always non-blocking.
 #[derive(Resource)]
 pub struct MicrophoneService {
+    generation: cathedral_sim::RuntimeGeneration,
     commands: Sender<MicrophoneCommand>,
     events: Receiver<MicrophoneEvent>,
     shutdown: Sender<()>,
@@ -113,9 +150,10 @@ pub struct MicrophoneService {
 impl MicrophoneService {
     pub fn spawn(
         runtime_dir: PathBuf,
-        bridge: Sender<BridgeCommand>,
+        bridge: super::bridge::BridgeCommandSender,
         trailing_silence: Duration,
     ) -> Self {
+        let generation = bridge.generation();
         let cleanup_dir = runtime_dir.clone();
         let (commands_tx, commands_rx) = bounded(8);
         let (events_tx, events_rx) = bounded(16);
@@ -145,6 +183,7 @@ impl MicrophoneService {
         };
 
         Self {
+            generation,
             commands: commands_tx,
             events: events_rx,
             shutdown: shutdown_tx,
@@ -162,6 +201,7 @@ impl MicrophoneService {
             "no input device (test)".into(),
         ));
         Self {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             commands,
             events,
             shutdown: bounded(1).0,
@@ -173,10 +213,18 @@ impl MicrophoneService {
 
     #[cfg(test)]
     pub fn command_harness_for_tests() -> (Self, Receiver<MicrophoneCommand>) {
+        Self::command_harness_for_generation(cathedral_sim::RuntimeGeneration::INITIAL)
+    }
+
+    #[cfg(test)]
+    pub fn command_harness_for_generation(
+        generation: cathedral_sim::RuntimeGeneration,
+    ) -> (Self, Receiver<MicrophoneCommand>) {
         let (commands, received_commands) = bounded(8);
         let (_events_tx, events) = bounded(1);
         (
             Self {
+                generation,
                 commands,
                 events,
                 shutdown: bounded(1).0,
@@ -190,9 +238,17 @@ impl MicrophoneService {
 
     #[cfg(test)]
     pub fn event_harness_for_tests() -> (Self, Sender<MicrophoneEvent>) {
+        Self::event_harness_for_generation(cathedral_sim::RuntimeGeneration::INITIAL)
+    }
+
+    #[cfg(test)]
+    pub fn event_harness_for_generation(
+        generation: cathedral_sim::RuntimeGeneration,
+    ) -> (Self, Sender<MicrophoneEvent>) {
         let (events_tx, events) = bounded(16);
         (
             Self {
+                generation,
                 commands: bounded(8).0,
                 events,
                 shutdown: bounded(1).0,
@@ -205,12 +261,26 @@ impl MicrophoneService {
     }
 
     pub fn try_send(&self, command: MicrophoneCommand) -> Result<(), String> {
+        if matches!(&command, MicrophoneCommand::Discard { wav_basename } if wav_basename.capacity() > 128)
+        {
+            return Err("recording identity exceeded byte limit".into());
+        }
         self.commands
             .try_send(command)
             .map_err(|error| match error {
                 TrySendError::Full(_) => "microphone command queue is busy".into(),
                 TrySendError::Disconnected(_) => "microphone worker is unavailable".into(),
             })
+    }
+
+    pub fn generation(&self) -> cathedral_sim::RuntimeGeneration {
+        self.generation
+    }
+    pub fn pending_events(&self) -> usize {
+        self.events.len().min(16)
+    }
+    pub fn retire(&self) {
+        let _ = self.shutdown.try_send(());
     }
 
     /// Relinquish a completed recording. If the bounded worker queue cannot
@@ -242,20 +312,17 @@ impl MicrophoneService {
 
 impl Drop for MicrophoneService {
     fn drop(&mut self) {
-        let _ = self.shutdown.try_send(());
-        // Dropping a JoinHandle detaches a driver call that did not return
-        // inside the bounded grace period; app shutdown must not freeze.
-        if let Some(worker) = self.worker.take()
-            && self.stopped.recv_timeout(WORKER_SHUTDOWN_GRACE).is_ok()
-        {
-            let _ = worker.join();
-        }
+        self.retire();
+        // The worker owns its captured endpoint and shutdown cleanup. Detach
+        // without a main-thread grace wait, even if a device call is wedged.
+        let _ = self.stopped.try_recv();
+        self.worker.take();
     }
 }
 
 fn microphone_worker(
     runtime_dir: PathBuf,
-    bridge: Sender<BridgeCommand>,
+    bridge: super::bridge::BridgeCommandSender,
     trailing_silence: Duration,
     commands: Receiver<MicrophoneCommand>,
     shutdown: Receiver<()>,
@@ -293,13 +360,14 @@ fn microphone_worker(
             match probe_microphone() {
                 Ok(()) => {
                     available = true;
-                    if events.send(MicrophoneEvent::Available).is_err() {
+                    if send_microphone_event(&events, MicrophoneEvent::Available).is_err() {
                         return;
                     }
                 }
                 Err(error) => {
                     enabled = false;
-                    if events.send(MicrophoneEvent::Unavailable(error)).is_err() {
+                    if send_microphone_event(&events, MicrophoneEvent::Unavailable(error)).is_err()
+                    {
                         return;
                     }
                 }
@@ -356,7 +424,7 @@ enum ListenOutcome {
 #[allow(clippy::too_many_arguments)]
 fn listen_for_utterances(
     runtime_dir: &Path,
-    bridge: &Sender<BridgeCommand>,
+    bridge: &super::bridge::BridgeCommandSender,
     trailing_silence: Duration,
     streaming_enabled: &mut bool,
     commands: &Receiver<MicrophoneCommand>,
@@ -366,17 +434,19 @@ fn listen_for_utterances(
 ) -> ListenOutcome {
     let host = cpal::default_host();
     let Some(device) = host.default_input_device() else {
-        let _ = events.send(MicrophoneEvent::Unavailable(
-            "no default microphone was found".into(),
-        ));
+        let _ = send_microphone_event(
+            &events,
+            MicrophoneEvent::Unavailable("no default microphone was found".into()),
+        );
         return ListenOutcome::Failed;
     };
     let config = match device.default_input_config() {
         Ok(config) => config,
         Err(error) => {
-            let _ = events.send(MicrophoneEvent::Unavailable(format!(
-                "microphone configuration failed: {error}"
-            )));
+            let _ = send_microphone_event(
+                &events,
+                MicrophoneEvent::Unavailable(format!("microphone configuration failed: {error}")),
+            );
             return ListenOutcome::Failed;
         }
     };
@@ -395,14 +465,15 @@ fn listen_for_utterances(
     let stream = match build_input_stream(&device, &config, audio_tx, error_tx) {
         Ok(stream) => stream,
         Err(error) => {
-            let _ = events.send(MicrophoneEvent::Unavailable(error));
+            let _ = send_microphone_event(&events, MicrophoneEvent::Unavailable(error));
             return ListenOutcome::Failed;
         }
     };
     if let Err(error) = stream.play() {
-        let _ = events.send(MicrophoneEvent::Unavailable(format!(
-            "could not start microphone: {error}"
-        )));
+        let _ = send_microphone_event(
+            &events,
+            MicrophoneEvent::Unavailable(format!("could not start microphone: {error}")),
+        );
         return ListenOutcome::Failed;
     }
 
@@ -465,7 +536,7 @@ fn listen_for_utterances(
             recv(error_rx) -> error => {
                 let error = error.unwrap_or_else(|_| "microphone error channel disconnected".into());
                 fail_recording(&mut recording, events, error.clone());
-                let _ = events.send(MicrophoneEvent::Unavailable(error));
+                let _ = send_microphone_event(&events,MicrophoneEvent::Unavailable(error));
                 return ListenOutcome::Failed;
             },
             recv(audio_rx) -> captured => match captured {
@@ -526,7 +597,7 @@ fn listen_for_utterances(
                                     let started = MicrophoneEvent::RecordingStarted {
                                         wav_basename: active.wav_basename.clone(),
                                     };
-                                    if events.send(started).is_ok() {
+                                    if send_microphone_event(&events,started).is_ok() {
                                         recording = Some(active);
                                     } else {
                                         let path = active.path.clone();
@@ -537,7 +608,7 @@ fn listen_for_utterances(
                                     pre_roll.clear();
                                 }
                                 Err(error) => {
-                                    let _ = events.send(MicrophoneEvent::RecordingFailed(error));
+                                    let _ = send_microphone_event(&events,MicrophoneEvent::RecordingFailed(error));
                                     return ListenOutcome::Failed;
                                 }
                             }
@@ -547,7 +618,7 @@ fn listen_for_utterances(
                 Err(_) => {
                     let error = "microphone stream disconnected".to_string();
                     fail_recording(&mut recording, events, error.clone());
-                    let _ = events.send(MicrophoneEvent::Unavailable(error));
+                    let _ = send_microphone_event(&events,MicrophoneEvent::Unavailable(error));
                     return ListenOutcome::Failed;
                 }
             },
@@ -619,7 +690,7 @@ impl LinearResampler {
 /// utterance quietly resolves through the batch WAV instead.
 struct UtteranceStream {
     wav_basename: String,
-    bridge: Sender<BridgeCommand>,
+    bridge: super::bridge::BridgeCommandSender,
     resampler: LinearResampler,
     pending: Vec<i16>,
     next_seq: u32,
@@ -628,7 +699,7 @@ struct UtteranceStream {
 
 impl UtteranceStream {
     fn begin(
-        bridge: Sender<BridgeCommand>,
+        bridge: super::bridge::BridgeCommandSender,
         wav_basename: String,
         input_rate: u32,
         pre_roll: &VecDeque<f32>,
@@ -726,7 +797,7 @@ fn begin_recording(
     next_recording: &mut u64,
     pre_roll: &VecDeque<f32>,
     confirmed_voice_frames: u64,
-    stream_bridge: Option<&Sender<BridgeCommand>>,
+    stream_bridge: Option<&super::bridge::BridgeCommandSender>,
 ) -> Result<ActiveRecording, String> {
     let wav_basename = format!("player-recording-{}.wav", *next_recording);
     *next_recording = next_recording.wrapping_add(1).max(1);
@@ -781,9 +852,12 @@ fn finish_recording(
             stream.abort();
         }
         let _ = std::fs::remove_file(&path);
-        let _ = events.send(MicrophoneEvent::RecordingFailed(format!(
-            "could not finish microphone recording: {error}"
-        )));
+        let _ = send_microphone_event(
+            &events,
+            MicrophoneEvent::RecordingFailed(format!(
+                "could not finish microphone recording: {error}"
+            )),
+        );
         return false;
     }
     // The stream end is enqueued before RecordingFinished so the engine
@@ -798,7 +872,7 @@ fn finish_recording(
         wav_basename,
         silent,
     };
-    if events.send(finished).is_err() && !silent {
+    if send_microphone_event(&events, finished).is_err() && !silent {
         // A recording no longer has an owner if Bevy cannot learn about it.
         let _ = std::fs::remove_file(path);
     }
@@ -821,7 +895,10 @@ fn cancel_recording(recording: &mut Option<ActiveRecording>, events: &Sender<Mic
     }
     drop(writer);
     let _ = std::fs::remove_file(path);
-    let _ = events.send(MicrophoneEvent::RecordingCancelled { wav_basename });
+    let _ = send_microphone_event(
+        &events,
+        MicrophoneEvent::RecordingCancelled { wav_basename },
+    );
 }
 
 fn fail_recording(
@@ -842,7 +919,7 @@ fn fail_recording(
         drop(writer);
         let _ = std::fs::remove_file(path);
     }
-    let _ = events.send(MicrophoneEvent::RecordingFailed(error));
+    let _ = send_microphone_event(&events, MicrophoneEvent::RecordingFailed(error));
 }
 
 fn remove_recording(runtime_dir: &Path, wav_basename: &str) {
@@ -1022,19 +1099,46 @@ where
     f32: FromSample<T>,
 {
     let channels = usize::from(config.channels);
+    if channels == 0 {
+        return Err("microphone has no input channels".into());
+    }
+    let capture_errors = errors.clone();
     device
         .build_input_stream(
             config,
             move |input: &[T], _| {
-                let samples = downmix_to_mono(input, channels);
-                let _ = captured.try_send(samples);
+                publish_capture(input, channels, &captured, &capture_errors);
             },
             move |error| {
-                let _ = errors.try_send(format!("microphone stream error: {error}"));
+                let _ = errors.try_send(
+                    format!("microphone stream error: {error}")
+                        .chars()
+                        .take(1024)
+                        .collect(),
+                );
             },
             None,
         )
         .map_err(|error| format!("could not open microphone: {error}"))
+}
+
+fn publish_capture<T>(
+    input: &[T],
+    channels: usize,
+    captured: &Sender<Vec<f32>>,
+    errors: &Sender<String>,
+) where
+    T: SizedSample + Copy,
+    f32: FromSample<T>,
+{
+    if channels == 0 || input.len() / channels > MAX_CAPTURE_SAMPLES {
+        let _ = errors.try_send("microphone capture block exceeded byte limit".into());
+        return;
+    }
+    let samples = downmix_to_mono(input, channels);
+    if captured.try_send(samples).is_err() {
+        let _ = errors.try_send("microphone capture overrun; recording cancelled".into());
+    }
 }
 
 fn downmix_to_mono<T>(input: &[T], channels: usize) -> Vec<f32>
@@ -1068,6 +1172,54 @@ fn safe_audio_path(runtime_dir: &Path, basename: &str) -> Option<PathBuf> {
 mod tests {
     use super::*;
     use std::time::{Instant, SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn capture_and_lifecycle_allocations_are_bounded_before_queueing() {
+        let (captured, buffers) = bounded(AUDIO_BUFFER_COUNT);
+        let (errors, failures) = bounded(1);
+        let input = vec![0.1f32; MAX_CAPTURE_SAMPLES];
+        for _ in 0..AUDIO_BUFFER_COUNT {
+            publish_capture(&input, 1, &captured, &errors);
+        }
+        assert_eq!(buffers.len(), AUDIO_BUFFER_COUNT);
+        publish_capture(&input, 1, &captured, &errors);
+        assert!(failures.try_recv().unwrap().contains("overrun"));
+        let allocated: usize = buffers
+            .try_iter()
+            .map(|b| b.capacity() * size_of::<f32>())
+            .sum();
+        assert_eq!(
+            allocated,
+            AUDIO_BUFFER_COUNT * MAX_CAPTURE_SAMPLES * size_of::<f32>()
+        );
+        publish_capture(
+            &vec![0.1f32; MAX_CAPTURE_SAMPLES + 1],
+            1,
+            &captured,
+            &errors,
+        );
+        assert!(buffers.is_empty());
+        assert!(failures.try_recv().unwrap().contains("byte limit"));
+        let mut error = String::with_capacity(1024 * 1024);
+        error.push_str("native error");
+        let MicrophoneEvent::Unavailable(error) =
+            bounded_microphone_event(MicrophoneEvent::Unavailable(error))
+        else {
+            unreachable!()
+        };
+        assert_eq!(error.capacity(), error.len());
+        let MicrophoneEvent::RecordingFailed(error) =
+            bounded_microphone_event(MicrophoneEvent::RecordingStarted {
+                wav_basename: "a".repeat(129),
+            })
+        else {
+            panic!("oversized stable ID must fail without being rewritten");
+        };
+        assert!(error.contains("identity"));
+        eprintln!(
+            "M1c microphone retained capture bytes={allocated} lifecycle_records=16 lifecycle_text_bytes_each<=4096 native_error_records=1"
+        );
+    }
 
     #[test]
     fn audio_paths_are_confined_to_the_session_directory() {
@@ -1114,6 +1266,7 @@ mod tests {
         let (shutdown, _shutdown_rx) = bounded(1);
         let (_stopped_tx, stopped) = bounded(1);
         let service = MicrophoneService {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             commands,
             events,
             shutdown,
@@ -1141,6 +1294,7 @@ mod tests {
             let _ = wait_for_release.recv();
         });
         let service = MicrophoneService {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             commands,
             events,
             shutdown,
@@ -1325,7 +1479,15 @@ mod tests {
     fn drain_bridge(receiver: &Receiver<BridgeCommand>) -> Vec<BridgeCommand> {
         let mut commands = Vec::new();
         while let Ok(command) = receiver.try_recv() {
-            commands.push(command);
+            let BridgeCommand::InGeneration {
+                generation,
+                command,
+            } = command
+            else {
+                panic!("microphone command was not bound");
+            };
+            assert_eq!(generation, cathedral_sim::RuntimeGeneration::INITIAL);
+            commands.push(*command);
         }
         commands
     }
@@ -1333,6 +1495,7 @@ mod tests {
     #[test]
     fn chunker_flushes_preroll_first_then_final_partial_and_end() {
         let (bridge_tx, bridge_rx) = bounded(64);
+        let bridge_tx = super::super::bridge::BridgeCommandSender::fixture(bridge_tx);
         let pre_roll: VecDeque<f32> = std::iter::repeat_n(0.25_f32, 2_500).collect();
         let mut stream = UtteranceStream::begin(
             bridge_tx,
@@ -1374,6 +1537,7 @@ mod tests {
     #[test]
     fn full_bridge_queue_degrades_stream_without_blocking_or_an_end() {
         let (bridge_tx, bridge_rx) = bounded(2);
+        let bridge_tx = super::super::bridge::BridgeCommandSender::fixture(bridge_tx);
         let mut stream = UtteranceStream::begin(
             bridge_tx,
             "player-recording-2.wav".into(),
@@ -1416,6 +1580,7 @@ mod tests {
             sample_format: hound::SampleFormat::Float,
         };
         let (bridge_tx, bridge_rx) = bounded(16);
+        let bridge_tx = super::super::bridge::BridgeCommandSender::fixture(bridge_tx);
         let (events_tx, events_rx) = bounded(4);
         let pre_roll: VecDeque<f32> = std::iter::repeat_n(0.5_f32, 100).collect();
         let mut next_recording = 1_u64;
@@ -1488,6 +1653,7 @@ mod tests {
             sample_format: hound::SampleFormat::Float,
         };
         let (bridge_tx, bridge_rx) = bounded(16);
+        let bridge_tx = super::super::bridge::BridgeCommandSender::fixture(bridge_tx);
         let (events_tx, events_rx) = bounded(4);
         let mut next_recording = 7_u64;
 

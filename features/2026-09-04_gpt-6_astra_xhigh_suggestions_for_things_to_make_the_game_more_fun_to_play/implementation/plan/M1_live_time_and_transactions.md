@@ -1,4 +1,4 @@
-Status: Partial; paused after M1b at the developer's request (2026-09-07). M1a–M1b implemented and coordinator reviewed; combined M1b verification passes 1,810 tests (eight ignored). M1c–M1d remain. Renderer/focus performance remains unavailable.
+Status: In progress (2026-09-08). M1a–M1c implemented and coordinator reviewed; final M1c workspace verification passes 1,840 tests (eight ignored). M1d remains. Renderer/focus performance remains unavailable.
 
 # M1 — Live time and committed actions
 
@@ -14,7 +14,13 @@ Make advancing time and clear, idempotent action results foundational. Every lat
 
 The production host assigns ordered command identities, and the sim checks replay/conflict before carried position or domain effects. All 48 existing command variants have an exhaustive policy; 36 consequential variants share receipts, including voice recording submission and fire-and-forget sounds/settings/debug effects. Provider turns and Night reflections reserve complete bounded reply batches using semantic identities independent of provider execution IDs. Travel and schedule edits publish acceptance, then the existing movement/round consumers publish their actual final results. Voice speaks once through its retained recording receipt.
 
-[The M1b record](evidence/m1b/README.md) tracks current verification, policy coverage and M2 owner obligations. Combined verification passes 1,810 tests with eight ignored, with final source hashes and per-target replacement details recorded. Coordinator review accepts this implementation cut. The user requested a pause after M1b; generation fences and the generic operation/duty kernel remain M1c/M1d.
+[The M1b record](evidence/m1b/README.md) tracks current verification, policy coverage and M2 owner obligations. Combined verification passes 1,810 tests with eight ignored, with final source hashes and per-target replacement details recorded. Coordinator review accepts this implementation cut. The user resumed after the M1b pause; generation fences are implemented below, and the generic operation/duty kernel remains M1d.
+
+## M1c implementation handoff — 2026-09-08
+
+Whole-runtime generation tags now reach commands, both cognition lanes, fake staging, STT/TTS/PCM, backend/microphone status, pending UI input and speech presentation acknowledgements. Accepted jobs reserve bounded terminal delivery before submission; unexpected producer loss and stream overflow produce one explicit failure. Host publication overflow stops the flush and invalidates the capture boundary. Audio consumers have their own retention limits. Immediate retirement fences the old bundle; saved-world adoption and budgeted destruction remain M3 work.
+
+[The M1c record](evidence/m1c/README.md) gives actual capacities, production seam witnesses, the passing full-workspace verification and explicit cleanup limitations. Coordinator review accepts this implementation cut. No renderer evidence is added. M1d remains unimplemented.
 
 ## Entry
 

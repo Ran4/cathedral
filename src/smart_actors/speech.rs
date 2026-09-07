@@ -57,6 +57,7 @@ fn streaming_playback_speed(backend: Option<TtsBackendKind>) -> f32 {
 /// A validated speech event that the bridge determined was heard by the player.
 #[derive(Message, Debug, Clone)]
 pub struct PresentSpeech {
+    pub generation: cathedral_sim::RuntimeGeneration,
     pub event_seq: u64,
     pub event_id: String,
     pub speaker_id: ActorId,
@@ -73,18 +74,21 @@ pub struct PresentSpeech {
 /// WAV bytes copied and path-validated by the bridge worker.
 #[derive(Message, Debug, Clone)]
 pub struct TtsClipReady {
+    pub generation: cathedral_sim::RuntimeGeneration,
     pub event_id: String,
     pub wav_bytes: Arc<[u8]>,
 }
 
 #[derive(Message, Debug, Clone)]
 pub struct TtsClipFailed {
+    pub generation: cathedral_sim::RuntimeGeneration,
     pub event_id: String,
     pub reason: String,
 }
 
 #[derive(Message, Debug, Clone)]
 pub struct TtsPcmChunkReady {
+    pub generation: cathedral_sim::RuntimeGeneration,
     pub event_id: String,
     pub chunk_seq: u32,
     pub sample_rate: u32,
@@ -94,16 +98,21 @@ pub struct TtsPcmChunkReady {
 
 #[derive(Message, Debug, Clone)]
 pub struct TtsStreamFinished {
+    pub generation: cathedral_sim::RuntimeGeneration,
     pub event_id: String,
     pub chunk_count: u32,
     pub first_chunk_ms: u32,
 }
 
 #[derive(Message, Debug, Clone, Copy)]
-pub struct StopNpcSpeech;
+pub struct StopNpcSpeech {
+    pub generation: cathedral_sim::RuntimeGeneration,
+}
 
 #[derive(Message, Debug, Clone, Copy)]
-pub struct ClearSpeechPresentation;
+pub struct ClearSpeechPresentation {
+    pub generation: cathedral_sim::RuntimeGeneration,
+}
 
 #[derive(Debug)]
 struct SubtitleLine {
@@ -126,10 +135,25 @@ struct ReadyClip {
     bytes: Arc<[u8]>,
 }
 
-#[derive(Debug, Default)]
+pub(super) const MAX_PCM_BUFFER_SAMPLES: usize = 1024 * 1024;
+pub(super) const MAX_PCM_STREAMS: usize = 2;
+const MAX_PENDING_PRESENTATIONS: usize = 512;
+const MAX_READY_CLIPS: usize = 3;
+const MAX_READY_CLIP_BYTES: usize = MAX_READY_CLIPS * MAX_WAV_BYTES;
+
+#[derive(Debug)]
 struct PcmBuffer {
     samples: VecDeque<f32>,
     finished: bool,
+}
+
+impl Default for PcmBuffer {
+    fn default() -> Self {
+        Self {
+            samples: VecDeque::with_capacity(MAX_PCM_BUFFER_SAMPLES),
+            finished: false,
+        }
+    }
 }
 
 #[derive(Asset, TypePath, Debug, Clone)]
@@ -146,7 +170,10 @@ impl StreamingPcmSource {
         }
     }
 
-    fn push(&self, samples: &[i16]) {
+    fn push(&self, samples: &[i16]) -> bool {
+        if samples.len() > cathedral_backends::MAX_PCM_CHUNK_BYTES / 2 {
+            return false;
+        }
         // Convert *before* taking the lock. The consumer of this mutex is
         // rodio's real-time callback thread, and one streamed chunk can carry
         // ~96 000 samples (`tts_local.rs`'s `MAX_CHUNK_BASE64_CHARS`): holding
@@ -160,8 +187,15 @@ impl StreamingPcmSource {
             .map(|sample| f32::from(*sample) / 32768.0)
             .collect();
         if let Ok(mut buffer) = self.buffer.lock() {
+            if buffer.finished
+                || samples.len() > MAX_PCM_BUFFER_SAMPLES.saturating_sub(buffer.samples.len())
+            {
+                return false;
+            }
             buffer.samples.extend(converted);
+            return true;
         }
+        false
     }
 
     fn finish(&self) {
@@ -272,6 +306,7 @@ struct ActiveVoice {
 /// Ordered presentation queues. They are transient and cleared on disconnect.
 #[derive(Resource, Debug, Default)]
 pub struct SpeechPresentationState {
+    generation: cathedral_sim::RuntimeGeneration,
     last_event_seq: Option<u64>,
     subtitles: VecDeque<SubtitleLine>,
     audio_order: VecDeque<AudioExpectation>,
@@ -329,6 +364,33 @@ pub(super) struct SpeechBubble {
 #[derive(Component)]
 pub(super) struct NpcVoice;
 
+/// Called before presentation consumers. M3 invokes the same owner reset at
+/// its adoption barrier; old queued messages remain tagged and are ignored.
+pub fn synchronize_generation(
+    mut commands: Commands,
+    handle: Option<Res<bridge::BridgeHandle>>,
+    mut state: ResMut<SpeechPresentationState>,
+    mut hud: ResMut<SmartActorHudState>,
+    entities: Query<Entity, Or<(With<SpeechBubbleStack>, With<SpeechBubble>, With<NpcVoice>)>>,
+    microphone: Option<Res<MicrophoneService>>,
+) {
+    let generation = handle
+        .as_ref()
+        .map_or(cathedral_sim::RuntimeGeneration::INITIAL, |h| {
+            h.generation()
+        });
+    if state.generation == generation {
+        return;
+    }
+    let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
+    for entity in &entities {
+        commands.entity(entity).try_despawn();
+    }
+    state.clear();
+    state.generation = generation;
+    hud.subtitle.clear();
+}
+
 pub fn receive_speech_events(
     mut commands: Commands,
     time: Res<Time>,
@@ -336,6 +398,7 @@ pub fn receive_speech_events(
     mut state: ResMut<SpeechPresentationState>,
     mut hud: ResMut<SmartActorHudState>,
     fonts: Option<Res<CathedralFonts>>,
+    handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     let now = time.elapsed_secs_f64();
     let speech_font = fonts
@@ -343,6 +406,13 @@ pub fn receive_speech_events(
         .map(CathedralFonts::body)
         .unwrap_or_default();
     for message in messages.read() {
+        if message.generation != state.generation {
+            continue;
+        }
+        if state.subtitles.len() >= MAX_PENDING_PRESENTATIONS {
+            notify_speech_presented(handle.as_deref(), message.generation, &message.event_id);
+            continue;
+        }
         if !state.observe_speech_sequence(message.event_seq) {
             continue;
         }
@@ -555,8 +625,12 @@ pub fn receive_tts_clips(
     mut messages: MessageReader<TtsClipReady>,
     mut state: ResMut<SpeechPresentationState>,
     mut hud: Option<ResMut<SmartActorHudState>>,
+    handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     for message in messages.read() {
+        if message.generation != state.generation {
+            continue;
+        }
         if !valid_wav(&message.wav_bytes) {
             voice_toast(
                 hud.as_deref_mut(),
@@ -572,6 +646,26 @@ pub fn receive_tts_clips(
             voice_toast(
                 hud.as_deref_mut(),
                 "NPC voice arrived too late; text remains available",
+            );
+            continue;
+        }
+        let retained: usize = state
+            .ready_audio
+            .iter()
+            .filter(|(id, _)| *id != &message.event_id)
+            .map(|(_, clip)| clip.bytes.len())
+            .sum();
+        if (!state.ready_audio.contains_key(&message.event_id)
+            && state.ready_audio.len() >= MAX_READY_CLIPS)
+            || message.wav_bytes.len() > MAX_READY_CLIP_BYTES.saturating_sub(retained)
+        {
+            state
+                .audio_order
+                .retain(|expected| expected.event_id != message.event_id);
+            notify_speech_presented(handle.as_deref(), state.generation, &message.event_id);
+            voice_toast(
+                hud.as_deref_mut(),
+                "NPC voice buffer is full; text remains available",
             );
             continue;
         }
@@ -591,6 +685,9 @@ pub fn receive_tts_failures(
     handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     for message in messages.read() {
+        if message.generation != state.generation {
+            continue;
+        }
         let before = state.audio_order.len();
         state
             .audio_order
@@ -600,7 +697,7 @@ pub fn receive_tts_failures(
             stream.source.finish();
         }
         if state.audio_order.len() != before {
-            notify_speech_presented(handle.as_deref(), &message.event_id);
+            notify_speech_presented(handle.as_deref(), state.generation, &message.event_id);
             voice_toast(
                 Some(&mut hud),
                 format!(
@@ -619,6 +716,9 @@ pub fn receive_tts_pcm_chunks(
     handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     for message in messages.read() {
+        if message.generation != state.generation {
+            continue;
+        }
         let stream_is_live = state.pcm_streams.contains_key(&message.event_id);
         let audio_is_waiting = state
             .audio_order
@@ -631,23 +731,29 @@ pub fn receive_tts_pcm_chunks(
             continue;
         }
         let invalid = {
-            let stream = state
-                .pcm_streams
-                .entry(message.event_id.clone())
-                .or_insert_with(|| PendingPcmStream {
-                    source: StreamingPcmSource::new(message.sample_rate),
-                    next_chunk_seq: 0,
-                    backend: message.backend,
-                });
-            if stream.next_chunk_seq != message.chunk_seq
-                || stream.source.sample_rate != message.sample_rate
-                || stream.backend != message.backend
-            {
+            let full = !stream_is_live && state.pcm_streams.len() >= MAX_PCM_STREAMS;
+            if full {
                 true
             } else {
-                stream.source.push(&message.samples);
-                stream.next_chunk_seq += 1;
-                false
+                let stream = state
+                    .pcm_streams
+                    .entry(message.event_id.clone())
+                    .or_insert_with(|| PendingPcmStream {
+                        source: StreamingPcmSource::new(message.sample_rate),
+                        next_chunk_seq: 0,
+                        backend: message.backend,
+                    });
+                if stream.next_chunk_seq != message.chunk_seq
+                    || stream.source.sample_rate != message.sample_rate
+                    || stream.backend != message.backend
+                {
+                    true
+                } else {
+                    let accepted = stream.source.push(&message.samples);
+                    stream.next_chunk_seq =
+                        stream.next_chunk_seq.saturating_add(u32::from(accepted));
+                    !accepted
+                }
             }
         };
         if invalid {
@@ -659,7 +765,7 @@ pub fn receive_tts_pcm_chunks(
                 .audio_order
                 .retain(|expected| expected.event_id != message.event_id);
             if state.audio_order.len() != before {
-                notify_speech_presented(handle.as_deref(), &message.event_id);
+                notify_speech_presented(handle.as_deref(), state.generation, &message.event_id);
             }
             voice_toast(
                 Some(&mut hud),
@@ -676,6 +782,9 @@ pub fn receive_tts_stream_ends(
     handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     for message in messages.read() {
+        if message.generation != state.generation {
+            continue;
+        }
         let Some(received_chunks) = state
             .pcm_streams
             .get(&message.event_id)
@@ -692,7 +801,7 @@ pub fn receive_tts_stream_ends(
                 .audio_order
                 .retain(|expected| expected.event_id != message.event_id);
             if state.audio_order.len() != before {
-                notify_speech_presented(handle.as_deref(), &message.event_id);
+                notify_speech_presented(handle.as_deref(), state.generation, &message.event_id);
             }
             voice_toast(
                 Some(&mut hud),
@@ -733,6 +842,12 @@ pub fn start_ready_audio(
     mut hud: Option<ResMut<SmartActorHudState>>,
     handle: Option<Res<bridge::BridgeHandle>>,
 ) {
+    if handle
+        .as_ref()
+        .is_some_and(|h| h.generation() != state.generation)
+    {
+        return;
+    }
     let now = time.elapsed_secs_f64();
     if !config.pause_microphone_during_npc_voice {
         let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
@@ -766,7 +881,7 @@ pub fn start_ready_audio(
         let event_id = active.event_id.clone();
         state.active_voice = None;
         state.pcm_streams.remove(&event_id);
-        notify_speech_presented(handle.as_deref(), &event_id);
+        notify_speech_presented(handle.as_deref(), state.generation, &event_id);
         if let Some(line) = state
             .subtitles
             .iter_mut()
@@ -799,7 +914,7 @@ pub fn start_ready_audio(
             if let Some(stream) = state.pcm_streams.remove(&stale.event_id) {
                 stream.source.finish();
             }
-            notify_speech_presented(handle.as_deref(), &stale.event_id);
+            notify_speech_presented(handle.as_deref(), state.generation, &stale.event_id);
             continue;
         }
 
@@ -814,7 +929,7 @@ pub fn start_ready_audio(
             if timed_out {
                 state.audio_order.pop_front();
                 state.pcm_streams.remove(&event_id);
-                notify_speech_presented(handle.as_deref(), &event_id);
+                notify_speech_presented(handle.as_deref(), state.generation, &event_id);
                 continue;
             }
             let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
@@ -832,7 +947,7 @@ pub fn start_ready_audio(
                 stream.source.finish();
             }
             state.audio_order.pop_front();
-            notify_speech_presented(handle.as_deref(), &event_id);
+            notify_speech_presented(handle.as_deref(), state.generation, &event_id);
             let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
             return;
         };
@@ -855,7 +970,7 @@ pub fn start_ready_audio(
                     stream.source.finish();
                 }
                 state.audio_order.pop_front();
-                notify_speech_presented(handle.as_deref(), &event_id);
+                notify_speech_presented(handle.as_deref(), state.generation, &event_id);
                 abandon_microphone_suspension(&mut state, microphone.as_deref());
                 voice_toast(
                     hud.as_deref_mut(),
@@ -883,7 +998,7 @@ pub fn start_ready_audio(
         } else {
             let Some(streaming_sources) = streaming_sources.as_deref_mut() else {
                 state.pcm_streams.remove(&event_id);
-                notify_speech_presented(handle.as_deref(), &event_id);
+                notify_speech_presented(handle.as_deref(), state.generation, &event_id);
                 abandon_microphone_suspension(&mut state, microphone.as_deref());
                 voice_toast(
                     hud.as_deref_mut(),
@@ -941,6 +1056,9 @@ fn microphone_suspension_readiness(
         state.microphone_suspend_started_at = None;
         return MicrophoneSuspensionReadiness::Ready;
     };
+    if microphone.generation() != state.generation {
+        return MicrophoneSuspensionReadiness::Failed("microphone belongs to another runtime");
+    }
 
     let started_at = *state.microphone_suspend_started_at.get_or_insert(now);
 
@@ -1003,7 +1121,10 @@ fn abandon_microphone_suspension(
     if !state.microphone_suspended_for_voice {
         return;
     }
-    if microphone.is_none_or(|microphone| microphone.try_send(MicrophoneCommand::Resume).is_ok()) {
+    if microphone.is_none_or(|microphone| {
+        microphone.generation() != state.generation
+            || microphone.try_send(MicrophoneCommand::Resume).is_ok()
+    }) {
         state.microphone_suspended_for_voice = false;
     }
 }
@@ -1015,8 +1136,10 @@ fn resume_microphone_after_voice(
     if !state.microphone_suspended_for_voice {
         return true;
     }
-    let resumed =
-        microphone.is_none_or(|microphone| microphone.try_send(MicrophoneCommand::Resume).is_ok());
+    let resumed = microphone.is_none_or(|microphone| {
+        microphone.generation() != state.generation
+            || microphone.try_send(MicrophoneCommand::Resume).is_ok()
+    });
     if resumed {
         println!("[smart actors/audio] microphone resumed after NPC playback");
         state.microphone_suspended_for_voice = false;
@@ -1074,7 +1197,10 @@ pub fn stop_npc_speech_for_capture(
     config: Res<SmartActorsConfig>,
     handle: Option<Res<bridge::BridgeHandle>>,
 ) {
-    if messages.read().next().is_none() {
+    if !messages
+        .read()
+        .any(|message| message.generation == state.generation)
+    {
         return;
     }
     if !config.pause_microphone_during_npc_voice {
@@ -1085,7 +1211,7 @@ pub fn stop_npc_speech_for_capture(
             sink.stop();
         }
         commands.entity(active.entity).try_despawn();
-        notify_speech_presented(handle.as_deref(), &active.event_id);
+        notify_speech_presented(handle.as_deref(), state.generation, &active.event_id);
         if let Some(line) = state
             .subtitles
             .iter_mut()
@@ -1095,8 +1221,9 @@ pub fn stop_npc_speech_for_capture(
         }
     }
     // Cut-off and never-started lines are equally terminal for the floor.
+    let generation = state.generation;
     for expected in state.audio_order.drain(..) {
-        notify_speech_presented(handle.as_deref(), &expected.event_id);
+        notify_speech_presented(handle.as_deref(), generation, &expected.event_id);
     }
     state.ready_audio.clear();
     for stream in state.pcm_streams.values() {
@@ -1118,7 +1245,10 @@ pub fn clear_speech_presentation(
     >,
     microphone: Option<Res<MicrophoneService>>,
 ) {
-    if messages.read().next().is_none() {
+    if !messages
+        .read()
+        .any(|message| message.generation == state.generation)
+    {
         return;
     }
     for entity in &transient_entities {
@@ -1133,10 +1263,17 @@ pub fn clear_speech_presentation(
 /// terminal state (played, skipped, dropped, failed, or cut off), freeing the
 /// conversation floor. Errors are ignored: a lost message only delays the next
 /// NPC line until the server-side failsafe deadline expires.
-fn notify_speech_presented(handle: Option<&bridge::BridgeHandle>, event_id: &str) {
+fn notify_speech_presented(
+    handle: Option<&bridge::BridgeHandle>,
+    generation: cathedral_sim::RuntimeGeneration,
+    event_id: &str,
+) {
     let Some(handle) = handle else {
         return;
     };
+    if handle.generation() != generation {
+        return;
+    }
     let _ = handle.try_send(bridge::BridgeCommand::SpeechPresented {
         speech_event_id: event_id.to_owned(),
     });
@@ -1194,6 +1331,7 @@ mod tests {
 
     fn npc_speech(event_seq: u64, speaker_id: &str, text: impl Into<String>) -> PresentSpeech {
         PresentSpeech {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             event_seq,
             event_id: format!("speech-{event_seq}"),
             speaker_id: ActorId(speaker_id.into()),
@@ -1216,6 +1354,233 @@ mod tests {
         let world = app.world_mut();
         let mut stacks = world.query_filtered::<Entity, With<SpeechBubbleStack>>();
         stacks.iter(world).count()
+    }
+
+    #[test]
+    fn every_queued_presentation_variant_preserves_a_colliding_current_event() {
+        use cathedral_sim::RuntimeGeneration;
+        for kind in 0..7 {
+            let current = RuntimeGeneration(42);
+            let (sender, received) = crossbeam_channel::bounded(128);
+            let mut app = App::new();
+            let source = StreamingPcmSource::new(24_000);
+            source.push(&[1]);
+            let mut state = SpeechPresentationState {
+                generation: current,
+                ..Default::default()
+            };
+            state.audio_order.push_back(AudioExpectation {
+                event_id: "speech-1".into(),
+                position: Vec3::ZERO,
+                queued_at: 0.0,
+            });
+            state.pcm_streams.insert(
+                "speech-1".into(),
+                PendingPcmStream {
+                    source: source.clone(),
+                    next_chunk_seq: 1,
+                    backend: Some(TtsBackendKind::Local),
+                },
+            );
+            app.add_plugins(MinimalPlugins)
+                .insert_resource(bridge::BridgeHandle::new_for_generation(
+                    sender,
+                    "/tmp".into(),
+                    current,
+                ))
+                .insert_resource(state)
+                .insert_resource(SmartActorsConfig {
+                    pause_microphone_during_npc_voice: true,
+                    ..Default::default()
+                })
+                .init_resource::<SmartActorHudState>()
+                .add_message::<PresentSpeech>()
+                .add_message::<TtsClipReady>()
+                .add_message::<TtsClipFailed>()
+                .add_message::<TtsPcmChunkReady>()
+                .add_message::<TtsStreamFinished>()
+                .add_message::<StopNpcSpeech>()
+                .add_message::<ClearSpeechPresentation>()
+                .add_systems(
+                    Update,
+                    (
+                        receive_speech_events,
+                        receive_tts_clips,
+                        receive_tts_failures,
+                        receive_tts_pcm_chunks,
+                        receive_tts_stream_ends,
+                        stop_npc_speech_for_capture,
+                        clear_speech_presentation,
+                    )
+                        .chain(),
+                );
+            let publish = |world: &mut World, generation| match kind {
+                0 => {
+                    let mut message = npc_speech(2, "same-actor", "current words");
+                    message.generation = generation;
+                    world.write_message(message);
+                }
+                1 => {
+                    world.write_message(TtsClipReady {
+                        generation,
+                        event_id: "speech-1".into(),
+                        wav_bytes: Arc::from(&b"RIFF\0\0\0\0WAVE"[..]),
+                    });
+                }
+                2 => {
+                    world.write_message(TtsClipFailed {
+                        generation,
+                        event_id: "speech-1".into(),
+                        reason: "current failure".into(),
+                    });
+                }
+                3 => {
+                    world.write_message(TtsPcmChunkReady {
+                        generation,
+                        event_id: "speech-1".into(),
+                        chunk_seq: 1,
+                        sample_rate: 24_000,
+                        samples: Arc::from([2i16, 3]),
+                        backend: Some(TtsBackendKind::Local),
+                    });
+                }
+                4 => {
+                    world.write_message(TtsStreamFinished {
+                        generation,
+                        event_id: "speech-1".into(),
+                        chunk_count: 1,
+                        first_chunk_ms: 1,
+                    });
+                }
+                5 => {
+                    world.write_message(StopNpcSpeech { generation });
+                }
+                _ => {
+                    world.write_message(ClearSpeechPresentation { generation });
+                }
+            };
+            let before = format!("{:?}", app.world().resource::<SpeechPresentationState>());
+            publish(app.world_mut(), RuntimeGeneration(41));
+            app.update();
+            assert_eq!(
+                format!("{:?}", app.world().resource::<SpeechPresentationState>()),
+                before,
+                "old presentation kind {kind} touched its colliding event"
+            );
+            assert!(received.is_empty());
+            publish(app.world_mut(), current);
+            app.update();
+            assert_ne!(
+                format!("{:?}", app.world().resource::<SpeechPresentationState>()),
+                before,
+                "current presentation kind {kind} was inert"
+            );
+        }
+    }
+
+    #[test]
+    fn presentation_ack_and_microphone_suspend_ack_keep_their_original_generation() {
+        use cathedral_sim::RuntimeGeneration;
+        let current = RuntimeGeneration(12);
+        let (sender, received) = crossbeam_channel::bounded(8);
+        let handle = bridge::BridgeHandle::new_for_generation(sender, "/tmp".into(), current);
+        notify_speech_presented(Some(&handle), RuntimeGeneration(11), "speech-1");
+        assert!(received.is_empty());
+        notify_speech_presented(Some(&handle), current, "speech-1");
+        assert!(
+            matches!(bridge::expect_generation(received.try_recv().unwrap(), current), bridge::BridgeCommand::SpeechPresented { speech_event_id } if speech_event_id == "speech-1")
+        );
+        let (microphone, commands) = MicrophoneService::command_harness_for_generation(current);
+        let (old_ack, old_receiver) = crossbeam_channel::bounded(1);
+        let mut app = App::new();
+        app.insert_resource(handle)
+            .insert_resource(microphone)
+            .init_resource::<SmartActorHudState>()
+            .insert_resource(SpeechPresentationState {
+                generation: RuntimeGeneration(11),
+                microphone_suspended_for_voice: true,
+                microphone_suspend_ack: Some(old_receiver),
+                microphone_suspend_started_at: Some(0.0),
+                ..Default::default()
+            })
+            .add_systems(Update, synchronize_generation);
+        app.update();
+        assert!(
+            commands.is_empty(),
+            "retiring presentation must not resume a replacement microphone"
+        );
+        assert!(
+            old_ack.try_send(()).is_err(),
+            "the old acknowledgement owner was dropped"
+        );
+        let microphone = app
+            .world_mut()
+            .remove_resource::<MicrophoneService>()
+            .unwrap();
+        let mut state = app.world_mut().resource_mut::<SpeechPresentationState>();
+        assert_eq!(
+            microphone_suspension_readiness(&mut state, Some(&microphone), 0.0),
+            MicrophoneSuspensionReadiness::Waiting
+        );
+        let MicrophoneCommand::Suspend { acknowledged } = commands.try_recv().unwrap() else {
+            panic!("current suspend request");
+        };
+        assert_eq!(
+            microphone_suspension_readiness(&mut state, Some(&microphone), 0.1),
+            MicrophoneSuspensionReadiness::Waiting
+        );
+        acknowledged.send(()).unwrap();
+        assert_eq!(
+            microphone_suspension_readiness(&mut state, Some(&microphone), 0.2),
+            MicrophoneSuspensionReadiness::Ready
+        );
+    }
+
+    #[test]
+    fn pcm_consumer_and_ready_wavs_have_fixed_retained_byte_bounds() {
+        let source = StreamingPcmSource::new(24_000);
+        let chunk = vec![1i16; cathedral_backends::MAX_PCM_CHUNK_BYTES / 2];
+        for _ in 0..MAX_PCM_BUFFER_SAMPLES / chunk.len() {
+            assert!(source.push(&chunk));
+        }
+        assert!(!source.push(&[1]));
+        let buffer = source.buffer.lock().unwrap();
+        assert_eq!(buffer.samples.len(), MAX_PCM_BUFFER_SAMPLES);
+        assert_eq!(buffer.samples.capacity(), MAX_PCM_BUFFER_SAMPLES);
+        eprintln!(
+            "M1c presentation bounds: pcm_streams={MAX_PCM_STREAMS} pcm_allocated_bytes={} ready_clips={MAX_READY_CLIPS} ready_wav_bytes={MAX_READY_CLIP_BYTES}",
+            buffer.samples.capacity() * std::mem::size_of::<f32>() * MAX_PCM_STREAMS
+        );
+        drop(buffer);
+        let mut app = App::new();
+        let mut state = SpeechPresentationState::default();
+        for n in 0..4 {
+            state.audio_order.push_back(AudioExpectation {
+                event_id: format!("speech-{n}"),
+                position: Vec3::ZERO,
+                queued_at: 0.0,
+            });
+        }
+        app.insert_resource(state)
+            .init_resource::<SmartActorHudState>()
+            .add_message::<TtsClipReady>()
+            .add_systems(Update, receive_tts_clips);
+        for n in 0..4 {
+            app.world_mut().write_message(TtsClipReady {
+                generation: cathedral_sim::RuntimeGeneration::INITIAL,
+                event_id: format!("speech-{n}"),
+                wav_bytes: Arc::from(&b"RIFF\0\0\0\0WAVE"[..]),
+            });
+        }
+        app.update();
+        let state = app.world().resource::<SpeechPresentationState>();
+        assert_eq!(state.ready_audio.len(), MAX_READY_CLIPS);
+        assert!(
+            !state
+                .audio_order
+                .iter()
+                .any(|expected| expected.event_id == "speech-3")
+        );
     }
 
     #[test]
@@ -1342,8 +1707,10 @@ mod tests {
             .write_message(npc_speech(1, "sven", "walking while talking"));
         app.update();
 
-        let stack_entity = app.world().resource::<SpeechPresentationState>().bubble_stacks
-            [&ActorId("sven".into())];
+        let stack_entity = app
+            .world()
+            .resource::<SpeechPresentationState>()
+            .bubble_stacks[&ActorId("sven".into())];
         let stack_position = |app: &App| {
             app.world()
                 .get::<SpeechBubbleStack>(stack_entity)
@@ -1376,8 +1743,10 @@ mod tests {
             .write_message(npc_speech(1, "sven", "a first line"));
         app.update();
         assert_eq!(stack_count(&mut app), 1);
-        let first_stack = app.world().resource::<SpeechPresentationState>().bubble_stacks
-            [&ActorId("sven".into())];
+        let first_stack = app
+            .world()
+            .resource::<SpeechPresentationState>()
+            .bubble_stacks[&ActorId("sven".into())];
 
         // Past the line's reading time with no audio holding it: the bubble
         // goes, and the stack behind it goes in the same frame.
@@ -1401,9 +1770,14 @@ mod tests {
         app.update();
         assert_eq!(bubble_count(&mut app), 1);
         assert_eq!(stack_count(&mut app), 1);
-        let second_stack = app.world().resource::<SpeechPresentationState>().bubble_stacks
-            [&ActorId("sven".into())];
-        assert_ne!(first_stack, second_stack, "a fresh stack, not a revived one");
+        let second_stack = app
+            .world()
+            .resource::<SpeechPresentationState>()
+            .bubble_stacks[&ActorId("sven".into())];
+        assert_ne!(
+            first_stack, second_stack,
+            "a fresh stack, not a revived one"
+        );
     }
 
     /// The audio callback used to take the shared PCM mutex once per sample —
@@ -1503,7 +1877,9 @@ mod tests {
         app.update();
         assert_eq!(bubble_count(&mut app), 1);
 
-        app.world_mut().write_message(ClearSpeechPresentation);
+        app.world_mut().write_message(ClearSpeechPresentation {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
+        });
         app.update();
 
         assert_eq!(bubble_count(&mut app), 0);
@@ -1625,6 +2001,7 @@ mod tests {
             .add_message::<TtsPcmChunkReady>()
             .add_systems(Update, receive_tts_pcm_chunks);
         app.world_mut().write_message(TtsPcmChunkReady {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             event_id: "speech-1".into(),
             chunk_seq: 0,
             sample_rate: 24_000,
@@ -1641,6 +2018,7 @@ mod tests {
         );
 
         app.world_mut().write_message(TtsPcmChunkReady {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             event_id: "speech-1".into(),
             chunk_seq: 2,
             sample_rate: 24_000,
@@ -1678,6 +2056,7 @@ mod tests {
             .add_message::<TtsPcmChunkReady>()
             .add_systems(Update, receive_tts_pcm_chunks);
         app.world_mut().write_message(TtsPcmChunkReady {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             event_id: "speech-1".into(),
             chunk_seq: 1,
             sample_rate: 24_000,
@@ -1709,6 +2088,7 @@ mod tests {
     fn player_speech_uses_the_tiny_caption_instead_of_npc_subtitle_queue() {
         let mut app = speech_test_app();
         app.world_mut().write_message(PresentSpeech {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             event_seq: 1,
             event_id: "speech-1".into(),
             speaker_id: ActorId("player".into()),
@@ -1799,6 +2179,7 @@ mod tests {
             .add_message::<TtsClipFailed>()
             .add_systems(Update, receive_tts_failures);
         app.world_mut().write_message(TtsClipFailed {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
             event_id: "speech-1".into(),
             reason: "local model failed".into(),
         });

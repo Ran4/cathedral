@@ -27,7 +27,7 @@
 //! realtime socket.
 
 use std::{
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader, Read, Write},
     path::PathBuf,
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
     sync::{
@@ -46,6 +46,19 @@ use crate::events::BackendSender;
 const TERMINATE_GRACE: Duration = Duration::from_secs(1);
 /// How long a status/error message may be (`speech_client.py:454`).
 const MAX_MESSAGE_CHARS: usize = 160;
+/// Allows the largest supported base64 WAV plus its JSON envelope. The reader
+/// refuses before an unterminated or malicious worker line can grow without bound.
+pub const MAX_WORKER_LINE_BYTES: usize = crate::wav::MAX_WAV_BYTES.div_ceil(3) * 4 + 4096;
+const MAX_WORKER_LOG_BYTES: usize = 64 * 1024;
+
+fn bounded_line(reader: &mut impl BufRead, limit: usize) -> std::io::Result<String> {
+    let mut line = String::new();
+    reader.take((limit + 1) as u64).read_line(&mut line)?;
+    if line.len() > limit {
+        return Err(std::io::Error::other("worker line exceeded byte limit"));
+    }
+    Ok(line)
+}
 
 // ------------------------------------------------------------------- log sink
 
@@ -321,10 +334,10 @@ impl Worker {
         let Some(worker) = io.as_mut() else {
             return Err(self.error(self.spec.messages.exited));
         };
-        let mut line = String::new();
-        match worker.stdout.read_line(&mut line) {
-            Ok(0) | Err(_) => return Err(self.error(self.spec.messages.exited)),
-            Ok(_) => {}
+        let line = bounded_line(&mut worker.stdout, MAX_WORKER_LINE_BYTES)
+            .map_err(|_| self.error(self.spec.messages.invalid_response))?;
+        if line.is_empty() {
+            return Err(self.error(self.spec.messages.exited));
         }
         let value: Value = serde_json::from_str(line.trim_end_matches(['\r', '\n']))
             .map_err(|_| self.error(self.spec.messages.invalid_json))?;
@@ -386,7 +399,11 @@ impl Worker {
         std::thread::Builder::new()
             .name(format!("{source}-worker-log"))
             .spawn(move || {
-                for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+                let mut reader = BufReader::new(stderr);
+                while let Ok(line) = bounded_line(&mut reader, MAX_WORKER_LOG_BYTES) {
+                    if line.is_empty() {
+                        break;
+                    }
                     log(source, &line);
                     if !progress {
                         continue;
@@ -521,7 +538,6 @@ pub(crate) fn truncate(text: &str, characters: usize) -> String {
 pub(crate) mod tests {
     use super::*;
     use crate::events::{BackendEvent, backend_channel};
-    use crossbeam_channel::Receiver;
     use std::fs;
     use std::path::Path;
 
@@ -683,7 +699,7 @@ done
         Ok(text)
     }
 
-    fn statuses(events: &Receiver<BackendEvent>) -> Vec<(String, String)> {
+    fn statuses(events: &crate::events::BackendReceiver) -> Vec<(String, String)> {
         events
             .try_iter()
             .filter_map(|event| match event {

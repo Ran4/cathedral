@@ -25,6 +25,7 @@ pub mod config;
 pub mod events;
 pub mod fake;
 pub mod llm;
+pub mod mailbox;
 pub mod prompt_log;
 pub mod runtime;
 pub mod session_dir;
@@ -45,13 +46,14 @@ mod testing;
 use std::{path::Path, sync::Arc};
 
 use cathedral_sim::{Transcription, Tts, TtsBackendKind};
-use crossbeam_channel::Receiver;
 
 pub use config::{
     BackendCapabilities, BackendsConfig, BackendsOptions, Environment, LlmConfigError, LlmSettings,
     PROVIDERS, Provider, ProviderSpec, RealtimeSettings, SpeechSettings, select_tts_backend,
 };
-pub use events::{BackendEvent, BackendSender, backend_channel};
+pub use events::{
+    BackendEvent, BackendReceiver, BackendSender, backend_channel, backend_channel_for,
+};
 pub use fake::{DEFAULT_FAKE_TRANSCRIPT, FakeSpeech};
 pub use llm::{HttpCognition, LlmClient, LlmError, ModelUsage, PRICING, UsageLedger, pricing_for};
 pub use prompt_log::{LocalTime, PromptExchange, PromptLog};
@@ -79,7 +81,7 @@ pub use worker::{LogSink, Worker, WorkerSpec, WorkerStep, set_log_sink};
 pub struct BackendsHandle {
     runtime: Arc<BackendRuntime>,
     sender: BackendSender,
-    events: Receiver<BackendEvent>,
+    events: BackendReceiver,
     config: BackendsConfig,
     session_dir: Option<SessionDir>,
 }
@@ -90,8 +92,20 @@ impl BackendsHandle {
     /// Creating the session directory is optional: the headless runner and the
     /// tests have no audio at all.
     pub fn start(config: BackendsConfig, session_dir: Option<SessionDir>) -> std::io::Result<Self> {
+        Self::start_for_generation(
+            config,
+            session_dir,
+            cathedral_sim::RuntimeGeneration::INITIAL,
+        )
+    }
+
+    pub fn start_for_generation(
+        config: BackendsConfig,
+        session_dir: Option<SessionDir>,
+        generation: cathedral_sim::RuntimeGeneration,
+    ) -> std::io::Result<Self> {
         let runtime = BackendRuntime::new()?;
-        let (sender, events) = backend_channel();
+        let (sender, events) = backend_channel_for(generation);
         Ok(Self {
             runtime,
             sender,
@@ -112,6 +126,36 @@ impl BackendsHandle {
         &self.config
     }
 
+    pub fn generation(&self) -> cathedral_sim::RuntimeGeneration {
+        self.sender.generation()
+    }
+
+    /// Immediate admission/callback fence; no joins or filesystem destruction.
+    /// M3 retains this bundle until its bounded destruction phase.
+    pub fn retire(&self) {
+        self.events.retire();
+    }
+
+    /// Share the runtime, with fresh endpoints and a distinct recording owner.
+    /// Existing jobs retain their immutable binding to the previous generation.
+    pub fn next_generation(
+        &self,
+        generation: cathedral_sim::RuntimeGeneration,
+        session_dir: Option<SessionDir>,
+    ) -> Option<Self> {
+        if generation <= self.generation() {
+            return None;
+        }
+        let (sender, events) = backend_channel_for(generation);
+        Some(Self {
+            runtime: Arc::clone(&self.runtime),
+            sender,
+            events,
+            config: self.config.clone(),
+            session_dir,
+        })
+    }
+
     pub fn capabilities(&self) -> BackendCapabilities {
         self.config.capabilities()
     }
@@ -125,7 +169,7 @@ impl BackendsHandle {
         self.sender.clone()
     }
 
-    pub fn events(&self) -> &Receiver<BackendEvent> {
+    pub fn events(&self) -> &BackendReceiver {
         &self.events
     }
 

@@ -33,7 +33,10 @@ use std::{
     panic::{self, AssertUnwindSafe},
     path::{Path, PathBuf},
     rc::Rc,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, AtomicUsize, Ordering},
+    },
 };
 
 use bevy::prelude::*;
@@ -48,7 +51,7 @@ use cathedral_sim::{
     SttBackendKind, Transcription, Tts, TtsBackendKind, Vec3 as SimVec3,
     WeatherConfig as SimWeatherConfig, WeatherMode, WorldClock, WorldSeed,
 };
-use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
+use crossbeam_channel::{Receiver, Sender, bounded};
 
 use super::interaction::PlayerSpatialState;
 use super::{
@@ -66,6 +69,7 @@ use crate::controller::{PhysicalPosition, PlayerController};
 /// M2 persists the watermark and matching physical identity with host dynamics.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct AcceptedHostBoundary {
+    pub generation: cathedral_sim::RuntimeGeneration,
     pub input_watermark: u64,
     pub physical_sequence: u64,
     pub position: Vec3,
@@ -74,6 +78,8 @@ pub(super) struct AcceptedHostBoundary {
 }
 
 const MAX_COMPLETIONS_PER_PUMP: usize = 128;
+pub(super) const MAX_BRIDGE_EVENTS: usize = 8192;
+static NEXT_RUNTIME_GENERATION: AtomicU64 = AtomicU64::new(1);
 
 /// The asset half of the sim's authored data. Assets and lore ship with the
 /// repository, not the player's save, so both resolve against the crate root
@@ -107,7 +113,7 @@ pub struct EngineGuard {
 /// hand those completions back as commands. That somebody is the host — here,
 /// as in `e2e_fake.rs` and the headless runner.
 #[derive(Clone, Default)]
-struct SharedCognition(Rc<RefCell<FakeCognition>>);
+struct SharedCognition(Rc<RefCell<FakeCognition>>, cathedral_sim::RuntimeGeneration);
 
 impl Cognition for SharedCognition {
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
@@ -153,12 +159,15 @@ struct EngineSeed {
 /// friends, which are deliberately not `Send` (the sim is single-threaded by
 /// construction — D22).
 pub struct LocalEngine {
+    generation: cathedral_sim::RuntimeGeneration,
+    publication_bytes: Arc<AtomicUsize>,
+    command_endpoint: Option<super::bridge::BridgeCommandSender>,
     seed: Option<EngineSeed>,
     engine: Option<Engine>,
     /// Everything the backends finish — LLM turns, transcripts, voices —
     /// arrives here (D7). The handle they hang off lives in the [`EngineGuard`],
     /// so a dropped guard stops them; this receiver then simply runs dry.
-    completions: Option<Receiver<BackendEvent>>,
+    completions: Option<cathedral_backends::BackendReceiver>,
     /// Present in fake mode only; the real provider answers on the backend
     /// channel instead.
     fake_cognition: Option<SharedCognition>,
@@ -216,7 +225,6 @@ impl LocalEngine {
     /// dead engine is precisely what wants covering.
     #[cfg(test)]
     pub(super) fn die_as_if_panicked(&mut self) {
-        self.engine = None;
         self.fail("the actor engine panicked: staged by a test".to_string());
     }
 }
@@ -230,11 +238,14 @@ pub fn spawn(
     config: &SmartActorsConfig,
     weather: &WeatherSettings,
 ) -> (BridgeHandle, BridgeInbox, EngineGuard, LocalEngine) {
+    let allocated =
+        NEXT_RUNTIME_GENERATION
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |id| id.checked_add(1));
+    let generation = cathedral_sim::RuntimeGeneration(allocated.unwrap_or(u64::MAX));
     let (commands_tx, commands_rx) = bounded(COMMAND_QUEUE_CAPACITY);
-    // Unbounded, unlike the sidecar's 256-slot event queue: producer and
-    // consumer are now the same schedule, one system apart. A bounded queue
-    // could only ever deadlock the pump against itself.
-    let (events_tx, events_rx) = unbounded();
+    // Producer and consumer share the main schedule. Nonblocking publication
+    // has reserved fault headroom; exceptional overflow retires this runtime.
+    let (events_tx, events_rx) = bounded(MAX_BRIDGE_EVENTS);
 
     let session = SessionDir::create(&SessionDir::new_session_id()).ok();
     let runtime_dir = session
@@ -242,6 +253,9 @@ pub fn spawn(
         .map_or_else(std::env::temp_dir, |session| session.path().to_path_buf());
 
     let mut engine = LocalEngine {
+        generation,
+        publication_bytes: Arc::new(AtomicUsize::new(0)),
+        command_endpoint: None,
         seed: None,
         engine: None,
         completions: None,
@@ -255,7 +269,12 @@ pub fn spawn(
     };
     let mut guard = EngineGuard { _backends: None };
 
-    match build(config, weather, session) {
+    let built = if allocated.is_ok() {
+        build(config, weather, session, generation)
+    } else {
+        Err("runtime generation identities exhausted".to_owned())
+    };
+    match built {
         Ok((seed, backends, fake_cognition, prompt_log)) => {
             engine.completions = Some(backends.events().clone());
             engine.seed = Some(seed);
@@ -264,17 +283,22 @@ pub fn spawn(
             guard._backends = Some(backends);
             // The handshake still opens with the same event, so mod.rs's
             // ProcessStarted arm (which answers with `Hello`) is untouched.
-            let _ = events_tx.send(BridgeEvent::ProcessStarted);
+            engine.send(BridgeEvent::ProcessStarted);
         }
         Err(error) => {
             engine.dead = true;
-            let _ = events_tx.send(BridgeEvent::Disconnected(error));
+            engine.send(BridgeEvent::Disconnected(error));
         }
     }
 
+    let handle = BridgeHandle::new_for_generation(commands_tx, runtime_dir, generation);
+    engine.command_endpoint = Some(handle.command_sender());
+    if engine.dead {
+        handle.retire();
+    }
     (
-        BridgeHandle::new(commands_tx, runtime_dir),
-        BridgeInbox::new(events_rx),
+        handle,
+        BridgeInbox::new_for_generation(events_rx, generation),
         guard,
         engine,
     )
@@ -340,6 +364,7 @@ fn build(
     config: &SmartActorsConfig,
     weather: &WeatherSettings,
     session: Option<SessionDir>,
+    generation: cathedral_sim::RuntimeGeneration,
 ) -> Result<Built, String> {
     let assets = assets_dir();
     let lore = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lore");
@@ -382,12 +407,12 @@ fn build(
     };
     let backends_config = BackendsConfig::load(&options);
     let turn_delay_seconds = backends_config.npc_turn_delay_seconds;
-    let backends = BackendsHandle::start(backends_config, session)
+    let backends = BackendsHandle::start_for_generation(backends_config, session, generation)
         .map_err(|error| format!("could not start the actor backends: {error}"))?;
 
     let (cognition, fake_cognition): (Box<dyn Cognition>, Option<SharedCognition>) =
         if config.fake_backend {
-            let fake = SharedCognition::default();
+            let fake = SharedCognition(Rc::new(RefCell::new(FakeCognition::new())), generation);
             (Box::new(fake.clone()), Some(fake))
         } else {
             (Box::new(backends.cognition()), None)
@@ -421,6 +446,7 @@ fn build(
     };
 
     let engine_config = EngineConfig {
+        runtime_generation: generation,
         player_id: SimActorId::from_raw(PLAYER_ID),
         fake_mode: config.fake_backend,
         sounds_enabled: config.sounds.enabled,
@@ -598,6 +624,18 @@ pub struct PumpTimer {
 }
 
 impl LocalEngine {
+    /// Immediate execution retirement, retaining the non-Send engine and its
+    /// backend owners. M3 owns later budgeted destruction and replacement.
+    pub fn retire_runtime(&mut self) {
+        self.dead = true;
+        self.accepted_boundary = None;
+        if let Some(endpoint) = &self.command_endpoint {
+            endpoint.retire();
+        }
+        if let Some(completions) = &self.completions {
+            completions.retire();
+        }
+    }
     /// Legacy explicit-clock harness. Production uses `pump_with_sample`.
     #[cfg(test)]
     pub(super) fn pump(&mut self, now: f64) {
@@ -632,10 +670,20 @@ impl LocalEngine {
             let Ok(command) = self.commands.try_recv() else {
                 break;
             };
-            self.input_watermark = self
-                .input_watermark
-                .checked_add(1)
-                .expect("input watermark overflow");
+            // Stale carried sequences must not spend the new input watermark
+            // or exhaust the controller's final physical sample identity.
+            let command = match command {
+                BridgeCommand::InGeneration {
+                    generation,
+                    command,
+                } if generation == self.generation && command.valid_transport_body() => *command,
+                _ => continue,
+            };
+            let Some(watermark) = self.input_watermark.checked_add(1) else {
+                self.fail("input watermark exhausted".into());
+                return;
+            };
+            self.input_watermark = watermark;
             max_spatial_sequence =
                 max_spatial_sequence.max(command.spatial_sequence().unwrap_or(0));
             match command {
@@ -647,7 +695,7 @@ impl LocalEngine {
                 } => self.start(position_m, spatial_seq, now),
                 command => {
                     if let Some(command) = translate(command) {
-                        commands.push(command);
+                        commands.push(command.in_generation(self.generation));
                     }
                 }
             }
@@ -666,19 +714,23 @@ impl LocalEngine {
                 self.fail("physical sample sequence exhausted".into());
                 return;
             };
-            commands.push(EngineCommand::SpatialUpdate {
-                spatial_seq: sequence as i64,
-                updates: vec![SpatialActorUpdate::new(
-                    SimActorId::from_raw(PLAYER_ID),
-                    SimVec3::new(
-                        f64::from(position.x),
-                        f64::from(position.y),
-                        f64::from(position.z),
-                    ),
-                    Some(f64::from(yaw)),
-                )],
-            });
+            commands.push(
+                EngineCommand::SpatialUpdate {
+                    spatial_seq: sequence as i64,
+                    updates: vec![SpatialActorUpdate::new(
+                        SimActorId::from_raw(PLAYER_ID),
+                        SimVec3::new(
+                            f64::from(position.x),
+                            f64::from(position.y),
+                            f64::from(position.z),
+                        ),
+                        Some(f64::from(yaw)),
+                    )],
+                }
+                .in_generation(self.generation),
+            );
             Some(AcceptedHostBoundary {
+                generation: self.generation,
                 input_watermark: self.input_watermark,
                 physical_sequence: sequence,
                 position,
@@ -707,7 +759,14 @@ impl LocalEngine {
                             })
                 });
                 for message in messages {
+                    if self.dead {
+                        break;
+                    }
                     self.emit(message);
+                }
+                if self.dead {
+                    self.accepted_boundary = None;
+                    return;
                 }
                 if matching {
                     self.accepted_boundary = boundary;
@@ -719,9 +778,9 @@ impl LocalEngine {
                 }
             }
             Err(payload) => {
-                // The engine may be half-way through a mutation. Drop it, and
-                // let the game do what it already does when its authority dies.
-                self.engine = None;
+                // The engine may be half-way through a mutation. Fence it
+                // immediately, retaining backend owners for M3 destruction;
+                // dropping a speech worker here could block the main thread.
                 let reason = panic_reason(payload.as_ref());
                 self.fail(format!("the actor engine panicked: {reason}"));
             }
@@ -733,7 +792,7 @@ impl LocalEngine {
     fn collect_completions(&mut self, commands: &mut Vec<EngineCommand>) {
         if let Some(fake) = &self.fake_cognition {
             for completion in fake.0.borrow_mut().drain_completions() {
-                commands.push(EngineCommand::LlmCompletion(completion));
+                commands.push(EngineCommand::LlmCompletion(completion).in_generation(fake.1));
             }
         }
         let Some(completions) = &self.completions else {
@@ -755,7 +814,7 @@ impl LocalEngine {
                     _ => continue,
                 },
             };
-            commands.push(command);
+            commands.push(command.in_generation(completions.generation()));
         }
     }
 
@@ -848,14 +907,55 @@ impl LocalEngine {
         }
     }
 
-    fn send(&self, event: BridgeEvent) {
+    fn send(&mut self, event: BridgeEvent) {
         // A closed inbox means the app is shutting down; there is nothing useful
         // to do about it here.
-        let _ = self.events.send(event);
+        let bytes = std::mem::size_of::<BridgeEvent>()
+            + 64
+            + match &event {
+                BridgeEvent::Message(message) => super::publication_bytes::message(message),
+                BridgeEvent::Disconnected(message) => message.capacity(),
+                _ => 0,
+            };
+        let allocation = super::bridge::PublicationAllocation::reserve(
+            &self.publication_bytes,
+            bytes,
+            matches!(event, BridgeEvent::Disconnected(_)),
+        );
+        let (event, allocation) = if self.events.len() >= MAX_BRIDGE_EVENTS - 1
+            || allocation.is_none()
+        {
+            drop(allocation);
+            self.retire_runtime();
+            let Some(allocation) =
+                super::bridge::PublicationAllocation::reserve(&self.publication_bytes, 512, true)
+            else {
+                return;
+            };
+            (
+                BridgeEvent::Disconnected(
+                    "actor publication exceeded its bounded delivery capacity".into(),
+                ),
+                allocation,
+            )
+        } else {
+            (event, allocation.expect("checked above"))
+        };
+        if self
+            .events
+            .try_send(BridgeEvent::InGeneration {
+                generation: self.generation,
+                event: Box::new(event),
+                allocation,
+            })
+            .is_err()
+        {
+            self.retire_runtime();
+        }
     }
 
     fn fail(&mut self, reason: String) {
-        self.dead = true;
+        self.retire_runtime();
         crate::session_log::log_line("engine", "ERROR", &reason);
         self.send(BridgeEvent::Disconnected(reason));
     }
@@ -867,6 +967,7 @@ impl LocalEngine {
 /// builds the engine) and is the only command that translates to nothing.
 fn translate(command: BridgeCommand) -> Option<EngineCommand> {
     Some(match command {
+        BridgeCommand::InGeneration { .. } => return None,
         BridgeCommand::Identified { id, command } => {
             return translate(*command).map(|command| command.identified(id));
         }
@@ -1257,6 +1358,368 @@ mod tests {
         );
     }
 
+    #[test]
+    fn stale_and_nested_carried_samples_do_not_spend_the_current_boundary() {
+        let mut harness = Harness::new();
+        let generation = harness.handle.generation();
+        let (raw, received) = bounded(COMMAND_QUEUE_CAPACITY);
+        harness.engine.commands = received;
+        let say = || BridgeCommand::PlayerSay {
+            request_id: "stale".into(),
+            text: "Must never be heard".into(),
+            position_m: player_position(),
+            spatial_seq: i64::MAX as u64,
+        };
+        raw.send(BridgeCommand::InGeneration {
+            generation: cathedral_sim::RuntimeGeneration(generation.0 - 1),
+            command: Box::new(say()),
+        })
+        .unwrap();
+        raw.send(BridgeCommand::InGeneration {
+            generation,
+            command: Box::new(BridgeCommand::Identified {
+                id: cathedral_sim::receipts::OperationId {
+                    producer: cathedral_sim::receipts::HOST_PRODUCER,
+                    sequence: 1,
+                }
+                .command(0),
+                command: Box::new(BridgeCommand::InGeneration {
+                    generation: cathedral_sim::RuntimeGeneration(generation.0 - 1),
+                    command: Box::new(say()),
+                }),
+            }),
+        })
+        .unwrap();
+        raw.send(BridgeCommand::InGeneration {
+            generation,
+            command: Box::new(BridgeCommand::Hello {
+                position_m: player_position(),
+                spatial_seq: 1,
+            }),
+        })
+        .unwrap();
+        let mut spatial = PlayerSpatialState::default();
+        harness
+            .engine
+            .pump_with_sample(0.0, Some((&mut spatial, Vec3::new(0.0, 0.91, 111.0), 0.0)));
+        assert!(!harness.engine.dead);
+        let boundary = harness.engine.accepted_boundary.unwrap();
+        assert_eq!(boundary.generation, generation);
+        assert_eq!(boundary.input_watermark, 1);
+        assert_eq!(boundary.physical_sequence, 2);
+        assert!(
+            !harness
+                .engine
+                .engine
+                .as_ref()
+                .unwrap()
+                .transcript()
+                .iter()
+                .any(|line| format!("{line:?}").contains("Must never"))
+        );
+    }
+
+    #[test]
+    fn byte_overflow_stops_the_flush_and_invalidates_the_capture_boundary() {
+        let mut harness = Harness::new();
+        harness.send(BridgeCommand::Hello {
+            position_m: player_position(),
+            spatial_seq: 1,
+        });
+        harness.step();
+        let mut spatial = PlayerSpatialState::default();
+        harness
+            .engine
+            .pump_with_sample(0.05, Some((&mut spatial, Vec3::ZERO, 0.0)));
+        assert!(harness.engine.accepted_boundary.is_some());
+        while harness
+            .inbox
+            .try_recv_current(harness.handle.generation())
+            .is_some()
+        {}
+        let held = super::super::bridge::PublicationAllocation::reserve(
+            &harness.engine.publication_bytes,
+            super::super::bridge::MAX_PUBLICATION_BYTES - 1024,
+            false,
+        )
+        .unwrap();
+        harness.send(BridgeCommand::PlayerSay {
+            request_id: "overflow".into(),
+            text: "A flush with several publications".into(),
+            position_m: player_position(),
+            spatial_seq: 10,
+        });
+        harness
+            .engine
+            .pump_with_sample(0.1, Some((&mut spatial, Vec3::ZERO, 0.0)));
+        assert!(harness.engine.dead);
+        assert!(harness.engine.accepted_boundary.is_none());
+        let mut delivered = Vec::new();
+        while let Some(event) = harness.inbox.try_recv_current(harness.handle.generation()) {
+            delivered.push(event);
+        }
+        assert_eq!(
+            delivered.len(),
+            1,
+            "no smaller message follows the failed publication"
+        );
+        assert!(
+            matches!(&delivered[0], BridgeEvent::Disconnected(reason) if reason.contains("capacity"))
+        );
+        assert!(
+            harness
+                .handle
+                .try_send(BridgeCommand::SpeechPresented {
+                    speech_event_id: "old".into()
+                })
+                .is_err()
+        );
+        drop(held);
+        assert_eq!(harness.engine.publication_bytes.load(Ordering::Acquire), 0);
+    }
+
+    #[test]
+    fn supported_command_and_provider_burst_stays_live_under_backend_pressure() {
+        let mut harness = Harness::new();
+        harness.send(BridgeCommand::Hello {
+            position_m: player_position(),
+            spatial_seq: 1,
+        });
+        harness.step();
+        let mut completion = harness
+            .engine
+            .fake_cognition
+            .as_ref()
+            .unwrap()
+            .0
+            .borrow_mut()
+            .drain_completions()
+            .into_iter()
+            .next()
+            .expect("a real scheduled turn");
+        completion.result = Ok((0..255)
+            .map(|n| format!(r#"say {{"text":"Provider burst line {n}."}}"#))
+            .chain(std::iter::once(r#"set_goal {"goal":"burst 255"}"#.into()))
+            .collect::<Vec<_>>()
+            .join("\n"));
+        let actor = harness
+            .engine
+            .engine
+            .as_ref()
+            .unwrap()
+            .scheduler()
+            .in_flight_actor_id()
+            .unwrap()
+            .clone();
+        let speaker = &harness.engine.world().unwrap().characters[&actor];
+        assert!(speaker.voice_key().is_some());
+        let position = speaker.position_m();
+        let nearby = Position::new(
+            position.x as f32,
+            position.y as f32,
+            position.z as f32 - 2.0,
+        )
+        .unwrap();
+        harness.send(BridgeCommand::SpatialUpdate {
+            position_m: nearby,
+            spatial_seq: 2,
+            facing_yaw: 0.0,
+        });
+        harness.engine.pump(0.05);
+        while harness
+            .inbox
+            .try_recv_current(harness.handle.generation())
+            .is_some()
+        {}
+        let sender = harness.guard._backends.as_ref().unwrap().sender();
+        sender.send(BackendEvent::LlmCompletion(completion));
+        // Terminal capacity is saturated independently of the deterministic
+        // city. Newly requested speech jobs must refuse, without a host fault.
+        let held: Vec<_> = (0..64)
+            .filter_map(|id| {
+                sender.reserve(BackendEvent::TranscriptionDone {
+                    job: cathedral_sim::TranscriptionJobId(10_000 + id),
+                    result: Err(cathedral_sim::SpeechError::new("saturated")),
+                })
+            })
+            .collect();
+        assert!(!held.is_empty());
+        for n in 0..COMMAND_QUEUE_CAPACITY {
+            harness.send(BridgeCommand::PlayerSay {
+                request_id: format!("burst-{n}"),
+                text: format!("Ordinary admitted sentence {n}."),
+                position_m: nearby,
+                spatial_seq: 3 + n as u64,
+            });
+        }
+        let mut spatial = PlayerSpatialState::default();
+        harness
+            .engine
+            .pump_with_sample(0.1, Some((&mut spatial, nearby.into(), 0.0)));
+        assert!(!harness.engine.dead);
+        assert_eq!(
+            harness.engine.accepted_boundary.unwrap().input_watermark,
+            130
+        );
+        let mut receipts = 0;
+        let mut provider_receipts = 0;
+        let mut refused_voices = 0;
+        let mut speech = 0;
+        while let Some(event) = harness.inbox.try_recv_current(harness.handle.generation()) {
+            match event {
+                BridgeEvent::Disconnected(reason) => panic!("supported burst retired: {reason}"),
+                BridgeEvent::Message(message) => match *message {
+                    EngineMessage::ActionReceipt(receipt) => {
+                        if receipt.id.operation.producer == cathedral_sim::receipts::HOST_PRODUCER {
+                            receipts += 1;
+                        }
+                        if receipt.id.operation.producer == cathedral_sim::receipts::TURN_PRODUCER {
+                            provider_receipts += 1;
+                        }
+                    }
+                    EngineMessage::Speech { .. } => speech += 1,
+                    EngineMessage::TtsFailed { reason, .. } if reason.contains("queue is full") => {
+                        refused_voices += 1
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        }
+        assert!(
+            receipts >= 128,
+            "host commands received authoritative outcomes"
+        );
+        assert!(speech >= 383);
+        assert!(provider_receipts >= 256);
+        assert!(
+            refused_voices > 0,
+            "backend capacity refusal reached the ordinary fallback path"
+        );
+        assert!(
+            harness
+                .engine
+                .world()
+                .unwrap()
+                .characters
+                .values()
+                .any(|actor| actor.state.goal == "burst 255")
+        );
+        harness
+            .engine
+            .pump_with_sample(0.2, Some((&mut spatial, Vec3::new(1.0, 0.91, 111.0), 0.0)));
+        assert!(!harness.engine.dead);
+        assert_eq!(
+            harness.engine.accepted_boundary.unwrap().elapsed.seconds(),
+            0.2
+        );
+        assert_eq!(
+            harness.engine.world().unwrap().characters[&SimActorId::from_raw(PLAYER_ID)]
+                .position_m()
+                .x,
+            1.0
+        );
+        let positions: Vec<_> = harness
+            .engine
+            .world()
+            .unwrap()
+            .characters
+            .iter()
+            .filter(|(id, _)| id.as_str() != PLAYER_ID)
+            .map(|(id, actor)| (id.clone(), actor.position_m()))
+            .collect();
+        let mut moved = false;
+        for n in 1..=100 {
+            while harness
+                .inbox
+                .try_recv_current(harness.handle.generation())
+                .is_some()
+            {}
+            harness.engine.pump(0.2 + n as f64 * 0.05);
+            assert!(!harness.engine.dead);
+            if positions.iter().any(|(id, before)| {
+                harness.engine.world().unwrap().characters[id]
+                    .position_m()
+                    .distance(*before)
+                    > 0.01
+            }) {
+                moved = true;
+                break;
+            }
+        }
+        assert!(
+            moved,
+            "ordinary resident motion continues while external terminal capacity is held"
+        );
+        eprintln!(
+            "M1c supported burst: host_receipts={receipts} provider_receipts={provider_receipts} speech={speech} refused_voices={refused_voices} retained_publication_bytes={} backend_reserved_jobs={}",
+            harness.engine.publication_bytes.load(Ordering::Acquire),
+            held.len()
+        );
+    }
+
+    #[test]
+    fn fake_staging_keeps_its_generation_when_numeric_request_ids_collide() {
+        let mut harness = Harness::new();
+        harness.send(BridgeCommand::Hello {
+            position_m: player_position(),
+            spatial_seq: 1,
+        });
+        harness.step();
+        let actor = harness
+            .engine
+            .engine
+            .as_ref()
+            .unwrap()
+            .scheduler()
+            .in_flight_actor_id()
+            .unwrap()
+            .clone();
+        harness
+            .engine
+            .world_mut()
+            .unwrap()
+            .characters
+            .get_mut(&actor)
+            .unwrap()
+            .state
+            .goal = "must survive old work".into();
+        let fake = || {
+            let mut fake = FakeCognition::new();
+            assert_eq!(fake.request("fixture".into()).unwrap(), RequestId(0));
+            Rc::new(RefCell::new(fake))
+        };
+        harness.engine.fake_cognition = Some(SharedCognition(
+            fake(),
+            cathedral_sim::RuntimeGeneration(harness.handle.generation().0 - 1),
+        ));
+        harness.engine.pump(0.0);
+        assert_eq!(
+            harness.engine.world().unwrap().characters[&actor]
+                .state
+                .goal,
+            "must survive old work"
+        );
+        assert!(
+            harness
+                .engine
+                .engine
+                .as_ref()
+                .unwrap()
+                .scheduler()
+                .in_flight_actor_id()
+                .is_some()
+        );
+        harness.engine.fake_cognition = Some(SharedCognition(fake(), harness.handle.generation()));
+        harness.engine.pump(0.0);
+        assert_eq!(
+            harness.engine.world().unwrap().characters[&actor]
+                .state
+                .goal,
+            "None"
+        );
+    }
+
     fn fake_config() -> SmartActorsConfig {
         SmartActorsConfig {
             fake_backend: true,
@@ -1291,7 +1754,7 @@ mod tests {
             self.engine.pump(self.now);
             self.now += 0.5;
             let mut events = Vec::new();
-            while let Some(event) = self.inbox.try_recv() {
+            while let Some(event) = self.inbox.try_recv_current(self.handle.generation()) {
                 events.push(event);
             }
             events
@@ -1310,6 +1773,9 @@ mod tests {
                             panic!("the engine disconnected while waiting for {what}: {reason}")
                         }
                         BridgeEvent::ProcessStarted => continue,
+                        BridgeEvent::InGeneration { .. } => {
+                            panic!("fixture consumer failed to unwrap generation")
+                        }
                     };
                     if let EngineMessage::Speech { event_id, .. } = &message {
                         self.handle
@@ -1357,7 +1823,7 @@ mod tests {
 
         // The handshake: ProcessStarted, then hello, then ready.
         assert!(matches!(
-            harness.inbox.try_recv(),
+            harness.inbox.try_recv_current(harness.handle.generation()),
             Some(BridgeEvent::ProcessStarted)
         ));
         harness.send(BridgeCommand::Hello {
@@ -1487,17 +1953,17 @@ mod tests {
         let (handle, inbox, _guard, mut engine) =
             spawn(&fake_config(), &WeatherSettings::default());
         assert!(matches!(
-            inbox.try_recv(),
+            inbox.try_recv_current(handle.generation()),
             Some(BridgeEvent::ProcessStarted)
         ));
 
         // No hello: nothing can be polled, and nothing is emitted.
         engine.pump(0.0);
-        assert!(inbox.try_recv().is_none());
+        assert!(inbox.try_recv_current(handle.generation()).is_none());
 
         engine.fail("the actor engine panicked: boom".to_string());
         assert!(matches!(
-            inbox.try_recv(),
+            inbox.try_recv_current(handle.generation()),
             Some(BridgeEvent::Disconnected(reason)) if reason.contains("panicked")
         ));
 
@@ -1507,9 +1973,9 @@ mod tests {
             .try_send(BridgeCommand::PlayerSound {
                 sound_id: "fart".into(),
             })
-            .expect("room in the queue");
+            .expect_err("retired producers reject further submissions");
         engine.pump(1.0);
-        assert!(inbox.try_recv().is_none());
+        assert!(inbox.try_recv_current(handle.generation()).is_none());
     }
 
     #[test]
@@ -1668,8 +2134,13 @@ mod tests {
     /// so the microphone worker is spawned and the cast has a (silent) voice.
     #[test]
     fn fake_mode_reports_every_capability_and_selects_the_configured_voice() {
-        let (seed, _backends, fake, _log) =
-            build(&fake_config(), &WeatherSettings::default(), None).expect("the shipped assets");
+        let (seed, _backends, fake, _log) = build(
+            &fake_config(),
+            &WeatherSettings::default(),
+            None,
+            cathedral_sim::RuntimeGeneration::INITIAL,
+        )
+        .expect("the shipped assets");
         assert!(fake.is_some());
         assert!(seed.capabilities.llm);
         assert!(
@@ -1695,8 +2166,13 @@ mod tests {
     /// else would fail.
     #[test]
     fn the_game_gates_idle_cognition_on_the_players_neighborhood_and_on_news() {
-        let (seed, _backends, _fake, _log) =
-            build(&fake_config(), &WeatherSettings::default(), None).expect("the shipped assets");
+        let (seed, _backends, _fake, _log) = build(
+            &fake_config(),
+            &WeatherSettings::default(),
+            None,
+            cathedral_sim::RuntimeGeneration::INITIAL,
+        )
+        .expect("the shipped assets");
         assert_eq!(seed.config.idle_mode, IdleCognitionMode::Stage);
         assert_eq!(seed.config.stage.radius_m, DEFAULT_STAGE_RADIUS_M);
         assert_eq!(seed.config.stage.max_actors, DEFAULT_STAGE_MAX_ACTORS);
@@ -1713,8 +2189,13 @@ mod tests {
             },
             ..fake_config()
         };
-        let (seed, _backends, _fake, _log) =
-            build(&ungated, &WeatherSettings::default(), None).expect("the shipped assets");
+        let (seed, _backends, _fake, _log) = build(
+            &ungated,
+            &WeatherSettings::default(),
+            None,
+            cathedral_sim::RuntimeGeneration::INITIAL,
+        )
+        .expect("the shipped assets");
         assert_eq!(seed.config.idle_mode, IdleCognitionMode::All);
         assert!(!seed.config.idle_requires_news);
     }
@@ -1728,9 +2209,13 @@ mod tests {
         let session = SessionDir::create(&session_id).expect("a private audio directory");
         let path = session.path().to_path_buf();
 
-        let (seed, backends, _fake, _log) =
-            build(&fake_config(), &WeatherSettings::default(), Some(session))
-                .expect("the shipped assets");
+        let (seed, backends, _fake, _log) = build(
+            &fake_config(),
+            &WeatherSettings::default(),
+            Some(session),
+            cathedral_sim::RuntimeGeneration::INITIAL,
+        )
+        .expect("the shipped assets");
         assert_eq!(seed.config.runtime_dir, path);
         assert_eq!(backends.runtime_dir(), Some(path.as_path()));
 

@@ -238,6 +238,11 @@ pub struct FakeCognition {
     prompts: Vec<String>,
 }
 
+pub const MAX_FAKE_STAGED: usize = 64;
+pub const MAX_FAKE_PROMPTS: usize = 32;
+pub const MAX_FAKE_PROMPT_BYTES: usize = 1024 * 1024;
+pub const MAX_FAKE_REPLY_BYTES: usize = 400_000;
+
 impl FakeCognition {
     pub fn new() -> Self {
         Self::default()
@@ -248,7 +253,7 @@ impl FakeCognition {
         std::mem::take(&mut self.staged)
     }
 
-    /// Every prompt this backend has been asked to complete, in order.
+    /// The newest bounded prompt history, in submission order.
     pub fn prompts(&self) -> &[String] {
         &self.prompts
     }
@@ -256,6 +261,9 @@ impl FakeCognition {
 
 impl Cognition for FakeCognition {
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
+        if prompt.capacity() > MAX_FAKE_PROMPT_BYTES || self.staged.len() >= MAX_FAKE_STAGED {
+            return Err(CognitionBusy);
+        }
         self.stage(fake_reply(&prompt), prompt)
     }
 
@@ -268,6 +276,9 @@ impl Cognition for FakeCognition {
         prompt: String,
         _max_output_tokens: Option<u32>,
     ) -> Result<RequestId, CognitionBusy> {
+        if prompt.capacity() > MAX_FAKE_PROMPT_BYTES || self.staged.len() >= MAX_FAKE_STAGED {
+            return Err(CognitionBusy);
+        }
         self.stage(fake_night_reply(&prompt), prompt)
     }
 }
@@ -275,12 +286,23 @@ impl Cognition for FakeCognition {
 impl FakeCognition {
     fn stage(&mut self, reply: String, prompt: String) -> Result<RequestId, CognitionBusy> {
         let request_id = RequestId(self.next_request_id);
-        self.next_request_id += 1;
+        self.next_request_id = self.next_request_id.checked_add(1).ok_or(CognitionBusy)?;
         self.staged.push(Completion {
             request_id,
-            result: Ok(reply),
+            result: if reply.len() > MAX_FAKE_REPLY_BYTES
+                || reply.chars().count() > crate::MAX_LLM_REPLY_CHARS
+            {
+                Err(crate::traits::CognitionError::new(
+                    "fake reply exceeded the provider response limit",
+                ))
+            } else {
+                Ok(reply.into_boxed_str().into_string())
+            },
             duration_seconds: 0.0,
         });
+        if self.prompts.len() == MAX_FAKE_PROMPTS {
+            self.prompts.remove(0);
+        }
         self.prompts.push(prompt);
         Ok(request_id)
     }
@@ -302,6 +324,36 @@ mod tests {
             }
         }
         format!("HEADER\n\nYour sheet:\n\n{sheet}\nFOOTER\n")
+    }
+
+    #[test]
+    fn fake_admission_bounds_staging_prompt_retention_and_numeric_ids() {
+        let mut fake = FakeCognition::new();
+        let mut oversized = String::with_capacity(MAX_FAKE_PROMPT_BYTES + 1);
+        oversized.push('x');
+        assert_eq!(fake.request(oversized), Err(CognitionBusy));
+        for _ in 0..MAX_FAKE_STAGED {
+            fake.request("normal".into()).unwrap();
+        }
+        assert_eq!(fake.request_night("night".into(), None), Err(CognitionBusy));
+        assert_eq!(fake.prompts.len(), MAX_FAKE_PROMPTS);
+        assert_eq!(fake.drain_completions().len(), MAX_FAKE_STAGED);
+        assert_eq!(
+            fake.request_night("night".into(), None).unwrap(),
+            RequestId(MAX_FAKE_STAGED as u64)
+        );
+        fake.next_request_id = u64::MAX;
+        let pending = fake.staged.len();
+        assert_eq!(fake.request("no wrap".into()), Err(CognitionBusy));
+        assert_eq!(fake.staged.len(), pending);
+        let mut oversize_reply = FakeCognition::new();
+        oversize_reply
+            .stage("x".repeat(MAX_FAKE_REPLY_BYTES + 1), "bounded".into())
+            .unwrap();
+        assert!(oversize_reply.drain_completions()[0].result.is_err());
+        eprintln!(
+            "M1c fake bounds: staged={MAX_FAKE_STAGED} retained_prompts={MAX_FAKE_PROMPTS} prompt_bytes_each={MAX_FAKE_PROMPT_BYTES}"
+        );
     }
 
     #[test]

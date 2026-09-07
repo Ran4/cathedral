@@ -28,6 +28,34 @@ use serde_json::json;
 
 // ---------------------------------------------------------------- test doubles
 
+#[derive(Clone, Default)]
+struct GenerationStt(Rc<RefCell<Vec<cathedral_sim::TranscriptionJobId>>>);
+
+impl cathedral_sim::Transcription for GenerationStt {
+    fn available(&self, _: SttBackendKind) -> bool {
+        true
+    }
+    fn submit_batch(
+        &mut self,
+        job: cathedral_sim::TranscriptionJobId,
+        _: std::path::PathBuf,
+        _: SttBackendKind,
+    ) -> Result<(), cathedral_sim::SttSubmitError> {
+        self.0.borrow_mut().push(job);
+        Ok(())
+    }
+    fn realtime_begin(&mut self, _: &str) -> bool {
+        true
+    }
+    fn realtime_append(&mut self, _: &str, _: &[i16]) -> bool {
+        true
+    }
+    fn realtime_commit(&mut self, _: &str) -> bool {
+        true
+    }
+    fn realtime_clear(&mut self, _: &str) {}
+}
+
 /// [`FakeCognition`] behind a handle, because the engine owns its `Box<dyn
 /// Cognition>` and the test still has to drain the staged completions and hand
 /// them back as `EngineCommand::LlmCompletion` — exactly what the host does.
@@ -43,6 +71,13 @@ impl SharedCognition {
 impl Cognition for SharedCognition {
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
         self.0.borrow_mut().request(prompt)
+    }
+    fn request_night(
+        &mut self,
+        prompt: String,
+        budget: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        self.0.borrow_mut().request_night(prompt, budget)
     }
 }
 
@@ -113,6 +148,9 @@ struct Harness {
 }
 
 struct Builder {
+    generation: cathedral_sim::RuntimeGeneration,
+    night: bool,
+    transcription: Option<Box<dyn cathedral_sim::Transcription>>,
     llm: bool,
     fake_mode: bool,
     sounds_enabled: bool,
@@ -127,6 +165,9 @@ struct Builder {
 impl Default for Builder {
     fn default() -> Self {
         Self {
+            generation: cathedral_sim::RuntimeGeneration::INITIAL,
+            night: false,
+            transcription: None,
             // The sound/command tests run with `llm_available=False` so the turn
             // stream never starts and nothing but the test moves the world.
             llm: false,
@@ -175,14 +216,21 @@ impl Builder {
         let cognition = SharedCognition::default();
         let capabilities = Capabilities::new(
             self.llm,
-            false,
-            false,
+            self.transcription.is_some(),
+            self.transcription.is_some(),
             self.tts_selected == TtsBackendKind::Cloud,
             self.tts_selected == TtsBackendKind::Local,
             self.tts_selected,
         );
         let engine = Engine::new(
             EngineConfig {
+                runtime_generation: self.generation,
+                night_office: cathedral_sim::NightOfficeConfig {
+                    enabled: self.night,
+                    wards: false,
+                    ambients: false,
+                    ..Default::default()
+                },
                 fake_mode: self.fake_mode,
                 sounds_enabled: self.sounds_enabled,
                 turn_delay_seconds: self.turn_delay_seconds,
@@ -196,7 +244,8 @@ impl Builder {
             catalog(),
             prompt_env(),
             Box::new(cognition.clone()),
-            Box::new(NullTranscription),
+            self.transcription
+                .unwrap_or_else(|| Box::new(NullTranscription)),
             Box::new(self.tts.clone()),
             Box::new(NullSight),
             capabilities,
@@ -4140,4 +4189,298 @@ fn exact_office_rate_change_never_replays_the_bell() {
         let changed = clock.with_scale(now, rate);
         assert_eq!(changed.game_days(now), clock.game_days(now));
     }
+}
+
+#[test]
+fn old_runtime_commands_and_colliding_cognition_ids_are_inert_before_dispatch() {
+    use cathedral_sim::RuntimeGeneration;
+    let current = RuntimeGeneration(77);
+    let mut h = Builder {
+        generation: current,
+        llm: true,
+        ..Builder::default()
+    }
+    .build();
+    h.ready();
+    let mut completion = h.cognition.drain().pop().expect("a current pending turn");
+    assert_eq!(
+        completion.request_id,
+        RequestId(0),
+        "the ID an older runtime can also issue"
+    );
+    completion.result = Ok("say {\"text\":\"generation witness\"}".into());
+    let old = RuntimeGeneration(76);
+    let transcript = h.engine.transcript().to_vec();
+    let revision = h.engine.world().world_revision;
+    let stale = vec![
+        EngineCommand::PlayerSay {
+            request_id: "old-player".into(),
+            text: "stale speech".into(),
+            position_m: Vec3::ZERO,
+            spatial_seq: i64::MAX,
+        },
+        EngineCommand::LlmCompletion(completion.clone()),
+        EngineCommand::BackendStatus(cathedral_sim::StatusEvent::llm(
+            "old-runtime-status",
+            None,
+            None,
+        )),
+    ];
+    let messages = h.engine.poll(
+        0.0,
+        stale.into_iter().map(|c| c.in_generation(old)).collect(),
+    );
+    assert_eq!(h.engine.transcript(), transcript);
+    assert_eq!(h.engine.world().world_revision, revision);
+    assert_eq!(h.engine.world().spatial_sequence, 0);
+    assert!(h.engine.scheduler().in_flight_actor_id().is_some());
+    assert!(
+        !messages
+            .iter()
+            .any(|m| matches!(m, EngineMessage::Status(s) if s.state == "old-runtime-status"))
+    );
+    let messages = h.engine.poll(
+        0.0,
+        vec![
+            EngineCommand::LlmCompletion(completion).in_generation(current),
+            EngineCommand::BackendStatus(cathedral_sim::StatusEvent::llm(
+                "current-runtime-status",
+                None,
+                None,
+            ))
+            .in_generation(current),
+        ],
+    );
+    assert!(messages.iter().any(|message| matches!(message, EngineMessage::Status(status) if status.state == "current-runtime-status")));
+    assert!(
+        messages.iter().any(
+            |m| matches!(m, EngineMessage::Speech { text, .. } if text == "generation witness")
+        )
+    );
+}
+
+#[test]
+fn every_tts_outcome_and_presentation_ack_is_fenced_with_a_matching_live_event_id() {
+    use cathedral_sim::RuntimeGeneration;
+    let current = RuntimeGeneration(91);
+    for kind in 0..5 {
+        let tts = TtsProbe::available();
+        let mut h = Builder {
+            generation: current,
+            ..Builder::default()
+        }
+        .voices(TtsBackendKind::Local, tts.clone())
+        .build();
+        h.ready();
+        h.npc("k0fb1", "say", json!({"text":"Await this voice."}));
+        let messages = h.engine.poll(0.0, vec![]);
+        let event_id = speech_event_id(&messages);
+        assert_eq!(tts.submitted()[0].event_id, event_id);
+        assert!(h.engine.floor_busy(0.0));
+        let command = match kind {
+            0 => EngineCommand::Tts(TtsOutcome::Chunk {
+                event_id: event_id.clone(),
+                seq: 0,
+                sample_rate: 24_000,
+                samples: Arc::from([0i16, 1]),
+            }),
+            1 => EngineCommand::Tts(TtsOutcome::StreamEnd {
+                event_id: event_id.clone(),
+                chunk_count: 1,
+                first_chunk_ms: 1,
+            }),
+            2 => EngineCommand::Tts(TtsOutcome::Done {
+                event_id: event_id.clone(),
+                result: Ok(Arc::from([0u8, 1])),
+            }),
+            3 => EngineCommand::Tts(TtsOutcome::Done {
+                event_id: event_id.clone(),
+                result: Err(SpeechError::new("fenced failure")),
+            }),
+            _ => EngineCommand::SpeechPresented {
+                event_id: event_id.clone(),
+            },
+        };
+        let messages = h.engine.poll(
+            0.0,
+            vec![command.clone().in_generation(RuntimeGeneration(90))],
+        );
+        assert!(!messages.iter().any(|m| matches!(
+            m,
+            EngineMessage::TtsChunk { .. }
+                | EngineMessage::TtsStreamEnd { .. }
+                | EngineMessage::TtsReady { .. }
+                | EngineMessage::TtsFailed { .. }
+        )));
+        assert!(
+            h.engine.floor_busy(0.5),
+            "stale terminal must not release the matching current floor"
+        );
+        let messages = h.engine.poll(0.5, vec![command.in_generation(current)]);
+        if kind == 4 {
+            assert!(!h.engine.floor_busy(1.0));
+        } else {
+            assert!(
+                messages.iter().any(|m| matches!(
+                    m,
+                    EngineMessage::TtsChunk { .. }
+                        | EngineMessage::TtsStreamEnd { .. }
+                        | EngineMessage::TtsReady { .. }
+                        | EngineMessage::TtsFailed { .. }
+                )),
+                "current callback {kind} must reach its owner"
+            );
+        }
+    }
+}
+
+#[test]
+fn old_batch_and_realtime_callbacks_cannot_resolve_matching_current_recordings() {
+    use cathedral_sim::{RealtimeResult, RuntimeGeneration, TranscriptionOutcome};
+    let current = RuntimeGeneration(102);
+    for kind in 0..3 {
+        let stt = GenerationStt::default();
+        let mut h = Builder {
+            generation: current,
+            transcription: Some(Box::new(stt.clone())),
+            ..Builder::default()
+        }
+        .build();
+        h.ready();
+        let mut input = Vec::new();
+        if kind != 0 {
+            input.extend([
+                EngineCommand::PlayerAudioBegin {
+                    wav_basename: "same.wav".into(),
+                    sample_rate: 24_000,
+                },
+                EngineCommand::PlayerAudioChunk {
+                    wav_basename: "same.wav".into(),
+                    seq: 0,
+                    samples: Arc::from([1i16, 2, 3]),
+                },
+                EngineCommand::PlayerAudioEnd {
+                    wav_basename: "same.wav".into(),
+                    chunk_count: 1,
+                    silent: false,
+                },
+            ]);
+        }
+        input.push(EngineCommand::PlayerRecording {
+            request_id: "current-recording".into(),
+            wav_basename: "same.wav".into(),
+            stt_backend: SttBackendKind::Cloud,
+            position_m: PLAYER_SPAWN,
+            spatial_seq: 1,
+        });
+        h.engine.poll(
+            0.0,
+            input
+                .into_iter()
+                .map(|c| c.in_generation(current))
+                .collect(),
+        );
+        let outcome = match kind {
+            0 => {
+                let job = stt.0.borrow()[0];
+                assert_eq!(job.0, 1);
+                TranscriptionOutcome::Done {
+                    job,
+                    result: Ok("current voice".into()),
+                }
+            }
+            1 => TranscriptionOutcome::Realtime(RealtimeResult::Transcript {
+                key: "same.wav".into(),
+                text: "current voice".into(),
+            }),
+            _ => TranscriptionOutcome::Realtime(RealtimeResult::Failure {
+                key: Some("same.wav".into()),
+                reason: "current failure".into(),
+            }),
+        };
+        let pending = h.engine.speech_router().pending_transcription_count()
+            + h.engine.speech_router().parked_count();
+        assert_eq!(pending, 1);
+        let messages = h.engine.poll(
+            0.0,
+            vec![
+                EngineCommand::Transcription(outcome.clone()).in_generation(RuntimeGeneration(101)),
+            ],
+        );
+        assert_eq!(
+            h.engine.speech_router().pending_transcription_count()
+                + h.engine.speech_router().parked_count(),
+            pending
+        );
+        assert!(h.engine.transcript().is_empty());
+        assert!(
+            !messages
+                .iter()
+                .any(|m| matches!(m, EngineMessage::TranscriptionResult { .. }))
+        );
+        let messages = h.engine.poll(
+            0.0,
+            vec![EngineCommand::Transcription(outcome).in_generation(current)],
+        );
+        if kind == 2 {
+            assert_eq!(
+                stt.0.borrow().len(),
+                1,
+                "current realtime failure submits one batch fallback"
+            );
+        } else {
+            assert!(messages.iter().any(
+                |m| matches!(m, EngineMessage::Speech { text, .. } if text == "current voice")
+            ));
+        }
+    }
+}
+
+#[test]
+fn old_night_completion_cannot_spend_the_matching_current_reflection() {
+    use cathedral_sim::RuntimeGeneration;
+    let current = RuntimeGeneration(121);
+    let mut h = Builder {
+        generation: current,
+        night: true,
+        clock: WorldClock::new(60.0, Office::Dayspring, 0, 0.05),
+        ..Default::default()
+    }
+    .build();
+    h.engine.poll(35.1, vec![]);
+    assert!(
+        h.engine.night().in_flight_subject().is_some(),
+        "actual night obligation must be live"
+    );
+    let mut completion = h.cognition.drain().pop().expect("night request");
+    assert_eq!(completion.request_id, RequestId(0));
+    completion.result = Ok(r#"remember {"memory":"generation-bound night reflection"}"#.into());
+    let totals = h.engine.night().totals();
+    let transcript = h.engine.transcript().to_vec();
+    h.engine.poll(
+        35.1,
+        vec![
+            EngineCommand::LlmCompletion(completion.clone()).in_generation(RuntimeGeneration(120)),
+        ],
+    );
+    assert_eq!(h.engine.night().totals(), totals);
+    assert!(h.engine.night().in_flight_subject().is_some());
+    assert_eq!(h.engine.transcript(), transcript);
+    assert!(!h.engine.world().characters.values().any(|a| {
+        a.state
+            .memories
+            .iter()
+            .any(|memory| memory.contains("generation-bound"))
+    }));
+    h.engine.poll(
+        35.1,
+        vec![EngineCommand::LlmCompletion(completion).in_generation(current)],
+    );
+    assert_eq!(h.engine.night().totals().0, totals.0 + 1);
+    assert!(h.engine.world().characters.values().any(|a| {
+        a.state
+            .memories
+            .iter()
+            .any(|memory| memory.contains("generation-bound"))
+    }));
 }

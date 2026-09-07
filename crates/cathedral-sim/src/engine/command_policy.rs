@@ -15,6 +15,13 @@ pub enum CommandPolicy {
 }
 
 impl EngineCommand {
+    pub fn in_generation(self, generation: crate::RuntimeGeneration) -> Self {
+        Self::InGeneration {
+            generation,
+            command: Box::new(self),
+        }
+    }
+
     pub fn identified(self, id: CommandId) -> Self {
         Self::Identified {
             id,
@@ -24,7 +31,9 @@ impl EngineCommand {
 
     pub fn policy(&self) -> CommandPolicy {
         match self {
-            Self::Identified { command, .. } => command.policy(),
+            Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
+                command.policy()
+            }
             Self::SpatialUpdate { .. } => CommandPolicy::LatestPosition,
             Self::PlayerOffer { .. } => CommandPolicy::Consequential,
             Self::PlayerAccept { .. } => CommandPolicy::Consequential,
@@ -78,7 +87,9 @@ impl EngineCommand {
 
     pub(super) fn payload(&self) -> Option<Value> {
         let payload = match self {
-            Self::Identified { command, .. } => return command.payload(),
+            Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
+                return command.payload();
+            }
             Self::SpatialUpdate { .. } => return None,
             Self::PlayerOffer {
                 item_id,
@@ -237,7 +248,9 @@ impl EngineCommand {
 
     pub(super) fn correlation(&self) -> Option<&str> {
         match self {
-            Self::Identified { command, .. } => command.correlation(),
+            Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
+                command.correlation()
+            }
             Self::PlayerOffer { request_id, .. } => Some(request_id),
             Self::PlayerAccept { request_id, .. } => Some(request_id),
             Self::PlayerDecline { request_id, .. } => Some(request_id),
@@ -260,7 +273,9 @@ impl EngineCommand {
     /// Bound borrowed raw payload bytes before json! allocates its projection.
     pub(super) fn bounded_raw_payload(&self) -> bool {
         let variable = match self {
-            Self::Identified { command, .. } => return command.bounded_raw_payload(),
+            Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
+                return command.bounded_raw_payload();
+            }
             Self::SpatialUpdate { .. } => 0usize,
             Self::PlayerOffer {
                 item_id, target_id, ..
@@ -346,7 +361,9 @@ impl EngineCommand {
 
     pub(super) fn valid_numbers(&self) -> bool {
         match self {
-            Self::Identified { command, .. } => command.valid_numbers(),
+            Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
+                command.valid_numbers()
+            }
             Self::PlayerRecording { position_m, .. } => position_m.is_finite(),
             Self::PlayerOffer { position_m, .. }
             | Self::PlayerAccept { position_m, .. }
@@ -370,7 +387,9 @@ impl EngineCommand {
         let actor = |id: &crate::ActorId| AffectedRef::new("actor", id.as_str());
         let item = |id: &crate::ItemId| AffectedRef::new("item", id.as_str());
         match self {
-            Self::Identified { command, .. } => command.affected(world),
+            Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
+                command.affected(world)
+            }
             Self::PlayerOffer {
                 item_id, target_id, ..
             }

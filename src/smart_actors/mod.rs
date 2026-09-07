@@ -27,6 +27,7 @@ mod inventory_ui;
 mod journal_ui;
 mod lamps;
 mod microphone;
+mod publication_bytes;
 mod sound;
 mod speech;
 mod targeting;
@@ -833,6 +834,7 @@ impl Plugin for SmartActorsPlugin {
                     // whole block keeps its sequence without an `ApplyDeferred`
                     // per `Commands` user in it.
                     (
+                        speech::synchronize_generation,
                         actors::position_actor_name_labels,
                         actors::update_thinking_indicators,
                         // Hand-over props mid-flight between two hands (M2).
@@ -1090,8 +1092,10 @@ fn drain_bridge_messages(
     // reference actors the earlier snapshot introduced, so it must be
     // processed against that snapshot's mirror, not a newer one.
     let mut events = Vec::new();
-    while let Some(event) = inbox.try_recv() {
-        events.push(event);
+    for _ in 0..inbox.len().clamp(1, local_engine::MAX_BRIDGE_EVENTS) {
+        if let Some(event) = inbox.try_recv_current(handle.generation()) {
+            events.push(event);
+        }
     }
     let is_snapshot: Vec<bool> = events
         .iter()
@@ -1102,6 +1106,7 @@ fn drain_bridge_messages(
         .collect();
     for (event_index, event) in events.into_iter().enumerate() {
         match event {
+            bridge::BridgeEvent::InGeneration { .. } => continue,
             bridge::BridgeEvent::ProcessStarted => {
                 runtime.connected = true;
                 runtime.ready = false;
@@ -1137,6 +1142,7 @@ fn drain_bridge_messages(
                     continue;
                 }
                 process_engine_message(
+                    handle.generation(),
                     *message,
                     *message_seq,
                     &mut mirror,
@@ -1189,7 +1195,9 @@ fn drain_bridge_messages(
                 // here (see [`custody::PlayerCustodyState::clear_on_disconnect`]).
                 hot.law.clear_on_disconnect();
                 hud.clear_transients_on_disconnect(truncate_owned(message, 300));
-                presentation.clear.write(speech::ClearSpeechPresentation);
+                presentation.clear.write(speech::ClearSpeechPresentation {
+                    generation: handle.generation(),
+                });
                 if microphone_present {
                     commands.remove_resource::<microphone::MicrophoneService>();
                     microphone_present = false;
@@ -1238,6 +1246,7 @@ struct DrainTimer {
 /// backend's error string are the two texts nobody in this process wrote.
 #[allow(clippy::too_many_arguments)]
 fn process_engine_message(
+    generation: cathedral_sim::RuntimeGeneration,
     message: EngineMessage,
     message_seq: u64,
     // The `ResMut` wrapper, not `&mut WorldMirror`: coercing at the call site
@@ -1473,6 +1482,7 @@ fn process_engine_message(
                 .filter(|recipient| **recipient != speaker_id && mirror.actor(recipient).is_some())
                 .count();
             presentation.speech.write(speech::PresentSpeech {
+                generation: generation,
                 event_seq: message_seq,
                 event_id: event_id.0,
                 speaker_id: speaker_id.clone(),
@@ -1830,6 +1840,7 @@ fn process_engine_message(
             wav_bytes,
         } => {
             presentation.wav.write(speech::TtsClipReady {
+                generation: generation,
                 event_id: event_id.0,
                 wav_bytes,
             });
@@ -1842,6 +1853,7 @@ fn process_engine_message(
             backend,
         } => {
             presentation.pcm.write(speech::TtsPcmChunkReady {
+                generation: generation,
                 event_id: event_id.0,
                 chunk_seq,
                 sample_rate,
@@ -1856,6 +1868,7 @@ fn process_engine_message(
         } => {
             if chunk_count > 0 && first_chunk_ms <= 600_000 {
                 presentation.stream_end.write(speech::TtsStreamFinished {
+                    generation: generation,
                     event_id: event_id.0,
                     chunk_count,
                     first_chunk_ms,
@@ -1867,6 +1880,7 @@ fn process_engine_message(
         EngineMessage::TtsFailed { event_id, reason } => {
             if valid_ui_text(&reason, 160) {
                 presentation.failure.write(speech::TtsClipFailed {
+                    generation: generation,
                     event_id: event_id.0,
                     reason,
                 });
@@ -2383,6 +2397,16 @@ fn forward_player_intents(
     mut hud: ResMut<hud::SmartActorHudState>,
 ) {
     for intent in intents.read() {
+        let intent = match intent {
+            interaction::PlayerIntent::InGeneration { generation, intent }
+                if *generation == handle.generation() =>
+            {
+                &**intent
+            }
+            interaction::PlayerIntent::InGeneration { .. } => continue,
+            intent if handle.generation() == cathedral_sim::RuntimeGeneration::INITIAL => intent,
+            _ => continue,
+        };
         let request_id = intent_request_id(intent).map(str::to_owned);
         let is_spatial = matches!(intent, interaction::PlayerIntent::SpatialUpdate { .. });
         let failed_recording = match intent {
@@ -2435,6 +2459,9 @@ fn intent_to_command(intent: &interaction::PlayerIntent) -> Result<bridge::Bridg
         model::Position::try_from(value).map_err(|_| "player position is invalid".to_string())
     };
     Ok(match intent {
+        interaction::PlayerIntent::InGeneration { .. } => {
+            return Err("nested input generation".into());
+        }
         interaction::PlayerIntent::SpatialUpdate {
             spatial_seq,
             position: value,
@@ -2590,6 +2617,7 @@ fn intent_to_command(intent: &interaction::PlayerIntent) -> Result<bridge::Bridg
 
 fn intent_request_id(intent: &interaction::PlayerIntent) -> Option<&str> {
     match intent {
+        interaction::PlayerIntent::InGeneration { .. } => None,
         interaction::PlayerIntent::SpatialUpdate { .. }
         | interaction::PlayerIntent::Sound { .. } => None,
         interaction::PlayerIntent::Recording { request_id, .. }
@@ -2615,7 +2643,7 @@ fn collect_injected_transcripts(
     players: Query<&GlobalTransform, With<crate::controller::PlayerController>>,
     mut spatial: ResMut<interaction::PlayerSpatialState>,
     mut interaction: ResMut<interaction::InteractionState>,
-    mut intents: MessageWriter<interaction::PlayerIntent>,
+    mut intents: interaction::PlayerIntentWriter,
 ) {
     let Ok(player) = players.single() else { return };
     for injection in injected.read() {
@@ -2698,10 +2726,10 @@ mod tests {
             .unwrap();
         app.update();
         assert!(
-            matches!(commands.try_recv(), Ok(bridge::BridgeCommand::PlayerAttention { actor_id: Some(id) }) if id.0 == "sv3n1")
+            matches!(commands.try_recv().map(|c| bridge::expect_generation(c, cathedral_sim::RuntimeGeneration::INITIAL)), Ok(bridge::BridgeCommand::PlayerAttention { actor_id: Some(id) }) if id.0 == "sv3n1")
         );
         assert!(
-            matches!(commands.try_recv(), Ok(bridge::BridgeCommand::PlayerUtteranceStarted { wav_basename }) if wav_basename == "onset.wav")
+            matches!(commands.try_recv().map(|c| bridge::expect_generation(c, cathedral_sim::RuntimeGeneration::INITIAL)), Ok(bridge::BridgeCommand::PlayerUtteranceStarted { wav_basename }) if wav_basename == "onset.wav")
         );
         assert!(commands.try_recv().is_err());
 
@@ -2714,11 +2742,13 @@ mod tests {
             .unwrap();
         app.update();
         assert!(matches!(
-            commands.try_recv(),
+            commands
+                .try_recv()
+                .map(|c| bridge::expect_generation(c, cathedral_sim::RuntimeGeneration::INITIAL)),
             Ok(bridge::BridgeCommand::PlayerAttention { .. })
         ));
         assert!(
-            matches!(commands.try_recv(), Ok(bridge::BridgeCommand::PlayerAudioAbort { wav_basename }) if wav_basename == "onset.wav")
+            matches!(commands.try_recv().map(|c| bridge::expect_generation(c, cathedral_sim::RuntimeGeneration::INITIAL)), Ok(bridge::BridgeCommand::PlayerAudioAbort { wav_basename }) if wav_basename == "onset.wav")
         );
 
         app.world_mut()
@@ -2732,7 +2762,9 @@ mod tests {
         });
         app.update();
         assert!(matches!(
-            commands.try_recv(),
+            commands
+                .try_recv()
+                .map(|c| bridge::expect_generation(c, cathedral_sim::RuntimeGeneration::INITIAL)),
             Ok(bridge::BridgeCommand::PlayerAttention { actor_id: None })
         ));
         assert!(
@@ -3325,6 +3357,32 @@ mod tests {
         assert!(app.world().resource::<SmartActorRuntime>().ready);
         app.update();
         app
+    }
+
+    #[test]
+    fn finite_bridge_drain_probes_empty_current_disconnect_and_ignores_old_receiver() {
+        let mut app = ready_fake_plugin_app();
+        let generation = app.world().resource::<bridge::BridgeHandle>().generation();
+        let (old_sender, old_receiver) = crossbeam_channel::bounded(1);
+        app.insert_resource(bridge::BridgeInbox::new_for_generation(
+            old_receiver,
+            cathedral_sim::RuntimeGeneration(generation.0 - 1),
+        ));
+        drop(old_sender);
+        app.world_mut()
+            .run_system_cached(drain_bridge_messages)
+            .unwrap();
+        assert!(app.world().resource::<SmartActorRuntime>().ready);
+        let (sender, receiver) = crossbeam_channel::bounded(1);
+        app.insert_resource(bridge::BridgeInbox::new_for_generation(
+            receiver, generation,
+        ));
+        drop(sender);
+        app.world_mut()
+            .run_system_cached(drain_bridge_messages)
+            .unwrap();
+        assert!(!app.world().resource::<SmartActorRuntime>().ready);
+        assert!(!app.world().resource::<SmartActorRuntime>().connected);
     }
 
     /// Uses the production plugin/pump and actual overlay keys. Rendering is

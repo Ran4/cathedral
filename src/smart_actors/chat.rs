@@ -302,7 +302,7 @@ pub(super) fn collect_chat_input(
     mut spatial: ResMut<PlayerSpatialState>,
     mut interaction: ResMut<InteractionState>,
     mut hud: ResMut<SmartActorHudState>,
-    mut intents: MessageWriter<PlayerIntent>,
+    mut intents: super::interaction::PlayerIntentWriter,
 ) {
     if !chat.open {
         if !keyboard.any_just_pressed([KeyCode::Enter, KeyCode::NumpadEnter])
@@ -427,7 +427,7 @@ fn submit_chat_line(
     spatial: &mut PlayerSpatialState,
     interaction: &mut InteractionState,
     hud: &mut SmartActorHudState,
-    intents: &mut MessageWriter<PlayerIntent>,
+    intents: &mut super::interaction::PlayerIntentWriter,
 ) {
     let text = chat.buffer.trim().to_string();
     if text.is_empty() {

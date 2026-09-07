@@ -567,7 +567,7 @@ pub(super) fn handle_inventory_actions(
     mut spatial: ResMut<PlayerSpatialState>,
     mut state: ResMut<InteractionState>,
     mut hud: ResMut<SmartActorHudState>,
-    mut intents: MessageWriter<PlayerIntent>,
+    mut intents: super::interaction::PlayerIntentWriter,
     mut cursor: Option<Single<&mut CursorOptions, With<PrimaryWindow>>>,
 ) {
     if !inventory.open {

@@ -76,7 +76,13 @@ impl CloudTranscriber {
         // Both checks happen locally, before any request: a missing file is the
         // caller's bug, not the provider's problem.
         require_existing_wav(wav_path)?;
-        let bytes = std::fs::read(wav_path)
+        use std::io::Read;
+        let mut bytes = Vec::new();
+        std::fs::File::open(wav_path)
+            .and_then(|file| {
+                file.take((MAX_WAV_BYTES + 1) as u64)
+                    .read_to_end(&mut bytes)
+            })
             .map_err(|_| SpeechError::new("transcription input could not be read"))?;
         if bytes.len() > MAX_WAV_BYTES {
             return Err(SpeechError::new("recording exceeds 16 MiB"));
@@ -111,7 +117,7 @@ impl CloudTranscriber {
                 .send()
                 .await;
 
-            let response = match response {
+            let mut response = match response {
                 Ok(response) => response,
                 Err(error) => {
                     if attempt < MAX_ATTEMPTS {
@@ -134,10 +140,13 @@ impl CloudTranscriber {
                 )));
             }
 
-            let payload: TranscriptionResponse = response
-                .json()
+            let body = crate::llm::read_response(&mut response)
                 .await
-                .map_err(|_| SpeechError::new(NO_TEXT_MESSAGE))?;
+                .map_err(|_| {
+                    SpeechError::new("transcription response exceeded byte limit or failed")
+                })?;
+            let payload: TranscriptionResponse =
+                serde_json::from_slice(&body).map_err(|_| SpeechError::new(NO_TEXT_MESSAGE))?;
             return payload
                 .text
                 .ok_or_else(|| SpeechError::new(NO_TEXT_MESSAGE));

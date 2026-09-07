@@ -66,6 +66,11 @@ macro_rules! id_newtype {
                 &self.0
             }
 
+            /// Owned allocation, including spare capacity, for bounded IO envelopes.
+            pub fn allocated_bytes(&self) -> usize {
+                self.0.capacity()
+            }
+
             pub fn into_string(self) -> String {
                 self.0
             }

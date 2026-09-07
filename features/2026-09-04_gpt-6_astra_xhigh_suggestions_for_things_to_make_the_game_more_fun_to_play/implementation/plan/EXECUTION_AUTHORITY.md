@@ -1,4 +1,4 @@
-Status: Finish and commit M1b, then pause, as instructed by the developer (2026-09-07).
+Status: Implementation resumed after M1b at the developer's instruction; M1a–M1c implemented and reviewed (2026-09-08). Continue sequentially and commit each completed leg.
 
 # Continue from the delivered M0 baseline
 
@@ -19,3 +19,11 @@ While M1b was undergoing final verification, the developer instructed:
 > hm, finish to the next leg then pause
 
 The coordinator confirmed that this means completing and committing the current M1b leg, then pausing before M1c. This replaces the earlier instruction to continue automatically through subsequent legs. The remaining roadmap and recorded acceptance limitations are unchanged.
+
+## Resume after M1b — 2026-09-07
+
+After M1b was committed as `33c0329` and work paused, the developer instructed:
+
+> keep going
+
+Implementation resumes with M1c under the original sequential review and commit-per-leg instruction. The temporary pause above is lifted; previously recorded measurement limitations remain explicit.

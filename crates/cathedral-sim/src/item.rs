@@ -62,6 +62,9 @@ static EMBEDDED_CATALOG: LazyLock<Arc<ItemCatalog>> = LazyLock::new(|| {
 pub struct ItemKind(String);
 
 impl ItemKind {
+    pub fn allocated_bytes(&self) -> usize {
+        self.0.capacity()
+    }
     /// Validating constructor — the only way untrusted input becomes a kind.
     pub fn new(value: impl Into<String>) -> Result<Self, InvalidKind> {
         let value = value.into();

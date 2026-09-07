@@ -46,6 +46,7 @@ pub mod prompt;
 mod pyfmt;
 pub mod receipts;
 pub mod round;
+pub mod runtime_generation;
 pub mod scheduler;
 pub mod seed;
 pub mod snapshot;
@@ -56,6 +57,8 @@ pub mod timeline;
 pub mod traits;
 pub mod weather;
 pub mod world;
+
+pub use runtime_generation::{RuntimeEnvelope, RuntimeGeneration};
 
 pub use actions::{apply_action, apply_action_at};
 pub use appearance::{AppearanceSnapshot, Build, Headgear, OutfitClass, palette_seed_of};

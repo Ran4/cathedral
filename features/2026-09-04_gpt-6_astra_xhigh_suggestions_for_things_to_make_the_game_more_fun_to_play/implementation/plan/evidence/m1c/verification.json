@@ -1,0 +1,228 @@
+{
+  "schema": 1,
+  "head": "33c03291e99415287164722062878a2f201b5b68",
+  "date": "2026-09-08",
+  "scope": "One complete final full-workspace run on source_hashes.json; focused repeated production-seam runs collect raw capacity witnesses without source changes.",
+  "environment": {
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "full_run": {
+    "command": "/home/ran/.cargo/bin/cargo test --workspace --no-fail-fast",
+    "raw_temporary_log": "/tmp/alibi-m1c-workspace-final3.log",
+    "archived_log": "workspace-final.log",
+    "log_sha256": "1f926474e9daee75deb40900b912be5e189b9a888da3bc427c3151bdc2017b1f",
+    "process_exit_code": 0,
+    "targets": {
+      "cathedral_backends": {
+        "passed": 158,
+        "failed": 0,
+        "ignored": 0
+      },
+      "cathedral_headless": {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      "curiosity_walk": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      },
+      "knowledge_consequences": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      },
+      "knowledge_provider_probe": {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 2
+      },
+      "place_estimates_evidence": {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 1
+      },
+      "pollen_cadence": {
+        "passed": 15,
+        "failed": 0,
+        "ignored": 1
+      },
+      "cathedral_sim": {
+        "passed": 591,
+        "failed": 0,
+        "ignored": 0
+      },
+      "attention_tests": {
+        "passed": 16,
+        "failed": 0,
+        "ignored": 0
+      },
+      "conversation_tests": {
+        "passed": 15,
+        "failed": 0,
+        "ignored": 0
+      },
+      "custody_tests": {
+        "passed": 26,
+        "failed": 0,
+        "ignored": 0
+      },
+      "dogs_tests": {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      },
+      "e2e_fake": {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      "engine_tests": {
+        "passed": 73,
+        "failed": 0,
+        "ignored": 0
+      },
+      "floor_tests": {
+        "passed": 13,
+        "failed": 0,
+        "ignored": 0
+      },
+      "golden_prompts": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 1
+      },
+      "knowledge_tests": {
+        "passed": 103,
+        "failed": 0,
+        "ignored": 0
+      },
+      "marks_tests": {
+        "passed": 43,
+        "failed": 0,
+        "ignored": 0
+      },
+      "parse_tests": {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0
+      },
+      "place_estimates": {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      "prompt_quirks": {
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0
+      },
+      "prompt_tests": {
+        "passed": 30,
+        "failed": 0,
+        "ignored": 0
+      },
+      "receipt_allocation_tests": {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      },
+      "scheduler_tests": {
+        "passed": 27,
+        "failed": 0,
+        "ignored": 0
+      },
+      "seed_tests": {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      "sim_tests": {
+        "passed": 41,
+        "failed": 0,
+        "ignored": 0
+      },
+      "sounds_tests": {
+        "passed": 19,
+        "failed": 0,
+        "ignored": 0
+      },
+      "speech_router_tests": {
+        "passed": 47,
+        "failed": 0,
+        "ignored": 0
+      },
+      "supply_chain_tests": {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0
+      },
+      "cathedralbevy": {
+        "passed": 542,
+        "failed": 0,
+        "ignored": 3
+      },
+      "supply_chain_host_tests": {
+        "passed": 20,
+        "failed": 0,
+        "ignored": 0
+      },
+      "doc-tests:cathedral_backends": {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      "doc-tests:cathedral_sim": {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    "raw_log_sha256": "d30ce8a8cfb59ae5122ad4877f29bb4bfd5dcb36e405febfab01620fff7ca0df",
+    "archive_normalization": "Redundant terminal blank lines removed; all test output bytes preserved."
+  },
+  "totals": {
+    "passed": 1840,
+    "failed": 0,
+    "ignored": 8
+  },
+  "target_count": 33,
+  "limitations": [
+    "Eight preexisting ignored tests remain ignored.",
+    "No renderer, GPU, focus performance or M0 CPU comparison rerun.",
+    "M1d kernel and M2/M3 checkpoint/adoption/destruction unimplemented."
+  ],
+  "focused_runs": [
+    {
+      "command": "/home/ran/.cargo/bin/cargo test -p cathedral-backends --lib -- --nocapture",
+      "raw_temporary_log": "/tmp/alibi-m1c-backend-final.log",
+      "archived_log": "backend-final.log",
+      "log_sha256": "bb8a1c38b3a6f3b5f5592151a3fdda37d7818a4cdf4d638953ee178e74e94c02",
+      "process_exit_code": 0,
+      "totals": {
+        "passed": 158,
+        "failed": 0,
+        "ignored": 0
+      },
+      "raw_log_sha256": "d818122795770e9fdb4470bf223f40278e010542f6eb6ae08c98a9376509ccdd",
+      "archive_normalization": "Redundant terminal blank lines removed; all test output bytes preserved."
+    },
+    {
+      "command": "/home/ran/.cargo/bin/cargo test --bin cathedralbevy smart_actors:: -- --nocapture",
+      "raw_temporary_log": "/tmp/alibi-m1c-host-final.log",
+      "archived_log": "host-final.log",
+      "log_sha256": "3e8811947012024e623f4a40e9a8bcb4cc1b1adac09718417e9abef37301e6ac",
+      "process_exit_code": 0,
+      "totals": {
+        "passed": 286,
+        "failed": 0,
+        "ignored": 1
+      },
+      "raw_log_sha256": "c81f3dbc566f7b81b647e4be7efb7cca38fd9e592d8c1cb565f37b3080abcab9",
+      "archive_normalization": "Redundant terminal blank lines removed; all test output bytes preserved."
+    }
+  ]
+}
