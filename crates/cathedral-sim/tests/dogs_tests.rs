@@ -83,6 +83,100 @@ fn the_pack_wanders_walkable_ground_deterministically() {
 
 // ---------------------------------------------------------------- the sheet
 
+#[test]
+fn rests_and_both_paces_preserve_distance_through_starts_and_stops() {
+    let nav = line_nav();
+    let mut pack = dogs::seed_pack(&nav);
+    let mut quiet = [0.0_f64; 10];
+    let mut longest_rest = 0.0_f64;
+    let mut slowing_steps = [0_u32; 10];
+    let mut walking_steps = [0_u32; 10];
+    let mut longest_slowing = 0;
+    let mut departures = 0;
+    let mut planted_turn_steps = 0;
+    let (mut saw_walk, mut saw_trot) = (false, false);
+    for _ in 0..2400 {
+        let before: Vec<_> = pack
+            .iter()
+            .map(|d| (d.position_m, d.gait_phase, d.speed, d.facing_yaw))
+            .collect();
+        dogs::step_dogs(&mut pack, 0.05, &nav);
+        for (i, dog) in pack.iter().enumerate() {
+            let distance = dog.position_m.distance(before[i].0);
+            assert!(
+                (dog.gait_phase - before[i].1 - distance * dogs::DOG_GAIT_CADENCE).abs() < 1e-8
+            );
+            assert!((dog.speed * 0.05 - distance).abs() < 1e-8);
+            let yaw_change = (dog.facing_yaw - before[i].3 + std::f64::consts::PI)
+                .rem_euclid(std::f64::consts::TAU)
+                - std::f64::consts::PI;
+            assert!(yaw_change.abs() <= dogs::DOG_TURN_RAD_S * 0.05 + 1e-8);
+            if distance > 1e-8 {
+                let forward = Vec3::new(-dog.facing_yaw.sin(), 0.0, -dog.facing_yaw.cos());
+                let travel = (dog.position_m - before[i].0) / distance;
+                assert!(
+                    forward.dot(travel) >= 0.31_f64.cos(),
+                    "a dog must face its travel"
+                );
+            } else if yaw_change.abs() > 1e-6 {
+                planted_turn_steps += 1;
+            }
+            assert!(
+                dog.speed - before[i].2 <= dogs::DOG_ACCEL_MPS2 * 0.05 + 1e-8,
+                "a supporting first step must precede cruise speed"
+            );
+            if dog.speed > 0.0 && dog.speed < before[i].2 - 1e-6 {
+                slowing_steps[i] += 1;
+                longest_slowing = longest_slowing.max(slowing_steps[i]);
+            } else {
+                slowing_steps[i] = 0;
+            }
+            if dog.speed == 0.0 {
+                quiet[i] += 0.05;
+                longest_rest = longest_rest.max(quiet[i]);
+            } else {
+                if quiet[i] > 0.5 {
+                    departures += 1;
+                    assert!(
+                        distance < 0.01,
+                        "a resting dog must not jump into a full stride"
+                    );
+                }
+                quiet[i] = 0.0;
+                if (0.65..1.0).contains(&dog.speed) && (dog.speed - before[i].2).abs() < 1e-8 {
+                    walking_steps[i] += 1;
+                } else {
+                    walking_steps[i] = 0;
+                }
+                // Passing through walking speed while accelerating into a
+                // trot does not establish an actual unhurried walk.
+                saw_walk |= walking_steps[i] >= 10;
+                saw_trot |= dog.speed == dogs::DOG_TROT_MPS;
+            }
+        }
+    }
+    assert!(
+        saw_walk && saw_trot,
+        "the same pack should investigate slowly and trot between places"
+    );
+    assert!(
+        longest_rest > 9.0,
+        "some rests must leave time for a complete longer idle"
+    );
+    assert!(
+        departures >= 10,
+        "the fixture must exercise real rest-to-travel starts"
+    );
+    assert!(
+        longest_slowing >= 3,
+        "a final approach needs several slowing steps"
+    );
+    assert!(
+        planted_turn_steps >= 10,
+        "sharp reversals must exercise supporting turns"
+    );
+}
+
 /// A dog within the 20 m hearing radius is on the sheet — nearest first, prose
 /// description only (no id, no name), the `moving` flag riding the speed — and
 /// a dog past the radius is not.

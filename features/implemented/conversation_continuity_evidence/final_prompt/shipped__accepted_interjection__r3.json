@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe\"}\nsay {\"target\":\"player\",\"text\":\"Mostly pepper, salt, saffron, and sealed oils—though I sell what the day's stock allows. Costly goods stay under seal until the measure is agreed.\"}",
+  "duration_seconds": 2.56658953,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__accepted_interjection__r3",
+  "prompt_path": "prompts/d9c16aa0ce97959a7c9156bedbc47b2ad525d53a3d34a56335801cff237934e1.txt"
+}

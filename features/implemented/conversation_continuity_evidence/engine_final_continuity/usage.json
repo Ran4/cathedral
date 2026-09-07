@@ -1,0 +1,12 @@
+{
+  "calls": 16,
+  "cost_usd": 0.064061,
+  "usage": [
+    {
+      "cached_prompt_tokens": 0,
+      "completion_tokens": 986,
+      "model": "gpt-5.6-luna",
+      "prompt_tokens": 58145
+    }
+  ]
+}

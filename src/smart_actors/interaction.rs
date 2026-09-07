@@ -879,7 +879,11 @@ pub fn poll_microphone(
             MicrophonePoll::Disconnected => {
                 microphone_input.enabled = false;
                 microphone_input.worker_enabled = false;
-                microphone_input.recording = None;
+                if let Some(context) = microphone_input.recording.take() {
+                    let _ = handle.try_send(BridgeCommand::PlayerAudioAbort {
+                        wav_basename: context.wav_basename,
+                    });
+                }
                 hud.microphone_available = false;
                 hud.listening = false;
                 if !hud.microphone_unavailable {
@@ -901,7 +905,11 @@ pub fn poll_microphone(
             MicrophoneEvent::Unavailable(message) => {
                 microphone_input.enabled = false;
                 microphone_input.worker_enabled = false;
-                microphone_input.recording = None;
+                if let Some(context) = microphone_input.recording.take() {
+                    let _ = handle.try_send(BridgeCommand::PlayerAudioAbort {
+                        wav_basename: context.wav_basename,
+                    });
+                }
                 hud.connection_detail = format!(
                     "Microphone unavailable: {} · [V] retry",
                     message.chars().take(220).collect::<String>()
@@ -912,6 +920,13 @@ pub fn poll_microphone(
                 hud.listening = false;
             }
             MicrophoneEvent::RecordingStarted { wav_basename } => {
+                if let Err(error) = handle.try_send(BridgeCommand::PlayerUtteranceStarted {
+                    wav_basename: wav_basename.clone(),
+                }) {
+                    microphone_input.recording = None;
+                    hud.toast(error);
+                    continue;
+                }
                 microphone_input.recording = Some(RecordingContext {
                     wav_basename,
                     stt_backend: microphone_input.stt_backend,
@@ -936,6 +951,7 @@ pub fn poll_microphone(
                     microphone_input.recording = None;
                 }
                 if silent {
+                    let _ = handle.try_send(BridgeCommand::PlayerAudioAbort { wav_basename });
                     continue;
                 }
                 if !context_matches {
@@ -986,6 +1002,9 @@ pub fn poll_microphone(
                 });
             }
             MicrophoneEvent::RecordingCancelled { wav_basename } => {
+                let _ = handle.try_send(BridgeCommand::PlayerAudioAbort {
+                    wav_basename: wav_basename.clone(),
+                });
                 if microphone_input
                     .recording
                     .as_ref()
@@ -995,7 +1014,11 @@ pub fn poll_microphone(
                 }
             }
             MicrophoneEvent::RecordingFailed(message) => {
-                microphone_input.recording = None;
+                if let Some(context) = microphone_input.recording.take() {
+                    let _ = handle.try_send(BridgeCommand::PlayerAudioAbort {
+                        wav_basename: context.wav_basename,
+                    });
+                }
                 microphone_input.enabled = false;
                 microphone_input.worker_enabled = false;
                 hud.microphone_available = false;

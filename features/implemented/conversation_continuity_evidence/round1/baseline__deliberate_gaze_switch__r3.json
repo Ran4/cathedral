@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’m Rohese Nett, a spicer and grocer of the Weigh Ward. I trade in oils and spices.\"}",
+  "duration_seconds": 2.259490727,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__deliberate_gaze_switch__r3",
+  "prompt_path": "prompts/412371551faef687ce56875a42f1b9f6fdb31fe130dfdc1a4621f0f165974700.txt"
+}

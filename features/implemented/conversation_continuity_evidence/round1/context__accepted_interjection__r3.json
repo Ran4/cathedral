@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe\"}\nsay {\"target\":\"player\",\"text\":\"Common spices, mostly salt, pepper, and warm blends for stews. I also handle costly oils under seal—no watered jars pass my stall.\"}",
+  "duration_seconds": 3.832001312,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "context__accepted_interjection__r3",
+  "prompt_path": "prompts/bc5192dea15863c2a0c0e3a1143d273836a3d9d9ca5574f4f78027697b8940a2.txt"
+}

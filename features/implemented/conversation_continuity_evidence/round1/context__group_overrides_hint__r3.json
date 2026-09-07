@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I sell spices at the Wickmarket. I’m bound there now—come along and I’ll show you what I have.\"}",
+  "duration_seconds": 2.27865716,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "context__group_overrides_hint__r3",
+  "prompt_path": "prompts/5758037e18589f9463d25242f3a116024003d7e46a8e746e5b953707ba750032.txt"
+}

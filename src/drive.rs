@@ -1390,6 +1390,63 @@ fn run_drive_script(
             distance,
             bearing_degrees,
         }) => {
+            // Animal portraits use the existing authoritative pack and move
+            // only the camera. No puppet, route or conversation state changes.
+            if handle == "@dog" || handle.starts_with("@dog ") {
+                let needle = handle.trim_start_matches("@dog").trim().to_lowercase();
+                let from = players.single().map_or(Vec3::ZERO, |p| p.translation());
+                let found = engine
+                    .as_ref()
+                    .and_then(|engine| engine.world())
+                    .into_iter()
+                    .flat_map(|world| world.dogs.iter())
+                    .filter(|dog| {
+                        needle.is_empty()
+                            || dog.name.to_lowercase().contains(&needle)
+                            || dog.id.as_str().to_lowercase() == needle
+                    })
+                    .min_by(|a, b| {
+                        let distance = |dog: &cathedral_sim::Dog| {
+                            Vec3::new(
+                                dog.position_m.x as f32,
+                                dog.position_m.y as f32,
+                                dog.position_m.z as f32,
+                            )
+                            .distance_squared(from)
+                        };
+                        distance(a)
+                            .total_cmp(&distance(b))
+                            .then_with(|| a.id.cmp(&b.id))
+                    });
+                if let Some(dog) = found {
+                    let root = Vec3::new(
+                        dog.position_m.x as f32,
+                        dog.position_m.y as f32,
+                        dog.position_m.z as f32,
+                    );
+                    let away =
+                        Quat::from_rotation_y(dog.facing_yaw as f32 + bearing_degrees.to_radians())
+                            * Vec3::NEG_Z;
+                    let eye = root + away * distance + Vec3::Y * EYE_OFFSET;
+                    let target = Vec3::new(root.x, root.y - 0.91 + 0.4 * dog.build, root.z);
+                    let look = target - eye;
+                    teleports.write(TeleportPlayer {
+                        position: eye - Vec3::Y * EYE_OFFSET,
+                        yaw_degrees: (-look.x).atan2(-look.z).to_degrees(),
+                        pitch_degrees: look.y.atan2(look.xz().length()).to_degrees(),
+                        fly: true,
+                    });
+                    drive_log(&format!(
+                        "[drive] {now:.1}s framed dog {} ({}) at {:?}",
+                        dog.id, dog.name, root
+                    ));
+                } else {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: no dog named like `{needle}`"
+                    ));
+                }
+                return;
+            }
             let selected = if handle == "@last" {
                 state.last_framed.clone()
             } else if handle.starts_with("@resident-") {

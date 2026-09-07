@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I do, though my spice basket is at the Wickmarket. I’m bound there now—come along if you wish.\"}",
+  "duration_seconds": 2.06142686,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__group_question__r5",
+  "prompt_path": "prompts/c0884c78958d62b62cc4e031e4fd121a14d93a436ff4feee459f37e6827668b3.txt"
+}

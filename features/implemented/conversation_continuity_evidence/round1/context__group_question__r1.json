@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I am Rohese Nett, a spicer, but I carry no spices just now. The Wickmarket is about three hundred and fifty paces away; stalls are open there.\"}\ntell_way {\"person\":\"player\",\"place_id\":\"pl_t7rf\"}",
+  "duration_seconds": 3.6741922799999998,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "context__group_question__r1",
+  "prompt_path": "prompts/94ef643c4f82a57b07251837405505aa93d405b73856a1993191325115826f0d.txt"
+}

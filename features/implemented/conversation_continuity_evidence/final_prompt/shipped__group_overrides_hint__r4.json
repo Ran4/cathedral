@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I do, friend—but my spices are at my stall in the Wickmarket. I’m bound there now.\"}",
+  "duration_seconds": 2.092094126,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__group_overrides_hint__r4",
+  "prompt_path": "prompts/88c919eb030fd4cbbfe742441db675eb4d4ea609d82ef581f198270eac7509ce.txt"
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I trade in spices and costly oils, dear. I keep them sealed and test them for watering.\"}",
+  "duration_seconds": 1.717963991,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__named_switch__r1",
+  "prompt_path": "prompts/271095138d631c03d4e9276f6fd1576fcf374ec24854ad887bef1a6f74000416.txt"
+}

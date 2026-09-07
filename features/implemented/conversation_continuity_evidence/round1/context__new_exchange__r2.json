@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I trade spices and costly oils, and keep a sharp eye on honest measures.\"}",
+  "duration_seconds": 1.842212897,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "context__new_exchange__r2",
+  "prompt_path": "prompts/a53906e8e58f5aa0f567368da0865206039f4ff4f4fe4e2af8c7fad28dddc370.txt"
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The trader with id g9sib is called Sibbe\"}\nsay {\"target\":\"player\",\"text\":\"I trade spices and costly oils here in the Weigh Ward—measured honest, and kept under seal.\"}",
+  "duration_seconds": 2.536479985,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__named_overrides_hint__r4",
+  "prompt_path": "prompts/c3738f614f0ae65518669b18a2375294f1ccf329e04fbd7b41a06c667d689320.txt"
+}

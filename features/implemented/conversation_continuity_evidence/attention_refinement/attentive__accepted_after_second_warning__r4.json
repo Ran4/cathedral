@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Rohese Nett. Glad I caught that tile in time.\"}",
+  "duration_seconds": 1.655487832,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "attentive__accepted_after_second_warning__r4",
+  "prompt_path": "prompts/c716935d17e30fb29d10dbd5bcdedc962c8de428332af75a3ca2e201705845f1.txt"
+}

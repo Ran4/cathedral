@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I am a spicer, but I have no spices in hand just now. I am bound for the Wickmarket; there are stalls there.\"}\ntell_way {\"person\":\"player\",\"place_id\":\"pl_t7rf\"}",
+  "duration_seconds": 3.479207593,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__group_question__r3",
+  "prompt_path": "prompts/0de954245b94171266245d669326d7028df23490f14b7ec8dc18bf00bdcf4ec6.txt"
+}

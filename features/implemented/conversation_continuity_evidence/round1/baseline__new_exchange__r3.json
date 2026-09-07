@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I trade spices and costly oils here in Weigh Ward, and keep a sharp eye for watered jars.\"}",
+  "duration_seconds": 1.326780473,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__new_exchange__r3",
+  "prompt_path": "prompts/807ad8c47a101a975fb2a04110cad8744c16a8f5db8909a328848399beacd650.txt"
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "wait {}",
+  "duration_seconds": 1.040654132,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__lark_archive__r3",
+  "prompt_path": "prompts/b7520dcb5a8bf428f89e7711b6b7691aaed58acbb9b391e60ee974ba4b670daa.txt"
+}

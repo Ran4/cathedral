@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’m Rohese Nett, a spicer—oils, salts, and spices at the market. Today I’m bound for the Wickmarket.\"}",
+  "duration_seconds": 2.272327514,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__named_overrides_hint__r2",
+  "prompt_path": "prompts/c3738f614f0ae65518669b18a2375294f1ccf329e04fbd7b41a06c667d689320.txt"
+}

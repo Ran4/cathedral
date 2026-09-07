@@ -62,6 +62,21 @@ pub struct ActorFocus {
     pub item: Option<FocusedActor>,
 }
 
+/// Ordered before microphone onset and typed input forwarding. The simulation
+/// measures dwell from these samples; a crossing body never becomes a sustained
+/// focus merely because it hit one ray. Hearing remains the full physical set.
+pub(super) fn forward_conversation_attention(
+    focus: Res<ActorFocus>,
+    handle: Res<super::bridge::BridgeHandle>,
+    runtime: Res<super::SmartActorRuntime>,
+) {
+    if runtime.interactions_enabled() {
+        let _ = handle.try_send(super::bridge::BridgeCommand::PlayerAttention {
+            actor_id: focus.actor.as_ref().map(|actor| actor.actor_id.clone()),
+        });
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct TargetCandidate {
     center: Vec3,

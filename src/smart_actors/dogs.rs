@@ -5,7 +5,8 @@
 //! changes pose (the `Lamps` shape, at the movement tick's 20 Hz). This
 //! module stands a small lofted quadruped up per dog, interpolates its root
 //! between ticks exactly as `actors::drive_npc_bodies` does for people, and
-//! swings the legs in a diagonal-pair trot off the sim's own `gait_phase`.
+//! plants the paws through a walk/trot off the sim's own distance clock.
+//! Quiet observation adds complete, interruptible actions without sim events.
 //!
 //! Deliberately none of the person plumbing: no `ActorView` (reconcile never
 //! sees a dog), no `ActorTarget` (the crosshair passes through), no name
@@ -13,13 +14,22 @@
 //! moving collider punches holes in the walkable bake).
 
 use std::collections::HashMap;
-use std::f32::consts::{FRAC_PI_2, PI, TAU};
+use std::f32::consts::{PI, TAU};
 
+use bevy::camera::visibility::DynamicSkinnedMeshBounds;
 use bevy::camera::visibility::VisibilityRange;
+use bevy::mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes};
 use bevy::prelude::*;
 use cathedral_sim::{DogCoat, MOVEMENT_TICK_SECONDS};
 
-use super::body::{Caps, Ring, loft, merge_meshes};
+#[path = "dogs/motion.rs"]
+mod animation;
+#[path = "dogs/appearance.rs"]
+mod appearance;
+#[path = "dogs/coat_surface.rs"]
+mod coat_surface;
+#[path = "dogs/geometry.rs"]
+mod geometry;
 
 // ---------------------------------------------------------------------------
 // Proportions. Ground-local metres for a middling street dog (`build` = 1.0),
@@ -34,32 +44,8 @@ const FRAME_Y: f32 = -0.91;
 
 /// Barrel centre height — low and long: a street dog, not a deer.
 const BODY_Y: f32 = 0.40;
-/// Where the leg pivots bury into the barrel.
-const LEG_ROOT_Y: f32 = 0.44;
-/// Upper leg: pivot to elbow/stifle.
-const UPPER_LEG_LEN: f32 = 0.20;
-/// Lower leg: elbow to sole, paw included.
-const LOWER_LEG_LEN: f32 = 0.24;
-/// Front and rear pivot stations along the barrel (−Z is forward).
-const FRONT_LEG_Z: f32 = -0.24;
-const REAR_LEG_Z: f32 = 0.26;
-const LEG_X: f32 = 0.10;
-
-/// Trot swing amplitude at the leg root, radians.
-const LEG_SWING_RAD: f32 = 0.55;
-/// The carpus/hock fold while a leg swings through the back of its arc.
-const LOWER_FOLD_RAD: f32 = 0.7;
-/// Barrel bob per trot beat — two beats per stride, like the diagonal pairs.
-const BOB_AMPLITUDE_M: f32 = 0.012;
-/// Speeds bracketing the settle→trot blend, mirroring the human walk blend.
-const SETTLED_SPEED_MPS: f32 = 0.15;
-const TROT_FULL_SPEED_MPS: f32 = 0.9;
+/// Time to finish an interrupted pose and settle the next gait.
 const TROT_BLEND_SECONDS: f32 = 0.25;
-
-const BODY_SECTORS: usize = 16;
-const LIMB_SECTORS: usize = 10;
-/// Flat colour coats: any tile scale works, this keeps the UVs sane.
-const COAT_TILE_M: f32 = 0.5;
 
 /// Dogs read at street level, not across the city: fade the pack out well
 /// before the human crowd's 120–150 m (`body::crowd_fade`).
@@ -100,14 +86,36 @@ pub struct StreetDog {
 /// walks the hierarchy — `BodyRig`'s idiom.
 #[derive(Component)]
 pub(crate) struct DogRig {
+    frame: Entity,
     body: Entity,
+    neck: Entity,
+    /// Empty pivot at the atlas joint, above the merged lower neck. The skull
+    /// mesh is offset below this pivot so the neutral geometry stays exact.
     head: Entity,
+    jaw: Entity,
+    ears: [Entity; 2],
+    eyes: Entity,
     tail: Entity,
     /// Upper legs: front-left, front-right, rear-left, rear-right.
     uppers: [Entity; 4],
     /// Lower legs, same order.
     lowers: [Entity; 4],
+    paws: [Entity; 4],
+    hocks: [Entity; 2],
+    stations: [Vec3; 4],
+    build: f32,
 }
+
+/// Animated transform, including the empty skull joint. Mesh filtering would
+/// silently exclude that joint and prevent the head from following attention.
+#[derive(Component)]
+pub(crate) struct DogPart;
+
+/// Atlas joint in the skull's authored coordinates. At build 1 it lies at
+/// ground-local (0, 0.59, -0.37). The lower neck has its own joint and blended
+/// skin weights across the continuous front torso rings.
+const SKULL_PIVOT: Vec3 = Vec3::new(0.0, 0.12, -0.10);
+const JAW_PIVOT: Vec3 = Vec3::new(0.0, 0.122, -0.145);
 
 /// Per-dog interpolation state — [`super::actors::NpcMotion`] with the gait
 /// scalars riding along, because the same 20 Hz sample carries them and the
@@ -130,198 +138,117 @@ pub(crate) struct DogMotion {
 pub(crate) struct DogGait {
     blend: f32,
     wag_seed: f32,
+    animation: animation::State,
 }
 
 /// Shared handles, built lazily on the first non-empty inbox (the lamp
 /// assets' idiom — no startup system, no cost while the pack is empty).
 pub(crate) struct DogAssets {
-    barrel: Handle<Mesh>,
-    head: Handle<Mesh>,
-    upper_leg: Handle<Mesh>,
-    lower_leg: Handle<Mesh>,
-    tail: Handle<Mesh>,
-    coats: Vec<(DogCoat, Handle<StandardMaterial>)>,
+    forms: Vec<(DogCoat, appearance::Form)>,
+    fur: Handle<StandardMaterial>,
+    brindle_fur: Handle<StandardMaterial>,
+    skin: Handle<StandardMaterial>,
+    eyes: Handle<StandardMaterial>,
+    paw_bind: [Handle<SkinnedMeshInverseBindposes>; 2],
+    jaw_bind: Handle<SkinnedMeshInverseBindposes>,
 }
 
 impl DogAssets {
-    fn coat(&self, coat: DogCoat) -> Handle<StandardMaterial> {
-        self.coats
+    fn form(&self, coat: DogCoat) -> &appearance::Form {
+        &self
+            .forms
             .iter()
             .find(|(kind, _)| *kind == coat)
-            .map(|(_, handle)| handle.clone())
-            .unwrap_or_else(|| self.coats[0].1.clone())
+            .unwrap_or(&self.forms[0])
+            .1
     }
 }
 
-// ---------------------------------------------------------------------------
-// Meshes. The barrel and muzzle use the turnshoe trick — lofted along +Y,
-// then laid down so +Y becomes −Z (forward) — and every part keeps the rig
-// invariant: origin at the joint it rotates around.
-// ---------------------------------------------------------------------------
-
-/// Chest to rump in one loft, authored nose-first along +Y then laid down.
-/// Origin at the barrel centre.
-fn barrel_mesh() -> Mesh {
-    loft(
-        &[
-            Ring::new(-0.36, 0.085, 0.100).at(0.0, -0.010),
-            Ring::new(-0.20, 0.105, 0.130).boxy(2.4),
-            Ring::new(0.00, 0.110, 0.140).boxy(2.4),
-            Ring::new(0.16, 0.115, 0.150).at(0.0, 0.005).boxy(2.4),
-            Ring::new(0.34, 0.090, 0.120).at(0.0, 0.010),
-        ],
-        BODY_SECTORS,
-        Caps::BOTH,
-        COAT_TILE_M,
-    )
-    .rotated_by(Quat::from_rotation_x(-FRAC_PI_2))
-}
-
-/// Neck, cranium, muzzle and both pricked ears, merged into one part. Origin
-/// at the neck root on the barrel's front shoulder, so a head nod pivots
-/// where a neck does.
-fn head_mesh() -> Mesh {
-    let neck = loft(
-        &[
-            Ring::new(-0.02, 0.055, 0.060).at(0.0, -0.020),
-            Ring::new(0.06, 0.048, 0.052).at(0.0, -0.045),
-            Ring::new(0.12, 0.045, 0.048).at(0.0, -0.070),
-        ],
-        LIMB_SECTORS,
-        Caps::NONE,
-        COAT_TILE_M,
-    );
-    let cranium = loft(
-        &[
-            Ring::new(0.10, 0.050, 0.055).at(0.0, -0.090),
-            Ring::new(0.16, 0.062, 0.065).at(0.0, -0.100),
-            Ring::new(0.22, 0.050, 0.050).at(0.0, -0.100),
-            Ring::new(0.245, 0.020, 0.020).at(0.0, -0.100),
-        ],
-        BODY_SECTORS,
-        Caps::TOP,
-        COAT_TILE_M,
-    );
-    let muzzle = loft(
-        &[
-            Ring::new(0.00, 0.036, 0.032).boxy(2.6),
-            Ring::new(0.06, 0.030, 0.026).boxy(2.6),
-            Ring::new(0.10, 0.024, 0.020).boxy(2.8),
-        ],
-        LIMB_SECTORS,
-        Caps::TOP,
-        COAT_TILE_M,
-    )
-    .rotated_by(Quat::from_rotation_x(-FRAC_PI_2))
-    .translated_by(Vec3::new(0.0, 0.155, -0.10));
-    let ear = |sign: f32| {
-        loft(
-            &[
-                Ring::new(0.000, 0.020, 0.008),
-                Ring::new(0.050, 0.012, 0.005),
-                Ring::new(0.075, 0.004, 0.003),
-            ],
-            8,
-            Caps::TOP,
-            COAT_TILE_M,
-        )
-        .rotated_by(Quat::from_rotation_z(sign * 0.25) * Quat::from_rotation_x(-0.15))
-        .translated_by(Vec3::new(sign * 0.035, 0.230, -0.080))
-    };
-    merge_meshes([neck, cranium, muzzle, ear(1.0), ear(-1.0)])
-}
-
-/// Shoulder/hip to elbow/stifle, hanging −Y — the human limb convention.
-fn upper_leg_mesh() -> Mesh {
-    loft(
-        &[
-            Ring::new(0.03, 0.050, 0.055),
-            Ring::new(-0.09, 0.042, 0.050),
-            Ring::new(-UPPER_LEG_LEN, 0.030, 0.034),
-        ],
-        LIMB_SECTORS,
-        Caps::NONE,
-        COAT_TILE_M,
-    )
-}
-
-/// Elbow to the ground, the paw leaning forward off the pastern.
-fn lower_leg_mesh() -> Mesh {
-    loft(
-        &[
-            Ring::new(0.02, 0.026, 0.030),
-            Ring::new(-0.10, 0.020, 0.024),
-            Ring::new(-0.20, 0.024, 0.030).at(0.0, -0.008).boxy(3.0),
-            Ring::new(-LOWER_LEG_LEN, 0.026, 0.038)
-                .at(0.0, -0.016)
-                .boxy(3.4),
-        ],
-        LIMB_SECTORS,
-        Caps::BOTTOM,
-        COAT_TILE_M,
-    )
-}
-
-/// Authored hanging −Y like a limb; the rig's rest rotation carries it up and
-/// back, and the wag plays about the root's own axis.
-fn tail_mesh() -> Mesh {
-    loft(
-        &[
-            Ring::new(0.00, 0.022, 0.022),
-            Ring::new(-0.14, 0.016, 0.016),
-            Ring::new(-0.26, 0.009, 0.009),
-        ],
-        8,
-        Caps::BOTTOM,
-        COAT_TILE_M,
-    )
-}
-
-/// The tail's rest pose: carried back off the rump with a slight rise — a
-/// street dog's easy line, not a hound at point.
 fn tail_rest_rotation() -> Quat {
-    Quat::from_rotation_x(-2.1)
+    Quat::IDENTITY
 }
 
-fn coat_color(coat: DogCoat) -> Color {
-    match coat {
-        DogCoat::Brindle => Color::srgb(0.42, 0.32, 0.22),
-        DogCoat::Black => Color::srgb(0.09, 0.08, 0.08),
-        DogCoat::Grey => Color::srgb(0.45, 0.45, 0.47),
-        DogCoat::Fawn => Color::srgb(0.62, 0.48, 0.30),
-        DogCoat::White => Color::srgb(0.82, 0.80, 0.75),
-        DogCoat::Pied => Color::srgb(0.35, 0.33, 0.30),
-    }
-}
-
-fn build_assets(meshes: &mut Assets<Mesh>, materials: &mut Assets<StandardMaterial>) -> DogAssets {
-    let coats = [
-        DogCoat::Brindle,
-        DogCoat::Black,
-        DogCoat::Grey,
-        DogCoat::Fawn,
-        DogCoat::White,
-        DogCoat::Pied,
-    ]
-    .into_iter()
-    .map(|coat| {
-        (
-            coat,
-            materials.add(StandardMaterial {
-                base_color: coat_color(coat),
-                perceptual_roughness: 0.9,
-                ..default()
-            }),
-        )
-    })
-    .collect();
+fn build_assets(
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    poses: &mut Assets<SkinnedMeshInverseBindposes>,
+) -> DogAssets {
+    let features = meshes.add(appearance::face_mesh());
+    let eyes = meshes.add(appearance::eye_mesh());
     DogAssets {
-        barrel: meshes.add(barrel_mesh()),
-        head: meshes.add(head_mesh()),
-        upper_leg: meshes.add(upper_leg_mesh()),
-        lower_leg: meshes.add(lower_leg_mesh()),
-        tail: meshes.add(tail_mesh()),
-        coats,
+        jaw_bind: poses.add(SkinnedMeshInverseBindposes::from(vec![
+            Mat4::IDENTITY,
+            Mat4::from_translation(-JAW_PIVOT),
+        ])),
+        forms: [
+            DogCoat::Brindle,
+            DogCoat::Black,
+            DogCoat::Grey,
+            DogCoat::Fawn,
+            DogCoat::White,
+            DogCoat::Pied,
+        ]
+        .into_iter()
+        .map(|coat| {
+            let mut form = appearance::build(coat, meshes, features.clone(), eyes.clone());
+            form.neck_bind = poses.add(SkinnedMeshInverseBindposes::from(vec![
+                Mat4::IDENTITY,
+                Mat4::from_translation(-neck_pivot(form.length)),
+            ]));
+            form.upper_bind = [
+                Vec3::new(0.088 * form.width, 0.445, -0.235 * form.length),
+                Vec3::new(-0.088 * form.width, 0.445, -0.235 * form.length),
+                Vec3::new(0.090 * form.width, 0.455, 0.255 * form.length),
+                Vec3::new(-0.090 * form.width, 0.455, 0.255 * form.length),
+            ]
+            .map(|station| {
+                let mut matrices = vec![
+                    Mat4::from_translation(station - Vec3::Y * BODY_Y),
+                    Mat4::IDENTITY,
+                ];
+                if station.z > 0.0 {
+                    matrices.push(Mat4::from_translation(-animation::elbow(true)));
+                }
+                poses.add(SkinnedMeshInverseBindposes::from(matrices))
+            });
+            (coat, form)
+        })
+        .collect(),
+        fur: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(images.add(coat_surface::image(false))),
+            perceptual_roughness: 0.94,
+            reflectance: 0.22,
+            ..default()
+        }),
+        brindle_fur: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(images.add(coat_surface::image(true))),
+            perceptual_roughness: 0.94,
+            reflectance: 0.22,
+            ..default()
+        }),
+        skin: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            perceptual_roughness: 0.54,
+            reflectance: 0.36,
+            ..default()
+        }),
+        eyes: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            perceptual_roughness: 0.34,
+            reflectance: 0.50,
+            ..default()
+        }),
+        paw_bind: [false, true].map(|rear| {
+            let mut matrices = vec![Mat4::IDENTITY];
+            if rear {
+                matrices.push(Mat4::from_translation(-animation::hock()));
+            }
+            matrices.push(Mat4::from_translation(-animation::ankle(rear)));
+            poses.add(SkinnedMeshInverseBindposes::from(matrices))
+        }),
     }
 }
 
@@ -338,6 +265,8 @@ pub fn sync_dogs(
     margin: Option<Res<crate::city::CutMarginProfile>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
+    mut poses: ResMut<Assets<SkinnedMeshInverseBindposes>>,
     existing: Query<&StreetDog>,
     mut assets: Local<Option<DogAssets>>,
 ) {
@@ -345,15 +274,14 @@ pub fn sync_dogs(
     if !inbox.is_changed() || inbox.0.is_empty() {
         return;
     }
-    let spawned: std::collections::HashSet<&str> =
-        existing.iter().map(|dog| dog.id.as_str()).collect();
-    if spawned.len() == inbox.0.len() {
+    if existing.iter().len() == inbox.0.len() {
         return;
     }
-    let assets = assets.get_or_insert_with(|| build_assets(&mut meshes, &mut materials));
+    let assets = assets
+        .get_or_insert_with(|| build_assets(&mut meshes, &mut materials, &mut images, &mut poses));
 
     for (id, sample) in &inbox.0 {
-        if spawned.contains(id.as_str()) {
+        if existing.iter().any(|dog| dog.id == *id) {
             continue;
         }
         spawn_dog(&mut commands, assets, margin.as_deref(), id, sample);
@@ -367,17 +295,31 @@ fn spawn_dog(
     id: &str,
     sample: &DogSample,
 ) {
-    let coat = assets.coat(sample.coat);
+    let form = assets.form(sample.coat);
+    let fur = if sample.coat == DogCoat::Brindle {
+        &assets.brindle_fur
+    } else {
+        &assets.fur
+    };
     let mut translation = sample.position;
     if let Some(profile) = margin {
         translation.y += profile.ground_lift(translation.x, translation.z);
     }
     let mut rig = DogRig {
+        frame: Entity::PLACEHOLDER,
         body: Entity::PLACEHOLDER,
+        neck: Entity::PLACEHOLDER,
         head: Entity::PLACEHOLDER,
+        jaw: Entity::PLACEHOLDER,
+        ears: [Entity::PLACEHOLDER; 2],
+        eyes: Entity::PLACEHOLDER,
         tail: Entity::PLACEHOLDER,
         uppers: [Entity::PLACEHOLDER; 4],
         lowers: [Entity::PLACEHOLDER; 4],
+        paws: [Entity::PLACEHOLDER; 4],
+        hocks: [Entity::PLACEHOLDER; 2],
+        stations: [Vec3::ZERO; 4],
+        build: sample.build,
     };
     let root = commands
         .spawn((
@@ -385,6 +327,7 @@ fn spawn_dog(
             StreetDog { id: id.to_string() },
             DogGait {
                 blend: 0.0,
+                animation: animation::State::new(id),
                 // A per-dog phase so ten tails never beat as one metronome.
                 wag_seed: id
                     .bytes()
@@ -399,7 +342,8 @@ fn spawn_dog(
         commands
             .spawn((
                 Mesh3d(mesh.clone()),
-                MeshMaterial3d(coat.clone()),
+                MeshMaterial3d(fur.clone()),
+                DogPart,
                 transform,
                 dog_fade(),
             ))
@@ -410,52 +354,196 @@ fn spawn_dog(
     // stays the sim's.
     let frame = commands
         .spawn((
+            DogPart,
             Transform::from_xyz(0.0, FRAME_Y, 0.0).with_scale(Vec3::splat(sample.build)),
             Visibility::default(),
         ))
         .id();
     commands.entity(frame).insert(ChildOf(root));
+    rig.frame = frame;
 
-    rig.body = part(
-        commands,
-        &assets.barrel,
-        Transform::from_xyz(0.0, BODY_Y, 0.0),
-    );
+    rig.body = part(commands, &form.body, Transform::from_xyz(0.0, BODY_Y, 0.0));
     commands.entity(rig.body).insert(ChildOf(frame));
-    rig.head = part(
+    rig.neck = commands
+        .spawn((
+            DogPart,
+            Name::new("Dog neck joint"),
+            Transform::from_translation(neck_pivot(form.length)),
+            Visibility::default(),
+            ChildOf(rig.body),
+        ))
+        .id();
+    commands.entity(rig.body).insert((
+        SkinnedMesh {
+            inverse_bindposes: form.neck_bind.clone(),
+            joints: vec![rig.body, rig.neck],
+        },
+        DynamicSkinnedMeshBounds,
+    ));
+    let skull = part(
         commands,
-        &assets.head,
-        Transform::from_xyz(0.0, 0.09, -0.32),
+        &form.head,
+        Transform::from_translation(-SKULL_PIVOT),
     );
-    commands.entity(rig.head).insert(ChildOf(rig.body));
+    rig.head = commands
+        .spawn((
+            DogPart,
+            Name::new("Dog skull joint"),
+            Transform::from_translation(
+                Vec3::new(0.0, 0.07, -0.27 * form.length) + SKULL_PIVOT * form.head_scale
+                    - neck_pivot(form.length),
+            )
+            .with_scale(form.head_scale),
+            Visibility::default(),
+            ChildOf(rig.neck),
+        ))
+        .id();
+    commands.entity(skull).insert(ChildOf(rig.head));
+    rig.jaw = commands
+        .spawn((
+            DogPart,
+            Name::new("Dog jaw joint"),
+            Transform::from_translation(JAW_PIVOT),
+            Visibility::default(),
+            ChildOf(skull),
+        ))
+        .id();
+    commands.entity(skull).insert((
+        SkinnedMesh {
+            inverse_bindposes: assets.jaw_bind.clone(),
+            joints: vec![skull, rig.jaw],
+        },
+        DynamicSkinnedMeshBounds,
+    ));
+    commands
+        .entity(skull)
+        .insert(MeshMaterial3d(assets.fur.clone()));
     rig.tail = part(
         commands,
-        &assets.tail,
-        Transform::from_xyz(0.0, 0.06, 0.34).with_rotation(tail_rest_rotation()),
+        &form.tail,
+        Transform::from_xyz(0.0, 0.06, 0.34 * form.length).with_rotation(tail_rest_rotation()),
     );
     commands.entity(rig.tail).insert(ChildOf(rig.body));
 
+    for (mesh, material) in [(&form.features, &assets.skin), (&form.eyes, &assets.eyes)] {
+        let entity = commands
+            .spawn((
+                Mesh3d(mesh.clone()),
+                MeshMaterial3d(material.clone()),
+                DogPart,
+                Transform::IDENTITY,
+                dog_fade(),
+                ChildOf(skull),
+            ))
+            .id();
+        if mesh == &form.eyes {
+            rig.eyes = entity;
+        }
+    }
+    for (index, sign) in [-1.0_f32, 1.0].into_iter().enumerate() {
+        let ear = part(
+            commands,
+            &form.ears[index],
+            Transform::from_xyz(sign * 0.061, 0.226, -0.066)
+                .with_rotation(Quat::from_rotation_z(sign * -0.12)),
+        );
+        commands.entity(ear).insert(ChildOf(skull));
+        rig.ears[index] = ear;
+        commands
+            .entity(ear)
+            .insert(MeshMaterial3d(assets.fur.clone()));
+    }
+
     let stations = [
-        (LEG_X, FRONT_LEG_Z),
-        (-LEG_X, FRONT_LEG_Z),
-        (LEG_X + 0.005, REAR_LEG_Z),
-        (-LEG_X - 0.005, REAR_LEG_Z),
+        (0.088 * form.width, -0.235 * form.length),
+        (-0.088 * form.width, -0.235 * form.length),
+        (0.090 * form.width, 0.255 * form.length),
+        (-0.090 * form.width, 0.255 * form.length),
     ];
     for (index, (x, z)) in stations.into_iter().enumerate() {
+        let rear = index >= 2;
         let upper = part(
             commands,
-            &assets.upper_leg,
-            Transform::from_xyz(x, LEG_ROOT_Y, z),
+            if rear {
+                &form.rear_upper[index % 2]
+            } else {
+                &form.front_upper[index % 2]
+            },
+            Transform::from_xyz(x, if rear { 0.455 } else { 0.445 }, z),
         );
         commands.entity(upper).insert(ChildOf(frame));
+        commands.entity(upper).insert((
+            SkinnedMesh {
+                inverse_bindposes: form.upper_bind[index].clone(),
+                joints: vec![rig.body, upper],
+            },
+            DynamicSkinnedMeshBounds,
+        ));
         let lower = part(
             commands,
-            &assets.lower_leg,
-            Transform::from_xyz(0.0, -UPPER_LEG_LEN, 0.0),
+            if rear {
+                &form.rear_lower
+            } else {
+                &form.front_lower
+            },
+            Transform::from_xyz(
+                0.0,
+                if rear { -0.17 } else { -0.19 },
+                if rear { -0.07 } else { 0.02 },
+            ),
         );
         commands.entity(lower).insert(ChildOf(upper));
+        if rear {
+            commands.entity(upper).insert(SkinnedMesh {
+                inverse_bindposes: form.upper_bind[index].clone(),
+                joints: vec![rig.body, upper, lower],
+            });
+        }
+        let paw_parent = if rear {
+            let hock = commands
+                .spawn((
+                    DogPart,
+                    Name::new(if index == 2 {
+                        "Dog hock RL"
+                    } else {
+                        "Dog hock RR"
+                    }),
+                    Transform::from_translation(animation::hock()),
+                    Visibility::default(),
+                    ChildOf(lower),
+                ))
+                .id();
+            rig.hocks[index - 2] = hock;
+            hock
+        } else {
+            lower
+        };
+        let paw = commands
+            .spawn((
+                DogPart,
+                Name::new(["Dog paw FL", "Dog paw FR", "Dog paw RL", "Dog paw RR"][index]),
+                Transform::from_translation(
+                    animation::ankle(rear) - if rear { animation::hock() } else { Vec3::ZERO },
+                ),
+                Visibility::default(),
+                ChildOf(paw_parent),
+            ))
+            .id();
+        commands.entity(lower).insert((
+            SkinnedMesh {
+                inverse_bindposes: assets.paw_bind[usize::from(rear)].clone(),
+                joints: if rear {
+                    vec![lower, paw_parent, paw]
+                } else {
+                    vec![lower, paw]
+                },
+            },
+            DynamicSkinnedMeshBounds,
+        ));
         rig.uppers[index] = upper;
         rig.lowers[index] = lower;
+        rig.paws[index] = paw;
+        rig.stations[index] = Vec3::new(x, if rear { 0.455 } else { 0.445 }, z);
     }
     commands.entity(root).insert(rig);
 }
@@ -521,69 +609,10 @@ pub fn drive_dog_bodies(
     }
 }
 
-/// The trot: diagonal pairs — front-left with rear-right — swinging off the
-/// sim's `gait_phase`, the lower leg folding through the back of its arc, a
-/// two-beat barrel bob, a wag that livens with speed, and a slow idle head
-/// sway while resting. Pure cosmetics on part transforms; the root belongs to
-/// [`drive_dog_bodies`].
-pub fn animate_dog_gait(
-    time: Res<Time>,
-    mut dogs: Query<(&DogRig, &mut DogGait, Option<&DogMotion>)>,
-    mut parts: Query<&mut Transform, With<Mesh3d>>,
-) {
-    let _span = crate::perf::span(crate::perf::Probe::Dogs);
-    let now = time.elapsed_secs();
-    let dt = time.delta_secs();
-    for (rig, mut gait, motion) in &mut dogs {
-        let (phase, speed) = match motion {
-            Some(motion) => {
-                let t =
-                    ((f64::from(now) - motion.t0) / MOVEMENT_TICK_SECONDS).clamp(0.0, 1.0) as f32;
-                (
-                    motion.prev_phase + (motion.cur_phase - motion.prev_phase) * t,
-                    motion.speed,
-                )
-            }
-            None => (0.0, 0.0),
-        };
-        let target = smoothstep(SETTLED_SPEED_MPS, TROT_FULL_SPEED_MPS, speed);
-        gait.blend = move_toward(gait.blend, target, dt / TROT_BLEND_SECONDS);
-        let blend = gait.blend;
+pub use animation::animate_dog_gait;
 
-        let cycle = phase * TAU;
-        let swing = cycle.sin();
-        // Diagonal pairing: FL and RR lead, FR and RL counter.
-        let pair_sign = [1.0, -1.0, -1.0, 1.0];
-        for (index, sign) in pair_sign.into_iter().enumerate() {
-            let leg_swing = sign * swing * LEG_SWING_RAD * blend;
-            if let Ok(mut upper) = parts.get_mut(rig.uppers[index]) {
-                upper.rotation = Quat::from_rotation_x(leg_swing);
-            }
-            // Fold through the back of the arc, like the human shin gate.
-            let fold = (-sign * swing).max(0.0) * LOWER_FOLD_RAD * blend;
-            if let Ok(mut lower) = parts.get_mut(rig.lowers[index]) {
-                lower.rotation = Quat::from_rotation_x(-fold);
-            }
-        }
-
-        if let Ok(mut body) = parts.get_mut(rig.body) {
-            let bob = (cycle * 2.0).sin().abs() * BOB_AMPLITUDE_M * blend;
-            body.translation.y = BODY_Y + bob;
-        }
-        if let Ok(mut head) = parts.get_mut(rig.head) {
-            // A trot nod when moving; a slow scenting sway when not.
-            let nod = (cycle * 2.0).sin() * 0.06 * blend;
-            let sway = ((now * 0.4 + gait.wag_seed) * TAU * 0.1).sin() * 0.12 * (1.0 - blend);
-            head.rotation =
-                Quat::from_rotation_x(nod + sway.abs() * 0.5) * Quat::from_rotation_y(sway);
-        }
-        if let Ok(mut tail) = parts.get_mut(rig.tail) {
-            let wag_hz = 1.2 + 1.6 * blend;
-            let wag_amp = 0.22 + 0.33 * blend;
-            let wag = (now * wag_hz * TAU + gait.wag_seed).sin() * wag_amp;
-            tail.rotation = tail_rest_rotation() * Quat::from_rotation_z(wag);
-        }
-    }
+fn neck_pivot(length: f32) -> Vec3 {
+    Vec3::new(0.0, 0.03, -0.265 * length)
 }
 
 fn smoothstep(low: f32, high: f32, value: f32) -> f32 {

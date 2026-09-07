@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"The closest place I know is my house, just a few steps away—about ten metres. Burnt Court lies beyond it, about a hundred and forty metres.\"}",
+  "duration_seconds": 2.528301576,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__petronel_archive__r2",
+  "prompt_path": "prompts/5790ae1b9aad7cd07101e7cf0f3dbfc989df142e5a1b4f625d7aa4356b00e8ef.txt"
+}

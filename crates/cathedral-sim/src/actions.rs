@@ -59,6 +59,38 @@ pub fn apply_action_at(
     args: &Value,
     position_override: Option<Vec3>,
 ) -> Result<String, ActionError> {
+    apply_action_with_context(world, actor_id, verb, args, position_override, None)
+}
+
+pub(crate) fn apply_player_speech_at(
+    world: &mut World,
+    actor_id: &ActorId,
+    text: &str,
+    at: Vec3,
+    selection: &crate::conversation::SpeechSelection,
+    prose: &crate::conversation::ConversationStrings,
+) -> Result<String, ActionError> {
+    apply_action_with_context(
+        world,
+        actor_id,
+        "say",
+        &serde_json::json!({"text": text}),
+        Some(at),
+        Some((selection, prose)),
+    )
+}
+
+fn apply_action_with_context(
+    world: &mut World,
+    actor_id: &ActorId,
+    verb: &str,
+    args: &Value,
+    position_override: Option<Vec3>,
+    selection: Option<(
+        &crate::conversation::SpeechSelection,
+        &crate::conversation::ConversationStrings,
+    )>,
+) -> Result<String, ActionError> {
     if !world.is_present(actor_id) {
         return Err(ActionError::new(
             ActionErrorCode::UnknownActor,
@@ -66,11 +98,11 @@ pub fn apply_action_at(
         ));
     }
     let Some(frozen) = position_override else {
-        return dispatch(world, actor_id, verb, args);
+        return dispatch(world, actor_id, verb, args, selection);
     };
     let actor = world.characters.get_mut(actor_id).expect("checked above");
     let original = std::mem::replace(&mut actor.state.position_m, frozen);
-    let result = dispatch(world, actor_id, verb, args);
+    let result = dispatch(world, actor_id, verb, args, selection);
     world
         .characters
         .get_mut(actor_id)
@@ -98,12 +130,16 @@ fn dispatch(
     actor_id: &ActorId,
     verb: &str,
     args: &Value,
+    selection: Option<(
+        &crate::conversation::SpeechSelection,
+        &crate::conversation::ConversationStrings,
+    )>,
 ) -> Result<String, ActionError> {
     // A non-string verb is impossible here (the reply parser types it), which
     // is where Python's `invalid_action` check lived.
     let result = match verb {
         "wait" => wait(world, actor_id, args),
-        "say" => say(world, actor_id, args),
+        "say" => say(world, actor_id, args, selection),
         "offer_item" => offer_item(world, actor_id, args),
         "accept_offered_item" => accept_offered_item(world, actor_id, args),
         "decline_offer" => decline_offer(world, actor_id, args),
@@ -538,7 +574,15 @@ fn wait(world: &World, actor_id: &ActorId, args: &Value) -> Result<String, Actio
     Ok(format!("{} waits", world.characters[actor_id].name()))
 }
 
-fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+fn say(
+    world: &mut World,
+    actor_id: &ActorId,
+    args: &Value,
+    selection: Option<(
+        &crate::conversation::SpeechSelection,
+        &crate::conversation::ConversationStrings,
+    )>,
+) -> Result<String, ActionError> {
     let parsed = args_object(args, &["text"], &["target"])?;
     let text = parse_text(&parsed["text"], "text", PLAYER_SPEECH_MAX_CHARS)?;
     let target_value = optional_arg(parsed, "target");
@@ -634,7 +678,11 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
                 let speaker = cap_first(&identify_ids(world, recipient, actor_id));
                 (
                     recipient.clone(),
-                    format!("{speaker} said{muffle}: \"{text}\""),
+                    format!(
+                        "{speaker} said{muffle}: \"{text}\"{}",
+                        selection.map_or_else(String::new, |(selection, prose)| selection
+                            .percept_suffix(world, recipient, prose))
+                    ),
                 )
             })
             .collect();
@@ -665,13 +713,9 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
         let game_days = world.current_time.map_or(0.0, |time| time.game_days());
         crate::knowledge::mint::note_assertion(world, actor_id, &hearer, &text, game_days);
     }
-    world.emit(DomainEvent::speech(
-        actor_id.clone(),
-        target,
-        text,
-        origin,
-        hearers,
-    ));
+    let mut event = DomainEvent::speech(actor_id.clone(), target, text, origin, hearers);
+    event.conversation = selection.map(|(selection, _)| selection.clone());
+    world.emit(event);
     Ok(line)
 }
 

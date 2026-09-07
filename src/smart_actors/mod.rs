@@ -801,6 +801,7 @@ impl Plugin for SmartActorsPlugin {
             .add_systems(
                 PostUpdate,
                 (
+                    targeting::forward_conversation_attention,
                     interaction::select_inventory_item,
                     interaction::sync_player_position,
                     interaction::poll_microphone,
@@ -2626,6 +2627,100 @@ mod tests {
     };
 
     use super::*;
+
+    /// The actual host systems order focus before local microphone capture and
+    /// typed speech. This app has no renderer, window or microphone worker.
+    #[test]
+    fn conversation_attention_precedes_voice_capture_and_typed_speech() {
+        use interaction::{
+            InteractionState, MicrophoneInputState, PlayerIntent, PlayerSpatialState,
+        };
+        use microphone::MicrophoneEvent;
+        let (sender, commands) = crossbeam_channel::bounded(32);
+        let (microphone, events) = microphone::MicrophoneService::event_harness_for_tests();
+        let mut app = App::new();
+        let entity = app.world_mut().spawn_empty().id();
+        let focus = targeting::ActorFocus {
+            actor: Some(targeting::FocusedActor {
+                actor_id: model::ActorId("sv3n1".into()),
+                entity,
+                ray_distance_m: 3.0,
+                body_distance_m: 3.0,
+            }),
+            item: None,
+        };
+        app.insert_resource(bridge::BridgeHandle::new(sender, "/tmp".into()))
+            .insert_resource(microphone)
+            .insert_resource(focus)
+            .insert_resource(SmartActorRuntime {
+                connected: true,
+                ready: true,
+                mirror_revision: Some(1),
+                ..SmartActorRuntime::starting(false)
+            })
+            .init_resource::<InteractionState>()
+            .init_resource::<PlayerSpatialState>()
+            .init_resource::<MicrophoneInputState>()
+            .init_resource::<hud::SmartActorHudState>()
+            .add_message::<PlayerIntent>()
+            .add_message::<speech::StopNpcSpeech>()
+            .add_systems(
+                Update,
+                (
+                    targeting::forward_conversation_attention,
+                    interaction::poll_microphone,
+                    forward_player_intents,
+                )
+                    .chain(),
+            );
+        events
+            .send(MicrophoneEvent::RecordingStarted {
+                wav_basename: "onset.wav".into(),
+            })
+            .unwrap();
+        app.update();
+        assert!(
+            matches!(commands.try_recv(), Ok(bridge::BridgeCommand::PlayerAttention { actor_id: Some(id) }) if id.0 == "sv3n1")
+        );
+        assert!(
+            matches!(commands.try_recv(), Ok(bridge::BridgeCommand::PlayerUtteranceStarted { wav_basename }) if wav_basename == "onset.wav")
+        );
+        assert!(commands.try_recv().is_err());
+
+        // A local cancellation has no streamed abort of its own; the host must
+        // release the engine capture, or it would suppress ordinary turns.
+        events
+            .send(MicrophoneEvent::RecordingCancelled {
+                wav_basename: "onset.wav".into(),
+            })
+            .unwrap();
+        app.update();
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(bridge::BridgeCommand::PlayerAttention { .. })
+        ));
+        assert!(
+            matches!(commands.try_recv(), Ok(bridge::BridgeCommand::PlayerAudioAbort { wav_basename }) if wav_basename == "onset.wav")
+        );
+
+        app.world_mut()
+            .resource_mut::<targeting::ActorFocus>()
+            .actor = None;
+        app.world_mut().write_message(PlayerIntent::Say {
+            request_id: "typed".into(),
+            text: "How will you trade?".into(),
+            spatial_seq: 1,
+            position: Vec3::ZERO,
+        });
+        app.update();
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(bridge::BridgeCommand::PlayerAttention { actor_id: None })
+        ));
+        assert!(
+            matches!(commands.try_recv(), Ok(bridge::BridgeCommand::PlayerSay { text, .. }) if text == "How will you trade?")
+        );
+    }
 
     /// A player-editable `config.ron` reaches the crowd generator directly, so
     /// a fat-fingered zero must be reported and cut rather than obeyed —

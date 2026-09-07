@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’ll set out my herring at one spark each and the smoked eel at three. I’ll call the prices, take the sparks, and keep count for Mother.\"}",
+  "duration_seconds": 2.40911165,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__sibbe_answer__r1",
+  "prompt_path": "prompts/36569789a0d431770824e8538ab097abfe3b2da28ab82cbc19e74bc87d18978f.txt"
+}

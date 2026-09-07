@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I trade in spices, oils, and other provisions at the market. I’m Rohese Nett.\"}",
+  "duration_seconds": 1.880515282,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__named_overrides_hint__r5",
+  "prompt_path": "prompts/c3738f614f0ae65518669b18a2375294f1ccf329e04fbd7b41a06c667d689320.txt"
+}

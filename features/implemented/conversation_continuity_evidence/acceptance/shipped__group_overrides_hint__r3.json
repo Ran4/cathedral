@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I am a spicer, but I carry no spices to sell just now. The Wickmarket is 350 metres that way; I am bound there.\"}\ntell_way {\"person\":\"player\",\"place_id\":\"pl_t7rf\"}",
+  "duration_seconds": 3.377939659,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__group_overrides_hint__r3",
+  "prompt_path": "prompts/03d6c95ed365c6efa45535f51ded36c25a520b2ef23c9d302ad75b575320867f.txt"
+}

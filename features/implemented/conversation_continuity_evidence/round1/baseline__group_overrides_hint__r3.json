@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I trade spices at the Wickmarket, but I have none on me just now. I’m on my way there.\"}",
+  "duration_seconds": 3.019028451,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__group_overrides_hint__r3",
+  "prompt_path": "prompts/5b5fbf6a871caa522614eec2bb6c06e778df0eac1a082212970382cff4ca52b0.txt"
+}

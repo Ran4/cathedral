@@ -1,0 +1,123 @@
+{
+  "seed": {
+    "characters": [
+      {
+        "id": "g9sib",
+        "name": "Sibbe Skell",
+        "back_story": "You are an eel and herring trader. Today you are heading to Coswald's Yard to sell herring for one spark each and smoked eel for three sparks each. You bargain briskly but honestly.",
+        "control": "llm",
+        "location_description": "Beside the Shambles well",
+        "voice_key": null,
+        "position_m": {
+          "x": 0,
+          "y": 0.91,
+          "z": 4
+        },
+        "holds": [],
+        "memories": [],
+        "knows": []
+      },
+      {
+        "id": "p009a",
+        "name": "Rohese Nett",
+        "back_story": "You are a grocer and spicer. Today you are heading to the Wickmarket to sell spices and sealed oils. You bargain cheerfully and remember exact sums. You do not sell fish.",
+        "control": "llm",
+        "location_description": "Beside the Shambles well",
+        "voice_key": null,
+        "position_m": {
+          "x": 9,
+          "y": 0.91,
+          "z": 4
+        },
+        "holds": [],
+        "memories": [],
+        "knows": []
+      },
+      {
+        "id": "x00428",
+        "name": "Bertran Pike",
+        "back_story": "You are a quiet elderly resident resting beside the well. You have no business with these traders and no goods for sale.",
+        "control": "llm",
+        "location_description": "Beside the Shambles well",
+        "voice_key": null,
+        "position_m": {
+          "x": -8,
+          "y": 0.91,
+          "z": 5
+        },
+        "holds": [],
+        "memories": [],
+        "knows": []
+      },
+      {
+        "id": "player",
+        "name": "Player",
+        "back_story": "A human visitor.",
+        "control": "player",
+        "location_description": "Beside the Shambles well",
+        "voice_key": null,
+        "position_m": {
+          "x": 0,
+          "y": 0.91,
+          "z": 0
+        },
+        "holds": [],
+        "memories": [],
+        "knows": []
+      }
+    ]
+  },
+  "steps": [
+    {
+      "label": "establish_sibbe",
+      "text": "Sibbe, where are you going to trade?",
+      "focus": "g9sib",
+      "focus_seconds": 0.7,
+      "turns": 1
+    },
+    {
+      "label": "unsolicited_greeting",
+      "moves": [
+        [
+          "p009a",
+          [
+            0,
+            0.91,
+            1.4
+          ]
+        ]
+      ],
+      "npc_lines": [
+        [
+          "p009a",
+          "Good day, stranger."
+        ]
+      ],
+      "text": "So what are you going to sell?",
+      "turns": 3
+    },
+    {
+      "label": "witnessed_danger",
+      "percepts": [
+        [
+          "p009a",
+          "You see a heavy roof tile break loose directly above the player. There is time to warn them before it falls."
+        ]
+      ],
+      "text": "And what does your herring cost?",
+      "turns": 3
+    },
+    {
+      "label": "accept_interjection",
+      "focus": "p009a",
+      "focus_seconds": 0.7,
+      "text": "Thank you for warning me. What is your name?",
+      "turns": 3
+    },
+    {
+      "label": "new_partner_followup",
+      "text": "What do you do for a living?",
+      "turns": 3
+    }
+  ]
+}

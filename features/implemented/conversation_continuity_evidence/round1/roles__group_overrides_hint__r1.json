@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe.\"}\nsay {\"target\":\"player\",\"text\":\"I am Rohese Nett, a spicer, bound for the Wickmarket. I trade spices there, though I have no stock in hand just now.\"}",
+  "duration_seconds": 3.023536771,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__group_overrides_hint__r1",
+  "prompt_path": "prompts/57840e86b015bf9c2b768f26f6a9bda5bc44680929c7b9788781b9aeac884a4f.txt"
+}

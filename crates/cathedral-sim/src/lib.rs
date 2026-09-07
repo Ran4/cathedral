@@ -16,6 +16,7 @@ pub mod areas;
 pub mod attention;
 pub mod character;
 pub mod clock;
+pub mod conversation;
 pub mod crowd;
 pub mod custody;
 pub mod dogs;

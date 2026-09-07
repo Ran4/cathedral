@@ -49,9 +49,46 @@ inbox, so the model can self-correct next turn (and are echoed as
 distance, inclusive boundary, stable `(distance, id)` ordering). Every recipient
 id is retained in the structured event the game consumes; LLM-controlled
 recipients additionally get a prose inbox line. The player is never scheduled, so
-his inbox never accumulates. Fresh player speech queues the nearest LLM listener
+his inbox never accumulates. Fresh player speech queues its probable addressee
 in a protected FIFO reaction lane: NPC-to-NPC handoffs cannot overwrite it, and
 background speech outside the player's earshot cannot hold its completed reply.
+
+**Conversation continuity (`conversation.rs`).** Typed and transcribed speech
+use one policy: an unambiguous initial vocative or open group cue, sustained
+gaze (0.65 s, with samples at most 1 s apart), the player's warm exchange,
+a recent NPC invitation, then the nearest listener. Every candidate must still
+be present and inside the utterance's physical hearing set. Player engagement
+owns the exchange; another NPC addressing the player cannot take it over.
+Reciprocal speech keeps the chosen exchange warm for 30 s; unaccepted invitations
+last 10 s. Movement and the stage keep their existing conversation protection.
+
+The host sends `PlayerAttention` after focus updates and before forwarding typed
+speech, and `PlayerUtteranceStarted` on microphone onset for both STT backends.
+`PlayerAudioBegin` provides a fallback capture for streamed/headless hosts.
+The utterance carries frozen attention through STT; a monotonic utterance token
+prevents old completions from replacing a newer player choice, including group
+speech handled at the same poll time. At most eight onset captures survive for
+120 s; cancellation, silent audio and failures release them. Hearing continues
+to use the existing recording position semantics and the listeners present at
+delivery. Extremely delayed captures discard their attention evidence.
+
+Each delivered speech percept includes its own `[Conversation: ...]` suffix,
+using `strings.toml`'s conversation prose. It follows that line through inbox,
+retry and history, never through a rendering of current partner state. Names
+use the hearer's perspective; an unseen target's id is omitted, and newcomers
+receive no earlier dialogue or claim to have witnessed it. Prior-witness memory
+is capped at 128 ids; omitted witnesses receive the conservative newcomer label.
+Group cues give the nearest LLM listener a protected reaction and everyone else
+an ordinary, ungated handoff, so one `wait` cannot swallow a group question and
+a fresh player follow-up can preempt the remaining group turns.
+
+The language cues are intentionally conservative English prefixes: initial
+`Name,` / `Name:` or common `Name can/do/are you...` forms, and explicit openings
+such as `Does anyone...`, `Everyone,` or `Both of you,`. First names must identify
+one listener unambiguously. Quoted, reported and noninitial name mentions do not
+redirect. Other phrasing remains a model judgment; an unnamed acceptance of an
+interjection needs sustained gaze to reliably switch an established exchange.
+There is no provider classification call or mechanical ban on bystander speech.
 
 **Unknown people.** Each character has a `knows` set of character ids. People
 outside it render as `(unknown - you don't know the name of this person)` in

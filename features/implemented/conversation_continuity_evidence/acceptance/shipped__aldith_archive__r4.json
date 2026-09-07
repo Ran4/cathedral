@@ -1,0 +1,9 @@
+{
+  "answer": "wait {}",
+  "duration_seconds": 1.50541538,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__aldith_archive__r4",
+  "prompt_path": "prompts/6c5487fc22194d3eb5fa578172222fa6256d6008805609a26a771c67e7d251a1.txt"
+}

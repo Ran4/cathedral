@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Cinnamon, pepper, cloves, and saffron when the purse allows. I also keep costly oils under seal.\"}",
+  "duration_seconds": 2.102460034,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "context__accepted_interjection__r1",
+  "prompt_path": "prompts/bc5192dea15863c2a0c0e3a1143d273836a3d9d9ca5574f4f78027697b8940a2.txt"
+}

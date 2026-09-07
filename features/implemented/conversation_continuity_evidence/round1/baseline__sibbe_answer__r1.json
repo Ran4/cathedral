@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"At Coswald’s Yard today. I’ll offer herring for one spark each, and smoked eel for three sparks.\"}",
+  "duration_seconds": 2.714463168,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__sibbe_answer__r1",
+  "prompt_path": "prompts/06a3f54376ddda96bae7b780d3e6ef86ed76fac89b83dcb790af8e0353a39f17.txt"
+}

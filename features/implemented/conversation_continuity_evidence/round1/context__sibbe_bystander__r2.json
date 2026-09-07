@@ -1,0 +1,9 @@
+{
+  "answer": "wait {}",
+  "duration_seconds": 0.857521107,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "context__sibbe_bystander__r2",
+  "prompt_path": "prompts/6f374ceb7aeab40eea132a7eb1b1e5716b4c5594b5b7e15803119ffbf9368824.txt"
+}

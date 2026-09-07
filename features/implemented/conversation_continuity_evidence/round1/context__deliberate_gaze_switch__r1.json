@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’m Rohese Nett, a spicer. I trade in spices and costly oils, and keep an eye out for watered jars.\"}",
+  "duration_seconds": 2.234714222,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "context__deliberate_gaze_switch__r1",
+  "prompt_path": "prompts/3a6e9ed491a1f01c12aa969489f510919b84b0db8c794166755b9742e35d726d.txt"
+}

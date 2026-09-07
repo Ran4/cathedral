@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"At my stall in Coswald’s Yard—herring for one spark, smoked eel for three. I’ll call the prices and let folk inspect the catch.\"}",
+  "duration_seconds": 1.783116432,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__sibbe_answer__r2",
+  "prompt_path": "prompts/ab09197caae0d1c7694c89fb50a30dcbf4e858d7cfc55cf2c31b12b7e7152498.txt"
+}

@@ -31,6 +31,8 @@ pub struct DomainEvent {
     /// `None` only for world sounds (the town bell).
     pub actor_id: Option<ActorId>,
     pub target_id: Option<ActorId>,
+    /// The player's inferred addressee, separate from an explicit `say` target.
+    pub conversation: Option<crate::conversation::SpeechSelection>,
     pub item_id: Option<ItemId>,
     /// How many units the item event moved (offer/accept/eat). 1 for every
     /// non-item event and for single-unit item traffic, so the HUD toast can
@@ -81,6 +83,7 @@ impl DomainEvent {
             kind: kind.into(),
             actor_id: None,
             target_id: None,
+            conversation: None,
             item_id: None,
             quantity: 1,
             text: None,

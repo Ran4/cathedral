@@ -87,6 +87,12 @@ pub enum BridgeCommand {
         position_m: Position,
         spatial_seq: u64,
     },
+    PlayerAttention {
+        actor_id: Option<ActorId>,
+    },
+    PlayerUtteranceStarted {
+        wav_basename: String,
+    },
     /// Start of a streamed copy of the utterance being recorded to
     /// `wav_basename`; chunks follow while the player is still speaking.
     PlayerAudioBegin {

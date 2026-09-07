@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"At my stall: herring is one spark each, smoked eel three. Tell me what you want, and we’ll trade coin for fish.\"}",
+  "duration_seconds": 1.7547602169999998,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "context__sibbe_answer__r1",
+  "prompt_path": "prompts/c5e8832342b8d5020ba651283afb7a1538aecece0051ce7e36867b26401ee550.txt"
+}

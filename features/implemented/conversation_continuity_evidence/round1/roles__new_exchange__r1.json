@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I trade in spices, sound oils, and common provisions—measured honestly and sealed well.\"}",
+  "duration_seconds": 1.264993011,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__new_exchange__r1",
+  "prompt_path": "prompts/d89c61491c2b1ccba0f03769f5bc98a5fde721e8f227f2caf18da86405f523b8.txt"
+}

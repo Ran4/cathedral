@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"At my stall in Coswald’s Yard: herring for one spark, smoked eel for three. I’ll hold out the fish, and you put the sparks in my hand.\"}",
+  "duration_seconds": 3.196665381,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__sibbe_answer__r2",
+  "prompt_path": "prompts/68c23ef8c167a8591e0487d32427e7609cb171cac5a6d00cbe93cc5dbb96c695.txt"
+}

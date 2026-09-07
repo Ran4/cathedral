@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"A little of many sorts—spices and costly oils, kept under seal. I can tell you what is sound and what has been watered, but I’ve no goods laid out in this basket just now.\"}",
+  "duration_seconds": 2.612257129,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__accepted_interjection__r2",
+  "prompt_path": "prompts/2878798b08759c89c2c2e908cce754d9e6ef90e9a458f1a65fbe95f901a0cbc1.txt"
+}

@@ -61,6 +61,7 @@ const NIGHT_TEMPLATE: &str = "night.j2";
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PromptStrings {
+    pub conversation: crate::conversation::ConversationStrings,
     /// Rendered instead of the real name of anyone outside `knows`.
     pub unknown_person_name: String,
     /// `you_see.description`.
@@ -2244,6 +2245,7 @@ mod tests {
 
     fn strings() -> PromptStrings {
         PromptStrings {
+            conversation: toml::from_str::<PromptStrings>(include_str!("../../../../assets/prompts/strings.toml")).unwrap().conversation,
             unknown_person_name: "a stranger (you don't know their name)".into(),
             you_see_description: "people within 20 metres, nearest first".into(),
             nothing: "nothing".into(),
@@ -2329,10 +2331,9 @@ same quarter or the same afternoon, you still do not know."#.into(),
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nmarks_note = \"mm\"\nchalkable_note = \"cc\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\nknow_note = \"n\"\nknow_discipline = \"nd\"\nknow_hedge_default_hops0_own = \"%s\"\nknow_hedge_default_hops0 = \"%s\"\nknow_hedge_default_hops1 = \"%s\"\nknow_hedge_default_hops2 = \"%s\"\nknow_hedge_default_hops3 = \"%s\"\nknow_hedge_default_hops4 = \"%s\"\nknow_hedge_default_cold = \"%s\"\nknow_hedge_top_hops0_own = \"%s\"\nknow_hedge_top_hops0 = \"%s\"\nknow_hedge_top_hops1 = \"%s\"\nknow_hedge_top_hops2 = \"%s\"\nknow_hedge_top_hops3 = \"%s\"\nknow_hedge_top_hops4 = \"%s\"\nknow_hedge_top_cold = \"%s\"\nknow_hedge_low_hops0_own = \"%s\"\nknow_hedge_low_hops0 = \"%s\"\nknow_hedge_low_hops1 = \"%s\"\nknow_hedge_low_hops2 = \"%s\"\nknow_hedge_low_hops3 = \"%s\"\nknow_hedge_low_hops4 = \"%s\"\nknow_hedge_low_cold = \"%s\"\nunknown_person_role = \"a %s of %s\"\nday_today = \"today\"\nday_yesterday = \"yesterday\"\nday_days_past = \"%s days past\"\nday_long_ago = \"long ago\"\nplace_unknown = \"somewhere\"\nknown_from = \" from %s\"\n";
-        let toml = format!(
-            "{toml}place_here = \"right here\"\nplace_walk_unavailable = \"unavailable\"\n"
-        );
+        let mut values = strings();
+        values.accept_with = "no placeholder".into();
+        let toml = toml::to_string(&values).expect("the complete strings serialize");
         let error = PromptEnv::new("x", "y", &toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }

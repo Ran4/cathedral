@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe.\"}\nsay {\"target\":\"player\",\"text\":\"I’m Rohese Nett, a spicer and grocer. I trade oils, spices, and provisions at the Wickmarket.\"}",
+  "duration_seconds": 1.80782903,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "courtesy__named_overrides_hint__r3",
+  "prompt_path": "prompts/eade9fcf552d54c0b84c8e78421538da9e41719706737a41d4718b5775460ea4.txt"
+}

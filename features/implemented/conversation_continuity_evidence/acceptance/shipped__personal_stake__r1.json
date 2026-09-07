@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"g9sib\",\"text\":\"Sibbe, those four sparks are due this morning. I need them for my stock—pay me before you trade.\"}",
+  "duration_seconds": 3.5100157960000002,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__personal_stake__r1",
+  "prompt_path": "prompts/b30d72b3a3ecb3034ce2d0253f51777d959b759ad7fde5618afd021ee0da9625.txt"
+}

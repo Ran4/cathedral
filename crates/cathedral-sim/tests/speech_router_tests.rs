@@ -957,6 +957,7 @@ fn a_silent_endpoint_discards_the_utterance_and_releases_the_hold() {
     assert!(speeches(&messages).is_empty());
     assert!(degrades(&messages).is_empty());
     assert_eq!(harness.engine.speech_router().active_stream_count(), 0);
+    assert!(!harness.engine.speech_router().player_composing());
     assert!(speech.calls().contains(&format!("clear:{WAV}")));
 }
 

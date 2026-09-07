@@ -1,0 +1,13 @@
+{
+  "cost_usd": 0.552174,
+  "duration_seconds": 62.6826189,
+  "failures": 0,
+  "usage": [
+    {
+      "cached_prompt_tokens": 385054,
+      "completion_tokens": 9609,
+      "model": "gpt-5.6-luna",
+      "prompt_tokens": 494520
+    }
+  ]
+}

@@ -54,6 +54,14 @@
     ],
     "finished": [
         {
+            "path": "features/implemented/animal_visuals_and_animation.md",
+            "when": "2026-09-07T0357"
+        },
+        {
+            "path": "features/implemented/conversation_continuity.md",
+            "when": "2026-09-06T2226"
+        },
+        {
             "path": "features/implemented/ambient_residents.md",
             "when": "2026-09-06T2046"
         },

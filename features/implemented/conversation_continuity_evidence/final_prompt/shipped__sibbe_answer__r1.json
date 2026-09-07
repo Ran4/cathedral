@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"At my stall in Coswald's Yard: I hold out herring for one spark each, or smoked eel for three. You choose, hand over the sparks, and I pass over the fish.\"}",
+  "duration_seconds": 2.696933607,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__sibbe_answer__r1",
+  "prompt_path": "prompts/68c23ef8c167a8591e0487d32427e7609cb171cac5a6d00cbe93cc5dbb96c695.txt"
+}

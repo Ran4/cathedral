@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’ll set my board at Coswald’s Yard and call the prices: one spark for herring, three for smoked eel. Fresh stock, no cheating.\"}",
+  "duration_seconds": 2.21640337,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__sibbe_answer__r3",
+  "prompt_path": "prompts/36569789a0d431770824e8538ab097abfe3b2da28ab82cbc19e74bc87d18978f.txt"
+}

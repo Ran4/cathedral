@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe.\"}\nsay {\"target\":\"player\",\"text\":\"Measured spices and sealed oils—whatever the day's stock allows. What are you seeking?\"}",
+  "duration_seconds": 2.5233223110000003,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__accepted_interjection__r1",
+  "prompt_path": "prompts/d9c16aa0ce97959a7c9156bedbc47b2ad525d53a3d34a56335801cff237934e1.txt"
+}

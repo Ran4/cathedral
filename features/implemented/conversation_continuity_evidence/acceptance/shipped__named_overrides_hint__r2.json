@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’m Rohese Nett, a spicer. I trade oils, spices, and such goods at the Wickmarket.\"}",
+  "duration_seconds": 1.708222311,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__named_overrides_hint__r2",
+  "prompt_path": "prompts/539ea6177dd48e47432856a9b1be4a6c7ec7b693e217d75168be6008eea959b3.txt"
+}

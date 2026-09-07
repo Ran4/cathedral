@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I'm heading to The Wickmarket to trade.\"}",
+  "duration_seconds": 1.7963614749999999,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__followup_3__r1",
+  "prompt_path": "prompts/92941339b348db63398ad04f077dbd2b5068533eb52526434ab3a8fb76275f68.txt"
+}

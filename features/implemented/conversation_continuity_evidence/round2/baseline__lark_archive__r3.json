@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I was looking for my younger sibling. No luck yet.\"}",
+  "duration_seconds": 2.668976068,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__lark_archive__r3",
+  "prompt_path": "prompts/45839344e5ce73809507dd8a28938a6501322fda9807095fe3088bb8b4abf2a1.txt"
+}

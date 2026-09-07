@@ -32,8 +32,7 @@ use crate::{
     actions::{self, apply_action},
     areas::AreaMap,
     attention::{
-        CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
-        StageConfig, WarmExchanges, on_stage,
+        CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, StageConfig, WarmExchanges, on_stage,
     },
     character::{
         BodySlot, Character, Control, GutEntry, IntentTarget, PocketedUnit, StatusKind,
@@ -82,6 +81,8 @@ macro_rules! speech_context {
             world: &mut $engine.world,
             floor: &mut $engine.floor,
             scheduler: &mut $engine.scheduler,
+            conversation: &mut $engine.conversation,
+            conversation_prose: &$engine.env.strings().conversation,
             transcript: &mut $engine.transcript,
             transcription: $engine.transcription.as_mut(),
             tts: $engine.tts.as_mut(),
@@ -620,6 +621,14 @@ pub enum EngineCommand {
         position_m: Vec3,
         spatial_seq: i64,
     },
+    /// Current unobstructed gaze, sampled by the host; dwell is measured here.
+    PlayerAttention {
+        actor_id: Option<ActorId>,
+    },
+    /// Freeze attention when local or streamed microphone capture starts.
+    PlayerUtteranceStarted {
+        wav_basename: String,
+    },
     SpeechPresented {
         event_id: SpeechEventId,
     },
@@ -1030,23 +1039,14 @@ pub struct Engine {
     /// −∞ so the very first `player_sound` is never inside the cooldown
     /// (`server.py:455`).
     last_player_sound_at: f64,
-    /// The NPC the player last exchanged a *targeted* line with, and when.
-    ///
-    /// The stage's second member: it keeps a conversation partner eligible for
-    /// an idle turn after the player has backed out of `stage.radius_m`
-    /// mid-exchange. Speech is the whole signal — the player addressed them, or
-    /// they addressed the player — and it lapses after
-    /// [`STAGE_PARTNER_MEMORY_SECONDS`], because a partner who never expired
-    /// would keep one NPC thinking in an empty field for the rest of the run.
-    ///
-    /// Broadcast lines need no entry here: to reach the player at all they came
-    /// from inside the 20 m hearing radius, which the stage radius contains.
-    last_player_exchange: Option<(ActorId, f64)>,
+    /// Player engagement and invitations are separate: an unsolicited speaker
+    /// cannot replace the player's established exchange.
+    conversation: crate::conversation::Conversation,
     /// The warm NPC↔NPC exchanges, pair-keyed — the same courtesy the slot
     /// above extends to the player, generalized to the rest of the cast: while
     /// a pair is warm the round holds both of them where they stand
     /// (`features/npcs_stop_walking_when_talking_to_each_other.md`). Kept
-    /// separate from `last_player_exchange` so the player pair's behaviour —
+    /// separate from `conversation` so the player pair's behaviour —
     /// the stage's reserved seat, the hot-channel snapshot — stays exactly as
     /// it was.
     npc_exchanges: WarmExchanges,
@@ -1337,7 +1337,7 @@ impl Engine {
             tts_selected,
             last_snapshot_revision: 0,
             last_player_sound_at: f64::NEG_INFINITY,
-            last_player_exchange: None,
+            conversation: crate::conversation::Conversation::default(),
             npc_exchanges: WarmExchanges::default(),
             novelty: Novelty::default(),
             clock,
@@ -1563,13 +1563,7 @@ impl Engine {
                 for gone in &departed {
                     custody::forget_departed(&mut self.world, gone);
                 }
-                if self
-                    .last_player_exchange
-                    .as_ref()
-                    .is_some_and(|(actor, _)| departed.contains(actor))
-                {
-                    self.last_player_exchange = None;
-                }
+                self.conversation.forget(&departed);
             }
             // The lamp channel (M7): republish the set exactly when a lamp
             // changed — the seed, a lighting, the dawn snuff.
@@ -2121,12 +2115,9 @@ impl Engine {
     }
 
     /// The NPC the player is currently in an exchange with, while it is still
-    /// warm — the stage's reserved seat (see [`Engine::last_player_exchange`]).
+    /// warm — the stage's reserved seat. Invitations cannot steal this seat.
     pub fn conversation_partner(&self, now: f64) -> Option<&ActorId> {
-        self.last_player_exchange
-            .as_ref()
-            .filter(|(_, spoke_at)| now - spoke_at < STAGE_PARTNER_MEMORY_SECONDS)
-            .map(|(actor_id, _)| actor_id)
+        self.conversation.partner(now, &self.world)
     }
 
     /// Purges overdue awaited utterances, then answers.
@@ -2332,6 +2323,17 @@ impl Engine {
                 position_m,
                 spatial_seq,
             } => self.player_say(now, &request_id, &text, position_m, spatial_seq, out),
+
+            EngineCommand::PlayerAttention { actor_id } => {
+                self.conversation.observe_focus(now, actor_id)
+            }
+            EngineCommand::PlayerUtteranceStarted { wav_basename } => {
+                self.speech_router.capture_utterance(
+                    now,
+                    &wav_basename,
+                    &mut speech_context!(self),
+                );
+            }
 
             EngineCommand::PlayerGrabbed { holder_id } => self.player_grabbed(now, &holder_id),
             EngineCommand::PlayerStruggling => self.player_struggling(now),
@@ -2703,8 +2705,8 @@ impl Engine {
     /// The typed-chat `say` (the Enter box), available in every mode. From the
     /// applied `say` onward this is the transcription path
     /// (`speech_router::resolve_transcription`): full sim validation, and being
-    /// heard is followed by the earliest possible reaction — the nearest LLM
-    /// listener takes the next protected player-reaction slot.
+    /// heard is followed by the earliest possible reaction, chosen using the
+    /// same captured attention policy as the microphone path.
     fn player_say(
         &mut self,
         now: f64,
@@ -2714,29 +2716,33 @@ impl Engine {
         spatial_seq: i64,
         out: &mut Vec<EngineMessage>,
     ) {
-        let result = self.apply_player_action(
-            "say",
-            &json!({"text": text}),
-            Some((spatial_seq, position_m)),
-        );
-        if result.is_ok() {
+        let result = (|| -> Result<String, CommandError> {
             let player_id = self.config.player_id.clone();
-            let utterance_position = self.world.characters[&player_id].position_m();
-            let nearest = self
-                .world
-                .characters_within(utterance_position, HEARING_RADIUS_M, Some(&player_id))
-                .into_iter()
-                .find(|candidate| {
-                    self.world
-                        .characters
-                        .get(candidate)
-                        .is_some_and(|character| character.control() == Control::Llm)
-                });
-            if let Some(nearest) = nearest {
-                self.scheduler
-                    .prioritize_player_reaction(&self.world, &nearest, now);
-            }
-        }
+            self.world.update_positions(
+                spatial_seq,
+                &[SpatialActorUpdate::new(player_id.clone(), position_m, None)],
+            )?;
+            let at = self.world.characters[&player_id].position_m();
+            let captured = self.conversation.capture(now, &self.world);
+            let (line, selection) = crate::conversation::speak(
+                now,
+                &mut self.world,
+                &mut self.scheduler,
+                &mut self.conversation,
+                &player_id,
+                &captured,
+                at,
+                text,
+                &self.env.strings().conversation,
+            )?;
+            out.push(EngineMessage::Diagnostic(format!(
+                "[conversation] request={request_id} addressee={} evidence={} captured_at={:.3}",
+                selection.addressee.as_ref().map_or("none", ActorId::as_str),
+                selection.evidence.as_str(),
+                captured.captured_at
+            )));
+            Ok(line)
+        })();
         self.finish_player_action(now, request_id, result, out);
     }
 
@@ -3736,21 +3742,23 @@ impl Engine {
             identify(&self.world.characters[&self.config.player_id], speaker)
         };
 
-        // Who the player is talking with, from the only signal that means it: a
-        // line one of them addressed to the other. It survives him walking out
-        // of the stage radius, and it lapses on its own.
-        //
-        // The partner also stops walking on the spot — before the next movement
-        // slice, or a round errand started this same poll would carry them out
-        // of interaction range while the words are still in the air. The round's
-        // tick keeps them held for as long as the exchange stays warm.
+        // Player engagement owns continuity. NPC lines can confirm it or make
+        // an invitation; a bystander's interjection never transfers ownership.
         if speaker_is_player {
             if let Some(target_id) = &event.target_id {
-                self.last_player_exchange = Some((target_id.clone(), now));
+                self.conversation
+                    .player_addressed(now, target_id, &event.recipient_ids);
+                round::interrupt_for_conversation(&mut self.round, &mut self.world, target_id);
+            } else if let Some(target_id) = event
+                .conversation
+                .as_ref()
+                .and_then(|c| c.addressee.as_ref())
+            {
                 round::interrupt_for_conversation(&mut self.round, &mut self.world, target_id);
             }
-        } else if event.target_id.as_ref() == Some(&self.config.player_id) {
-            self.last_player_exchange = Some((actor_id.clone(), now));
+        } else if event.target_id.as_ref() == Some(&self.config.player_id) && player_can_hear {
+            self.conversation
+                .npc_addressed_player(now, &actor_id, &event.recipient_ids);
             round::interrupt_for_conversation(&mut self.round, &mut self.world, &actor_id);
         } else if let Some(target_id) = &event.target_id {
             // An NPC→NPC targeted line gets the same courtesy, pair-keyed:

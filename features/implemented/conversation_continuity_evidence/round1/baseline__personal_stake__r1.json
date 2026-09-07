@@ -1,0 +1,9 @@
+{
+  "answer": "",
+  "duration_seconds": 4.385367055,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__personal_stake__r1",
+  "prompt_path": "prompts/b87a0db2cc2e18a35dd0f88431845dd7fdaea581b9b095c3df5523503935b42f.txt"
+}

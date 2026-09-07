@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’m carrying herring at one spark each, or smoked eel at three. Pick what you fancy, and I’ll hold it out for you.\"}",
+  "duration_seconds": 1.5883941830000001,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__sibbe_answer__r5",
+  "prompt_path": "prompts/ab09197caae0d1c7694c89fb50a30dcbf4e858d7cfc55cf2c31b12b7e7152498.txt"
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I do—Rohese Nett, spicer. I’m bound for The Wickmarket now; come there and I’ll show you my wares.\"}",
+  "duration_seconds": 1.758209806,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__group_overrides_hint__r2",
+  "prompt_path": "prompts/5b5fbf6a871caa522614eec2bb6c06e778df0eac1a082212970382cff4ca52b0.txt"
+}

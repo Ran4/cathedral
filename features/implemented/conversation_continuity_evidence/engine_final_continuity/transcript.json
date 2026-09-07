@@ -1,0 +1,245 @@
+{
+  "events": [
+    {
+      "at": 0.0,
+      "diagnostic": "fact ashe.salt.short: unknown area 'shambles'; place left unset"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact ashe.salt.short: seeded actor e9nan is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact ashe.salt.short: seeded actor fg2sh is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact ashe.salt.short: subject fg2sh is not in this world; row skipped"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: unknown area 'wickmarket'; place left unset"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: seeded actor dclsk is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: seeded actor dv8ll is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: seeded actor p000x is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: subject dv8ll is not in this world; row skipped"
+    },
+    {
+      "at": 0.7,
+      "diagnostic": "[conversation] request=line-1 addressee=g9sib evidence=explicit name captured_at=0.700"
+    },
+    {
+      "at": 0.7,
+      "hearers": [
+        "g9sib",
+        "x00428",
+        "p009a"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "Sibbe, where are you going to trade?"
+    },
+    {
+      "at": 2.392590485,
+      "hearers": [
+        "player",
+        "x00428",
+        "p009a"
+      ],
+      "speaker": "g9sib",
+      "target": "player",
+      "text": "Coswald's Yard, to sell herring and smoked eel."
+    },
+    {
+      "at": 2.392590485,
+      "diagnostic": "[conversation] request=line-2 addressee=g9sib evidence=ongoing exchange captured_at=2.393"
+    },
+    {
+      "at": 2.392590485,
+      "hearers": [
+        "p009a",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "How are you going to trade?"
+    },
+    {
+      "at": 7.584176692999989,
+      "hearers": [
+        "p009a",
+        "player",
+        "x00428"
+      ],
+      "speaker": "g9sib",
+      "target": "player",
+      "text": "I’ll offer herring for one spark each and smoked eel for three, bargain honestly, and take the sparks when the goods change hands."
+    },
+    {
+      "at": 19.446136534,
+      "diagnostic": "[conversation] request=line-3 addressee=none evidence=open group language captured_at=19.446"
+    },
+    {
+      "at": 19.446136534,
+      "hearers": [
+        "p009a",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "Does anyone here sell spices?"
+    },
+    {
+      "at": 21.53899181,
+      "hearers": [
+        "player",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "p009a",
+      "target": "player",
+      "text": "I do—Rohese Nett, grocer and spicer. I’m bound for the Wickmarket with spices and sealed oils."
+    },
+    {
+      "at": 32.7010093800001,
+      "hearers": [
+        "g9sib",
+        "p009a",
+        "player"
+      ],
+      "speaker": "x00428",
+      "target": "player",
+      "text": "Rohese Nett there is a grocer and spicer; she has spices and sealed oils, bound for the Wickmarket."
+    },
+    {
+      "at": 32.7010093800001,
+      "diagnostic": "[conversation] request=line-4 addressee=p009a evidence=explicit name captured_at=32.701"
+    },
+    {
+      "at": 32.7010093800001,
+      "hearers": [
+        "p009a",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "Rohese, where do you trade?"
+    },
+    {
+      "at": 41.332339282000206,
+      "hearers": [
+        "player",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "p009a",
+      "target": "player",
+      "text": "At the Wickmarket, with my spices and sealed oils."
+    },
+    {
+      "at": 48.74484009000028,
+      "diagnostic": "[conversation] request=line-5 addressee=p009a evidence=ongoing exchange captured_at=48.745"
+    },
+    {
+      "at": 48.74484009000028,
+      "hearers": [
+        "p009a",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "And what will you sell there?"
+    },
+    {
+      "at": 50.15684170300028,
+      "hearers": [
+        "player",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "p009a",
+      "target": "player",
+      "text": "Spices and sealed oils—good pepper, fragrant herbs, and oils kept tight against the dust."
+    },
+    {
+      "at": 60.079510910000394,
+      "diagnostic": "[conversation] request=line-6 addressee=g9sib evidence=explicit name captured_at=60.080"
+    },
+    {
+      "at": 60.079510910000394,
+      "hearers": [
+        "p009a",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "Sibbe, how much is your smoked eel?"
+    },
+    {
+      "at": 61.550338325000396,
+      "hearers": [
+        "p009a",
+        "player",
+        "x00428"
+      ],
+      "speaker": "g9sib",
+      "target": "player",
+      "text": "Three sparks each, fair and honest."
+    }
+  ],
+  "steps": [
+    {
+      "at": 2.392590485,
+      "calls": 1,
+      "label": "establish_sibbe",
+      "partner": "g9sib"
+    },
+    {
+      "at": 19.446136534,
+      "calls": 3,
+      "label": "nearer_bystander_followup",
+      "partner": "g9sib"
+    },
+    {
+      "at": 32.7010093800001,
+      "calls": 3,
+      "label": "open_group",
+      "partner": "g9sib"
+    },
+    {
+      "at": 48.74484009000028,
+      "calls": 3,
+      "label": "named_switch",
+      "partner": "p009a"
+    },
+    {
+      "at": 60.079510910000394,
+      "calls": 3,
+      "label": "switch_followup",
+      "partner": "p009a"
+    },
+    {
+      "at": 68.02237151000024,
+      "calls": 3,
+      "label": "return_to_sibbe",
+      "partner": "g9sib"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Common spices and costly oils, weighed honestly and kept under seal. I can tell you what I have when we reach the Wickmarket.\"}",
+  "duration_seconds": 2.594748527,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__accepted_interjection__r1",
+  "prompt_path": "prompts/918584baf650c64b5b37a7ddda0dc5ce254a0b203291d187f08efe52ea3ae3ac.txt"
+}

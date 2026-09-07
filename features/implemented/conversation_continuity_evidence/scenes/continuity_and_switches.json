@@ -1,0 +1,114 @@
+{
+  "seed": {
+    "characters": [
+      {
+        "id": "g9sib",
+        "name": "Sibbe Skell",
+        "back_story": "You are an eel and herring trader. Today you are heading to Coswald's Yard to sell herring for one spark each and smoked eel for three sparks each. You bargain briskly but honestly.",
+        "control": "llm",
+        "location_description": "Beside the Shambles well",
+        "voice_key": null,
+        "position_m": {
+          "x": 0,
+          "y": 0.91,
+          "z": 4
+        },
+        "holds": [],
+        "memories": [],
+        "knows": []
+      },
+      {
+        "id": "p009a",
+        "name": "Rohese Nett",
+        "back_story": "You are a grocer and spicer. Today you are heading to the Wickmarket to sell spices and sealed oils. You bargain cheerfully and remember exact sums. You do not sell fish.",
+        "control": "llm",
+        "location_description": "Beside the Shambles well",
+        "voice_key": null,
+        "position_m": {
+          "x": 9,
+          "y": 0.91,
+          "z": 4
+        },
+        "holds": [],
+        "memories": [],
+        "knows": []
+      },
+      {
+        "id": "x00428",
+        "name": "Bertran Pike",
+        "back_story": "You are a quiet elderly resident resting beside the well. You have no business with these traders and no goods for sale.",
+        "control": "llm",
+        "location_description": "Beside the Shambles well",
+        "voice_key": null,
+        "position_m": {
+          "x": -8,
+          "y": 0.91,
+          "z": 5
+        },
+        "holds": [],
+        "memories": [],
+        "knows": []
+      },
+      {
+        "id": "player",
+        "name": "Player",
+        "back_story": "A human visitor.",
+        "control": "player",
+        "location_description": "Beside the Shambles well",
+        "voice_key": null,
+        "position_m": {
+          "x": 0,
+          "y": 0.91,
+          "z": 0
+        },
+        "holds": [],
+        "memories": [],
+        "knows": []
+      }
+    ]
+  },
+  "steps": [
+    {
+      "label": "establish_sibbe",
+      "text": "Sibbe, where are you going to trade?",
+      "focus": "g9sib",
+      "focus_seconds": 0.7,
+      "turns": 1
+    },
+    {
+      "label": "nearer_bystander_followup",
+      "moves": [
+        [
+          "p009a",
+          [
+            0,
+            0.91,
+            1.4
+          ]
+        ]
+      ],
+      "text": "How are you going to trade?",
+      "turns": 3
+    },
+    {
+      "label": "open_group",
+      "text": "Does anyone here sell spices?",
+      "turns": 3
+    },
+    {
+      "label": "named_switch",
+      "text": "Rohese, where do you trade?",
+      "turns": 3
+    },
+    {
+      "label": "switch_followup",
+      "text": "And what will you sell there?",
+      "turns": 3
+    },
+    {
+      "label": "return_to_sibbe",
+      "text": "Sibbe, how much is your smoked eel?",
+      "turns": 3
+    }
+  ]
+}

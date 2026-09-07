@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I keep spices under seal, and deal in whatever the market brings; I can show you my stock at the Wickmarket.\"}",
+  "duration_seconds": 3.9928947150000003,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__accepted_interjection__r3",
+  "prompt_path": "prompts/2878798b08759c89c2c2e908cce754d9e6ef90e9a458f1a65fbe95f901a0cbc1.txt"
+}

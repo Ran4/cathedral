@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I trade in spices, oils, and grocer's goods. Today you'll find me at the Wickmarket.\"}",
+  "duration_seconds": 1.237687449,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__new_exchange__r5",
+  "prompt_path": "prompts/06a0a9a4e8045dfce8240729f9edec11166a468b8296849ae5b97db9bde3231c.txt"
+}

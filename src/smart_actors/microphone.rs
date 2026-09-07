@@ -188,6 +188,22 @@ impl MicrophoneService {
         )
     }
 
+    #[cfg(test)]
+    pub fn event_harness_for_tests() -> (Self, Sender<MicrophoneEvent>) {
+        let (events_tx, events) = bounded(16);
+        (
+            Self {
+                commands: bounded(8).0,
+                events,
+                shutdown: bounded(1).0,
+                stopped: bounded(1).1,
+                worker: None,
+                cleanup_dir: None,
+            },
+            events_tx,
+        )
+    }
+
     pub fn try_send(&self, command: MicrophoneCommand) -> Result<(), String> {
         self.commands
             .try_send(command)

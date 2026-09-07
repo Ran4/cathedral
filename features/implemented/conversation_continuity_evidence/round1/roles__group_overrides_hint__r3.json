@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I am a spicer, but I have no spices on me just now. I’m bound for the Wickmarket—there you may find my stall.\"}",
+  "duration_seconds": 2.850385751,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__group_overrides_hint__r3",
+  "prompt_path": "prompts/57840e86b015bf9c2b768f26f6a9bda5bc44680929c7b9788781b9aeac884a4f.txt"
+}

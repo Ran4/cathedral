@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’m Rohese Nett, a spicer, but I’ve no spices on me at present. You’ll find traders at the Wickmarket.\"}",
+  "duration_seconds": 2.033145671,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__group_question__r2",
+  "prompt_path": "prompts/80ccd5f202d66287214ffe34fdf630d172233db1d01cd41a77a754ac1338fc36.txt"
+}

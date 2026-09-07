@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe\"}\nsay {\"target\":\"player\",\"text\":\"I’m Rohese Nett, a spicer and grocer in Weigh Ward. I trade oils, spices, and such goods—today I’m bound for the Wickmarket.\"}",
+  "duration_seconds": 2.131676564,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__named_overrides_hint__r3",
+  "prompt_path": "prompts/c3738f614f0ae65518669b18a2375294f1ccf329e04fbd7b41a06c667d689320.txt"
+}

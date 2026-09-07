@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Rohese Nett, spicer of the Weigh Ward. I trade in oils, spices, and such honest measures as keep a market sound.\"}",
+  "duration_seconds": 2.399782946,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__deliberate_gaze_switch__r3",
+  "prompt_path": "prompts/adc364ae22d6f27bae281586bb4cd3994e2b545a54e0e5f35e3cc1be3d7d38bc.txt"
+}

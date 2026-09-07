@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I am a spicer, but I carry no spices with me just now. I trade at the Wickmarket—find me there.\"}\ntell_way {\"person\":\"player\",\"place_id\":\"pl_t7rf\"}",
+  "duration_seconds": 2.499876721,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__group_question__r1",
+  "prompt_path": "prompts/c0884c78958d62b62cc4e031e4fd121a14d93a436ff4feee459f37e6827668b3.txt"
+}

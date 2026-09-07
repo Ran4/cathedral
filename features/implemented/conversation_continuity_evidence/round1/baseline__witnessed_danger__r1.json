@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Look out! A roof tile is breaking loose above you!\"}",
+  "duration_seconds": 2.391783881,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__witnessed_danger__r1",
+  "prompt_path": "prompts/426dbe6e437eb9eea686a02dc1b256d9d1f9bfea23727556a749381a1156b583.txt"
+}

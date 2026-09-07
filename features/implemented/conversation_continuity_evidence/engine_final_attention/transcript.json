@@ -1,0 +1,198 @@
+{
+  "events": [
+    {
+      "at": 0.0,
+      "diagnostic": "fact ashe.salt.short: unknown area 'shambles'; place left unset"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact ashe.salt.short: seeded actor e9nan is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact ashe.salt.short: seeded actor fg2sh is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact ashe.salt.short: subject fg2sh is not in this world; row skipped"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: unknown area 'wickmarket'; place left unset"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: seeded actor dclsk is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: seeded actor dv8ll is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: seeded actor p000x is not in this world; dropped from seeded"
+    },
+    {
+      "at": 0.0,
+      "diagnostic": "fact vell.stall.pitch: subject dv8ll is not in this world; row skipped"
+    },
+    {
+      "at": 0.7,
+      "diagnostic": "[conversation] request=line-1 addressee=g9sib evidence=explicit name captured_at=0.700"
+    },
+    {
+      "at": 0.7,
+      "hearers": [
+        "g9sib",
+        "x00428",
+        "p009a"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "Sibbe, where are you going to trade?"
+    },
+    {
+      "at": 2.984827536,
+      "hearers": [
+        "player",
+        "x00428",
+        "p009a"
+      ],
+      "speaker": "g9sib",
+      "target": "player",
+      "text": "Coswald's Yard. I mean to sell herring for a spark each, and smoked eel for three."
+    },
+    {
+      "at": 3.1848275360000002,
+      "diagnostic": "[conversation] request=line-2 addressee=g9sib evidence=ongoing exchange captured_at=3.185"
+    },
+    {
+      "at": 3.1848275360000002,
+      "hearers": [
+        "p009a",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "What are you selling?"
+    },
+    {
+      "at": 10.538432242999983,
+      "hearers": [
+        "p009a",
+        "player",
+        "x00428"
+      ],
+      "speaker": "g9sib",
+      "target": "player",
+      "text": "Herring and smoked eel are my trade, though I have none on me just now."
+    },
+    {
+      "at": 19.783003396999998,
+      "diagnostic": "[conversation] request=line-3 addressee=p009a evidence=sustained attention captured_at=19.783"
+    },
+    {
+      "at": 19.783003396999998,
+      "hearers": [
+        "p009a",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "And you, what do you trade?"
+    },
+    {
+      "at": 21.557779055999998,
+      "hearers": [
+        "player",
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "p009a",
+      "target": "player",
+      "text": "I am a grocer and spicer. I trade spices and sealed oils at the Wickmarket."
+    },
+    {
+      "at": 31.08665757700009,
+      "diagnostic": "[conversation] request=line-4 addressee=g9sib evidence=explicit name captured_at=31.087"
+    },
+    {
+      "at": 31.08665757700009,
+      "hearers": [
+        "g9sib",
+        "x00428"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "Sibbe, are you still here?"
+    },
+    {
+      "at": 32.20452162100009,
+      "hearers": [
+        "player",
+        "x00428"
+      ],
+      "speaker": "g9sib",
+      "target": "player",
+      "text": "Aye, still here. I’m bound for Coswald’s Yard to trade my herring and smoked eel."
+    },
+    {
+      "at": 74.67565238200018,
+      "diagnostic": "[conversation] request=line-5 addressee=p009a evidence=proximity only captured_at=74.676"
+    },
+    {
+      "at": 74.67565238200018,
+      "hearers": [
+        "p009a",
+        "x00428"
+      ],
+      "speaker": "player",
+      "target": null,
+      "text": "Hello. What is your name?"
+    },
+    {
+      "at": 75.87874421400018,
+      "hearers": [
+        "player",
+        "x00428"
+      ],
+      "speaker": "p009a",
+      "target": "player",
+      "text": "My name is Rohese Nett."
+    }
+  ],
+  "steps": [
+    {
+      "at": 2.984827536,
+      "calls": 1,
+      "label": "establish_sibbe",
+      "partner": "g9sib"
+    },
+    {
+      "at": 19.083003397,
+      "calls": 3,
+      "label": "brief_glance",
+      "partner": "g9sib"
+    },
+    {
+      "at": 31.08665757700009,
+      "calls": 3,
+      "label": "sustained_attention",
+      "partner": "p009a"
+    },
+    {
+      "at": 39.67565238200018,
+      "calls": 2,
+      "label": "partner_departs",
+      "partner": "g9sib"
+    },
+    {
+      "at": 79.48239712300004,
+      "calls": 2,
+      "label": "silence_then_new_person",
+      "partner": "p009a"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "wait {}",
+  "duration_seconds": 1.584678719,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__followup_2__r4",
+  "prompt_path": "prompts/85b890fef4dffd67df72019e8d9aecb1923bcc0a0ff7db1884d1cfc4cadfefc1.txt"
+}

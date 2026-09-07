@@ -4,13 +4,14 @@
 //! never simulated: no per-rat entities, no colliders, no nav rebake, no sim
 //! verb, and an ordinary rat never costs a token. The chimney-smoke pattern at
 //! smaller scale: one `Vermin` entity, one batched mesh rewritten per frame,
-//! and per-rat motion a pure function of the clock — each rat's
+//! and per-rat routes a pure function of the clock — each rat's
 //! sprint–pause–sprint waypoint loop is baked once at startup from
 //! `(colony seed, rat index)` and validated against the same navigation and
 //! collision the player walks, so a rat is confined by *reading* the world,
 //! never by writing a collider into it (`collision_footprints.json` stays
-//! byte-identical). The only mutable state is one scatter impulse per colony:
-//! rats that ignore you are wallpaper; rats that flee you are alive.
+//! byte-identical). Fixed-size cosmetic state follows the final displacement,
+//! with one scatter impulse per colony: rats that ignore you are wallpaper;
+//! rats that flee you are alive.
 //!
 //! Once a game night one colony *boils* (M2): from the Snuffing to the Kindling
 //! its count triples and its reach doubles — purely more of the same rats, off a
@@ -64,7 +65,7 @@ const SCATTER_TOTAL_S: f32 = 3.0;
 /// How far the dart carries at full effect.
 const SCATTER_FLEE_M: f32 = 1.7;
 /// Where a rat's feet sit: just above the 0.012 m road and site surfaces.
-const RAT_GROUND_Y: f32 = 0.03;
+const RAT_GROUND_Y: f32 = 0.0125;
 /// The height colliders are probed at when a waypoint is validated — inside a
 /// wall or crate, above kerbs and thresholds a rat may cross.
 const RAT_PROBE_Y: f32 = 0.15;
@@ -204,6 +205,7 @@ struct Rat {
     length_m: f32,
     /// Coat brightness jitter around the shared dark brown.
     tint: f32,
+    motion: RatMotion,
 }
 
 struct Colony {
@@ -216,7 +218,7 @@ struct Colony {
     /// doubled radius and kept apart from them so an ordinary frame — every
     /// frame but one colony's, one night in eight — skips it for free.
     boil_rats: Vec<Rat>,
-    /// Where somebody's foot fell and when — the one piece of mutable state.
+    /// The colony-wide footfall impulse; cosmetic pose state lives on each rat.
     scatter: Option<(Vec2, f32)>,
 }
 
@@ -410,10 +412,20 @@ fn bake_rat(
         phase: unit(seed, 31) * now,
         length_m: 0.24 + 0.08 * unit(seed, 32),
         tint: 0.8 + 0.35 * unit(seed, 33),
+        motion: RatMotion::default(),
     })
 }
 
 impl Rat {
+    /// The budget available to a cosmetic action before the next baked departure.
+    fn pause_remaining(&self, elapsed: f32) -> f32 {
+        let t = (elapsed + self.phase).rem_euclid(self.period.max(0.001));
+        self.legs
+            .iter()
+            .find(|leg| t < leg.arrive)
+            .map_or(0.0, |leg| (leg.depart - t).max(0.0))
+    }
+
     /// Position, facing and gait on the loop at wall-clock `elapsed` — a pure
     /// function of time, like a smoke puff on its arc.
     fn sample(&self, elapsed: f32) -> (Vec2, Vec2, bool) {
@@ -668,8 +680,8 @@ pub(super) fn spawn_vermin(
 /// The boil's bookkeeping half (`features/rats.md` M2): the once-a-night log
 /// line the feature is verified by, and the one crossing the whole feature
 /// makes into the simulation. The drawing half is [`animate_vermin`], which
-/// carries no state at all — it asks [`boiling_colony_now`] the same question
-/// and gets the same answer.
+/// derives the same colony selection — it asks [`boiling_colony_now`] the same question
+/// and gets the same answer. Cosmetic pose state remains local to each rat.
 ///
 /// The percept is an unattributed world sound at the colony's anchor, so an NPC
 /// standing in the boil hears it on their next turn exactly as they hear the
@@ -878,7 +890,7 @@ pub(super) fn animate_vermin(
     weather: Option<Res<WorldWeatherState>>,
     collision: Res<CollisionWorld>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
-    vermin: Query<(&Vermin, &Mesh3d)>,
+    mut vermin: Query<(&mut Vermin, &Mesh3d)>,
     mut meshes: ResMut<Assets<Mesh>>,
     // Held across frames: a boiling colony's batch is the same size every frame
     // it boils, so growing five fresh `Vec`s to it each time was work with no
@@ -894,10 +906,11 @@ pub(super) fn animate_vermin(
     let clock = clock.as_deref();
     let suppressed = rain_suppressed(weather.as_deref());
 
-    for (vermin, mesh_handle) in &vermin {
+    for (mut vermin, mesh_handle) in &mut vermin {
+        let vermin = &mut *vermin;
         let batch = &mut *scratch;
         let boiling = boiling_colony_now(clock, vermin.seed, vermin.colonies.len());
-        for (index, colony) in vermin.colonies.iter().enumerate() {
+        for (index, colony) in vermin.colonies.iter_mut().enumerate() {
             let Some(showing) = colony_showing(colony.all_offices, boiling == Some(index), clock)
             else {
                 continue;
@@ -906,28 +919,37 @@ pub(super) fn animate_vermin(
             if colony.anchor.distance_squared(camera_position.xz()) > colony_range * colony_range {
                 continue;
             }
-            for (rat_index, rat) in colony.showing_rats(showing).enumerate() {
+            let scatter = colony.scatter;
+            let extra = if matches!(showing, Showing::Boil) {
+                colony.boil_rats.as_mut_slice()
+            } else {
+                &mut []
+            };
+            for (rat_index, rat) in colony.rats.iter_mut().chain(extra).enumerate() {
                 // Heavy rain thins the colony to a stray third, matching the
                 // animals going quiet in the soundscape.
                 if suppressed && rat_index % 3 != 0 {
                     continue;
                 }
-                let (loop_position, loop_heading, sprinting) = rat.sample(elapsed);
+                let (loop_position, loop_heading, _) = rat.sample(elapsed);
                 let offset = scatter_offset(
                     &vermin.nav,
                     &collision,
                     rat,
                     loop_position,
-                    colony.scatter,
+                    scatter,
                     elapsed,
                 );
-                let fleeing = offset.length_squared() > 0.0025;
                 let position = loop_position + offset;
-                let heading = if fleeing {
-                    offset.normalize_or(loop_heading)
-                } else {
-                    loop_heading
-                };
+                let pause_remaining = rat.pause_remaining(elapsed);
+                let pose = rat.motion.update(
+                    rat.seed,
+                    rat.length_m,
+                    position,
+                    loop_heading,
+                    elapsed,
+                    pause_remaining,
+                );
                 push_rat(
                     &mut batch.positions,
                     &mut batch.normals,
@@ -936,9 +958,7 @@ pub(super) fn animate_vermin(
                     &mut batch.indices,
                     rat,
                     position,
-                    heading,
-                    sprinting || fleeing,
-                    elapsed,
+                    &pose,
                 );
             }
         }
@@ -947,57 +967,594 @@ pub(super) fn animate_vermin(
 }
 
 // ---------------------------------------------------------------------------
-// The rat itself: one lofted hull and a few authored quads, written straight
+// The rat itself: a continuous hull and small shaped features, written straight
 // into the batch each frame like a smoke puff. There is no per-rat mesh asset
 // to place, so the gait is free to reshape the body — stretch it into a
 // sprint, beat the legs, whip the tail — without a rig.
 // ---------------------------------------------------------------------------
 
-/// Cross-sections around the body hull. Six smooth-shaded sectors read as a
-/// rounded barrel at rat scale, and the flat face they leave under the belly
-/// sits close over the ground like a crouch.
-const BODY_SECTORS: usize = 6;
-/// Stations along the body hull, nose tip to tail root.
-const BODY_STATIONS: usize = 8;
-/// The tail is a triangular tube — the cheapest closed form that reads from
-/// street level and from a bridge overhead alike.
-const TAIL_SECTORS: usize = 3;
-const TAIL_STATIONS: usize = 5;
+const BODY_SECTORS: usize = 12;
+const BODY_STATIONS: usize = 14;
+const TAIL_SECTORS: usize = 6;
+const TAIL_STATIONS: usize = 11;
 
-/// The body hull for the 0.28 m reference rat, `(along, half_width,
-/// half_height, spine_height)` in metres; `Rat::length_m` scales the whole
-/// frame. The profile is the rat silhouette itself: a pointed muzzle, a low
-/// head, the back arched over the haunches, the rump falling away to the tail
-/// root. The two end stations are a few millimetres wide and left open rather
-/// than capped — at 25 cm a 4 mm hole never covers a pixel, and the tail tube
-/// plugs the rump's.
+/// Nose to rump, in metres for a 28 cm rat. The low shoulder saddle separates
+/// the cranium from the rounded haunch without a seam between body parts.
 const BODY_PROFILE: [(f32, f32, f32, f32); BODY_STATIONS] = [
-    (0.140, 0.004, 0.004, 0.030),  // nose tip
-    (0.116, 0.012, 0.011, 0.034),  // muzzle
-    (0.086, 0.024, 0.022, 0.044),  // head — the eyes and ears sit here
-    (0.044, 0.032, 0.030, 0.051),  // shoulders
-    (-0.006, 0.038, 0.036, 0.055), // mid-back
-    (-0.068, 0.042, 0.040, 0.058), // haunches, the arch's peak
-    (-0.116, 0.028, 0.026, 0.044), // rump
-    (-0.140, 0.010, 0.009, 0.031), // tail root
+    (0.148, 0.0045, 0.004, 0.043), // small nose above a shallow chin
+    (0.140, 0.008, 0.006, 0.042),
+    (0.124, 0.014, 0.010, 0.040), // muzzle and chin share the same surface
+    (0.111, 0.018, 0.014, 0.044),
+    (0.102, 0.026, 0.022, 0.047), // cheek below the orbital ridge
+    (0.083, 0.029, 0.028, 0.054), // rounded cranium
+    (0.060, 0.026, 0.025, 0.050),
+    (0.035, 0.031, 0.032, 0.056),
+    (-0.028, 0.043, 0.042, 0.058),
+    (-0.063, 0.047, 0.047, 0.063),
+    (-0.095, 0.043, 0.044, 0.059),
+    (-0.123, 0.029, 0.031, 0.044),
+    (-0.138, 0.017, 0.018, 0.032),
+    (-0.151, 0.0065, 0.0075, 0.024), // fur narrows over the naked tail root
 ];
 
-/// Vertices one rat writes into the batch: the hull, the tail tube, two ears,
-/// two eyes and four legs. The gait bends the body but never its topology, so
-/// the counting tests multiply by this whatever the clock says.
-const RAT_VERTICES: usize =
-    BODY_STATIONS * BODY_SECTORS + TAIL_STATIONS * TAIL_SECTORS + 2 * 4 + 2 * 4 + 4 * 4;
+// Constant topology, including the underside of the ears and all twelve toes.
+const RAT_VERTICES: usize = BODY_STATIONS * BODY_SECTORS
+    + TAIL_STATIONS * TAIL_SECTORS
+    + 2 * 26
+    + 3 * 14
+    + 2 * 26
+    + 4 * (18 + 14 + 3 * 6)
+    + 6 * 4;
+
+/// Local attachment points in the frozen 28 cm appearance.
+const RAT_LEGS: [(f32, f32, f32); 4] = [
+    (0.050, 0.024, 0.032),
+    (0.050, -0.024, 0.032),
+    (-0.075, 0.030, 0.038),
+    (-0.075, -0.030, 0.038),
+];
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum RatAction {
+    #[default]
+    Quiet,
+    Sniff,
+    Alert,
+    Groom,
+}
+
+/// All dimensions in this pose are cosmetic; no geometry requests navigation.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct RatPose {
+    heading: Vec2,
+    speed: f32,
+    phase: f32,
+    tail_phase: f32,
+    travel: f32,
+    turn: f32,
+    sniff: f32,
+    alert: f32,
+    groom: f32,
+    head_yaw: f32,
+    head_bow: f32,
+    nose: f32,
+    ears: [f32; 2],
+    tail_bend: f32,
+    tail_tip: f32,
+    /// World-sized offsets expressed in the visible body's forward/up/side frame.
+    feet: [Vec3; 4],
+    paw_curl: [f32; 4],
+    action: RatAction,
+}
+impl Default for RatPose {
+    fn default() -> Self {
+        Self {
+            heading: Vec2::X,
+            speed: 0.0,
+            phase: 0.0,
+            tail_phase: 0.0,
+            travel: 0.0,
+            turn: 0.0,
+            sniff: 0.0,
+            alert: 0.0,
+            groom: 0.0,
+            head_yaw: 0.0,
+            head_bow: 0.0,
+            nose: 0.0,
+            ears: [0.0; 2],
+            tail_bend: 0.0,
+            tail_tip: 0.0,
+            feet: [Vec3::ZERO; 4],
+            paw_curl: [0.0; 4],
+            action: RatAction::Quiet,
+        }
+    }
+}
+
+/// Retained, fixed-size cosmetic state: no entities, allocations or events.
+#[derive(Clone, Debug, Default)]
+struct RatMotion {
+    last_time: Option<f32>,
+    last_position: Vec2,
+    tail_heading: Vec2,
+    phase: f32,
+    tail_phase: f32,
+    feet: [Vec2; 4],
+    swing_from: [Vec2; 4],
+    foot_height: [f32; 4],
+    was_stance: [bool; 4],
+    wash_offset: [Vec3; 2],
+    wash_curl: [f32; 2],
+    idle_age: f32,
+    bout: u64,
+    action: RatAction,
+    action_age: f32,
+    action_duration: f32,
+    next_action: f32,
+    pose: RatPose,
+}
+
+fn rat_smooth(t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+/// End an ease at a visually negligible boundary. Otherwise f32 subtraction
+/// can stall at the smallest subnormal and make every subsequent vertex costly.
+fn rat_snap(value: f32, epsilon: f32) -> f32 {
+    if value.abs() < epsilon { 0.0 } else { value }
+}
+
+fn rat_angle(from: Vec2, to: Vec2) -> f32 {
+    from.perp_dot(to).atan2(from.dot(to))
+}
+
+impl RatMotion {
+    /// Follow the *final* validated position, including scatter attack/hold/return.
+    /// The caller evaluates navigation once; this method only observes its result.
+    fn update(
+        &mut self,
+        seed: u64,
+        length_m: f32,
+        position: Vec2,
+        heading_hint: Vec2,
+        elapsed: f32,
+        pause_remaining: f32,
+    ) -> RatPose {
+        let scale = length_m / 0.28;
+        let dt = self.last_time.map_or(f32::INFINITY, |last| elapsed - last);
+        if dt == 0.0 {
+            return self.pose;
+        }
+        let displacement = position - self.last_position;
+        // A newly visible rat must not turn a hidden minute into one enormous stride.
+        if !dt.is_finite() || !(0.0..=0.25).contains(&dt) || displacement.length() > 1.0 {
+            *self = Self::default();
+            self.last_time = Some(elapsed);
+            self.last_position = position;
+            self.pose.heading = heading_hint.normalize_or(Vec2::X);
+            self.tail_heading = self.pose.heading;
+            self.next_action = 0.22 + unit(seed, 701) * 0.23;
+            let side = self.pose.heading.perp();
+            for (index, (along, flank, _)) in RAT_LEGS.into_iter().enumerate() {
+                let rest = Vec2::new(
+                    along + if index < 2 { 0.008 } else { -0.006 },
+                    flank + flank.signum() * 0.007,
+                ) * scale;
+                self.feet[index] = position + self.pose.heading * rest.x + side * rest.y;
+                self.swing_from[index] = self.feet[index];
+                self.was_stance[index] = true;
+                self.pose.feet[index] = Vec3::new(rest.x, 0.0, rest.y);
+            }
+            return self.pose;
+        }
+        self.last_time = Some(elapsed);
+        self.last_position = position;
+        let distance = displacement.length();
+        let speed = distance / dt;
+        let moving = speed > 0.025;
+        let yaw_error = if moving {
+            rat_angle(self.pose.heading, displacement / distance)
+        } else {
+            0.0
+        };
+        let heading = if moving {
+            let target = displacement / distance;
+            let turn = rat_angle(self.pose.heading, target).clamp(-26.0 * dt, 26.0 * dt);
+            Vec2::from_angle(turn)
+                .rotate(self.pose.heading)
+                .normalize_or(target)
+        } else {
+            self.pose.heading
+        };
+        let tail_turn = rat_angle(self.tail_heading, heading);
+        self.tail_heading = if tail_turn.abs() < 0.0001 {
+            heading
+        } else {
+            Vec2::from_angle(tail_turn * (1.0 - (-5.5 * dt).exp()))
+                .rotate(self.tail_heading)
+                .normalize_or(heading)
+        };
+        let side = heading.perp();
+        let stride = 0.18 * scale;
+        if moving {
+            self.phase = (self.phase + distance / stride).rem_euclid(1.0);
+            self.tail_phase = (self.tail_phase + distance / stride * 0.5).rem_euclid(1.0);
+        }
+        let travel_target = if moving { (speed / 0.8).min(1.0) } else { 0.0 };
+        let travel = rat_snap(
+            self.pose.travel + (travel_target - self.pose.travel) * (1.0 - (-22.0 * dt).exp()),
+            0.0001,
+        );
+        let turn_target = (yaw_error.abs() / 1.3).min(1.0);
+        let turn = rat_snap(
+            self.pose.turn + (turn_target - self.pose.turn) * (1.0 - (-20.0 * dt).exp()),
+            0.0001,
+        );
+        if moving {
+            if self.idle_age > 0.0 {
+                self.bout = self.bout.wrapping_add(1);
+            }
+            self.idle_age = 0.0;
+            self.action = RatAction::Quiet;
+            self.action_age = 0.0;
+            self.next_action = 0.18 + unit(seed, 701 + self.bout * 17) * 0.22;
+        } else {
+            self.idle_age += dt;
+            self.action_age += dt;
+            if self.action != RatAction::Quiet && self.action_age >= self.action_duration {
+                self.action = RatAction::Quiet;
+                self.next_action = self.idle_age + 0.22 + unit(seed, 705 + self.bout * 17) * 0.45;
+                self.bout = self.bout.wrapping_add(1);
+            }
+            if self.action == RatAction::Quiet
+                && self.idle_age >= self.next_action
+                && pause_remaining > 0.38
+            {
+                let choice = mix(seed ^ self.bout.wrapping_mul(31) ^ 0xace5) % 5;
+                let (action, duration) = if choice == 0 && pause_remaining > 1.82 {
+                    (
+                        RatAction::Groom,
+                        (1.58 + unit(seed, 710 + self.bout) * 0.16).min(pause_remaining - 0.12),
+                    )
+                } else if choice == 1 && pause_remaining > 0.75 {
+                    (RatAction::Alert, 0.58 + unit(seed, 711 + self.bout) * 0.16)
+                } else {
+                    (
+                        RatAction::Sniff,
+                        (0.62 + unit(seed, 712 + self.bout) * 0.34).min(pause_remaining - 0.12),
+                    )
+                };
+                self.action = action;
+                self.action_age = 0.0;
+                self.action_duration = duration;
+            }
+        }
+        let envelope = rat_smooth(self.action_age / 0.14)
+            * rat_smooth((self.action_duration - self.action_age) / 0.18)
+            * rat_smooth(pause_remaining / 0.13);
+        let blend = 1.0 - (-28.0 * dt).exp();
+        let weight = |old: f32, action: RatAction| {
+            rat_snap(
+                old + ((if self.action == action { envelope } else { 0.0 }) - old) * blend,
+                0.0001,
+            )
+        };
+        let sniff = weight(self.pose.sniff, RatAction::Sniff);
+        let alert = weight(self.pose.alert, RatAction::Alert);
+        let groom = weight(self.pose.groom, RatAction::Groom);
+        let clock = elapsed + unit(seed, 719) * 9.0;
+        let nose = sniff * (clock * 34.0).sin() * (0.6 + 0.4 * (clock * 11.0).sin());
+        let wash_time = (self.action_age - 0.22).max(0.0);
+        let wash_cycle = (wash_time / 0.54).fract();
+        let wash_half = (wash_time / 0.54).floor() as usize;
+        let sweep =
+            rat_smooth((wash_cycle - 0.28) / 0.37) * (1.0 - rat_smooth((wash_cycle - 0.68) / 0.22));
+        let head_bow_target = groom * mixf(-0.014, -0.026, sweep);
+        let head_bow = rat_snap(
+            self.pose.head_bow + (head_bow_target - self.pose.head_bow) * blend,
+            0.000001,
+        );
+        let mut pose = RatPose {
+            heading,
+            speed,
+            phase: self.phase,
+            tail_phase: self.tail_phase,
+            travel,
+            turn,
+            sniff,
+            alert,
+            groom,
+            head_yaw: {
+                let turn_lead = if moving {
+                    rat_angle(heading, displacement.normalize()).clamp(-0.30, 0.30)
+                } else {
+                    0.0
+                };
+                let target = sniff * 0.18 * (self.action_age * 6.0 + unit(seed, 720) * 6.0).sin()
+                    + alert * 0.12 * (self.action_age * 4.0).sin()
+                    + groom * if wash_half % 2 == 0 { 0.10 } else { -0.10 }
+                    + turn_lead;
+                rat_snap(
+                    self.pose.head_yaw + (target - self.pose.head_yaw) * (1.0 - (-15.0 * dt).exp()),
+                    0.00001,
+                )
+            },
+            head_bow,
+            nose,
+            ears: [0.0; 2],
+            tail_bend: -rat_angle(self.tail_heading, heading).clamp(-1.10, 1.10),
+            tail_tip: if moving {
+                0.0
+            } else {
+                (clock * 3.7).sin() * sniff
+            },
+            feet: [Vec3::ZERO; 4],
+            paw_curl: [0.0; 4],
+            action: self.action,
+        };
+        for (ear, value) in pose.ears.iter_mut().enumerate() {
+            let twitch = (clock * 1.7 + ear as f32 * 2.4).sin();
+            *value = alert * (if ear == 0 { -0.16 } else { 0.08 })
+                + (twitch - 0.93).max(0.0) * 4.0 * (clock * 42.0).sin();
+        }
+        for (index, (along, flank, _)) in RAT_LEGS.into_iter().enumerate() {
+            let cycle = (self.phase + [0.0, 0.5, 0.5, 0.0][index]).fract();
+            let brace_leg = if yaw_error < 0.0 { 3 } else { 2 };
+            let brace = moving
+                && index == brace_leg
+                && ((yaw_error.abs() > 0.35 && turn > 0.1) || self.pose.groom > 0.2);
+            let stance = cycle < 0.55 || brace;
+            let target = position
+                + heading * ((along + 0.0495) * scale)
+                + side * ((flank + flank.signum() * 0.007) * scale);
+            if moving {
+                if stance {
+                    if !self.was_stance[index] {
+                        self.feet[index] = target - heading * (cycle * stride);
+                    }
+                    self.foot_height[index] = 0.0;
+                    self.swing_from[index] = self.feet[index];
+                } else {
+                    if self.was_stance[index] {
+                        self.swing_from[index] = self.feet[index];
+                    }
+                    let swing = (cycle - 0.55) / 0.45;
+                    self.feet[index] = self.swing_from[index].lerp(target, rat_smooth(swing));
+                    self.foot_height[index] = (std::f32::consts::PI * swing).sin() * 0.014 * scale;
+                }
+                self.was_stance[index] = stance;
+            } else {
+                // Finish only the vertical part of an interrupted step: no treadmill.
+                self.foot_height[index] = (self.foot_height[index] - dt * 0.20 * scale).max(0.0);
+            }
+            // A fast escape can cross a whole stance between rendered frames.
+            // Replant an overreached contact rather than stretching a limb across
+            // the turning torso; the new contact uses the already validated body.
+            let neutral = position
+                + heading * (along * scale)
+                + side * ((flank + flank.signum() * 0.007) * scale);
+            if self.feet[index].distance(neutral) > 0.061 * scale {
+                self.feet[index] = neutral + heading * (0.018 * scale);
+                self.swing_from[index] = self.feet[index];
+                self.foot_height[index] = 0.0;
+                self.was_stance[index] = true;
+            }
+            let relative = self.feet[index] - position;
+            pose.feet[index] = Vec3::new(
+                relative.dot(heading),
+                self.foot_height[index],
+                relative.dot(side),
+            );
+            // Hind paws gather before the hands lift. Their staggered little
+            // steps are supported by both front feet during entry and exit.
+            if index >= 2 {
+                let gather = rat_smooth((groom - if index == 2 { 0.0 } else { 0.35 }) / 0.40);
+                pose.feet[index].x += gather * 0.028 * scale;
+                pose.feet[index].y +=
+                    (std::f32::consts::PI * gather).sin().max(0.0) * 0.006 * scale;
+            }
+            // Both hands gather at the muzzle only once the rump and hind paws
+            // support the crouch. One hand trails the other slightly in the wipe.
+            if index < 2 {
+                let hand_cycle = ((wash_time - index as f32 * 0.025).max(0.0) / 0.54).fract();
+                let hand_sweep = rat_smooth((hand_cycle - 0.28) / 0.37)
+                    * (1.0 - rat_smooth((hand_cycle - 0.68) / 0.22));
+                let wash = groom
+                    * rat_smooth((groom - 0.88) / 0.12)
+                    * rat_smooth((self.action_age - 0.22) / 0.10)
+                    * rat_smooth((self.action_duration - self.action_age - 0.16) / 0.12)
+                    * rat_smooth(hand_cycle / 0.16)
+                    * (1.0 - rat_smooth((hand_cycle - 0.94) / 0.06));
+                let sign = flank.signum();
+                // Lick the paw at the muzzle, wipe toward the eye/ear, return
+                // to the mouth, then plant before the opposite paw starts.
+                // These are the same stations as the rendered muzzle and brow.
+                // Subtract the middle toe's actual extension so the fingertips,
+                // rather than the wrist, contact the moving face.
+                let mouth = rat_local_station(&pose, 0.133, 0.043) + Vec3::Z * (sign * 0.012);
+                let brow = rat_local_station(&pose, 0.085, 0.077) + Vec3::Z * (sign * 0.025);
+                let curl = mixf(0.40, 1.10, hand_sweep);
+                let toe = Vec3::new(
+                    0.020 * curl.cos() - 0.00035 * curl.sin(),
+                    0.020 * curl.sin() + 0.00035 * curl.cos(),
+                    0.0,
+                );
+                let face = (mouth.lerp(brow, hand_sweep) - toe) * scale;
+                let target = (face - pose.feet[index]) * wash;
+                let settle = 1.0 - (-45.0 * dt).exp();
+                self.wash_offset[index] += (target - self.wash_offset[index]) * settle;
+                for axis in 0..3 {
+                    self.wash_offset[index][axis] =
+                        rat_snap(self.wash_offset[index][axis], 0.000001 * scale);
+                }
+                self.wash_curl[index] = rat_snap(
+                    self.wash_curl[index] + (wash * curl - self.wash_curl[index]) * settle,
+                    0.0001,
+                );
+                pose.feet[index] += self.wash_offset[index];
+                pose.paw_curl[index] = self.wash_curl[index];
+            }
+        }
+        self.pose = pose;
+        pose
+    }
+}
+
+/// Shared body deformation in the 28 cm model frame. The wash targets use
+/// the very same moving surface as the visible head, including its bow and turn.
+fn rat_local_station(pose: &RatPose, along: f32, height: f32) -> Vec3 {
+    let gait = pose.phase * std::f32::consts::TAU;
+    let stretch =
+        1.0 + pose.travel * (0.040 + 0.025 * gait.sin()) - pose.turn * 0.035 * (1.0 - pose.groom);
+    let squat = 1.0 - 0.015 * pose.travel;
+    let head = ((along - 0.035) / 0.09).clamp(0.0, 1.0);
+    let chest = ((along + 0.045) / 0.09).clamp(0.0, 1.0);
+    let shoulder_wave = pose.travel * 0.0035 * (gait + chest * 1.8).sin();
+    let seat = ((0.010 - along) / 0.10).clamp(0.0, 1.0);
+    let crouch = rat_smooth(pose.groom / 0.75);
+    let lift = pose.alert * 0.034 * head - pose.sniff * 0.012 * head
+        + pose.head_bow * head
+        + (pose.alert * 0.008 + pose.groom * 0.021) * chest
+        + pose.nose * 0.0013 * head
+        + shoulder_wave
+        - crouch * 0.012 * seat
+        - pose.turn * 0.0035 * (1.0 - crouch) * (0.45 + 0.55 * chest);
+    let bob = pose.travel * 0.0035 * (0.5 + 0.5 * (gait * 2.0).cos());
+    Vec3::new(
+        along * stretch - crouch * 0.028 - pose.groom * (0.023 * head + 0.009 * chest)
+            + pose.travel * 0.0025 * gait.sin() * chest,
+        height * squat + lift + bob,
+        pose.head_yaw * head * (along - 0.035).max(0.0),
+    )
+}
 
 fn mixf(from: f32, to: f32, t: f32) -> f32 {
     from + (to - from) * t
 }
 
-/// One rat: a smooth-shaded loft from nose tip to tail root — pointed muzzle,
-/// back arched over the haunches — with pricked ears, dark eye beads, four
-/// stub legs scurrying in diagonal pairs, and a full-length naked tail.
-/// Sprinting stretches the body long and low, beats the legs and whips the
-/// tail; a paused rat sits on a still S-curved tail, nothing moving but an
-/// occasional sniffing lift of the nose.
+/// Stack-only writer into the city's retained batch buffers. Small append-only
+/// primitives do not allocate after those buffers have reached their high water.
+struct RatMesh<'a> {
+    positions: &'a mut Vec<[f32; 3]>,
+    normals: &'a mut Vec<[f32; 3]>,
+    uvs: &'a mut Vec<[f32; 2]>,
+    colors: &'a mut Vec<[f32; 4]>,
+    indices: &'a mut Vec<u32>,
+}
+
+impl RatMesh<'_> {
+    fn vertex(&mut self, p: Vec3, n: Vec3, color: [f32; 4]) -> u32 {
+        let index = self.positions.len() as u32;
+        self.positions.push(p.to_array());
+        self.normals.push(n.normalize_or(Vec3::Y).to_array());
+        self.uvs.push([0.0, 0.0]);
+        self.colors.push(color);
+        index
+    }
+
+    fn triangle(&mut self, a: u32, b: u32, c: u32) {
+        self.indices.extend_from_slice(&[a, b, c]);
+    }
+
+    /// Two latitude rings and two actual poles: no zero-area polar triangles.
+    fn ellipsoid(&mut self, center: Vec3, axes: [Vec3; 3], radii: Vec3, color: [f32; 4]) {
+        let [ahead, side, up] = axes;
+        let first = self.positions.len() as u32;
+        for longitudinal in [0.55_f32, -0.55] {
+            for sector in 0..6 {
+                let (sin, cos) = rat_circle(sector, 6);
+                let local = Vec3::new(longitudinal, cos * 0.8351647, sin * 0.8351647);
+                self.vertex(
+                    center
+                        + ahead * (local.x * radii.x)
+                        + side * (local.y * radii.y)
+                        + up * (local.z * radii.z),
+                    ahead * (local.x / radii.x)
+                        + side * (local.y / radii.y)
+                        + up * (local.z / radii.z),
+                    color,
+                );
+            }
+        }
+        stitch_tube(self.indices, first, 2, 6);
+        let front = self.vertex(center + ahead * radii.x, ahead, color);
+        let rear = self.vertex(center - ahead * radii.x, -ahead, color);
+        for sector in 0..6 {
+            let next = (sector + 1) % 6;
+            self.triangle(front, first + next, first + sector);
+            self.triangle(rear, first + 6 + sector, first + 6 + next);
+        }
+    }
+    /// Extra silhouette resolution is reserved for the two exposed thighs.
+    fn haunch(&mut self, center: Vec3, axes: [Vec3; 3], radii: Vec3, color: [f32; 4]) {
+        let [ahead, side, up] = axes;
+        let first = self.positions.len() as u32;
+        for (longitudinal, radius) in [
+            (0.70710677, 0.70710677),
+            (0.0, 1.0),
+            (-0.70710677, 0.70710677),
+        ] {
+            for sector in 0..8 {
+                let (sin, cos) = rat_circle(sector, 8);
+                let local = Vec3::new(longitudinal, cos * radius, sin * radius);
+                self.vertex(
+                    center
+                        + ahead * (local.x * radii.x)
+                        + side * (local.y * radii.y)
+                        + up * (local.z * radii.z),
+                    ahead * (local.x / radii.x)
+                        + side * (local.y / radii.y)
+                        + up * (local.z / radii.z),
+                    color,
+                );
+            }
+        }
+        stitch_tube(self.indices, first, 3, 8);
+        let front = self.vertex(center + ahead * radii.x, ahead, color);
+        let rear = self.vertex(center - ahead * radii.x, -ahead, color);
+        for sector in 0..8 {
+            let next = (sector + 1) % 8;
+            self.triangle(front, first + next, first + sector);
+            self.triangle(rear, first + 16 + sector, first + 16 + next);
+        }
+    }
+}
+
+/// Fixed ring samples avoid trigonometry per vertex in the frame hot path.
+fn rat_circle(sector: usize, sectors: usize) -> (f32, f32) {
+    const RING: [(f32, f32); 12] = [
+        (0.0, 1.0),
+        (0.5, 0.8660254),
+        (0.8660254, 0.5),
+        (1.0, 0.0),
+        (0.8660254, -0.5),
+        (0.5, -0.8660254),
+        (0.0, -1.0),
+        (-0.5, -0.8660254),
+        (-0.8660254, -0.5),
+        (-1.0, 0.0),
+        (-0.8660254, 0.5),
+        (-0.5, 0.8660254),
+    ];
+    const OCTAGON: [(f32, f32); 8] = [
+        (0.0, 1.0),
+        (0.70710677, 0.70710677),
+        (1.0, 0.0),
+        (0.70710677, -0.70710677),
+        (0.0, -1.0),
+        (-0.70710677, -0.70710677),
+        (-1.0, 0.0),
+        (-0.70710677, 0.70710677),
+    ];
+    if sectors == 8 {
+        OCTAGON[sector]
+    } else {
+        RING[sector * (12 / sectors)]
+    }
+}
+
+/// Continuous coat hull, cupped ears, embedded eyes and a naked tapered tail.
+/// The persistent pose deforms the hull and its attached features together.
 #[allow(clippy::too_many_arguments)]
 fn push_rat(
     positions: &mut Vec<[f32; 3]>,
@@ -1007,253 +1564,296 @@ fn push_rat(
     indices: &mut Vec<u32>,
     rat: &Rat,
     position: Vec2,
-    heading: Vec2,
-    moving: bool,
-    elapsed: f32,
+    pose: &RatPose,
 ) {
     use std::f32::consts::{PI, TAU};
-
     let first_vertex = positions.len();
     let scale = rat.length_m / 0.28;
     let center = Vec3::new(position.x, RAT_GROUND_Y, position.y);
+    let heading = pose.heading;
     let ahead = Vec3::new(heading.x, 0.0, heading.y);
     let side = Vec3::new(-heading.y, 0.0, heading.x);
-
-    // One clock drives the whole gait — the legs' beat, a bob riding two to a
-    // stride, the tail's whip — phased per rat so a colony never marches.
-    let gait = elapsed * 21.0 + rat.phase * 7.0;
-    let (stretch, squat, bob) = if moving {
-        // A sprinting rat runs long and low.
-        (1.08, 0.94, 0.006 * (gait * 2.0).sin() * scale)
-    } else {
-        (1.0, 1.0, 0.0)
-    };
-    // The sniff: a paused rat now and then lifts its nose and works it. A slow
-    // per-rat sine gates a faster one, so the twitch comes in bouts with still
-    // stretches between — wallpaper until it moves.
-    let sniff = if moving {
-        0.0
-    } else {
-        let bout = (elapsed * 0.6 + unit(rat.seed, 50) * TAU).sin();
-        ((bout - 0.35) * 4.0).clamp(0.0, 1.0) * (elapsed * 9.0 + rat.phase * 3.0).sin()
-    };
-    // How much of the sniff's nose-lift a station at `along` inherits.
-    let lift = |along: f32| sniff * 0.008 * ((along - 0.05) / 0.09).clamp(0.0, 1.0);
+    let axes = [ahead, side, Vec3::Y];
+    let gait = pose.phase * TAU;
+    let stretch =
+        1.0 + pose.travel * (0.040 + 0.025 * gait.sin()) - pose.turn * 0.035 * (1.0 - pose.groom);
+    let squat = 1.0 - 0.015 * pose.travel;
     let station = |along: f32, height: f32| {
-        center
-            + ahead * (along * stretch * scale)
-            + Vec3::Y * ((height * squat + lift(along)) * scale + bob)
+        let local = rat_local_station(pose, along, height) * scale;
+        center + ahead * local.x + side * local.z + Vec3::Y * local.y
     };
-
-    // Coat: per-rat brightness (`tint`) over a per-rat brown-to-grey blend —
-    // kept dark: full sun on a mid vertex colour reads as bone, and a rat is
-    // vermin, not a lab mouse. Per vertex the spine darkens and the belly
-    // lightens, the shading that makes a rounded back read as a body rather
-    // than a lump.
     let tint = rat.tint;
     let grey = unit(rat.seed, 34);
     let coat = [
-        mixf(0.062, 0.050, grey) * tint,
-        mixf(0.048, 0.048, grey) * tint,
-        mixf(0.036, 0.046, grey) * tint,
+        mixf(0.095, 0.073, grey) * tint,
+        mixf(0.068, 0.065, grey) * tint,
+        mixf(0.044, 0.056, grey) * tint,
     ];
-    let body_color = |up_factor: f32| {
-        let back = up_factor.max(0.0) * 0.30;
-        let belly = ((-up_factor) * 1.3 - 0.15).clamp(0.0, 1.0) * 0.6;
+    let body_color = |up: f32, along: f32| {
+        let belly = (-up).max(0.0) * 0.38;
+        let back = up.max(0.0) * 0.12;
+        // Broad, restrained color variation follows anatomy, never random faces.
+        let muzzle = ((along - 0.08) / 0.06).clamp(0.0, 1.0) * 0.12;
         [
-            coat[0] * (1.0 + 0.75 * belly) * (1.0 - back),
-            coat[1] * (1.0 + 0.85 * belly) * (1.0 - back),
-            coat[2] * (1.0 + belly) * (1.0 - back),
+            coat[0] * (1.0 + belly + muzzle - back),
+            coat[1] * (1.0 + belly * 1.25 + muzzle - back),
+            coat[2] * (1.0 + belly * 1.6 + muzzle - back),
             1.0,
         ]
     };
-    // The naked parts in the pink-grey of bare skin; the eyes a wet dark bead
-    // outside the tint, so a pale rat never gets pale eyes.
-    let naked = [0.115 * tint, 0.082 * tint, 0.072 * tint, 1.0];
-    let feet = [0.095 * tint, 0.070 * tint, 0.062 * tint, 1.0];
-    let ear_color = [
-        (coat[0] + naked[0]) * 0.5,
-        (coat[1] + naked[1]) * 0.5,
-        (coat[2] + naked[2]) * 0.5,
-        1.0,
-    ];
-    let eye = [0.015, 0.011, 0.010, 1.0];
+    let naked = [0.18 * tint, 0.105 * tint, 0.085 * tint, 1.0];
+    let feet = [0.21 * tint, 0.125 * tint, 0.10 * tint, 1.0];
+    let eye = [0.009, 0.007, 0.006, 1.0];
+    let mut mesh = RatMesh {
+        positions,
+        normals,
+        uvs,
+        colors,
+        indices,
+    };
 
-    // -- The body hull ------------------------------------------------------
-    // Smooth-shaded rings stitched into a tube. A ring normal is the ellipse's
-    // own, tilted along the spine by the taper (`radial - ahead * slope`), so
-    // the nose cone lights like a cone and not like a cylinder butt.
-    let hull_first = positions.len() as u32;
-    for (index, &(along, half_width, half_height, spine)) in BODY_PROFILE.iter().enumerate() {
+    let hull_first = mesh.positions.len() as u32;
+    for (index, &(along, width, height, spine)) in BODY_PROFILE.iter().enumerate() {
         let fore = BODY_PROFILE[index.saturating_sub(1)];
         let aft = BODY_PROFILE[(index + 1).min(BODY_STATIONS - 1)];
-        let mean = |ring: (f32, f32, f32, f32)| (ring.1 + ring.2) * 0.5;
-        let slope = (mean(fore) - mean(aft)) / (fore.0 - aft.0).max(1e-4);
-        let ring_center = station(along, spine);
         for sector in 0..BODY_SECTORS {
-            let theta = sector as f32 / BODY_SECTORS as f32 * TAU;
-            let (sin, cos) = theta.sin_cos();
-            let point = ring_center
-                + side * (cos * half_width * scale)
-                + Vec3::Y * (sin * half_height * squat * scale);
-            let radial =
-                (side * (cos * half_height) + Vec3::Y * (sin * half_width)).normalize_or(Vec3::Y);
-            let normal = (radial - ahead * slope).normalize_or(radial);
-            positions.push(point.to_array());
-            normals.push(normal.to_array());
-            uvs.push([
-                sector as f32 / BODY_SECTORS as f32,
-                index as f32 / (BODY_STATIONS - 1) as f32,
-            ]);
-            colors.push(body_color(sin));
+            let (sin, cos) = rat_circle(sector, BODY_SECTORS);
+            let brow = (1.0 - ((along - 0.097) / 0.020).abs()).max(0.0) * sin.max(0.0) * 0.002;
+            let pad = (1.0 - ((along - 0.130) / 0.018).abs()).max(0.0) * (1.0 - sin.abs()) * 0.0025;
+            let point = station(along, spine)
+                + side * (cos * (width + brow + pad) * scale)
+                + Vec3::Y * (sin * (height + brow) * squat * scale);
+            let tangent = station(fore.0, fore.3 + sin * fore.2)
+                - station(aft.0, aft.3 + sin * aft.2)
+                + side * (cos * (fore.1 - aft.1) * scale);
+            let around = -side * (sin * width) + Vec3::Y * (cos * height * squat);
+            mesh.vertex(point, tangent.cross(around), body_color(sin, along));
         }
     }
-    stitch_tube(indices, hull_first, BODY_STATIONS, BODY_SECTORS);
+    stitch_tube(mesh.indices, hull_first, BODY_STATIONS, BODY_SECTORS);
 
-    // -- The tail -----------------------------------------------------------
-    // The other half of a rat: the body's length again, drooping from the
-    // root to drag its tip on the ground — whipped side to side on the gait
-    // clock at a sprint, lying in a per-rat S-curve at rest.
-    let tail_first = positions.len() as u32;
+    let tail_first = mesh.positions.len() as u32;
     let tail_length = rat.length_m * 0.9;
     let swirl = unit(rat.seed, 51) * TAU;
-    let root_height = BODY_PROFILE[BODY_STATIONS - 1].3;
+    let root_height = rat_local_station(pose, -0.151, BODY_PROFILE[BODY_STATIONS - 1].3).y;
     for index in 0..TAIL_STATIONS {
         let fraction = index as f32 / (TAIL_STATIONS - 1) as f32;
-        let lateral = if moving {
-            (gait * 0.5 - fraction * 4.0).sin() * 0.020 * fraction
-        } else {
-            (swirl + fraction * 3.2).sin() * 0.014 * fraction
-        };
+        let resting_curve = (swirl + fraction * 3.2).sin() * 0.014 * fraction;
+        let scurry_curve = (pose.tail_phase * TAU - fraction * 4.0).sin() * 0.009 * fraction;
+        let lateral = mixf(resting_curve, scurry_curve, pose.travel);
+        // The resting curve is retained anatomy; the travel wave blends into
+        // it while the tail's arc follows the previous heading through a turn.
+        let lateral = lateral
+            + 0.035 * (fraction * PI * 1.35).sin() * fraction
+            + pose.tail_tip * 0.006 * fraction.powi(4);
         let droop = fraction * fraction * (3.0 - 2.0 * fraction);
-        let height = mixf(root_height * squat * scale + bob, 0.006 * scale, droop);
-        let ring_center = center
-            + ahead * (-(0.140 * stretch) * scale - fraction * tail_length)
-            + side * (lateral * scale)
-            + Vec3::Y * height;
-        let radius = mixf(0.0055, 0.0018, fraction) * scale;
+        let radius = mixf(0.0065, 0.00055, fraction) * scale;
+        let height = mixf(root_height * scale, 0.0011 * scale, droop).max(radius + 0.0004 * scale);
+        let bend = pose.tail_bend * fraction;
+        let tail_axis = ahead * bend.cos() + side * bend.sin();
+        let tangent =
+            -ahead * (bend.cos() - bend * bend.sin()) - side * (bend.sin() + bend * bend.cos());
+        let tail_side = Vec3::Y.cross(tangent).normalize_or(side);
+        let ring_center =
+            center - ahead * (0.147 * stretch * scale) - tail_axis * (fraction * tail_length)
+                + side * (lateral * scale)
+                + Vec3::Y * height;
         for sector in 0..TAIL_SECTORS {
-            // A vertex at the top, a flat face resting toward the ground.
-            let theta = PI * 0.5 + sector as f32 / TAIL_SECTORS as f32 * TAU;
-            let (sin, cos) = theta.sin_cos();
-            let point = ring_center + side * (cos * radius) + Vec3::Y * (sin * radius);
-            positions.push(point.to_array());
-            normals.push((side * cos + Vec3::Y * sin).to_array());
-            uvs.push([sector as f32 / TAIL_SECTORS as f32, fraction]);
-            colors.push(naked);
+            let (sin, cos) = rat_circle(sector, TAIL_SECTORS);
+            let shade = 0.92 + 0.08 * sin;
+            mesh.vertex(
+                ring_center + tail_side * (cos * radius) + Vec3::Y * (sin * radius),
+                tail_side * cos + Vec3::Y * sin,
+                [naked[0] * shade, naked[1] * shade, naked[2] * shade, 1.0],
+            );
         }
     }
-    stitch_tube(indices, tail_first, TAIL_STATIONS, TAIL_SECTORS);
+    stitch_tube(mesh.indices, tail_first, TAIL_STATIONS, TAIL_SECTORS);
 
-    // -- Ears ---------------------------------------------------------------
-    // Two flaps pricked up and out from the crown, raked a little back. The
-    // corner order mirrors between the sides so both computed normals face
-    // the sky, not one sky and one street.
+    // Thick round pinnae. An inset inner ring slopes into the concha; separate
+    // back vertices retain the outer skin and a crisp but rounded rolled rim.
     for sign in [1.0_f32, -1.0] {
-        let base = station(0.068, 0.056) + side * (sign * 0.013 * scale);
-        let out = side * (sign * 0.75) + Vec3::Y * 0.66;
-        let tip = base + out * (0.020 * scale) - ahead * (0.005 * scale);
-        let half = ahead * (0.008 * scale);
-        let corners = if sign > 0.0 {
-            [
-                base + half,
-                base - half,
-                tip - half * 0.55,
-                tip + half * 0.55,
-            ]
-        } else {
-            [
-                base - half,
-                base + half,
-                tip + half * 0.55,
-                tip - half * 0.55,
-            ]
-        };
-        push_quad(positions, normals, uvs, colors, indices, corners, ear_color);
+        let ear_center = station(0.065, 0.077) + side * (sign * 0.024 * scale);
+        let ear_angle = sign * (0.6435 + pose.ears[usize::from(sign < 0.0)]);
+        let normal = ahead * ear_angle.cos() + side * ear_angle.sin();
+        let across = side * ear_angle.cos() - ahead * ear_angle.sin();
+        let first = mesh.positions.len() as u32;
+        for layer in 0..3 {
+            let (size, depth, color) = match layer {
+                0 => (1.0, 0.0, naked),
+                1 => (
+                    0.66,
+                    -0.0032,
+                    [0.145 * tint, 0.068 * tint, 0.055 * tint, 1.0],
+                ),
+                _ => (1.0, -0.0018, body_color(0.4, 0.067)),
+            };
+            for sector in 0..8 {
+                let angle = sector as f32 * TAU / 8.0;
+                let (sin, cos) = angle.sin_cos();
+                let radial = across * cos + Vec3::Y * sin;
+                let p = ear_center
+                    + across * (cos * 0.0115 * size * scale)
+                    + Vec3::Y * (sin * 0.017 * size * scale)
+                    + normal * (depth * scale);
+                let n = if layer == 2 {
+                    -normal + radial * 0.7
+                } else {
+                    normal + radial * 0.5
+                };
+                mesh.vertex(p, n, color);
+            }
+        }
+        let inner = mesh.vertex(
+            ear_center - normal * (0.0045 * scale),
+            normal,
+            [0.115 * tint, 0.048 * tint, 0.039 * tint, 1.0],
+        );
+        let back = mesh.vertex(
+            ear_center - normal * (0.005 * scale),
+            -normal,
+            body_color(0.3, 0.067),
+        );
+        for sector in 0..8_u32 {
+            let next = (sector + 1) % 8;
+            mesh.triangle(inner, first + 8 + next, first + 8 + sector);
+            mesh.triangle(first + sector, first + 8 + next, first + next);
+            mesh.triangle(first + sector, first + 8 + sector, first + 8 + next);
+            mesh.triangle(back, first + 16 + sector, first + 16 + next);
+            mesh.triangle(first + sector, first + next, first + 16 + next);
+            mesh.triangle(first + sector, first + 16 + next, first + 16 + sector);
+        }
     }
 
-    // -- Eyes ---------------------------------------------------------------
-    // Two dark beads just proud of the head's flanks — sub-pixel past a few
-    // metres, alive when a scatter sends one darting past your boot.
     for sign in [1.0_f32, -1.0] {
-        let bead = station(0.094, 0.047) + side * (sign * 0.0208 * scale);
-        let across = ahead * (0.0032 * scale);
-        let up = Vec3::Y * (0.0024 * scale);
-        let corners = if sign > 0.0 {
-            [
-                bead - across - up,
-                bead + across - up,
-                bead + across + up,
-                bead - across + up,
-            ]
-        } else {
-            [
-                bead + across - up,
-                bead - across - up,
-                bead - across + up,
-                bead + across + up,
-            ]
-        };
-        push_quad(positions, normals, uvs, colors, indices, corners, eye);
+        let bead = station(0.102, 0.057) + side * (sign * 0.0232 * scale);
+        mesh.ellipsoid(bead, axes, Vec3::new(0.0046, 0.0022, 0.0042) * scale, eye);
     }
+    mesh.ellipsoid(
+        station(0.148, 0.043),
+        axes,
+        Vec3::new(0.0032, 0.0043, 0.0032) * scale,
+        [0.13 * tint, 0.067 * tint, 0.056 * tint, 1.0],
+    );
 
-    // -- Legs ---------------------------------------------------------------
-    // Four stubs from hip to ground. Sprinting they scurry in diagonal pairs
-    // on the gait clock, lifting through the forward swing; paused they
-    // stand, the front pair planted a little ahead like a rat about to bolt.
-    let legs: [(f32, f32, f32, f32); 4] = [
-        (0.050, 0.024, 0.030, 0.0),   // front right
-        (0.050, -0.024, 0.030, PI),   // front left
-        (-0.075, 0.030, 0.032, PI),   // rear right — diagonal with front left
-        (-0.075, -0.030, 0.032, 0.0), // rear left
-    ];
-    for (along, flank, hip_height, phase) in legs {
-        let sign = flank.signum();
-        let beat = (gait + phase).sin();
-        let (swing, foot_lift) = if moving {
-            (beat * 0.030, beat.max(0.0) * 0.010)
-        } else if along > 0.0 {
-            (0.008, 0.0)
-        } else {
-            (-0.006, 0.0)
-        };
-        let hip = center
-            + ahead * (along * stretch * scale)
+    // Feet are planted in world space during stance. Paired face washing uses
+    // a low rump-supported crouch, rather than the cage reference's support.
+    for (leg_index, (along, flank, hip_height)) in RAT_LEGS.into_iter().enumerate() {
+        let hip = station(along, hip_height)
             + side * (flank * scale)
-            + Vec3::Y * (hip_height * squat * scale + bob);
-        let foot = center
-            + ahead * ((along * stretch + swing) * scale)
-            + side * ((flank + sign * 0.007) * scale)
-            + Vec3::Y * (foot_lift * scale);
-        let half_hip = ahead * (0.005 * scale);
-        let half_foot = ahead * (0.0035 * scale);
-        let corners = if sign > 0.0 {
-            [
-                hip + half_hip,
-                hip - half_hip,
-                foot - half_foot,
-                foot + half_foot,
-            ]
-        } else {
-            [
-                hip - half_hip,
-                hip + half_hip,
-                foot + half_foot,
-                foot - half_foot,
-            ]
-        };
-        push_quad(positions, normals, uvs, colors, indices, corners, feet);
+            + ahead * (pose.groom * 0.008 * scale * if leg_index < 2 { 1.0 } else { 0.0 });
+        let local_foot = pose.feet[leg_index];
+        let foot = center + ahead * local_foot.x + side * local_foot.z + Vec3::Y * local_foot.y;
+        let rear = leg_index >= 2;
+        let paw_angle = pose.paw_curl[leg_index];
+        let finger = ahead * paw_angle.cos() + Vec3::Y * paw_angle.sin();
+        let palm_up = Vec3::Y * paw_angle.cos() - ahead * paw_angle.sin();
+        let paw_axes = [finger, side, palm_up];
+        if rear {
+            // The upper half is buried in the rump. Its long axis leans from
+            // the rear hip down toward the forward knee; denser rings round
+            // the exposed contour without lowering it into a hanging lobe.
+            let thigh_axes = [
+                ahead * 0.9 + Vec3::Y * 0.4358899,
+                side,
+                Vec3::Y * 0.9 - ahead * 0.4358899,
+            ];
+            mesh.haunch(
+                hip + ahead * (0.006 * scale) - Vec3::Y * (0.001 * scale),
+                thigh_axes,
+                Vec3::new(0.026, 0.018, 0.026) * scale,
+                body_color(-0.1, along),
+            );
+        }
+        let wrist = foot + palm_up * (0.007 * scale) - finger * (0.002 * scale);
+        let elbow = hip.lerp(wrist, 0.53) - ahead * (if rear { -0.006 } else { 0.005 } * scale);
+        let limb_first = mesh.positions.len() as u32;
+        let limb_down = (wrist - hip).normalize_or(-Vec3::Y);
+        let limb_side = (side - limb_down * side.dot(limb_down)).normalize_or(side);
+        let limb_round = limb_down.cross(limb_side);
+        // Rings advance down the limb; side/ahead ordering keeps its skin out.
+        for (point, radius, color) in [
+            (
+                hip,
+                if rear { 0.013 } else { 0.009 },
+                body_color(-0.2, along),
+            ),
+            (
+                elbow,
+                if rear { 0.007 } else { 0.005 },
+                body_color(-0.6, along),
+            ),
+            (wrist, 0.0032, feet),
+        ] {
+            for sector in 0..6 {
+                let (sin, cos) = rat_circle(sector, 6);
+                let radial = limb_side * cos + limb_round * sin;
+                mesh.vertex(point + radial * (radius * scale), radial, color);
+            }
+        }
+        stitch_tube(mesh.indices, limb_first, 3, 6);
+        let paw = foot + finger * (0.004 * scale) + palm_up * (0.003 * scale);
+        mesh.ellipsoid(
+            paw,
+            paw_axes,
+            Vec3::new(if rear { 0.010 } else { 0.008 }, 0.0065, 0.003) * scale,
+            feet,
+        );
+        for toe in -1..=1 {
+            let root = foot + finger * (0.009 * scale) + side * (toe as f32 * 0.0034 * scale);
+            let tip = root
+                + finger * ((if toe == 0 { 0.011 } else { 0.0085 }) * scale)
+                + side * (toe as f32 * 0.001 * scale)
+                + palm_up * (0.00035 * scale);
+            let first = mesh.positions.len() as u32;
+            // Three-sided toes taper to a small blunt end, not a single spike.
+            let points = [
+                tip + side * (0.0008 * scale),
+                tip + palm_up * (0.0018 * scale),
+                tip - side * (0.0008 * scale),
+                root + side * (0.0015 * scale),
+                root + palm_up * (0.0036 * scale),
+                root - side * (0.0015 * scale),
+            ];
+            let toe_center = points.iter().copied().sum::<Vec3>() / 6.0;
+            for p in points {
+                mesh.vertex(p, p - toe_center, feet);
+            }
+            stitch_tube(mesh.indices, first, 2, 3);
+            mesh.triangle(first, first + 2, first + 1);
+            mesh.triangle(first + 3, first + 4, first + 5);
+        }
     }
 
-    // The promise the counting tests spend: whatever the gait is doing, a rat
-    // is always exactly this many vertices.
-    debug_assert_eq!(positions.len() - first_vertex, RAT_VERTICES);
+    // Three fine whiskers per cheek. Their span stays inside the broad rump,
+    // so neither the silhouette nor the batch bounds become a wire brush.
+    for sign in [1.0_f32, -1.0] {
+        for row in 0..3 {
+            let root = station(0.135 - row as f32 * 0.004, 0.043) + side * (sign * 0.015 * scale);
+            let tip = root
+                + side * (sign * (0.020 + row as f32 * 0.003) * scale)
+                + ahead * ((0.013 - row as f32 * 0.013 + pose.nose * 0.007) * scale)
+                + Vec3::Y * ((row as f32 - 1.0) * 0.003 * scale);
+            let thickness = Vec3::Y * (0.00018 * scale);
+            push_quad(
+                mesh.positions,
+                mesh.normals,
+                mesh.uvs,
+                mesh.colors,
+                mesh.indices,
+                [
+                    root - thickness,
+                    tip - thickness * 0.2,
+                    tip + thickness * 0.2,
+                    root + thickness,
+                ],
+                [0.075, 0.060, 0.049, 1.0],
+            );
+        }
+    }
+    debug_assert_eq!(mesh.positions.len() - first_vertex, RAT_VERTICES);
 }
 
-/// Stitches consecutive rings of `sectors` vertices into a closed tube, wound
-/// so every face's computed normal agrees with the outward ring normals —
-/// the invariant `a_rat_is_wound_with_its_normals_out` pins, since the
-/// double-sided material would shade an inside-out tube identically.
 fn stitch_tube(indices: &mut Vec<u32>, first: u32, stations: usize, sectors: usize) {
     for station in 0..stations - 1 {
         for sector in 0..sectors {
@@ -1267,6 +1867,7 @@ fn stitch_tube(indices: &mut Vec<u32>, first: u32, stations: usize, sectors: usi
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_quad(
     positions: &mut Vec<[f32; 3]>,
     normals: &mut Vec<[f32; 3]>,
@@ -1294,6 +1895,32 @@ mod tests {
 
     use super::*;
     use crate::mesh_batch::IDLE_BATCH_VERTICES;
+
+    fn motion_pose(rat: &Rat, heading: Vec2, moving: bool, elapsed: f32) -> RatPose {
+        let mut motion = RatMotion::default();
+        let mut pose = motion.update(
+            rat.seed,
+            rat.length_m,
+            Vec2::ZERO,
+            heading,
+            0.0,
+            f32::INFINITY,
+        );
+        let frames = (elapsed * 60.0).ceil() as usize;
+        for frame in 1..=frames {
+            let t = (frame as f32 / 60.0).min(elapsed);
+            let position = heading * if moving { t * 1.8 } else { 0.0 };
+            pose = motion.update(
+                rat.seed,
+                rat.length_m,
+                position,
+                heading,
+                t,
+                if moving { 0.0 } else { f32::INFINITY },
+            );
+        }
+        pose
+    }
 
     fn built_app() -> App {
         built_app_with(None)
@@ -2218,10 +2845,7 @@ mod tests {
             density: 0.0,
             ..Default::default()
         }));
-        empty.insert_resource(BridgeHandle::new(
-            sender,
-            std::path::PathBuf::from("/tmp"),
-        ));
+        empty.insert_resource(BridgeHandle::new(sender, std::path::PathBuf::from("/tmp")));
         empty.insert_resource(night_clock(4, 21.5));
         empty.update();
         assert_eq!(announced(&mut empty), None, "a boil of nobody is not news");
@@ -2235,10 +2859,7 @@ mod tests {
         // still announces and is heard.
         let (sender, commands) = bounded(8);
         let mut app = built_app();
-        app.insert_resource(BridgeHandle::new(
-            sender,
-            std::path::PathBuf::from("/tmp"),
-        ));
+        app.insert_resource(BridgeHandle::new(sender, std::path::PathBuf::from("/tmp")));
         let night = 4_i64;
         let index = boiling_colony(night, default_seed(), COLONIES.len()).expect("a colony boils");
         {
@@ -2290,6 +2911,498 @@ mod tests {
     /// off the attributes rather than trusted to the picture. Checked at three
     /// headings, since the whole body is built out of `ahead`/`side`.
     #[test]
+    fn rat_motion_follows_distance_and_retains_stance_contacts() {
+        let run = |hz: usize| {
+            let mut motion = RatMotion::default();
+            let mut old = motion.update(7, 0.28, Vec2::ZERO, Vec2::X, 0.0, 0.0);
+            let mut old_position = Vec2::ZERO;
+            let mut planted = 0;
+            for frame in 1..=hz {
+                let t = frame as f32 / hz as f32;
+                let position = Vec2::X * t * 0.72;
+                let pose = motion.update(7, 0.28, position, Vec2::Y, t, 0.0);
+                for foot in 0..4 {
+                    if t > 0.25 && old.feet[foot].y == 0.0 && pose.feet[foot].y == 0.0 {
+                        let previous_world =
+                            old_position + Vec2::new(old.feet[foot].x, old.feet[foot].z);
+                        let current_world =
+                            position + Vec2::new(pose.feet[foot].x, pose.feet[foot].z);
+                        assert!(
+                            previous_world.distance(current_world) < 0.00001,
+                            "stance slid: {foot}"
+                        );
+                        planted += 1;
+                    }
+                }
+                old = pose;
+                old_position = position;
+            }
+            assert!(
+                planted > hz,
+                "travel must have measurable supporting contacts"
+            );
+            old
+        };
+        let a = run(60);
+        let b = run(120);
+        assert!(rat_angle(a.heading, Vec2::X).abs() < 0.001);
+        assert!(
+            (a.phase - b.phase)
+                .abs()
+                .min(1.0 - (a.phase - b.phase).abs())
+                < 0.0001
+        );
+        assert!((a.speed - 0.72).abs() < 0.0001);
+    }
+
+    #[test]
+    fn rat_zero_dt_cull_resume_and_groom_interruption_are_safe() {
+        let mut motion = RatMotion::default();
+        let mut previous = motion.update(7, 0.28, Vec2::ZERO, Vec2::X, 0.0, 10.0);
+        let mut groom_seen = false;
+        for frame in 1..=2400 {
+            let t = frame as f32 / 60.0;
+            let pose = motion.update(7, 0.28, Vec2::ZERO, Vec2::Y, t, 10.0);
+            assert_eq!(
+                motion.update(7, 0.28, Vec2::ONE, -Vec2::X, t, 0.0),
+                pose,
+                "paused frames must be inert"
+            );
+            assert_eq!(pose.phase, 0.0, "idle feet must not treadmill");
+            assert_eq!(
+                pose.heading,
+                Vec2::X,
+                "outgoing route hint must not spin a stationary rat"
+            );
+            if pose.groom > 0.7 && pose.feet.iter().any(|foot| foot.y > 0.025) {
+                assert!(
+                    pose.feet[2].y < 0.0001 && pose.feet[3].y < 0.0001,
+                    "both hind paws support the seated wash"
+                );
+                let next = motion.update(7, 0.28, Vec2::X * 0.006, Vec2::X, t + 1.0 / 60.0, 0.0);
+                assert!(next.groom < pose.groom && next.groom > 0.0);
+                for foot in 0..2 {
+                    assert!(
+                        (next.feet[foot].y - pose.feet[foot].y).abs() < 0.04,
+                        "wash must settle into escape"
+                    );
+                }
+                groom_seen = true;
+                break;
+            }
+            previous = pose;
+        }
+        assert!(
+            groom_seen,
+            "ordinary deterministic quiet time must include an actual paw-to-face wash"
+        );
+        let reset = motion.update(7, 0.28, Vec2::splat(200.0), Vec2::Y, 100.0, 4.0);
+        assert_eq!(reset.speed, 0.0);
+        assert!(reset.feet.iter().all(|p| p.is_finite() && p.y == 0.0));
+        assert_ne!(previous.heading, reset.heading);
+    }
+
+    #[test]
+    fn rat_actions_deform_the_actual_mesh_with_ground_support() {
+        let rat = Rat {
+            seed: 7,
+            legs: Vec::new(),
+            period: 10.0,
+            phase: 0.0,
+            length_m: 0.28,
+            tint: 1.0,
+            motion: RatMotion::default(),
+        };
+        let (mut p, mut n, mut u, mut c, mut i) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        let mut seen = [false; 3];
+        let mut contact_low = f32::INFINITY;
+        let mut contact_high = f32::NEG_INFINITY;
+        let mut contact_count = 0;
+        for length in [0.24, 0.28, 0.32] {
+            let mut motion = RatMotion::default();
+            for frame in 0..1800 {
+                let t = frame as f32 / 60.0;
+                let pose = motion.update(rat.seed, length, Vec2::ZERO, Vec2::X, t, 4.0);
+                assert!(
+                    [
+                        pose.travel,
+                        pose.turn,
+                        pose.sniff,
+                        pose.alert,
+                        pose.groom,
+                        pose.head_bow,
+                        pose.head_yaw,
+                        pose.tail_bend,
+                        pose.tail_tip,
+                        pose.nose
+                    ]
+                    .into_iter()
+                    .chain(pose.paw_curl)
+                    .chain(pose.ears)
+                    .chain(pose.feet.into_iter().flat_map(|foot| foot.to_array()))
+                    .all(|value| value == 0.0 || value.is_normal()),
+                    "quiet easing residues must not feed subnormals into geometry: {pose:?}"
+                );
+                seen[0] |= pose.sniff > 0.8;
+                seen[1] |= pose.alert > 0.8;
+                seen[2] |= pose.groom > 0.8;
+                p.clear();
+                n.clear();
+                u.clear();
+                c.clear();
+                i.clear();
+                let sized = Rat {
+                    length_m: length,
+                    ..Rat {
+                        seed: rat.seed,
+                        legs: Vec::new(),
+                        period: 10.0,
+                        phase: 0.0,
+                        length_m: length,
+                        tint: 1.0,
+                        motion: RatMotion::default(),
+                    }
+                };
+                push_rat(
+                    &mut p,
+                    &mut n,
+                    &mut u,
+                    &mut c,
+                    &mut i,
+                    &sized,
+                    Vec2::ZERO,
+                    &pose,
+                );
+                assert_eq!(p.len(), RAT_VERTICES);
+                assert_eq!(i.len() / 3, 996);
+                if pose.feet[0].y.min(pose.feet[1].y) > 0.02 * (length / 0.28) {
+                    let rump_floor = p[10 * BODY_SECTORS..13 * BODY_SECTORS]
+                        .iter()
+                        .map(|p| p[1])
+                        .fold(f32::INFINITY, f32::min);
+                    assert!(
+                        rump_floor < RAT_GROUND_Y + 0.0025 * (length / 0.28),
+                        "paired wash must sit on its rump: {rump_floor}"
+                    );
+                    assert!(
+                        pose.feet[2].y.max(pose.feet[3].y) < 0.0001,
+                        "paired wash needs both hind contacts"
+                    );
+                }
+                if pose.groom > 0.8 {
+                    // The middle toe's three tip vertices, on each actual front paw.
+                    for first in [366, 416] {
+                        let fingertip = p[first..first + 3]
+                            .iter()
+                            .copied()
+                            .map(Vec3::from_array)
+                            .sum::<Vec3>()
+                            / 3.0;
+                        let gap = p[..7 * BODY_SECTORS]
+                            .iter()
+                            .copied()
+                            .map(Vec3::from_array)
+                            .map(|point| point.distance(fingertip))
+                            .fold(f32::INFINITY, f32::min);
+                        if gap < 0.011 * (length / 0.28) {
+                            let height = (fingertip.y - RAT_GROUND_Y) / (length / 0.28);
+                            contact_low = contact_low.min(height);
+                            contact_high = contact_high.max(height);
+                            contact_count += 1;
+                        }
+                    }
+                }
+                let floor = p.iter().map(|p| p[1]).fold(f32::INFINITY, f32::min);
+                assert!(
+                    (0.012..0.014).contains(&floor),
+                    "action digs through road: {floor} {pose:?}"
+                );
+                assert!(p.iter().flatten().all(|v| v.is_finite()));
+                for tri in i.chunks_exact(3) {
+                    let [a, b, c] = [tri[0] as usize, tri[1] as usize, tri[2] as usize];
+                    let face = (Vec3::from_array(p[b]) - Vec3::from_array(p[a]))
+                        .cross(Vec3::from_array(p[c]) - Vec3::from_array(p[a]));
+                    let normal =
+                        Vec3::from_array(n[a]) + Vec3::from_array(n[b]) + Vec3::from_array(n[c]);
+                    assert!(
+                        face.length() > 1e-11 && face.normalize().dot(normal.normalize()) > 0.025,
+                        "invalid action triangle {a},{b},{c}, frame={frame}, pose={pose:?}"
+                    );
+                }
+            }
+        }
+        assert!(
+            contact_count > 20 && contact_high - contact_low > 0.020,
+            "washing fingertips must traverse the actual mouth-to-brow surface: {contact_count} contacts over {} m",
+            contact_high - contact_low
+        );
+        assert!(
+            seen.into_iter().all(|seen| seen),
+            "all three short actions must appear"
+        );
+    }
+
+    #[test]
+    fn rat_tail_vertices_remain_continuous_through_stride_wraps_and_stops() {
+        let rat = Rat {
+            seed: 37,
+            legs: Vec::new(),
+            period: 10.0,
+            phase: 0.0,
+            length_m: 0.28,
+            tint: 1.0,
+            motion: RatMotion::default(),
+        };
+        let mut motion = RatMotion::default();
+        let (mut p, mut n, mut u, mut c, mut i) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        let mut previous = Vec::new();
+        for frame in 0..180 {
+            let t = frame as f32 / 120.0;
+            let position = Vec2::X * t.min(0.83) * 1.8;
+            let pose = motion.update(
+                rat.seed,
+                rat.length_m,
+                position,
+                Vec2::X,
+                t,
+                if t < 0.83 { 0.0 } else { 0.3 },
+            );
+            p.clear();
+            n.clear();
+            u.clear();
+            c.clear();
+            i.clear();
+            push_rat(
+                &mut p,
+                &mut n,
+                &mut u,
+                &mut c,
+                &mut i,
+                &rat,
+                Vec2::ZERO,
+                &pose,
+            );
+            let tail = &p[BODY_STATIONS * BODY_SECTORS
+                ..BODY_STATIONS * BODY_SECTORS + TAIL_STATIONS * TAIL_SECTORS];
+            if !previous.is_empty() {
+                for (before, after) in previous.iter().zip(tail) {
+                    assert!(
+                        Vec3::from_array(*before).distance(Vec3::from_array(*after)) < 0.006,
+                        "tail vertex jumped across stride/stop at {t}"
+                    );
+                }
+            }
+            previous.clear();
+            previous.extend_from_slice(tail);
+        }
+    }
+
+    /// Optional capture input is produced by the actual route and scatter functions.
+    /// With no env setting this is a normal assertion-only regression test.
+    #[test]
+    fn rat_actual_route_and_stationary_scatter_trace() {
+        use std::fmt::Write as _;
+        let nav = committed_nav();
+        let collision = CollisionWorld::default();
+        let anchor = Vec2::new(-294.0, 220.0);
+        let destination = std::env::var_os("CATHEDRAL_RAT_TRACE_DIR").map(std::path::PathBuf::from);
+        for case in 0..4 {
+            let interrupt_groom = case == 3;
+            let stationary = case == 1 || interrupt_groom;
+            let combined = case == 2;
+            let mut rat = bake_rat(
+                &nav,
+                &collision,
+                anchor,
+                14.0,
+                if interrupt_groom { 37 } else { 7 },
+            )
+            .unwrap();
+            rat.phase = if combined {
+                (rat.legs[0].depart - 0.6).max(0.0)
+            } else {
+                0.0
+            };
+            let home = rat.sample(0.0).0;
+            let attack_start = if interrupt_groom { 1.0 } else { 0.25 };
+            if stationary {
+                rat.legs = vec![Leg {
+                    depart: 10.0,
+                    arrive: 10.02,
+                    from: home,
+                    to: home,
+                    heading: Vec2::X,
+                }];
+                rat.period = 10.02;
+            }
+            let duration = if stationary || combined {
+                if interrupt_groom { 4.5 } else { 4.0 }
+            } else {
+                rat.period
+            };
+            let mut motion = RatMotion::default();
+            let mut csv = destination.as_ref().map(|_| {
+                String::from("time_seconds,x_m,z_m,heading_x,heading_z,pause_remaining_seconds\n")
+            });
+            let mut hold_phase = None;
+            let mut return_seen = false;
+            let mut combined_hold_travel = false;
+            let mut last_position = rat.sample(0.0).0;
+            let mut max_speed = 0.0_f32;
+            let mut paired_before_escape = false;
+            let mut leaving_crouch_seen = false;
+            let (mut p, mut n, mut u, mut c, mut i) =
+                (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+            for frame in 0..=(duration * 60.0).ceil() as usize {
+                let t = frame as f32 / 60.0;
+                let (base, hint, _) = rat.sample(t);
+                let impulse =
+                    (stationary || combined).then_some((home + Vec2::new(0.4, 0.0), attack_start));
+                let offset = scatter_offset(&nav, &collision, &rat, base, impulse, t);
+                let position = base + offset;
+                assert!(walkable(&nav, &collision, position));
+                let remaining = rat.pause_remaining(t);
+                let pose = motion.update(rat.seed, rat.length_m, position, hint, t, remaining);
+                p.clear();
+                n.clear();
+                u.clear();
+                c.clear();
+                i.clear();
+                push_rat(
+                    &mut p,
+                    &mut n,
+                    &mut u,
+                    &mut c,
+                    &mut i,
+                    &rat,
+                    Vec2::ZERO,
+                    &pose,
+                );
+                assert!(p.iter().flatten().all(|v| v.is_finite()));
+                let floor = p.iter().map(|p| p[1]).fold(f32::INFINITY, f32::min);
+                assert!(
+                    (0.012..0.014).contains(&floor),
+                    "escape geometry loses the road at {t}: {floor}"
+                );
+                assert_eq!(i.len() / 3, 996);
+                for triangle in i.chunks_exact(3) {
+                    let [a, b, c] = [
+                        triangle[0] as usize,
+                        triangle[1] as usize,
+                        triangle[2] as usize,
+                    ];
+                    let face = (Vec3::from_array(p[b]) - Vec3::from_array(p[a]))
+                        .cross(Vec3::from_array(p[c]) - Vec3::from_array(p[a]));
+                    let normal =
+                        Vec3::from_array(n[a]) + Vec3::from_array(n[b]) + Vec3::from_array(n[c]);
+                    assert!(
+                        face.length() > 1e-11 && face.normalize().dot(normal.normalize()) > 0.025,
+                        "invalid escape triangle {a},{b},{c} at {t}"
+                    );
+                }
+                paired_before_escape |= interrupt_groom
+                    && t < attack_start
+                    && pose.feet[0].y.min(pose.feet[1].y) > 0.020 * (rat.length_m / 0.28);
+                leaving_crouch_seen |= interrupt_groom
+                    && t > attack_start
+                    && t < attack_start + 0.3
+                    && pose.groom > 0.0
+                    && pose.speed > 0.2;
+                max_speed = max_speed.max(pose.speed);
+                for (index, foot) in pose.feet.iter().enumerate() {
+                    let (along, flank, _) = RAT_LEGS[index];
+                    let neutral =
+                        Vec2::new(along, flank + flank.signum() * 0.007) * (rat.length_m / 0.28);
+                    assert!(
+                        Vec2::new(foot.x, foot.z).distance(neutral) < 0.080 * (rat.length_m / 0.28),
+                        "actual escape/turn overextends foot {index} at {t}: {foot:?}"
+                    );
+                }
+                if combined && (0.85..1.4).contains(&t) && pose.speed > 0.5 {
+                    let delta = position - last_position;
+                    assert!((pose.speed - delta.length() * 60.0).abs() < 0.003);
+                    combined_hold_travel = true;
+                }
+                last_position = position;
+                if stationary && (attack_start + 0.55..attack_start + 1.35).contains(&t) {
+                    assert!(pose.speed < 0.001, "scatter hold has no translation");
+                    if let Some(phase) = hold_phase {
+                        assert_eq!(pose.phase, phase, "scatter hold cannot treadmill");
+                    }
+                    hold_phase = Some(pose.phase);
+                    if pose.groom < 0.001 {
+                        assert!(
+                            pose.feet.iter().all(|p| p.y < 0.001),
+                            "settled non-washing paws stay grounded"
+                        );
+                    }
+                }
+                if stationary
+                    && (attack_start + 1.75..attack_start + 2.75).contains(&t)
+                    && pose.speed > 0.03
+                {
+                    assert!(
+                        pose.heading.dot((-offset).normalize()) > 0.95,
+                        "return must face home"
+                    );
+                    return_seen = true;
+                }
+                if let Some(csv) = &mut csv {
+                    writeln!(
+                        csv,
+                        "{t:.8},{:.8},{:.8},{:.8},{:.8},{remaining:.8}",
+                        position.x, position.y, hint.x, hint.y
+                    )
+                    .unwrap();
+                }
+            }
+            if stationary {
+                assert!(return_seen && hold_phase.is_some());
+                assert!(
+                    max_speed > 3.0,
+                    "regression must include actual escape speed"
+                );
+            }
+            if interrupt_groom {
+                assert!(
+                    paired_before_escape && leaving_crouch_seen,
+                    "trace must interrupt a real paired crouch"
+                );
+            }
+            if combined {
+                assert!(
+                    combined_hold_travel,
+                    "scatter hold still moves when the baked base moves"
+                );
+            }
+            if let (Some(directory), Some(csv)) = (&destination, csv) {
+                std::fs::create_dir_all(directory).unwrap();
+                let name = if interrupt_groom {
+                    "groom_interrupt_scatter"
+                } else if stationary {
+                    "stationary_scatter"
+                } else if combined {
+                    "moving_base_scatter"
+                } else {
+                    "baked_route"
+                };
+                std::fs::write(directory.join(format!("{name}.csv")), csv).unwrap();
+                let metadata = serde_json::json!({ "seed":rat.seed, "length_m":rat.length_m, "tint":rat.tint,
+                    "phase":rat.phase, "period":rat.period, "sample_hz":60, "duration_seconds":duration, "scatter_start_seconds":if stationary || combined {Some(attack_start)} else {None},
+                    "navigation":"assets/world/navigation.json + assets/world/navigation.bin (committed bake)",
+                    "limitations":"Actual Rat.sample and scatter_offset with committed NavData, default empty test CollisionWorld; does not include full runtime colliders. Stationary trace replaces route with one legal degenerate home leg. The paired-groom interrupt uses seed 37 and a 1.0-second impulse; the other scatter traces start the actual impulse at 0.25 seconds; moving_base_scatter shifts the baked phase to depart at 0.6 seconds. Route trace has no scatter." });
+                std::fs::write(
+                    directory.join(format!("{name}.json")),
+                    serde_json::to_vec_pretty(&metadata).unwrap(),
+                )
+                .unwrap();
+            }
+        }
+    }
+
+    #[test]
     fn a_rat_is_wound_with_its_normals_out() {
         let nav = committed_nav();
         let rat = bake_rat(
@@ -2312,9 +3425,7 @@ mod tests {
                 &mut indices,
                 &rat,
                 Vec2::ZERO,
-                heading,
-                false,
-                0.0,
+                &motion_pose(&rat, heading, false, 0.0),
             );
             assert_eq!(positions.len(), RAT_VERTICES);
             assert_eq!(normals.len(), RAT_VERTICES);
@@ -2402,9 +3513,7 @@ mod tests {
                 &mut indices,
                 &rat,
                 Vec2::ZERO,
-                Vec2::X,
-                moving,
-                elapsed,
+                &motion_pose(&rat, Vec2::X, moving, elapsed),
             );
             (positions, indices)
         };
@@ -2462,6 +3571,77 @@ mod tests {
             "the tail is the other half of a rat: {} of {length}",
             reach(&paused)
         );
+    }
+
+    /// The road is at 12 mm: comparing only to RAT_GROUND_Y would permit
+    /// an accidentally elevated origin to make every rat float together.
+    #[test]
+    fn rat_geometry_has_a_bounded_budget_and_clears_the_actual_road() {
+        let mut rat = Rat {
+            seed: 37,
+            legs: Vec::new(),
+            period: 10.0,
+            phase: 0.0,
+            length_m: 0.28,
+            tint: 1.0,
+            motion: RatMotion::default(),
+        };
+        let (mut p, mut n, mut u, mut c, mut i) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        for length in [0.24, 0.28, 0.32] {
+            rat.length_m = length;
+            for moving in [false, true] {
+                for frame in 0..24 {
+                    p.clear();
+                    n.clear();
+                    u.clear();
+                    c.clear();
+                    i.clear();
+                    push_rat(
+                        &mut p,
+                        &mut n,
+                        &mut u,
+                        &mut c,
+                        &mut i,
+                        &rat,
+                        Vec2::ZERO,
+                        &motion_pose(&rat, Vec2::X, moving, frame as f32 / 24.0),
+                    );
+                    assert!(i.len() / 3 <= 1000, "one rat exceeds its geometry budget");
+                    assert!(p.iter().flatten().all(|v| v.is_finite()));
+                    let floor = p.iter().map(|v| v[1]).fold(f32::INFINITY, f32::min);
+                    assert!(
+                        (0.012..=0.014).contains(&floor),
+                        "rat feet must meet the road: {floor}"
+                    );
+                    let belly = p[..10 * BODY_SECTORS]
+                        .iter()
+                        .map(|v| v[1])
+                        .fold(f32::INFINITY, f32::min);
+                    assert!(
+                        belly >= 0.017,
+                        "the belly ahead of the seated rump must clear the road: {belly}"
+                    );
+                    for triangle in i.chunks_exact(3) {
+                        let [a, b, d] = [
+                            triangle[0] as usize,
+                            triangle[1] as usize,
+                            triangle[2] as usize,
+                        ];
+                        let face = (Vec3::from_array(p[b]) - Vec3::from_array(p[a]))
+                            .cross(Vec3::from_array(p[d]) - Vec3::from_array(p[a]));
+                        let shading = Vec3::from_array(n[a])
+                            + Vec3::from_array(n[b])
+                            + Vec3::from_array(n[d]);
+                        assert!(
+                            face.length() > 1e-11
+                                && face.normalize().dot(shading.normalize()) > 0.05,
+                            "inverted or collapsed triangle {a},{b},{d}; moving={moving}, frame={frame}"
+                        );
+                    }
+                }
+            }
+        }
     }
 
     /// Heavy rain thins the visible count, matching the animals going quiet —

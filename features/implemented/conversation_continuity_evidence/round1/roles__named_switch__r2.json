@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe.\"}\nsay {\"target\":\"player\",\"text\":\"I trade in spices, good oils, and honest measures—I'm Rohese Nett, a spicer of Weigh Ward.\"}",
+  "duration_seconds": 1.855030033,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__named_switch__r2",
+  "prompt_path": "prompts/f272314036295bc04fb32ff92e264eea874c777c5d5b3784d9d4aa99e473dfcf.txt"
+}

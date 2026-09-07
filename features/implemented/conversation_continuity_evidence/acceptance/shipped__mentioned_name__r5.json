@@ -1,0 +1,9 @@
+{
+  "answer": "go_to {\"place_id\":\"pl_t7rf\"}",
+  "duration_seconds": 2.71535088,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__mentioned_name__r5",
+  "prompt_path": "prompts/65b37bf1b68569015a78f8660d110256c087f40fa97c9cd1faab56a36bb1c1c2.txt"
+}

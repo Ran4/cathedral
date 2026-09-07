@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I do. I’m Rohese Nett, a spicer, bound for the Wickmarket now. Come there and we’ll talk prices.\"}",
+  "duration_seconds": 3.386540224,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__group_overrides_hint__r5",
+  "prompt_path": "prompts/03d6c95ed365c6efa45535f51ded36c25a520b2ef23c9d302ad75b575320867f.txt"
+}

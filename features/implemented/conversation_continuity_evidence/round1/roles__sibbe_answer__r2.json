@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’ll set out the herring and smoked eel at Coswald’s Yard, call the prices, and take sparks for them—one spark for a herring, three for a smoked eel.\"}",
+  "duration_seconds": 2.543010968,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__sibbe_answer__r2",
+  "prompt_path": "prompts/36569789a0d431770824e8538ab097abfe3b2da28ab82cbc19e74bc87d18978f.txt"
+}

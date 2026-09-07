@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I trade in spices, oils, and other provisions here in the Weigh Ward.\"}",
+  "duration_seconds": 1.754094221,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__named_overrides_hint__r1",
+  "prompt_path": "prompts/62f898a965c7b2e5d701ad8de4f03d9f4322fdca60e04d726c36082f1f1fc1b8.txt"
+}

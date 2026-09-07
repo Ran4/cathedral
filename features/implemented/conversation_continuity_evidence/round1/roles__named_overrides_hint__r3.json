@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe.\"}\nsay {\"target\":\"player\",\"text\":\"I trade spices, oils, and provisions in Weigh Ward. Today you’ll find me at the Wickmarket.\"}",
+  "duration_seconds": 2.181007699,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__named_overrides_hint__r3",
+  "prompt_path": "prompts/30dfce7018ae771b61e2a50e6b22349e8a6b3cb3035bf293c38746347727b245.txt"
+}

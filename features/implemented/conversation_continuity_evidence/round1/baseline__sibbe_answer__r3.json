@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’m selling herring for one spark each, or smoked eel for three. Tell me which you want, and I’ll hold it out.\"}",
+  "duration_seconds": 2.517157269,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__sibbe_answer__r3",
+  "prompt_path": "prompts/06a3f54376ddda96bae7b780d3e6ef86ed76fac89b83dcb790af8e0353a39f17.txt"
+}

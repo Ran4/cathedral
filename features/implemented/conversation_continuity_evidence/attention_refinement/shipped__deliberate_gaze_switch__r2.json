@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I trade spices and costly oils, and I keep a sharp eye against watering. I’m bound for the Wickmarket this morning.\"}",
+  "duration_seconds": 2.02382042,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__deliberate_gaze_switch__r2",
+  "prompt_path": "prompts/58a1f40beed0038557c2a0c446c5cadc8e1452c05c2735486bc904d170e8e1a8.txt"
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Pepper, ginger, cinnamon, and salt—though my basket is nearly bare today. I can tell you what is sound when I reach the Wickmarket.\"}",
+  "duration_seconds": 1.7704109209999999,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__accepted_interjection__r3",
+  "prompt_path": "prompts/535ebd0cb2947372704f6e35a1f9b74564b4ccb4552cd18511b4dbdc169f9193.txt"
+}

@@ -163,3 +163,16 @@ place_unknown = "somewhere in the city"
 # that cites its source is not flat. UNMEASURED — the one string M3 adds; the Q4
 # re-measurement (M3 Verification 11) fires it.
 known_from = " — you had it from %s"
+
+# Delivered with each utterance, before its inbox/history lifecycle begins.
+[conversation]
+addressed = " [Conversation: probable addressee: you; evidence: {evidence}.]"
+overhearing = " [Conversation: probable addressee: {target}; you are overhearing; evidence: {evidence}.]"
+group = " [Conversation: open question to nearby listeners, including you.]"
+unseen_target = "someone else nearby"
+apparent_attention = "apparent attention"
+named = "explicit name"
+focus = "sustained attention"
+continuing = "ongoing exchange"
+invitation = "recent invitation"
+nearest = "proximity only"

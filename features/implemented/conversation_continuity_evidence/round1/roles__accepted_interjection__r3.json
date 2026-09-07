@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Pepper, cumin, coriander, and a little saffron when the ships bring it. I keep them sealed and honest.\"}",
+  "duration_seconds": 4.182274952,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__accepted_interjection__r3",
+  "prompt_path": "prompts/918584baf650c64b5b37a7ddda0dc5ce254a0b203291d187f08efe52ea3ae3ac.txt"
+}

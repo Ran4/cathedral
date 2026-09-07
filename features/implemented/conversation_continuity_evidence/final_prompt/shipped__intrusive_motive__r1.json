@@ -1,0 +1,9 @@
+{
+  "answer": "wait {}",
+  "duration_seconds": 0.929566825,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__intrusive_motive__r1",
+  "prompt_path": "prompts/f096014ab506ac2fdff39322a16655cc400ef6a19384d8abde841873b9184784.txt"
+}

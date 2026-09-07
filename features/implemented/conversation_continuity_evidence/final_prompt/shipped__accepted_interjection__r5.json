@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I deal in sealed spices and costly oils, by the measure. I’ve no spice packet in hand just now—only sparks—but at my stall I can show you the day’s stock.\"}",
+  "duration_seconds": 5.064480005,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__accepted_interjection__r5",
+  "prompt_path": "prompts/d9c16aa0ce97959a7c9156bedbc47b2ad525d53a3d34a56335801cff237934e1.txt"
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "wait {}",
+  "duration_seconds": 0.774622272,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__petronel_archive__r2",
+  "prompt_path": "prompts/db7ee4caf11896d5224608032e9e702c9c8cb4f412ce212f6176d0d762d181a2.txt"
+}

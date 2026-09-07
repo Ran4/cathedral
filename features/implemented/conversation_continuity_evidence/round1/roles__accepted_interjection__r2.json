@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Pepper, cumin, and saffron when the caravans bring it; I also deal in good salt and sealed oils.\"}",
+  "duration_seconds": 2.940432017,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__accepted_interjection__r2",
+  "prompt_path": "prompts/918584baf650c64b5b37a7ddda0dc5ce254a0b203291d187f08efe52ea3ae3ac.txt"
+}

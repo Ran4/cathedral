@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I am a spicer, but I have none with me at present. I trade at the Wickmarket—350 metres that way, about three minutes on foot.\"} \ntell_way {\"person\":\"player\",\"place_id\":\"pl_t7rf\"}",
+  "duration_seconds": 2.685444272,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__group_question__r3",
+  "prompt_path": "prompts/c0884c78958d62b62cc4e031e4fd121a14d93a436ff4feee459f37e6827668b3.txt"
+}

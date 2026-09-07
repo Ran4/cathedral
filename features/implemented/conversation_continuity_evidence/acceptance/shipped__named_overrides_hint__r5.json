@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe.\"}\nsay {\"target\":\"player\",\"text\":\"I trade spices, oils, and honest measures. I’m bound for the Wickmarket this morning.\"}",
+  "duration_seconds": 1.706521017,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__named_overrides_hint__r5",
+  "prompt_path": "prompts/539ea6177dd48e47432856a9b1be4a6c7ec7b693e217d75168be6008eea959b3.txt"
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I do, at the Wickmarket—I’m heading there now. What spice do you seek?\"}",
+  "duration_seconds": 3.3608136330000002,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__group_question__r1",
+  "prompt_path": "prompts/80ccd5f202d66287214ffe34fdf630d172233db1d01cd41a77a754ac1338fc36.txt"
+}

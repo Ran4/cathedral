@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe.\"}\nsay {\"target\":\"player\",\"text\":\"I am a spicer, yes, though my basket is headed for the Wickmarket. Come there if you seek spices.\"}\ngo_to {\"place_id\":\"pl_t7rf\"}",
+  "duration_seconds": 2.866569665,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__group_overrides_hint__r3",
+  "prompt_path": "prompts/88c919eb030fd4cbbfe742441db675eb4d4ea609d82ef581f198270eac7509ce.txt"
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"At Coswald’s Yard, same as our board: herring for one spark, smoked eel for three. I’ll call the prices and let the coins do the talking.\"}",
+  "duration_seconds": 1.506604059,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__sibbe_answer__r1",
+  "prompt_path": "prompts/ab09197caae0d1c7694c89fb50a30dcbf4e858d7cfc55cf2c31b12b7e7152498.txt"
+}

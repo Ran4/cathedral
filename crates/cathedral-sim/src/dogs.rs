@@ -32,12 +32,21 @@ use crate::nav::{NavData, WALK_Y};
 /// (2.1): a street dog drifts, it does not march.
 pub const DOG_TROT_MPS: f64 = 1.7;
 
+/// Give a resting dog time to transfer its weight before reaching cruise pace.
+pub const DOG_ACCEL_MPS2: f64 = 1.8;
+/// Braking applies to the final approach and corners requiring a planted turn.
+pub const DOG_BRAKE_MPS2: f64 = 2.8;
+/// Leave time for supporting steps during a sharp change of direction.
+pub const DOG_TURN_RAD_S: f64 = std::f64::consts::FRAC_PI_2;
+const TRAVEL_ALIGNMENT_RAD: f64 = 0.30;
+
 /// Gait cycles per metre — quicker than the human `GAIT_CADENCE` (0.67)
 /// because the stride is half as long.
 pub const DOG_GAIT_CADENCE: f64 = 1.15;
 
-/// Below this a dog reads as standing — the sheet's `moving` flag and the
-/// host's gait blend both use it, mirroring `SETTLED_SPEED_MPS` for people.
+/// Below this a dog reads as standing in the sheet's `moving` flag.
+/// The render rig also handles slower start/stop
+/// steps so a rising dog does not slide before the sheet calls it moving.
 pub const DOG_SETTLED_MPS: f64 = 0.15;
 
 /// The coat, for the host's material choice. Render vocabulary only — the
@@ -257,7 +266,7 @@ pub fn seed_pack(nav: &NavData) -> Vec<Dog> {
             };
             let id = DogId::from_raw(row.id);
             // Stagger the first drift so the pack does not set off as one.
-            let rest_s = 1.0 + dog_hash01("dog_first_rest", &id, 0) * 6.0;
+            let rest_s = 3.0 + dog_hash01("dog_first_rest", &id, 0) * 8.0;
             Dog {
                 id,
                 name: row.name.to_string(),
@@ -306,7 +315,10 @@ pub fn step_dogs(dogs: &mut [Dog], dt: f64, nav: &NavData) -> bool {
                     dog.path = path;
                     // The rest taken after *this* drift arrives, rolled now so
                     // arrival needs no second decision.
-                    dog.rest_s = 1.5 + dog_hash01("dog_rest", &dog.id, dog.epoch) * 8.5;
+                    // Leave enough quiet time for a sniff or sit to develop.
+                    // This remains one deterministic roll per drift, with no
+                    // extra routing, cognition, or cosmetic publications.
+                    dog.rest_s = 5.0 + dog_hash01("dog_rest", &dog.id, dog.epoch) * 14.0;
                 }
                 // Every try landed on stone — sit a little and try again.
                 None => {
@@ -321,12 +333,44 @@ pub fn step_dogs(dogs: &mut [Dog], dt: f64, nav: &NavData) -> bool {
         if let Some(&waypoint) = dog.path.first() {
             let to = Vec3::new(waypoint.x - start.x, 0.0, waypoint.z - start.z);
             let distance = to.length();
-            let step = DOG_TROT_MPS * dt;
+            // Some investigations are an unhurried walk; others are a trot.
+            // The choice stays fixed along a path so gait does not flutter at
+            // waypoint joins, and geometry/navigation remain authoritative.
+            let cruise_speed = if dog_hash01("dog_pace", &dog.id, dog.epoch) < 0.38 {
+                0.65 + f64::from(dog.build) * 0.16
+            } else {
+                DOG_TROT_MPS
+            };
+            let mut aligned = true;
+            let mut stop_at_waypoint = dog.path.len() == 1;
             if distance > 1e-9 {
                 let dir = to / distance;
-                // yaw 0 faces -Z, matching the rest of the codebase.
-                dog.facing_yaw = (-dir.x).atan2(-dir.z);
+                // A reversed route begins with a planted turn, not a half-turn
+                // squeezed into one sample. Translation waits until the dog
+                // mostly faces its route. The path itself remains unchanged.
+                let desired = (-dir.x).atan2(-dir.z);
+                let turn = yaw_delta(desired, old_yaw);
+                dog.facing_yaw = old_yaw + turn.clamp(-DOG_TURN_RAD_S * dt, DOG_TURN_RAD_S * dt);
+                aligned = yaw_delta(desired, dog.facing_yaw).abs() <= TRAVEL_ALIGNMENT_RAD;
+                if let Some(next) = dog.path.get(1) {
+                    let onward = Vec3::new(next.x - waypoint.x, 0.0, next.z - waypoint.z);
+                    if onward.length() > 1e-9 {
+                        // Slow before a sharp corner so its turn does not
+                        // begin with a full-speed sideways or backward step.
+                        stop_at_waypoint |=
+                            dir.dot(onward / onward.length()) < TRAVEL_ALIGNMENT_RAD.cos();
+                    }
+                }
             }
+            let target_speed = if !aligned {
+                0.0
+            } else if stop_at_waypoint {
+                cruise_speed.min((2.0 * DOG_BRAKE_MPS2 * distance).sqrt())
+            } else {
+                cruise_speed
+            };
+            let travel_speed = target_speed.min(dog.speed + DOG_ACCEL_MPS2 * dt);
+            let step = travel_speed * dt;
             if distance <= step {
                 dog.position_m = Vec3::new(waypoint.x, WALK_Y, waypoint.z);
                 dog.speed = if dt > 0.0 { distance / dt } else { 0.0 };
@@ -334,7 +378,7 @@ pub fn step_dogs(dogs: &mut [Dog], dt: f64, nav: &NavData) -> bool {
             } else {
                 let dir = to / distance;
                 dog.position_m = Vec3::new(start.x + dir.x * step, WALK_Y, start.z + dir.z * step);
-                dog.speed = DOG_TROT_MPS;
+                dog.speed = travel_speed;
             }
             dog.gait_phase += dog.speed * dt * DOG_GAIT_CADENCE;
         }
@@ -343,6 +387,11 @@ pub fn step_dogs(dogs: &mut [Dog], dt: f64, nav: &NavData) -> bool {
         }
     }
     any_moved
+}
+
+fn yaw_delta(target: f64, current: f64) -> f64 {
+    use std::f64::consts::{PI, TAU};
+    (target - current + PI).rem_euclid(TAU) - PI
 }
 
 /// A drift: a hashed walkable point within the leash, routed over the street

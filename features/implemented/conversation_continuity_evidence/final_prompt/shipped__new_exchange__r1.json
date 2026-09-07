@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Spices, oils, and provisions—though I have only sparks in my basket at present.\"}",
+  "duration_seconds": 1.785259728,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__new_exchange__r1",
+  "prompt_path": "prompts/1e7ef3dd0590fd407c6a67fb4a3fbbf23a74027e9436eff477152b5b280f8d9f.txt"
+}

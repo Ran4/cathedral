@@ -776,6 +776,12 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             // The mic worker resamples every device to this before chunking.
             sample_rate: STREAM_SAMPLE_RATE,
         },
+        BridgeCommand::PlayerAttention { actor_id } => EngineCommand::PlayerAttention {
+            actor_id: actor_id.map(|id| SimActorId::from_raw(id.0)),
+        },
+        BridgeCommand::PlayerUtteranceStarted { wav_basename } => {
+            EngineCommand::PlayerUtteranceStarted { wav_basename }
+        }
         BridgeCommand::PlayerAudioChunk {
             wav_basename,
             seq,

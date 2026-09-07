@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I am Rohese Nett, a grocer and spicer.\"}",
+  "duration_seconds": 1.5271596010000001,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__accepted_after_second_warning__r5",
+  "prompt_path": "prompts/c716935d17e30fb29d10dbd5bcdedc962c8de428332af75a3ca2e201705845f1.txt"
+}

@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Pepper, saffron, cumin, and coriander mostly—fine spices when the purse allows, common ones for everyday pots.\"}",
+  "duration_seconds": 1.51002412,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__accepted_interjection__r2",
+  "prompt_path": "prompts/535ebd0cb2947372704f6e35a1f9b74564b4ccb4552cd18511b4dbdc169f9193.txt"
+}

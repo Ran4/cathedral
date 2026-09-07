@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe.\"}\nsay {\"target\":\"g9sib\",\"text\":\"Sibbe, you promised me those four sparks this morning. I need them back before you spend them on eels.\"}",
+  "duration_seconds": 3.088771759,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "context__personal_stake__r1",
+  "prompt_path": "prompts/0fc7e9547163a53895367d2b19134d252a255536ad95e580a35f87eea0690393.txt"
+}

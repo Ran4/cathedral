@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"I’m a spicer bound for the Wickmarket. I trade in oils and spices, though today I’m chiefly proving an oil jar hasn’t been watered.\"}",
+  "duration_seconds": 2.087536704,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "baseline__followup_1__r2",
+  "prompt_path": "prompts/74cf428304a11f1d68ff51b37bc2620d2f55fb64ee4954bdd0ed5e528bd12364.txt"
+}

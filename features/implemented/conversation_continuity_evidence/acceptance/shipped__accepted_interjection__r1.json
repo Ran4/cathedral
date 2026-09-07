@@ -1,0 +1,9 @@
+{
+  "answer": "remember {\"memory\":\"The stranger with id g9sib is called Sibbe\"}  \nsay {\"target\":\"player\",\"text\":\"Pepper, salt, cloves, and saffron when the caravans bring them. I also keep costly oils under seal, and I know the difference between honest oil and watered stuff.\"}",
+  "duration_seconds": 1.781883096,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "shipped__accepted_interjection__r1",
+  "prompt_path": "prompts/535ebd0cb2947372704f6e35a1f9b74564b4ccb4552cd18511b4dbdc169f9193.txt"
+}

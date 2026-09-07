@@ -27,15 +27,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use serde_json::json;
-
 use crate::{
     FLOOR_PLAYER_CHUNK_HOLD_SECONDS, FLOOR_PLAYER_ENDPOINT_HOLD_SECONDS,
-    FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS, HEARING_RADIUS_M, MAX_ACTIVE_STREAMS,
-    MAX_UTTERANCE_TIMINGS, PLAYER_SPEECH_MAX_CHARS, STREAM_SAMPLE_RATE,
-    STT_STREAM_HELD_TRANSCRIPT_SECONDS, STT_STREAM_MAX_CHUNK_SAMPLES, STT_STREAM_MAX_CHUNKS,
-    actions::apply_action_at,
+    FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS, MAX_ACTIVE_STREAMS, MAX_UTTERANCE_TIMINGS,
+    PLAYER_SPEECH_MAX_CHARS, STREAM_SAMPLE_RATE, STT_STREAM_HELD_TRANSCRIPT_SECONDS,
+    STT_STREAM_MAX_CHUNK_SAMPLES, STT_STREAM_MAX_CHUNKS,
     character::Control,
+    conversation::{CAPTURE_LIFETIME_SECONDS, CapturedAttention, Conversation},
     engine::{EngineMessage, MAX_COMMAND_MESSAGE_CHARS, MAX_TTS_FAILURE_REASON_CHARS},
     error::{CommandError, CommandErrorCode},
     event::DomainEvent,
@@ -84,6 +82,8 @@ pub struct SpeechContext<'a> {
     pub world: &'a mut World,
     pub floor: &'a mut ConversationFloor,
     pub scheduler: &'a mut NpcScheduler,
+    pub conversation: &'a mut Conversation,
+    pub conversation_prose: &'a crate::conversation::ConversationStrings,
     /// The omniscient run transcript; an applied player `say` appends to it.
     pub transcript: &'a mut Vec<String>,
     pub transcription: &'a mut dyn Transcription,
@@ -242,6 +242,7 @@ struct TranscriptionTask {
     /// applied here even if he has walked away since (`server.py:1701-1717`).
     position_m: Vec3,
     backend: SttBackendKind,
+    attention: CapturedAttention,
 }
 
 /// A recording briefly waiting for the transcript the provider already owns.
@@ -273,6 +274,7 @@ pub struct SpeechRouter {
     /// paying for a batch upload.
     stt_stream_grace_seconds: f64,
     streams: Vec<(String, StreamState)>,
+    captures: Vec<(String, CapturedAttention)>,
     parked: Vec<(String, ParkedRecording)>,
     timings: Vec<(String, UtteranceTiming)>,
     /// Batch jobs that will resolve a `player_recording`.
@@ -327,7 +329,29 @@ impl SpeechRouter {
     /// held-transcript timeout, an abort — so a dropped client cannot wedge the
     /// cast into silence.
     pub fn player_composing(&self) -> bool {
-        !self.streams.is_empty() || !self.parked.is_empty() || !self.recording_jobs.is_empty()
+        !self.captures.is_empty()
+            || !self.streams.is_empty()
+            || !self.parked.is_empty()
+            || !self.recording_jobs.is_empty()
+    }
+
+    /// The host calls this on microphone onset, including local STT (which has
+    /// no audio stream). The streamed begin is a fallback for headless hosts.
+    pub fn capture_utterance(&mut self, now: f64, basename: &str, ctx: &mut SpeechContext<'_>) {
+        if check_basename(basename).is_err() || self.captures.iter().any(|(key, _)| key == basename)
+        {
+            return;
+        }
+        while self.captures.len() >= MAX_ACTIVE_STREAMS {
+            self.captures.remove(0);
+        }
+        self.captures
+            .push((basename.into(), ctx.conversation.capture(now, ctx.world)));
+    }
+
+    fn take_capture(&mut self, basename: &str) -> Option<CapturedAttention> {
+        let index = self.captures.iter().position(|(key, _)| key == basename)?;
+        Some(self.captures.remove(index).1)
     }
 
     // ------------------------------------------------------------------ poll
@@ -335,6 +359,8 @@ impl SpeechRouter {
     /// `_poll_streaming` (`server.py:1325-1353`): the two deadlines nobody else
     /// watches.
     pub fn poll(&mut self, now: f64, ctx: &mut SpeechContext<'_>, out: &mut Vec<EngineMessage>) {
+        self.captures
+            .retain(|(_, captured)| now - captured.captured_at < CAPTURE_LIFETIME_SECONDS);
         // The provider is taking too long: stop paying it rent and upload.
         while let Some(index) = self
             .parked
@@ -372,6 +398,7 @@ impl SpeechRouter {
             out.push(diagnostic("player_audio_begin", &error));
             return;
         }
+        self.capture_utterance(now, basename, ctx);
         // Re-beginning a live basename replaces it outright: the mic worker has
         // restarted the utterance and the old sequence expectations are void.
         if self.take_stream(basename).is_some() {
@@ -479,6 +506,7 @@ impl SpeechRouter {
             // ever be committed or said for them, so give the floor back at once.
             ctx.floor.clear_player_hold();
             self.take_stream(basename);
+            self.take_capture(basename);
             ctx.realtime_clear(basename);
             return;
         }
@@ -543,6 +571,7 @@ impl SpeechRouter {
     /// A *parked* recording is deliberately untouched: it belongs to an
     /// in-flight `player_recording` whose grace timer owns its resolution.
     pub fn on_audio_abort(&mut self, basename: &str, ctx: &mut SpeechContext<'_>) {
+        self.take_capture(basename);
         if self.take_stream(basename).is_some() {
             ctx.floor.clear_player_hold();
             ctx.realtime_clear(basename);
@@ -577,6 +606,7 @@ impl SpeechRouter {
         ) {
             Ok(()) => {}
             Err(error) => {
+                self.take_capture(basename);
                 out.push(EngineMessage::TranscriptionResult {
                     request_id: request_id.to_string(),
                     text: None,
@@ -635,6 +665,9 @@ impl SpeechRouter {
             basename: basename.to_string(),
             position_m: utterance_position,
             backend: stt_backend,
+            attention: self
+                .take_capture(basename)
+                .unwrap_or_else(|| ctx.conversation.capture(now, ctx.world)),
         };
 
         let mut stream = self.take_stream(basename);
@@ -997,15 +1030,28 @@ impl SpeechRouter {
         // Frozen position: transcription can finish after newer spatial updates
         // have landed. The utterance is applied where it was *spoken*, without
         // rewinding the authoritative player position (speech-python.md risk 7).
-        let said = apply_action_at(
+        let said = crate::conversation::speak(
+            now,
             ctx.world,
+            ctx.scheduler,
+            ctx.conversation,
             ctx.player_id,
-            "say",
-            &json!({"text": text}),
-            Some(task.position_m),
+            &task.attention,
+            task.position_m,
+            text,
+            ctx.conversation_prose,
         );
         let line = match said {
-            Ok(line) => line,
+            Ok((line, selection)) => {
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[conversation] request={} addressee={} evidence={} captured_at={:.3}",
+                    task.request_id,
+                    selection.addressee.as_ref().map_or("none", ActorId::as_str),
+                    selection.evidence.as_str(),
+                    task.attention.captured_at
+                )));
+                line
+            }
             Err(error) => {
                 out.push(EngineMessage::Status(stt_status(
                     STATE_IDLE,
@@ -1022,24 +1068,6 @@ impl SpeechRouter {
             }
         };
         ctx.transcript.push(line.clone());
-
-        // Being heard should be followed by the earliest possible reaction: the
-        // nearest LLM listener takes the next turn without waiting out the
-        // round-robin or the inter-turn delay.
-        let nearest = ctx
-            .world
-            .characters_within(task.position_m, HEARING_RADIUS_M, Some(ctx.player_id))
-            .into_iter()
-            .find(|candidate| {
-                ctx.world
-                    .characters
-                    .get(candidate)
-                    .is_some_and(|character| character.control() == Control::Llm)
-            });
-        if let Some(nearest) = nearest {
-            ctx.scheduler
-                .prioritize_player_reaction(ctx.world, &nearest, now);
-        }
 
         out.push(EngineMessage::Status(stt_status(
             STATE_IDLE,

@@ -1,0 +1,9 @@
+{
+  "answer": "say {\"target\":\"player\",\"text\":\"Mind the roof tile! Move clear!\"}\nremember {\"memory\":\"The stranger with id g9sib is called Sibbe.\"}",
+  "duration_seconds": 2.4041695450000002,
+  "error": null,
+  "max_output_tokens": 350,
+  "model": "gpt-5.6-luna",
+  "name": "roles__witnessed_danger__r3",
+  "prompt_path": "prompts/e50c8b92b70d745155a0a626dc13482269ba4870a576fb18d40eaa00b744b260.txt"
+}
