@@ -1,4 +1,4 @@
-Status: Partial (2026-09-07). Knowledge/source/ownership reconciliation and CPU baseline delivered; V03 reference-renderer and full stress acceptance remain unavailable. M1 must not advance yet.
+Status: Partial (2026-09-07). Knowledge/source/ownership reconciliation and CPU baseline delivered; V03 reference-renderer and full stress acceptance remain unavailable. Continued implementation is authorized by EXECUTION_AUTHORITY.md.
 
 # M0 — Baseline and prerequisite gate
 

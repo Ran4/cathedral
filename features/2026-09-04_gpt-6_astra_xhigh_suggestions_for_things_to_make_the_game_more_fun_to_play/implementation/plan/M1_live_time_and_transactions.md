@@ -1,8 +1,14 @@
-Status: Planned (2026-09-05).
+Status: In progress (2026-09-07). M1a implemented and coordinator reviewed. Combined current-tree verification passes 1,791 tests (eight ignored). M1b–M1d remain. Renderer/focus performance remains unavailable.
 
 # M1 — Live time and committed actions
 
 Make advancing time and clear, idempotent action results foundational. Every later UI and activity relies on this contract.
+
+## M1a implementation handoff — 2026-09-07
+
+`timeline::AcceptedTime` and host `LiveTimePlugin` own the production accepted stream: 100 ms maximum per frame, retained ordinary debt, no overlay/focus exception. Controller fixed steps, engine elapsed/calendar deadlines and physical gates consume that stream. The normal local pump freezes a finite command cohort, appends the newest authoritative `PhysicalPosition.current`/yaw sample, flushes events and verifies the matching sim sample/watermark. Engine, Round and Night Office crossing cursors now store calendar days; Night has an explicit ambient day guard. Exclusive expiry precedes same-instant provider actions.
+
+[The M1a record](evidence/m1a/README.md) gives interfaces, field dispositions, test commands and limitations. Direct legacy coarse `Engine::poll` calls remain an explicit debug/test API and now diagnose discarded physical spans; both headless clock watching and ordinary turn stepping use at most 50 ms. Production gameplay admission retains debt instead of entering that legacy path. Save/load and command replay are still the next cuts' work.
 
 ## Entry
 

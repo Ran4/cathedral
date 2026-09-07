@@ -1,0 +1,1458 @@
+{
+  "schema": 1,
+  "scope": "Selected private owner declarations; review against PERSISTENCE_INVENTORY.md, not serialization or automatic approval of new fields",
+  "owners": [
+    {
+      "source": "crates/cathedral-sim/src/world.rs",
+      "owner": "World",
+      "fields": [
+        {
+          "field": "area_map",
+          "type_declaration": "AreaMap,"
+        },
+        {
+          "field": "characters",
+          "type_declaration": "BTreeMap<ActorId, Character>,"
+        },
+        {
+          "field": "roster",
+          "type_declaration": "Vec<ActorId>,"
+        },
+        {
+          "field": "items",
+          "type_declaration": "BTreeMap<ItemId, Item>,"
+        },
+        {
+          "field": "item_catalog",
+          "type_declaration": "Arc<ItemCatalog>,"
+        },
+        {
+          "field": "offers",
+          "type_declaration": "BTreeMap<ItemId, Offer>,"
+        },
+        {
+          "field": "legacy_restock_shares",
+          "type_declaration": "BTreeMap<ItemId, Vec<LegacyRestockShare>>,"
+        },
+        {
+          "field": "transform_jobs",
+          "type_declaration": "BTreeMap<ActorId, TransformJob>,"
+        },
+        {
+          "field": "completed_transform_jobs",
+          "type_declaration": "BTreeMap<String, CompletedTransform>,"
+        },
+        {
+          "field": "world_revision",
+          "type_declaration": "i64,"
+        },
+        {
+          "field": "event_sequence",
+          "type_declaration": "i64,"
+        },
+        {
+          "field": "spatial_sequence",
+          "type_declaration": "i64,"
+        },
+        {
+          "field": "sounds_enabled",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "view_cone_degrees",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "sound_catalog",
+          "type_declaration": "SoundCatalog,"
+        },
+        {
+          "field": "current_time",
+          "type_declaration": "Option<WorldTime>,"
+        },
+        {
+          "field": "current_weather",
+          "type_declaration": "Option<WeatherSample>,"
+        },
+        {
+          "field": "shelters",
+          "type_declaration": "Arc<ShelterMap>,"
+        },
+        {
+          "field": "nav",
+          "type_declaration": "Option<Arc<NavData>>,"
+        },
+        {
+          "field": "places",
+          "type_declaration": "PlaceRegistry,"
+        },
+        {
+          "field": "needle_claim",
+          "type_declaration": "Option<NeedleClaim>,"
+        },
+        {
+          "field": "notices",
+          "type_declaration": "crate::notices::Notices,"
+        },
+        {
+          "field": "custody",
+          "type_declaration": "crate::custody::Custody,"
+        },
+        {
+          "field": "dogs",
+          "type_declaration": "Vec<crate::dogs::Dog>,"
+        },
+        {
+          "field": "marks",
+          "type_declaration": "crate::marks::Marks,"
+        },
+        {
+          "field": "mark_catalog",
+          "type_declaration": "Arc<crate::marks::MarkCatalog>,"
+        },
+        {
+          "field": "marks_enabled",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "mark_kinds",
+          "type_declaration": "crate::marks::MarkKindSwitches,"
+        },
+        {
+          "field": "ward_moods",
+          "type_declaration": "BTreeMap<crate::lore::PlanningWard, String>,"
+        },
+        {
+          "field": "knowledge",
+          "type_declaration": "crate::knowledge::Knowledge,"
+        },
+        {
+          "field": "fact_catalog",
+          "type_declaration": "Arc<crate::knowledge::FactCatalog>,"
+        },
+        {
+          "field": "salience",
+          "type_declaration": "Arc<crate::knowledge::SalienceTable>,"
+        },
+        {
+          "field": "knowledge_enabled",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "area_adjacency",
+          "type_declaration": "Arc<crate::knowledge::AreaAdjacency>,"
+        },
+        {
+          "field": "household_doors",
+          "type_declaration": "Arc<BTreeMap<ActorId, Vec3>>,"
+        },
+        {
+          "field": "pollen_no_salience",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "spoke_this_turn",
+          "type_declaration": "Option<ActorId>,"
+        },
+        {
+          "field": "events",
+          "type_declaration": "Vec<DomainEvent>,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/character.rs",
+      "owner": "CharacterState",
+      "fields": [
+        {
+          "field": "position_m",
+          "type_declaration": "Vec3,"
+        },
+        {
+          "field": "facing_yaw",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "holds",
+          "type_declaration": "Vec<ItemId>,"
+        },
+        {
+          "field": "pockets",
+          "type_declaration": "Vec<PocketedUnit>,"
+        },
+        {
+          "field": "gut",
+          "type_declaration": "Vec<GutEntry>,"
+        },
+        {
+          "field": "urgency_since_game_days",
+          "type_declaration": "Option<f64>,"
+        },
+        {
+          "field": "debug_urgency",
+          "type_declaration": "Option<f64>,"
+        },
+        {
+          "field": "goal",
+          "type_declaration": "String,"
+        },
+        {
+          "field": "memories",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "knows",
+          "type_declaration": "BTreeSet<ActorId>,"
+        },
+        {
+          "field": "inbox",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "recent_history",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "pending_history",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "movement",
+          "type_declaration": "Option<Movement>,"
+        },
+        {
+          "field": "needs",
+          "type_declaration": "Needs,"
+        },
+        {
+          "field": "places_known",
+          "type_declaration": "BTreeSet<PlaceId>,"
+        },
+        {
+          "field": "intent",
+          "type_declaration": "Option<TravelIntent>,"
+        },
+        {
+          "field": "daily_round",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "resident",
+          "type_declaration": "Option<crate::round::residents::ResidentStatus>,"
+        },
+        {
+          "field": "round_edit",
+          "type_declaration": "Option<RoundEdit>,"
+        },
+        {
+          "field": "you_sell",
+          "type_declaration": "Vec<VendorListing>,"
+        },
+        {
+          "field": "active_gesture",
+          "type_declaration": "Option<ActiveGesture>,"
+        },
+        {
+          "field": "leaving_city",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "statuses",
+          "type_declaration": "BTreeMap<StatusKind, f64>,"
+        },
+        {
+          "field": "presence",
+          "type_declaration": "Presence,"
+        },
+        {
+          "field": "presence_epoch",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "economic_class",
+          "type_declaration": "EconomicClass,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/engine.rs",
+      "owner": "Engine",
+      "fields": [
+        {
+          "field": "world",
+          "type_declaration": "World,"
+        },
+        {
+          "field": "transcript",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "scheduler",
+          "type_declaration": "NpcScheduler,"
+        },
+        {
+          "field": "floor",
+          "type_declaration": "ConversationFloor,"
+        },
+        {
+          "field": "speech_router",
+          "type_declaration": "SpeechRouter,"
+        },
+        {
+          "field": "env",
+          "type_declaration": "PromptEnv,"
+        },
+        {
+          "field": "cognition",
+          "type_declaration": "Box<dyn Cognition>,"
+        },
+        {
+          "field": "transcription",
+          "type_declaration": "Box<dyn Transcription>,"
+        },
+        {
+          "field": "tts",
+          "type_declaration": "Box<dyn Tts>,"
+        },
+        {
+          "field": "sight",
+          "type_declaration": "Box<dyn Sight>,"
+        },
+        {
+          "field": "config",
+          "type_declaration": "EngineConfig,"
+        },
+        {
+          "field": "capabilities",
+          "type_declaration": "Capabilities,"
+        },
+        {
+          "field": "tts_selected",
+          "type_declaration": "TtsBackendKind,"
+        },
+        {
+          "field": "last_snapshot_revision",
+          "type_declaration": "i64,"
+        },
+        {
+          "field": "last_player_sound_at",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "conversation",
+          "type_declaration": "crate::conversation::Conversation,"
+        },
+        {
+          "field": "npc_exchanges",
+          "type_declaration": "WarmExchanges,"
+        },
+        {
+          "field": "novelty",
+          "type_declaration": "Novelty,"
+        },
+        {
+          "field": "clock",
+          "type_declaration": "WorldClock,"
+        },
+        {
+          "field": "weather",
+          "type_declaration": "WeatherTimeline,"
+        },
+        {
+          "field": "last_weather_days",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "last_weather_sample",
+          "type_declaration": "WeatherSample,"
+        },
+        {
+          "field": "last_clock_days",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "bell_strokes",
+          "type_declaration": "VecDeque<f64>,"
+        },
+        {
+          "field": "bell_seq",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "movement_now",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "round",
+          "type_declaration": "Round,"
+        },
+        {
+          "field": "night",
+          "type_declaration": "NightOffice,"
+        },
+        {
+          "field": "next_round_tick_at",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "next_stage_hop_at",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "next_player_pollen_game_days",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "lamp_revision_sent",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "dogs_published",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "startup_diagnostics",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "ready_emitted",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "last_law_standing",
+          "type_declaration": "Option<EngineMessage>,"
+        },
+        {
+          "field": "last_chalk_standing",
+          "type_declaration": "Option<EngineMessage>,"
+        },
+        {
+          "field": "last_ward_heat",
+          "type_declaration": "Option<EngineMessage>,"
+        },
+        {
+          "field": "door_shut_until",
+          "type_declaration": "BTreeMap<(ActorId, ActorId), f64>,"
+        },
+        {
+          "field": "last_journal",
+          "type_declaration": "Option<EngineMessage>,"
+        },
+        {
+          "field": "last_journal_receipts",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "last_journal_at",
+          "type_declaration": "f64,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/round.rs",
+      "owner": "Round",
+      "fields": [
+        {
+          "field": "sources",
+          "type_declaration": "Vec<WaterSource>,"
+        },
+        {
+          "field": "taverns",
+          "type_declaration": "Vec<Vec3>,"
+        },
+        {
+          "field": "stalls",
+          "type_declaration": "Vec<FoodStall>,"
+        },
+        {
+          "field": "food_trades",
+          "type_declaration": "BTreeMap<String, ResolvedTrade>,"
+        },
+        {
+          "field": "food_log",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "last_office_days",
+          "type_declaration": "Option<f64>,"
+        },
+        {
+          "field": "people",
+          "type_declaration": "BTreeMap<ActorId, Townsperson>,"
+        },
+        {
+          "field": "residents",
+          "type_declaration": "residents::Residents,"
+        },
+        {
+          "field": "weather_shelter_intents",
+          "type_declaration": "BTreeMap<ActorId, WeatherShelterIntent>,"
+        },
+        {
+          "field": "lightning_reflex_until",
+          "type_declaration": "BTreeMap<ActorId, f64>,"
+        },
+        {
+          "field": "chalk_refused_until",
+          "type_declaration": "BTreeMap<ActorId, f64>,"
+        },
+        {
+          "field": "knowledge_refused_until",
+          "type_declaration": "BTreeMap<ActorId, f64>,"
+        },
+        {
+          "field": "knowledge_refused_buyers",
+          "type_declaration": "BTreeSet<ActorId>,"
+        },
+        {
+          "field": "next_pollen",
+          "type_declaration": "BTreeMap<ActorId, f64>,"
+        },
+        {
+          "field": "pollen_due",
+          "type_declaration": "BTreeSet<(u64, ActorId)>,"
+        },
+        {
+          "field": "last_game_days",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "seeded",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "lamps",
+          "type_declaration": "Vec<Lamp>,"
+        },
+        {
+          "field": "lamp_revision",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "lamp_night_day",
+          "type_declaration": "Option<i64>,"
+        },
+        {
+          "field": "lamp_targets",
+          "type_declaration": "BTreeMap<ActorId, usize>,"
+        },
+        {
+          "field": "belwyn",
+          "type_declaration": "BTreeMap<String, usize>,"
+        },
+        {
+          "field": "household_reserves",
+          "type_declaration": "BTreeMap<ActorId, u32>,"
+        },
+        {
+          "field": "last_household_watch_day",
+          "type_declaration": "Option<i64>,"
+        },
+        {
+          "field": "last_household_settlement_day",
+          "type_declaration": "Option<i64>,"
+        },
+        {
+          "field": "unrelieved_zero_streak",
+          "type_declaration": "BTreeMap<ActorId, u32>,"
+        },
+        {
+          "field": "institutional_payroll_sparks",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "household_redistributed_sparks",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "road_cash_in_sparks",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "road_cash_out_sparks",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "road_parties",
+          "type_declaration": "BTreeMap<PartyId, RoadParty>,"
+        },
+        {
+          "field": "observed_cart_loads",
+          "type_declaration": "BTreeMap<PartyId, Vec<CartLoadKind>>,"
+        },
+        {
+          "field": "departed_this_tick",
+          "type_declaration": "Vec<ActorId>,"
+        },
+        {
+          "field": "worksites",
+          "type_declaration": "BTreeMap<String, Vec3>,"
+        },
+        {
+          "field": "counters",
+          "type_declaration": "BTreeMap<String, Counter>,"
+        },
+        {
+          "field": "counter_groups",
+          "type_declaration": "BTreeMap<String, Vec<String>>,"
+        },
+        {
+          "field": "stock_plans",
+          "type_declaration": "Vec<StockPlanSpec>,"
+        },
+        {
+          "field": "market_errands",
+          "type_declaration": "BTreeMap<ActorId, MarketErrand>,"
+        },
+        {
+          "field": "closed_market_visits",
+          "type_declaration": "BTreeMap<String, ClosedMarketVisit>,"
+        },
+        {
+          "field": "production_plans",
+          "type_declaration": "Vec<ResolvedProductionPlan>,"
+        },
+        {
+          "field": "production_starts",
+          "type_declaration": "BTreeMap<(ActorId, i64), u32>,"
+        },
+        {
+          "field": "production_last_game_days",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "production_was_eligible",
+          "type_declaration": "BTreeMap<ActorId, bool>,"
+        },
+        {
+          "field": "transform_stall_watch",
+          "type_declaration": "BTreeMap<ActorId, TransformStallWatch>,"
+        },
+        {
+          "field": "ladder_scratch",
+          "type_declaration": "Vec<ActorId>,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/round.rs",
+      "owner": "Townsperson",
+      "fields": [
+        {
+          "field": "home",
+          "type_declaration": "Option<Vec3>,"
+        },
+        {
+          "field": "base",
+          "type_declaration": "Vec3,"
+        },
+        {
+          "field": "legs",
+          "type_declaration": "Vec<RoundLeg>,"
+        },
+        {
+          "field": "leash_m",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "curfew_exempt",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "source",
+          "type_declaration": "Option<usize>,"
+        },
+        {
+          "field": "is_household",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "food",
+          "type_declaration": "Option<FoodErrand>,"
+        },
+        {
+          "field": "phase",
+          "type_declaration": "Phase,"
+        },
+        {
+          "field": "travel_target",
+          "type_declaration": "Option<Vec3>,"
+        },
+        {
+          "field": "travel_for_intent",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "motion_cause",
+          "type_declaration": "motion::MotionCause,"
+        },
+        {
+          "field": "next_decision",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "epoch",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "evening_seed",
+          "type_declaration": "Option<(usize, RoundLeg)>,"
+        },
+        {
+          "field": "leg_lag_share",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "excused",
+          "type_declaration": "bool,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/round/residents.rs",
+      "owner": "Residents",
+      "fields": [
+        {
+          "field": "people",
+          "type_declaration": "BTreeMap<ActorId, Resident>,"
+        },
+        {
+          "field": "reservations",
+          "type_declaration": "SpotReservations,"
+        },
+        {
+          "field": "order",
+          "type_declaration": "Vec<ActorId>,"
+        },
+        {
+          "field": "cursor",
+          "type_declaration": "usize,"
+        },
+        {
+          "field": "optional",
+          "type_declaration": "BTreeSet<ActorId>,"
+        },
+        {
+          "field": "changed",
+          "type_declaration": "BTreeSet<ActorId>,"
+        },
+        {
+          "field": "departing",
+          "type_declaration": "BTreeSet<usize>,"
+        },
+        {
+          "field": "local_shelters",
+          "type_declaration": "BTreeMap<usize, Vec<(usize, usize)>>,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/round/residents.rs",
+      "owner": "Resident",
+      "fields": [
+        {
+          "field": "patch",
+          "type_declaration": "usize,"
+        },
+        {
+          "field": "preferred_spot",
+          "type_declaration": "usize,"
+        },
+        {
+          "field": "spot",
+          "type_declaration": "Option<usize>,"
+        },
+        {
+          "field": "target",
+          "type_declaration": "Option<usize>,"
+        },
+        {
+          "field": "phase",
+          "type_declaration": "ResidentPhase,"
+        },
+        {
+          "field": "dwell_until",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "epoch",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "retiring",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "support_was_eligible",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "missed_meal",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "recovery_remaining",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "weather",
+          "type_declaration": "Option<ResidentWeather>,"
+        },
+        {
+          "field": "weather_retry_until",
+          "type_declaration": "f64,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/round/residents.rs",
+      "owner": "ResidentWeather",
+      "fields": [
+        {
+          "field": "slot",
+          "type_declaration": "usize,"
+        },
+        {
+          "field": "intent",
+          "type_declaration": "WeatherShelterIntent,"
+        },
+        {
+          "field": "arrived",
+          "type_declaration": "bool,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/nav/residents.rs",
+      "owner": "SpotReservations",
+      "fields": [
+        {
+          "field": "positions",
+          "type_declaration": "BTreeMap<String, Vec3>,"
+        },
+        {
+          "field": "owners",
+          "type_declaration": "BTreeMap<String, ActorId>,"
+        },
+        {
+          "field": "actors",
+          "type_declaration": "BTreeMap<ActorId, SpotClaims>,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/nav/residents.rs",
+      "owner": "SpotClaims",
+      "fields": [
+        {
+          "field": "occupied",
+          "type_declaration": "Option<String>,"
+        },
+        {
+          "field": "destination",
+          "type_declaration": "Option<String>,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/knowledge/mod.rs",
+      "owner": "Knowledge",
+      "fields": [
+        {
+          "field": "live",
+          "type_declaration": "BTreeMap<FactKey, Fact>,"
+        },
+        {
+          "field": "by_id",
+          "type_declaration": "BTreeMap<FactId, FactKey>,"
+        },
+        {
+          "field": "next_key",
+          "type_declaration": "u32,"
+        },
+        {
+          "field": "next_sequence",
+          "type_declaration": "i64,"
+        },
+        {
+          "field": "holdings",
+          "type_declaration": "Arc<BTreeMap<ActorId, Vec<Holding>>>,"
+        },
+        {
+          "field": "air",
+          "type_declaration": "Arc<BTreeMap<(PlanningWard, FactKey), Drift>>,"
+        },
+        {
+          "field": "last_sweep_game_days",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "occasions",
+          "type_declaration": "BTreeMap<ActorId, Occasion>,"
+        },
+        {
+          "field": "raises",
+          "type_declaration": "BTreeMap<ActorId, (i64, Office, u8)>,"
+        },
+        {
+          "field": "player_learned",
+          "type_declaration": "BTreeMap<FactId, LearnedHow>,"
+        },
+        {
+          "field": "receipts_revision",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "seated",
+          "type_declaration": "Option<(ActorId, Vec<FactKey>)>,"
+        },
+        {
+          "field": "player_stage_stir",
+          "type_declaration": "Option<u32>,"
+        },
+        {
+          "field": "player_stage_tellings",
+          "type_declaration": "BTreeSet<(FactKey, ActorId)>,"
+        },
+        {
+          "field": "last_hearsay_beat_game_days",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "hearsay_raised",
+          "type_declaration": "BTreeSet<(FactKey, ActorId)>,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/knowledge/mod.rs",
+      "owner": "Fact",
+      "fields": [
+        {
+          "field": "id",
+          "type_declaration": "FactId,"
+        },
+        {
+          "field": "key",
+          "type_declaration": "FactKey,"
+        },
+        {
+          "field": "sequence",
+          "type_declaration": "i64,"
+        },
+        {
+          "field": "subject",
+          "type_declaration": "Vec<ActorId>,"
+        },
+        {
+          "field": "place",
+          "type_declaration": "Option<AreaKey>,"
+        },
+        {
+          "field": "day",
+          "type_declaration": "Option<i64>,"
+        },
+        {
+          "field": "said",
+          "type_declaration": "String,"
+        },
+        {
+          "field": "own",
+          "type_declaration": "BTreeMap<ActorId, String>,"
+        },
+        {
+          "field": "seeded",
+          "type_declaration": "BTreeSet<ActorId>,"
+        },
+        {
+          "field": "garble",
+          "type_declaration": "GarbleMask,"
+        },
+        {
+          "field": "decays",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "topic",
+          "type_declaration": "Topic,"
+        },
+        {
+          "field": "minted_game_days",
+          "type_declaration": "Option<f64>,"
+        },
+        {
+          "field": "quiet_among",
+          "type_declaration": "BTreeSet<ActorId>,"
+        },
+        {
+          "field": "craft_ear",
+          "type_declaration": "Option<String>,"
+        },
+        {
+          "field": "source",
+          "type_declaration": "FactSource,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/knowledge/mod.rs",
+      "owner": "Holding",
+      "fields": [
+        {
+          "field": "key",
+          "type_declaration": "FactKey,"
+        },
+        {
+          "field": "hops",
+          "type_declaration": "u8,"
+        },
+        {
+          "field": "heat_at_learn",
+          "type_declaration": "f32,"
+        },
+        {
+          "field": "learned_on",
+          "type_declaration": "Option<f64>,"
+        },
+        {
+          "field": "from",
+          "type_declaration": "Option<ActorId>,"
+        },
+        {
+          "field": "view",
+          "type_declaration": "FactView,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/knowledge/mod.rs",
+      "owner": "LearnedHow",
+      "fields": [
+        {
+          "field": "word",
+          "type_declaration": "String,"
+        },
+        {
+          "field": "at",
+          "type_declaration": "Option<f64>,"
+        },
+        {
+          "field": "place",
+          "type_declaration": "Option<AreaKey>,"
+        },
+        {
+          "field": "from",
+          "type_declaration": "Option<ActorId>,"
+        },
+        {
+          "field": "hops",
+          "type_declaration": "u8,"
+        },
+        {
+          "field": "tellings",
+          "type_declaration": "u16,"
+        },
+        {
+          "field": "wards",
+          "type_declaration": "u8,"
+        },
+        {
+          "field": "wards_seen",
+          "type_declaration": "u8,"
+        },
+        {
+          "field": "mouths_seen",
+          "type_declaration": "BTreeSet<ActorId>,"
+        },
+        {
+          "field": "unattributed_seen",
+          "type_declaration": "bool,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/knowledge/mod.rs",
+      "owner": "Occasion",
+      "fields": [
+        {
+          "field": "subject",
+          "type_declaration": "Option<ActorId>,"
+        },
+        {
+          "field": "from",
+          "type_declaration": "Option<ActorId>,"
+        },
+        {
+          "field": "at_game_days",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "offered",
+          "type_declaration": "bool,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/conversation.rs",
+      "owner": "Conversation",
+      "fields": [
+        {
+          "field": "engagement",
+          "type_declaration": "Option<Engagement>,"
+        },
+        {
+          "field": "invitation",
+          "type_declaration": "Option<(ActorId, f64)>,"
+        },
+        {
+          "field": "focus",
+          "type_declaration": "Option<(ActorId, f64, f64)>,"
+        },
+        {
+          "field": "next_utterance",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "latest_applied_utterance",
+          "type_declaration": "u64,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/conversation.rs",
+      "owner": "Engagement",
+      "fields": [
+        {
+          "field": "actor",
+          "type_declaration": "ActorId,"
+        },
+        {
+          "field": "at",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "reciprocal",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "witnesses",
+          "type_declaration": "BTreeSet<ActorId>,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/conversation.rs",
+      "owner": "CapturedAttention",
+      "fields": [
+        {
+          "field": "captured_at",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "sequence",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "focus",
+          "type_declaration": "Option<ActorId>,"
+        },
+        {
+          "field": "engagement",
+          "type_declaration": "Option<Engagement>,"
+        },
+        {
+          "field": "invitation",
+          "type_declaration": "Option<ActorId>,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/scheduler.rs",
+      "owner": "NpcScheduler",
+      "fields": [
+        {
+          "field": "order",
+          "type_declaration": "Vec<ActorId>,"
+        },
+        {
+          "field": "minimum_delay_seconds",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "maximum_backoff_seconds",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "round_robin_index",
+          "type_declaration": "usize,"
+        },
+        {
+          "field": "priority_handoffs",
+          "type_declaration": "VecDeque<ActorId>,"
+        },
+        {
+          "field": "player_reactions",
+          "type_declaration": "VecDeque<ActorId>,"
+        },
+        {
+          "field": "in_flight",
+          "type_declaration": "Option<InFlight>,"
+        },
+        {
+          "field": "held_result",
+          "type_declaration": "Option<Completion>,"
+        },
+        {
+          "field": "next_turn_at",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "provider_failures",
+          "type_declaration": "u32,"
+        },
+        {
+          "field": "running",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "submitted",
+          "type_declaration": "Option<ActorId>,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/scheduler.rs",
+      "owner": "InFlight",
+      "fields": [
+        {
+          "field": "actor_id",
+          "type_declaration": "ActorId,"
+        },
+        {
+          "field": "presence_epoch",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "request_id",
+          "type_declaration": "RequestId,"
+        },
+        {
+          "field": "lane",
+          "type_declaration": "TurnLane,"
+        },
+        {
+          "field": "drained_events",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "presented",
+          "type_declaration": "Vec<String>,"
+        },
+        {
+          "field": "prompt",
+          "type_declaration": "String,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/speech_router.rs",
+      "owner": "SpeechRouter",
+      "fields": [
+        {
+          "field": "stt_stream_grace_seconds",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "streams",
+          "type_declaration": "Vec<(String, StreamState)>,"
+        },
+        {
+          "field": "captures",
+          "type_declaration": "Vec<(String, CapturedAttention)>,"
+        },
+        {
+          "field": "parked",
+          "type_declaration": "Vec<(String, ParkedRecording)>,"
+        },
+        {
+          "field": "timings",
+          "type_declaration": "Vec<(String, UtteranceTiming)>,"
+        },
+        {
+          "field": "recording_jobs",
+          "type_declaration": "Vec<(TranscriptionJobId, TranscriptionTask)>,"
+        },
+        {
+          "field": "stream_jobs",
+          "type_declaration": "Vec<(TranscriptionJobId, String)>,"
+        },
+        {
+          "field": "tts_backends",
+          "type_declaration": "Vec<(SpeechEventId, TtsBackendKind)>,"
+        },
+        {
+          "field": "next_job",
+          "type_declaration": "u64,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/speech_router.rs",
+      "owner": "TranscriptionTask",
+      "fields": [
+        {
+          "field": "request_id",
+          "type_declaration": "String,"
+        },
+        {
+          "field": "basename",
+          "type_declaration": "String,"
+        },
+        {
+          "field": "position_m",
+          "type_declaration": "Vec3,"
+        },
+        {
+          "field": "backend",
+          "type_declaration": "SttBackendKind,"
+        },
+        {
+          "field": "attention",
+          "type_declaration": "CapturedAttention,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/speech_router.rs",
+      "owner": "StreamState",
+      "fields": [
+        {
+          "field": "phase",
+          "type_declaration": "StreamPhase,"
+        },
+        {
+          "field": "next_seq",
+          "type_declaration": "u32,"
+        },
+        {
+          "field": "decoded_bytes",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "end_at",
+          "type_declaration": "Option<f64>,"
+        },
+        {
+          "field": "commit_at",
+          "type_declaration": "Option<f64>,"
+        },
+        {
+          "field": "completed_at",
+          "type_declaration": "Option<f64>,"
+        },
+        {
+          "field": "transcript",
+          "type_declaration": "Option<String>,"
+        },
+        {
+          "field": "degrade_reason",
+          "type_declaration": "Option<DegradeReason>,"
+        },
+        {
+          "field": "status_sent",
+          "type_declaration": "bool,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/speech_router.rs",
+      "owner": "ParkedRecording",
+      "fields": [
+        {
+          "field": "task",
+          "type_declaration": "TranscriptionTask,"
+        },
+        {
+          "field": "deadline",
+          "type_declaration": "f64,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/night.rs",
+      "owner": "NightOffice",
+      "fields": [
+        {
+          "field": "config",
+          "type_declaration": "NightOfficeConfig,"
+        },
+        {
+          "field": "queue",
+          "type_declaration": "VecDeque<Due>,"
+        },
+        {
+          "field": "in_flight",
+          "type_declaration": "Option<Flight>,"
+        },
+        {
+          "field": "last_reflected",
+          "type_declaration": "BTreeMap<Subject, i64>,"
+        },
+        {
+          "field": "bedtimes",
+          "type_declaration": "BTreeMap<ActorId, Office>,"
+        },
+        {
+          "field": "last_office_days",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "last_ambient_reroll_day",
+          "type_declaration": "Option<i64>,"
+        },
+        {
+          "field": "next_attempt_at",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "next_yield_report",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "seeded",
+          "type_declaration": "bool,"
+        },
+        {
+          "field": "reflected",
+          "type_declaration": "u64,"
+        },
+        {
+          "field": "dropped",
+          "type_declaration": "u64,"
+        }
+      ]
+    },
+    {
+      "source": "crates/cathedral-sim/src/floor.rs",
+      "owner": "ConversationFloor",
+      "fields": [
+        {
+          "field": "awaiting",
+          "type_declaration": "Vec<AwaitedSpeech>,"
+        },
+        {
+          "field": "foreground_floor_until",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "background_floor_until",
+          "type_declaration": "f64,"
+        },
+        {
+          "field": "player_hold_until",
+          "type_declaration": "f64,"
+        }
+      ]
+    }
+  ]
+}

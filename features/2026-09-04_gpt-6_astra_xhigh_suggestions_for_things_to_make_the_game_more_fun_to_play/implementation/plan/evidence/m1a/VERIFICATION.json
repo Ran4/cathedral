@@ -1,0 +1,80 @@
+{
+  "recorded_utc": "2026-09-07T19:08:20Z",
+  "base_commit": "36b144307f9a00aedd5eb0197314d001579e5c3b",
+  "scope": "M1a uncommitted implementation; combined workspace verification. The only post-workspace source change is warmup in the new host overlay test.",
+  "source_sha256": {
+    "crates/cathedral-backends/src/bin/cathedral_headless.rs": "dad00b3acf115a5585c4d41a4b153d52de6e1f5335c72adf45cc920d355ad6cb",
+    "crates/cathedral-sim/src/clock.rs": "307de5a1d0e26e48e4ec63cec3e0a481946fb87a518c688cb7e5487ef7970102",
+    "crates/cathedral-sim/src/engine.rs": "ff26290e57ed8627f9f63651c8717708d2f14d68f5499abeab589b451eaa9268",
+    "crates/cathedral-sim/src/lib.rs": "7dc32b8d9dfdf12e43a27f43e4a27691ed7516afe7a4ed42a1ad1c1306409adb",
+    "crates/cathedral-sim/src/night.rs": "c9200d414a8676d4853ca95bc254889b10ffdecfe249fb03c60a44fdab8c2992",
+    "crates/cathedral-sim/src/night/tests.rs": "c5a33498eab7e44547358226e8b5f57160a64ebf8c2adb3185dac2799e067343",
+    "crates/cathedral-sim/src/notices.rs": "89bbf7d066bd532923c704877a7532d5a06b21cffed3395f706f549222ae7e7c",
+    "crates/cathedral-sim/src/round.rs": "4c236c761a24316802e305f904b3c561a25e6a1f04fd276a18c8ccf948b6be54",
+    "crates/cathedral-sim/src/round/tests.rs": "ce73024ae8c917a202299a2b4a5250a28c3a0f5285a6008507791f67c041f9ab",
+    "crates/cathedral-sim/src/timeline.rs": "460d5875d2f9d3fad411d0c3fdaa9b48091f2aa7118e09c21e7bdc47242af50a",
+    "crates/cathedral-sim/tests/engine_tests.rs": "02cf639dd9007e5a14d79f21b0da1e0f7fae509e6ad0971860f397d3b78535fb",
+    "src/city/gates.rs": "6a64bbb1dfb03b8deb2b90341faf72746a60e7aa06e58b4352e26ba5a31d0f4d",
+    "src/controller.rs": "5f247f80438782079ba01e2435e621117c6786244b78676e73d0bf150ee2b81d",
+    "src/live_time.rs": "2eed53349efa519d225b8945a97fbfb0ffbe9434d6ceddaccbd6b92367f1aa6d",
+    "src/main.rs": "449849c4f7aefe48a73f3091a2b3f7a49264f49aa86338d8b6e01373e7fb9497",
+    "src/smart_actors/bridge.rs": "b9dc263a0f133b45e524c098f6db9380d9dd82cfb46d1b97848b8c89f6ed9201",
+    "src/smart_actors/interaction.rs": "8a6ebbae25a140cddb17dc334dd49acdcc682d1e2a6896a4e7ad4148cc76055a",
+    "src/smart_actors/local_engine.rs": "2c14326cb54f2932f37fc9ae49f22c0701902a5f700aa744e656c1bb62a5dad7",
+    "src/smart_actors/mod.rs": "736993f8422b6993a704dea05f4363b2ce58b3c0a7930399e99c7ec5421bdf96"
+  },
+  "binary_sha256": {
+    "target/debug/deps/cathedralbevy-96aaf906481dbd56": "01ebdf22ffd9c121af5e60860a67006c8264f8f5fa136410cab106b35395cb67",
+    "target/debug/cathedral-headless": "f01e6f124237e3afbcd900f807a4f4c5e167630c3a7f932245cd15cc9a4db746"
+  },
+  "commands": [
+    {
+      "command": "/home/ran/.cargo/bin/cargo test --workspace --no-fail-fast",
+      "log": "workspace_before_overlay_warmup.log.gz",
+      "exit": 101,
+      "results": {
+        "targets": 32,
+        "passed": 1790,
+        "failed": 1,
+        "ignored": 8
+      },
+      "note": "Only failed test: ordinary_overlays_keep_accepted_time_and_npc_motion_live; superseded below after adding actual-route warmup to that fixture."
+    },
+    {
+      "command": "CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 target/debug/deps/cathedralbevy-96aaf906481dbd56 --exact smart_actors::tests::ordinary_overlays_keep_accepted_time_and_npc_motion_live --nocapture",
+      "log": "overlay_focused.log.gz",
+      "exit": 0,
+      "results": {
+        "targets": 1,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "command": "CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 /home/ran/.cargo/bin/cargo test --bin cathedralbevy",
+      "log": "host_final.log.gz",
+      "exit": 0,
+      "results": {
+        "targets": 1,
+        "passed": 527,
+        "failed": 0,
+        "ignored": 3
+      }
+    },
+    {
+      "command": "CATHEDRAL_FAKE_BACKEND=1 target/debug/cathedral-headless --fake --night-office --start-office waning --seconds-per-day 300 --watch-clock 0.26 --trace-motion",
+      "log": "watcher.log.gz",
+      "exit": 0
+    }
+  ],
+  "combined_current_tree": {
+    "passed": 1791,
+    "failed": 0,
+    "ignored": 8,
+    "targets": 32,
+    "method": "Replace the 526 pass/1 fail/3 ignored cathedralbevy target in workspace run with the final 527 pass/0 fail/3 ignored host rerun; all remaining targets cover unchanged production and test sources."
+  },
+  "renderer_evidence": false,
+  "performance_claim": "None. Development watcher raw timing is not a runtime budget benchmark."
+}

@@ -1,8 +1,12 @@
-Status: M0 partially executed (2026-09-07): V01/V02 reconciled, CPU portion of V03 measured; current renderer/full-stress acceptance pending. No milestone accepted; M1–M19 not started.
+Status: M0 baseline delivered; continued implementation authorized (2026-09-07). M1a implemented and reviewed; M1b–M1d remain. M0 renderer/full-stress evidence is pending; see EXECUTION_AUTHORITY.md.
 
 # An Alibi in Stone — systems first, then the full quest
 
 The [M0 coordinator review](BASELINE_REVIEW.md) records the delivered baseline, the repaired host test fixture and the remaining acceptance gate.
+
+The developer subsequently [authorized continuing through the remaining implementation](EXECUTION_AUTHORITY.md), with a commit after each coherent leg. This overrides the earlier M0 instruction to stop before M1 while retaining the recorded measurement limitations.
+
+[M1a's implementation and verification record](evidence/m1a/README.md) covers retained time debt, exact calendar crossings and the ordinary host/poll boundary. Current-tree verification totals 1,791 passing tests and eight ignored checks, combining the complete workspace run with the final host-only fixture repair and rerun. The remaining M1 cuts add command receipts, runtime generations and operation ownership.
 
 Build the machinery for investigations that happen inside a living city, then use it to deliver the complete quest. People keep their own time. Physical evidence has a location and a history. A finding may justify an order; available guards must then carry it out. The player can save at any moment and resume a coherent world.
 

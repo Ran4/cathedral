@@ -309,7 +309,7 @@ impl GateRuntime {
 }
 
 pub(super) fn animate_gate_mechanisms(
-    real_time: Res<Time<Real>>,
+    time: Res<Time>,
     clock: Option<Res<WorldClockState>>,
     mut runtime: ResMut<GateRuntime>,
     mut cues: MessageWriter<SoundscapeCue>,
@@ -336,7 +336,8 @@ pub(super) fn animate_gate_mechanisms(
         }
     }
 
-    runtime.advance(real_time.delta_secs());
+    // Physical leaves and collision consume the same accepted time as bodies.
+    runtime.advance(time.delta_secs());
 
     for (leaf, mut transform) in &mut leaves {
         let openness = match leaf.gate {
@@ -602,6 +603,33 @@ fn spawn_box(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_stalled_frame_moves_physical_gates_only_by_accepted_time() {
+        use std::time::Duration;
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, crate::live_time::LiveTimePlugin))
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                Duration::from_millis(500),
+            ))
+            .init_resource::<GateRuntime>()
+            .add_message::<SoundscapeCue>()
+            .add_systems(Update, animate_gate_mechanisms);
+        app.update();
+        app.world_mut()
+            .resource_mut::<GateRuntime>()
+            .apply(ScheduleAction::Transition(GatePosition::Closed));
+        app.update();
+        let runtime = app.world().resource::<GateRuntime>();
+        assert!((runtime.stone_leaves.elapsed - 0.1).abs() < 1e-6);
+        assert_eq!(
+            app.world()
+                .resource::<crate::live_time::LiveTime>()
+                .continuation
+                .debt,
+            Duration::from_millis(400)
+        );
+    }
 
     fn sample(day: i64, hour: f64, office: Office) -> Option<ClockSample> {
         Some(ClockSample {

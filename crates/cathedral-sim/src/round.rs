@@ -1135,10 +1135,10 @@ pub struct Round {
     /// drained by the host for `--trace-food`. The game host never reads it, so
     /// it is capped ([`FOOD_LOG_CAP`]) and never grows without bound.
     food_log: Vec<String>,
-    /// Real `now` at the last office-crossing check, so Kindling restock and
+    /// Calendar days at the last office-crossing check, so Kindling restock and
     /// Watch settlement each fire exactly once per crossing, no matter the debug
     /// time-scale (`WorldClock::offices_crossed`).
-    last_office_now: f64,
+    last_office_days: Option<f64>,
     people: BTreeMap<ActorId, Townsperson>,
     residents: residents::Residents,
     /// Active deterministic weather diversions.  Kept at round level so the
@@ -3378,7 +3378,7 @@ impl Round {
         // is trading from the first tick — the seed's day may not be a market
         // day, in which case the square stalls simply bind nobody and wait for
         // their weekday. Runs last: it reads the enrolled `people`'s legs to bind.
-        self.last_office_now = now;
+        self.last_office_days = Some(clock.game_days(now));
         self.seed_food(world, nav, &resolver, &mut diagnostics);
         let time = clock.at(now);
         self.bind_vendors(world, time.weekday);
@@ -6647,10 +6647,16 @@ fn tick_food_economy(
     now: f64,
     nudges: &mut Vec<ActorId>,
 ) {
-    let crossings = clock.offices_crossed(round.last_office_now, now);
-    round.last_office_now = now;
+    // A production Round is seeded with an explicit calendar origin. Minimal
+    // clock-less fixtures retain the old Round::default logical-zero origin
+    // on their first tick; every subsequent tick stores calendar days.
+    let previous = round
+        .last_office_days
+        .unwrap_or_else(|| clock.game_days(0.0));
+    let crossings = crate::clock::offices_crossed_days(previous, clock.game_days(now));
+    round.last_office_days = Some(clock.game_days(now));
     for (instant, office) in crossings {
-        let time = clock.at(instant);
+        let time = crate::clock::WorldTime::from_game_days(instant);
         let day = time.day;
         round.trigger_road_office(world, office, time, nudges);
         match office {

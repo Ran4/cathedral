@@ -56,10 +56,9 @@ use clap::Parser;
 
 /// The player id every seed world must carry.
 const PLAYER_ID: &str = "player";
-/// Sim seconds one pump advances the virtual clock by. Small enough that the
-/// floor's reading pause (3-10 s) resolves in a handful of polls, large enough
-/// that no loop below spins.
-const CLOCK_STEP_SECONDS: f64 = 0.5;
+/// Every development pump services a complete physical slice. Reading-time
+/// pacing may cost more polls, but never discards NPC journeys.
+const CLOCK_STEP_SECONDS: f64 = 0.05;
 /// The loop separates submit-poll from apply-poll by the inter-turn delay, so
 /// it must never be zero here (see the module docs). `NPC_TURN_DELAY_SECONDS=0`
 /// is honored as "as fast as the sim allows", not as "collapse two turns into
@@ -313,11 +312,9 @@ struct Args {
     #[arg(long)]
     pollen_saturate: bool,
 
-    /// the watch-clock step, in real seconds, while `--trace-pollen` is on
-    /// (default 0.4 = `MAX_MOVEMENT_CATCHUP_SLICES` × `MOVEMENT_TICK_SECONDS`,
-    /// the most walking one poll can realise). The cost guard passes 3 — it does
-    /// not measure crossings, and 9,000 polls at 179 ms is 27 minutes.
-    #[arg(long, default_value_t = 0.4)]
+    /// Finer physical poll step for --trace-pollen (seconds, maximum 0.05).
+    /// Older larger values are clamped; sampling cost no longer drops journeys.
+    #[arg(long, default_value_t = 0.05)]
     pollen_step: f64,
 
     /// run with every salience band and multiplier at 1.0 — the identity run
@@ -819,33 +816,14 @@ impl Runner {
     fn watch_clock(&mut self, game_days: f64, seconds_per_day: f64) -> Result<(), String> {
         let real_seconds = game_days * seconds_per_day;
         let end = self.now + real_seconds;
-        // Small enough that even the closest two offices (the Kindling and
-        // Dayspring, two game hours apart) never share a step, so no bell's line
-        // is skipped. When tracing the water round the step must also stay under
-        // the mover accumulator's catch-up budget, or a coarse step snaps walkers
-        // forward and drops the walk — so cap it at a stride there.
-        let mut step = (seconds_per_day / 200.0).max(0.05);
-        // Tracing positions (water or the round census) needs the step under the
-        // mover accumulator's catch-up budget, or a coarse step snaps walkers
-        // forward and drops the walk — nobody would ever be seen to arrive. That
-        // budget is `MAX_MOVEMENT_CATCHUP_SLICES` (8) × `MOVEMENT_TICK_SECONDS`
-        // (0.05) = **0.4 s** of walking per poll; the 3.0 s cap below is a stride
-        // and was never about completing a commute.
-        if self.trace_water || self.census_by_area || self.trace_food {
-            step = step.min(3.0);
-        }
-        // Pollen crosses wards in walking mouths, and a poll realises at most
-        // 0.4 s of walking, so any coarser step starves every commute and the
-        // band is unmeasurable (D22). `--pollen-step` overrides it for the cost
-        // guard, which measures no crossings. It is **not** needed for the roll
-        // rate: `poll_gap_game_days`' composed invariant covers that at any step
-        // this loop can take.
-        if self.trace_pollen {
-            step = step.min(self.pollen_step);
-        }
-        if self.trace_motion {
-            step = 0.05;
-        }
+        // The ordinary city always walks: even a clock-only trace must service
+        // physical work. Pollen sampling may request finer polls, never coarser
+        // mechanical progression. Calendar rate controls days, not walking.
+        let step = if self.trace_pollen && self.pollen_step.is_finite() && self.pollen_step > 0.0 {
+            self.pollen_step.min(0.05)
+        } else {
+            0.05
+        };
         println!(
             "== watching {game_days} game day(s): {real_seconds:.0} s at {seconds_per_day:.0} s/day =="
         );

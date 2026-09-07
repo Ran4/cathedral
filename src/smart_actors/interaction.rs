@@ -332,6 +332,24 @@ impl PlayerSpatialState {
         self.sequence
     }
 
+    /// A final authoritative body sample always receives an identity newer
+    /// than every pose carried by the frozen incoming action cohort.
+    pub(super) fn mark_boundary_sample(
+        &mut self,
+        position: Vec3,
+        yaw: f32,
+        after: u64,
+    ) -> Option<u64> {
+        let next = self.sequence.max(after).checked_add(1)?;
+        if next > i64::MAX as u64 {
+            return None;
+        }
+        self.sequence = next;
+        self.last_position = Some(position);
+        self.last_yaw = Some(yaw);
+        Some(next)
+    }
+
     pub fn mark_hello_position(&mut self, position: Vec3) -> u64 {
         self.last_position = Some(position);
         self.sequence

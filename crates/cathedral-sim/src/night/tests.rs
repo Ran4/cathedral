@@ -149,7 +149,7 @@ fn world_with_cast() -> World {
 }
 
 fn office(enabled_tiers: NightOfficeConfig, world: &World, now: f64) -> NightOffice {
-    let mut night = NightOffice::new(enabled_tiers, now);
+    let mut night = NightOffice::new(enabled_tiers, now, &clock());
     night.seed(world, &Round::new());
     night
 }
@@ -686,7 +686,7 @@ fn a_reflection_that_lands_after_the_pace_deadline_still_yields_to_the_stage() {
 #[test]
 fn the_lane_is_inert_until_the_host_asks_for_it() {
     let world = world_with_cast();
-    let mut night = NightOffice::new(NightOfficeConfig::default(), 0.0);
+    let mut night = NightOffice::new(NightOfficeConfig::default(), 0.0, &clock());
     assert!(night.seed(&world, &Round::new()).is_none());
     assert!(!night.enabled());
     assert!(!night.wants_slot(1e6));
@@ -1121,4 +1121,50 @@ fn the_offline_fake_moves_a_leg_it_read_off_the_night_sheet() {
     );
     let (reflected, _) = night.totals();
     assert_eq!(reflected, 1);
+}
+
+/// Night rings after commands, including a clock-rate change in that poll.
+#[test]
+fn rate_changes_preserve_owed_nights_and_ambient_day_across_midnight() {
+    for (old_rate, new_rate) in [(1.0, 60.0), (60.0, 1.0)] {
+        let mut world = world_with_cast();
+        let mut round = Round::new();
+        let clock = WorldClock::new(240.0, Office::Dayspring, 0, 0.05).with_scale(0.0, old_rate);
+        let crossing = clock.elapsed_at_day(Office::Snuffing.start_fraction());
+        let before = crossing - 0.01;
+        let mut night = NightOffice::new(all_tiers(), before, &clock);
+        night.seed(&world, &round);
+        let change_at = crossing + 0.005;
+        let clock = clock.with_scale(change_at, new_rate);
+        let mut events = Vec::new();
+        night.ring(change_at, &mut world, &mut round, &clock, &mut events);
+        assert_eq!(
+            night.owed(),
+            3,
+            "owed bedtime survives {old_rate} to {new_rate}"
+        );
+        assert_eq!(night.last_ambient_reroll_day, Some(0));
+        let first_queue = night.queue.clone();
+        night.ring(
+            change_at + 0.02,
+            &mut world,
+            &mut round,
+            &clock,
+            &mut events,
+        );
+        assert_eq!(
+            night.queue, first_queue,
+            "the already processed bedtime stays spent"
+        );
+        let midnight = clock.elapsed_at_day(1.0) + 0.001;
+        night.ring(midnight, &mut world, &mut round, &clock, &mut events);
+        assert_eq!(
+            night.last_ambient_reroll_day,
+            Some(0),
+            "midnight alone owes no new roll"
+        );
+        let next_night = clock.elapsed_at_day(1.0 + Office::Snuffing.start_fraction()) + 0.001;
+        night.ring(next_night, &mut world, &mut round, &clock, &mut events);
+        assert_eq!(night.last_ambient_reroll_day, Some(1));
+    }
 }

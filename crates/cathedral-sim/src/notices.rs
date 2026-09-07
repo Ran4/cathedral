@@ -461,9 +461,14 @@ impl Notices {
     /// Drop every notice whose life has run out. Undated notices never decay.
     pub fn expire(&mut self, game_days: f64) {
         self.live.retain(|notice| {
-            notice
-                .raised_game_days
-                .is_none_or(|raised| game_days - raised < NOTICE_LIFE_GAME_DAYS)
+            notice.raised_game_days.is_none_or(|raised| {
+                use crate::timeline::{CalendarTime, ExclusiveDeadline};
+                let until = CalendarTime::new(raised + NOTICE_LIFE_GAME_DAYS)
+                    .expect("notice expiry is finite");
+                !ExclusiveDeadline(until).is_due(
+                    CalendarTime::new(game_days).expect("notice sweep calendar time is finite"),
+                )
+            })
         });
     }
 }

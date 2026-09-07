@@ -1,0 +1,37 @@
+{
+  "baseline": "../m0_baseline/owner_fields.json",
+  "current": "owner_fields.json",
+  "changes": [
+    {
+      "source": "crates/cathedral-sim/src/engine.rs",
+      "owner": "Engine",
+      "removed": {
+        "last_clock_now": "f64,"
+      },
+      "added_or_changed": {
+        "last_clock_days": "f64,"
+      }
+    },
+    {
+      "source": "crates/cathedral-sim/src/round.rs",
+      "owner": "Round",
+      "removed": {
+        "last_office_now": "f64,"
+      },
+      "added_or_changed": {
+        "last_office_days": "Option<f64>,"
+      }
+    },
+    {
+      "source": "crates/cathedral-sim/src/night.rs",
+      "owner": "NightOffice",
+      "removed": {
+        "last_office_now": "f64,"
+      },
+      "added_or_changed": {
+        "last_office_days": "f64,",
+        "last_ambient_reroll_day": "Option<i64>,"
+      }
+    }
+  ]
+}

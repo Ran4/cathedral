@@ -229,9 +229,11 @@ pub struct NightOffice {
     /// Round is authored content and does not change under us, so neither does
     /// this.
     bedtimes: BTreeMap<ActorId, Office>,
-    /// `now` at the last office-crossing check, so a whole office passing inside
+    /// Calendar days at the last office-crossing check, so a whole office passing inside
     /// one frame at 60× still owes its reflections exactly once.
-    last_office_now: f64,
+    last_office_days: f64,
+    /// Once-per-day semantic ambient decision, independent of provider duties.
+    last_ambient_reroll_day: Option<i64>,
     /// The `now` at or after which a refused submit may be retried.
     next_attempt_at: f64,
     /// The `now` at or after which a stood-down night says so again. Throttled
@@ -245,14 +247,15 @@ pub struct NightOffice {
 }
 
 impl NightOffice {
-    pub fn new(config: NightOfficeConfig, now: f64) -> Self {
+    pub fn new(config: NightOfficeConfig, now: f64, clock: &WorldClock) -> Self {
         Self {
             config,
             queue: VecDeque::new(),
             in_flight: None,
             last_reflected: BTreeMap::new(),
             bedtimes: BTreeMap::new(),
-            last_office_now: now,
+            last_office_days: clock.game_days(now),
+            last_ambient_reroll_day: None,
             next_attempt_at: now,
             next_yield_report: now,
             seeded: false,
@@ -434,10 +437,11 @@ impl NightOffice {
         clock: &WorldClock,
         events: &mut Vec<SchedulerEvent>,
     ) {
-        let crossings = clock.offices_crossed(self.last_office_now, now);
-        self.last_office_now = now;
+        let crossings =
+            crate::clock::offices_crossed_days(self.last_office_days, clock.game_days(now));
+        self.last_office_days = clock.game_days(now);
         for (instant, office) in crossings {
-            let day = clock.at(instant).day;
+            let day = instant.floor() as i64;
             if self.config.majors {
                 // Roster order, so a night fills the queue in the same order
                 // every run — the lane has no clock of its own and must not
@@ -459,7 +463,11 @@ impl NightOffice {
                     }
                 }
             }
-            if self.config.ambients && office == WARD_OFFICE {
+            if self.config.ambients
+                && office == WARD_OFFICE
+                && self.last_ambient_reroll_day != Some(day)
+            {
+                self.last_ambient_reroll_day = Some(day);
                 let moved = round.reroll_ambient_evenings(world, day);
                 if moved > 0 {
                     events.push(SchedulerEvent::Diagnostic(format!(

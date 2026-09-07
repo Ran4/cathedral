@@ -1,7 +1,7 @@
 //! The world's clock (movement L0).
 //!
 //! Pure, like the rest of this crate: the sim reads no clock of its own, it is
-//! *handed* `now: f64` (monotonic seconds since app start) on every
+//! *handed* `now: f64` (accepted logical seconds; independent of the host process origin) on every
 //! [`Engine::poll`](crate::Engine::poll). So [`WorldClock`] is not a clock at
 //! all — it is a projection of `now`, plus a scale and an epoch. No clock is
 //! read here, no time crate is pulled in, and every method is a deterministic
@@ -268,6 +268,20 @@ pub struct WorldTime {
 }
 
 impl WorldTime {
+    /// Resolve a stored calendar position without projecting an old elapsed
+    /// timestamp through a possibly changed clock rate.
+    pub fn from_game_days(total: f64) -> Self {
+        let whole = total.floor();
+        let fraction = total - whole;
+        let day = whole as i64;
+        Self {
+            day,
+            fraction,
+            office: office_at(fraction),
+            weekday: Weekday::of_day(day),
+        }
+    }
+
     /// Absolute game-days at this instant — the same scale
     /// [`WorldClock::game_days`] returns, and the one `WardNotice` stamps.
     pub fn game_days(&self) -> f64 {
@@ -334,9 +348,12 @@ impl WorldTime {
 pub struct WorldClock {
     /// Real seconds per game day (before `scale`). From `config.ron`.
     seconds_per_day: f64,
-    /// Where the world's clock stood at `now == 0`, in fractional days. Lets a
-    /// run open at Dayspring instead of at midnight.
+    /// Calendar position at `elapsed_origin`, in fractional days. Storing the
+    /// rate-change instant directly avoids cancellation that can move an exact
+    /// bell backwards by an ulp and replay its crossing.
     epoch_days: f64,
+    /// Accepted logical elapsed origin of the current constant-rate segment.
+    elapsed_origin: f64,
     /// Debug multiplier on top of `seconds_per_day`; the `T` key cycles it so a
     /// whole day can be watched in a minute. 1.0 in a normal game.
     scale: f64,
@@ -346,7 +363,12 @@ pub struct WorldClock {
 
 impl WorldClock {
     /// A clock that reads `start_office` on `start_day` at `now == 0`.
-    pub fn new(seconds_per_day: f64, start_office: Office, start_day: i64, night_brightness: f64) -> Self {
+    pub fn new(
+        seconds_per_day: f64,
+        start_office: Office,
+        start_day: i64,
+        night_brightness: f64,
+    ) -> Self {
         let seconds_per_day = if seconds_per_day.is_finite() {
             seconds_per_day.max(MIN_SECONDS_PER_DAY)
         } else {
@@ -365,6 +387,7 @@ impl WorldClock {
         Self {
             seconds_per_day,
             epoch_days: start_day as f64 + start_office.start_fraction(),
+            elapsed_origin: 0.0,
             scale: 1.0,
             night_brightness,
         }
@@ -387,7 +410,7 @@ impl WorldClock {
 
     /// Fractional days since the epoch at `now`.
     fn total_days(self, now: f64) -> f64 {
-        self.epoch_days + (now * self.scale) / self.seconds_per_day
+        self.epoch_days + ((now - self.elapsed_origin) * self.scale) / self.seconds_per_day
     }
 
     /// Monotonic game time in whole and fractional days since the epoch —
@@ -400,16 +423,7 @@ impl WorldClock {
 
     /// Resolve `now` to a [`WorldTime`].
     pub fn at(self, now: f64) -> WorldTime {
-        let total = self.total_days(now);
-        let whole = total.floor();
-        let fraction = total - whole;
-        let day = whole as i64;
-        WorldTime {
-            day,
-            fraction,
-            office: office_at(fraction),
-            weekday: Weekday::of_day(day),
-        }
+        WorldTime::from_game_days(self.total_days(now))
     }
 
     /// The single number the behaviour ladder and the sun both read: 0.0 at the
@@ -426,30 +440,16 @@ impl WorldClock {
     /// high debug scale a whole office can pass inside one frame, and a paused
     /// game can never ring one twice.
     pub fn offices_crossed(self, previous: f64, now: f64) -> Vec<(f64, Office)> {
-        if now <= previous || self.scale <= 0.0 {
-            return Vec::new();
-        }
-        let t0 = self.total_days(previous);
-        let t1 = self.total_days(now);
-        let mut crossings: Vec<(f64, Office)> = Vec::new();
-        for office in Office::ALL {
-            let start = office.start_fraction();
-            // Integer days `d` for which the boundary `d + start` lies in
-            // `(t0, t1]`. Begin just below `t0` and step up.
-            let mut day = (t0 - start).floor() as i64;
-            while (day as f64) + start <= t0 {
-                day += 1;
-            }
-            while (day as f64) + start <= t1 {
-                let boundary_days = (day as f64) + start;
-                // Invert `total_days`: now = (total - epoch) * spd / scale.
-                let instant = (boundary_days - self.epoch_days) * self.seconds_per_day / self.scale;
-                crossings.push((instant, office));
-                day += 1;
-            }
-        }
-        crossings.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap_or(Ordering::Equal));
-        crossings
+        offices_crossed_days(self.game_days(previous), self.game_days(now))
+            .into_iter()
+            .map(|(day, office)| (self.elapsed_at_day(day), office))
+            .collect()
+    }
+
+    /// Invert the current calendar segment. Only use for crossings processed
+    /// before changing rate; historical elapsed anchors are not calendar cursors.
+    pub fn elapsed_at_day(self, game_days: f64) -> f64 {
+        self.elapsed_origin + (game_days - self.epoch_days) * self.seconds_per_day / self.scale
     }
 
     /// The same clock reading the same instant, but running at `new_scale`
@@ -464,7 +464,8 @@ impl WorldClock {
         let target = self.total_days(now);
         WorldClock {
             scale: new_scale,
-            epoch_days: target - (now * new_scale) / self.seconds_per_day,
+            epoch_days: target,
+            elapsed_origin: now,
             ..self
         }
     }
@@ -482,6 +483,29 @@ impl WorldClock {
     }
 }
 
+/// Calendar offices in `(previous_days, game_days]`, ordered by calendar time.
+/// Every crossing consumer stores its own calendar cursor, including those
+/// whose cadence skips the poll that changes the clock rate.
+pub fn offices_crossed_days(previous_days: f64, game_days: f64) -> Vec<(f64, Office)> {
+    if !previous_days.is_finite() || !game_days.is_finite() || game_days <= previous_days {
+        return Vec::new();
+    }
+    let mut crossings = Vec::new();
+    for office in Office::ALL {
+        let start = office.start_fraction();
+        let mut day = (previous_days - start).floor() as i64;
+        while day as f64 + start <= previous_days {
+            day += 1;
+        }
+        while day as f64 + start <= game_days {
+            crossings.push((day as f64 + start, office));
+            day += 1;
+        }
+    }
+    crossings.sort_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+    crossings
+}
+
 /// Brightness as a trapezoid pegged to the offices: dark until the Kindling
 /// (05:00), a dawn ramp to full by 06:30 — so the Dayspring (07:00) opens on a
 /// full summer morning, not the tail of dawn — full day, a dusk ramp from 17:00
@@ -497,11 +521,19 @@ fn brightness_at(fraction: f64, night: f64) -> f64 {
     if !(DAWN_START..DUSK_END).contains(&fraction) {
         night
     } else if fraction < DAWN_END {
-        lerp(night, day, (fraction - DAWN_START) / (DAWN_END - DAWN_START))
+        lerp(
+            night,
+            day,
+            (fraction - DAWN_START) / (DAWN_END - DAWN_START),
+        )
     } else if fraction < DUSK_START {
         day
     } else {
-        lerp(day, night, (fraction - DUSK_START) / (DUSK_END - DUSK_START))
+        lerp(
+            day,
+            night,
+            (fraction - DUSK_START) / (DUSK_END - DUSK_START),
+        )
     }
 }
 
@@ -528,7 +560,11 @@ mod tests {
     #[test]
     fn office_boundaries_are_inclusive_at_the_ring() {
         let f = |hour: f64| hour / 24.0;
-        assert_eq!(office_at(f(0.0)), Office::Snuffing, "midnight is still curfew");
+        assert_eq!(
+            office_at(f(0.0)),
+            Office::Snuffing,
+            "midnight is still curfew"
+        );
         assert_eq!(office_at(f(1.999)), Office::Snuffing);
         assert_eq!(office_at(f(2.0)), Office::Watch);
         assert_eq!(office_at(f(4.999)), Office::Watch);
@@ -568,7 +604,11 @@ mod tests {
         // `now` hours past the 02:00 open read straight off the office table.
         let clock = WorldClock::new(DAY, Office::Watch, 0, 0.05);
         assert_eq!(clock.at(0.0).office, Office::Watch, "02:00");
-        assert_eq!(clock.at(2.0 * 3600.0).office, Office::Watch, "04:00 is still the Watch");
+        assert_eq!(
+            clock.at(2.0 * 3600.0).office,
+            Office::Watch,
+            "04:00 is still the Watch"
+        );
         assert_eq!(clock.at(3.0 * 3600.0).office, Office::Kindling, "05:00");
         assert_eq!(clock.at(10.0 * 3600.0).office, Office::HighWick, "12:00");
         assert_eq!(clock.at(16.0 * 3600.0).office, Office::Lamplight, "18:00");
@@ -610,13 +650,13 @@ mod tests {
         assert_eq!(
             crossed,
             vec![
-                Office::HighWick, // 12:00 day 0
-                Office::Waning,   // 15:00
-                Office::Lamplight,// 18:00
-                Office::Snuffing, // 21:00
-                Office::Watch,    // 02:00 day 1
-                Office::Kindling, // 05:00
-                Office::Dayspring,// 07:00 day 1
+                Office::HighWick,  // 12:00 day 0
+                Office::Waning,    // 15:00
+                Office::Lamplight, // 18:00
+                Office::Snuffing,  // 21:00
+                Office::Watch,     // 02:00 day 1
+                Office::Kindling,  // 05:00
+                Office::Dayspring, // 07:00 day 1
             ]
         );
     }
@@ -703,13 +743,25 @@ mod tests {
         // and ambient fill on the host).
         for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
             let clock = WorldClock::new(DAY, Office::Watch, 0, bad);
-            assert!(clock.night_brightness().is_finite(), "floor from {bad} must be finite");
-            assert!(clock.brightness(0.0).is_finite(), "midnight brightness from {bad} must be finite");
-            assert!(clock.brightness(10.0 * 3600.0).is_finite(), "noon brightness from {bad} must be finite");
+            assert!(
+                clock.night_brightness().is_finite(),
+                "floor from {bad} must be finite"
+            );
+            assert!(
+                clock.brightness(0.0).is_finite(),
+                "midnight brightness from {bad} must be finite"
+            );
+            assert!(
+                clock.brightness(10.0 * 3600.0).is_finite(),
+                "noon brightness from {bad} must be finite"
+            );
             // The whole trapezoid stays finite and in range.
             for hour in 0..24 {
                 let b = clock.brightness(f64::from(hour) * 3600.0);
-                assert!((0.0..=1.0).contains(&b), "brightness at {hour}:00 out of range: {b}");
+                assert!(
+                    (0.0..=1.0).contains(&b),
+                    "brightness at {hour}:00 out of range: {b}"
+                );
             }
         }
     }
@@ -717,7 +769,10 @@ mod tests {
     #[test]
     fn the_snuffing_rings_seven_strokes_three_seconds_apart() {
         let strokes: Vec<f64> = stroke_times(Office::Snuffing, 100.0).collect();
-        assert_eq!(strokes, vec![100.0, 103.0, 106.0, 109.0, 112.0, 115.0, 118.0]);
+        assert_eq!(
+            strokes,
+            vec![100.0, 103.0, 106.0, 109.0, 112.0, 115.0, 118.0]
+        );
         assert_eq!(stroke_times(Office::Watch, 5.0).count(), 1);
     }
 
@@ -786,10 +841,22 @@ mod tests {
 
     #[test]
     fn office_names_parse_from_config() {
-        assert_eq!(Office::from_config_name("dayspring"), Some(Office::Dayspring));
-        assert_eq!(Office::from_config_name("High Wick"), Some(Office::HighWick));
-        assert_eq!(Office::from_config_name("high_wick"), Some(Office::HighWick));
-        assert_eq!(Office::from_config_name("the Snuffing"), Some(Office::Snuffing));
+        assert_eq!(
+            Office::from_config_name("dayspring"),
+            Some(Office::Dayspring)
+        );
+        assert_eq!(
+            Office::from_config_name("High Wick"),
+            Some(Office::HighWick)
+        );
+        assert_eq!(
+            Office::from_config_name("high_wick"),
+            Some(Office::HighWick)
+        );
+        assert_eq!(
+            Office::from_config_name("the Snuffing"),
+            Some(Office::Snuffing)
+        );
         assert_eq!(Office::from_config_name("nope"), None);
     }
 }

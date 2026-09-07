@@ -1062,10 +1062,10 @@ pub struct Engine {
     weather: WeatherTimeline,
     last_weather_days: f64,
     last_weather_sample: WeatherSample,
-    /// The `now` at which the offices were last checked for a bell, so a span —
+    /// Calendar days when offices were last checked for a bell, so a span —
     /// never an instant — is tested and no office can be missed or double-rung.
-    last_clock_now: f64,
-    /// Future bell strokes owed to the player, in real `now`-seconds. An office
+    last_clock_days: f64,
+    /// Future bell strokes owed to the player, in accepted logical seconds. An office
     /// enqueues its ordinal here (the Watch one, the Snuffing seven) and each
     /// poll drains the ones now due.
     bell_strokes: VecDeque<f64>,
@@ -1073,7 +1073,7 @@ pub struct Engine {
     bell_seq: u64,
     /// The `now` up to which movement has been stepped, so a fixed 20 Hz slice —
     /// never a variable frame — decides how far anyone walks. Starts at the
-    /// construction `now`, like `last_clock_now`.
+    /// construction logical `now`; calendar cursors use game-days instead.
     movement_now: f64,
     /// The M3 water round: thirst, the behaviour ladder, the queues at the wells.
     /// Empty and inert unless the host supplied a nav graph
@@ -1088,8 +1088,8 @@ pub struct Engine {
     /// ladder and its services are a 20 Hz behaviour, not a per-frame one
     /// ([`MOVEMENT_TICK_SECONDS`]): running its ~13 whole-cast passes on every
     /// render frame is pure waste at 60 Hz. The dt/office math inside
-    /// [`round::tick`] spans real elapsed time (`round.last_game_days`,
-    /// `round.last_office_now`), so a coarser cadence changes when it runs, never
+    /// [`round::tick`] spans accepted progression via calendar cursors (`round.last_game_days`,
+    /// `round.last_office_days`), so a coarser cadence changes when it runs, never
     /// how much time it accounts for.
     next_round_tick_at: f64,
     /// The `now` at or after which Layer 2 may scan again
@@ -1268,7 +1268,7 @@ impl Engine {
         // The Night Office reads its bedtimes off the seeded round, so it is
         // built here and not a line earlier (M6). Off by default, and then this
         // is two map lookups and a `None`.
-        let mut night = NightOffice::new(config.night_office, now);
+        let mut night = NightOffice::new(config.night_office, now, &config.clock);
         startup_diagnostics.extend(night.seed(&world, &round));
 
         let mut capabilities = capabilities;
@@ -1344,9 +1344,9 @@ impl Engine {
             weather,
             last_weather_days,
             last_weather_sample,
-            // The construction `now`: the first poll's span opens here, so the
-            // office the run *starts* in is never rung, only entered.
-            last_clock_now: now,
+            // The construction calendar position: the first crossing span
+            // opens here. Its elapsed origin may later bind to a new host.
+            last_clock_days: clock.game_days(now),
             bell_strokes: VecDeque::new(),
             bell_seq: 0,
             // The first movement span opens at construction, mirroring the clock.
@@ -1372,9 +1372,16 @@ impl Engine {
         })
     }
 
-    /// The single pump (`server.py:726-739`).
+    /// The single ordinary transaction boundary. `now` is accepted logical
+    /// elapsed time, never raw process time. Production hosts admit at most
+    /// `timeline::MAX_ACCEPTED_FRAME` before both controller and sim consume it.
+    /// Due expiry precedes FIFO commands/completions, then ordinary event flush.
+    /// Legacy coarse debug polls diagnose discarded physical work and cannot
+    /// certify travel/operation timing.
     pub fn poll(&mut self, now: f64, commands: Vec<EngineCommand>) -> Vec<EngineMessage> {
         let mut out: Vec<EngineMessage> = Vec::new();
+        let boundary = crate::timeline::DueBoundary::new(now, self.clock.game_days(now))
+            .expect("poll requires finite non-negative logical time and finite calendar time");
 
         if !self.ready_emitted {
             self.ready_emitted = true;
@@ -1430,7 +1437,7 @@ impl Engine {
         // now within hearing of an accused. Both are no-ops while no notice is
         // live, which is almost always; the decay clock lives here because the
         // sim itself is clock-free.
-        self.world.notices.expire(self.clock.game_days(now));
+        self.expire_due(boundary);
         // …and, on the same clock, the one rung that nobody chooses (M4a): a
         // summons still live when its named bell rings becomes a warrant. That
         // is the whole of the deadline — settlement is what discharges it, and
@@ -3106,6 +3113,13 @@ impl Engine {
         }
     }
 
+    /// Due-expiry adapter registration seam. Called before any same-instant
+    /// consequential command or completion. New domain owners add their expiry
+    /// sweep here and use this same typed boundary for commit validation.
+    fn expire_due(&mut self, boundary: crate::timeline::DueBoundary) {
+        self.world.notices.expire(boundary.calendar.days());
+    }
+
     /// Ring the offices whose bells fell in the span since the last check, and
     /// sound any strokes now due. Called once per poll, before commands, so the
     /// span tested here is stable no matter what the commands do to the scale.
@@ -3117,7 +3131,8 @@ impl Engine {
         self.world.current_time = Some(self.clock.at(now));
 
         if self.config.ring_the_offices && self.world.sounds_enabled {
-            let mut crossed = self.clock.offices_crossed(self.last_clock_now, now);
+            let mut crossed =
+                crate::clock::offices_crossed_days(self.last_clock_days, self.clock.game_days(now));
             // Bound the catch-up like `tick_movement` does: a huge `now` jump —
             // a resume from a long pause, or a hitch at a high debug scale —
             // crosses many offices at once, and ringing every skipped stroke in
@@ -3130,7 +3145,8 @@ impl Engine {
                 self.bell_strokes.clear();
             }
             let mut queued_any = false;
-            for (instant, office) in crossed {
+            for (days, office) in crossed {
+                let instant = self.clock.elapsed_at_day(days);
                 for stroke_at in stroke_times(office, instant) {
                     self.bell_strokes.push_back(stroke_at);
                     queued_any = true;
@@ -3151,7 +3167,7 @@ impl Engine {
                     .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             }
         }
-        self.last_clock_now = now;
+        self.last_clock_days = self.clock.game_days(now);
 
         // Sound every stroke now due. `offices_crossed` never returns a future
         // instant, so an office's first stroke rings the poll it is scheduled and
@@ -3235,8 +3251,14 @@ impl Engine {
             self.movement_now += MOVEMENT_TICK_SECONDS;
             slices += 1;
         }
-        // Overflowed the catch-up budget: drop the backlog and snap forward.
+        // Production hosts admit bounded elapsed spans before controller and
+        // sim consume them. Legacy coarse debug callers still have a finite
+        // safety cap, but must never present this as movement-faithful time.
         if self.movement_now + MOVEMENT_TICK_SECONDS <= now {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[time] coarse poll discarded {:.6}s of physical work; use bounded accepted-time polls for mechanical timing",
+                now - self.movement_now,
+            )));
             self.movement_now = now;
         }
 

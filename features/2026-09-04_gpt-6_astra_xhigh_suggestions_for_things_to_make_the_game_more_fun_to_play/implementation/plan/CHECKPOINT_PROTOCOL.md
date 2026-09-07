@@ -1,4 +1,4 @@
-Status: Proposed implementation contract (2026-09-05); owned by M1–M3, not implemented.
+Status: M1a ordinary host/time boundary implemented (2026-09-07), review pending; capture/hydration/adoption/storage remain M2–M3 implementation contracts.
 
 # Capturing and resuming one coherent city
 
@@ -28,7 +28,7 @@ Saving must observe a boundary already used in normal play. Do not run an extra 
 4. Complete ordinary domain-event flush. Assert the accepted sim player pose, yaw and physical sample identity match the host sample. If the sample is rejected, reconcile the boundary before claiming capture; never save a split body.
 5. Capture before another physics tick. Include **H**, receipts, semantic obligations and readable committed presentation emitted by this poll even if host presentation has not consumed it. Inputs after **H** belong to the continuing timeline after the checkpoint.
 
-The implementation must make the same ordering apply with and without a save request. The frame schedule currently pumps before its interpolated/throttled position synchronization, so M1/M3 must change that seam deliberately rather than assuming “same frame” means coherent.
+M1a now uses this boundary on every production local pump: fixed steps finish, Update produces custody/input work, then PostUpdate freezes the input cohort and appends the final physical sample before the ordinary Engine poll finishes. Render-interpolated/throttled updates cannot leave the sim behind. Input collected later in PostUpdate retains its existing next-frame latency. `AcceptedHostBoundary` records the verified pose/sequence/elapsed/watermark; M2 captures it without adding a poll and M3 restores it alongside controller dynamics. Renderer-free fixtures lacking `PhysicalPosition` use their explicit Transform as the body; production ControllerPlugin always supplies the physical component.
 
 Persist simulation movement residual and host fixed-step residual separately. A jump restored halfway between fixed ticks must resume with the same next tick and collision behavior. Preserve current/previous physical samples or normalize them through a documented equivalent boundary used by both saved and control runs; reset render interpolation independently so old-world transforms cannot sweep across the city.
 

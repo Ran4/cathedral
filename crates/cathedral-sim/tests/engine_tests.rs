@@ -120,6 +120,8 @@ struct Builder {
     tts: TtsProbe,
     turn_delay_seconds: f64,
     nav: bool,
+    clock: WorldClock,
+    nav_override: Option<Arc<NavData>>,
 }
 
 impl Default for Builder {
@@ -134,6 +136,8 @@ impl Default for Builder {
             tts: TtsProbe::default(),
             turn_delay_seconds: 0.0,
             nav: false,
+            clock: EngineConfig::default().clock,
+            nav_override: None,
         }
     }
 }
@@ -183,7 +187,8 @@ impl Builder {
                 sounds_enabled: self.sounds_enabled,
                 turn_delay_seconds: self.turn_delay_seconds,
                 tts_selected: self.tts_selected,
-                nav: self.nav.then(real_nav),
+                nav: self.nav_override.or_else(|| self.nav.then(real_nav)),
+                clock: self.clock,
                 ..EngineConfig::default()
             },
             &seed(),
@@ -3857,5 +3862,181 @@ fn the_players_real_draw_and_scrub_commands_mint_fixed_stranger_deeds() {
         assert_eq!(fact.subject, vec![player()]);
         assert!(!fact.is_claimed());
         assert!(messages.iter().any(|m| matches!(m, EngineMessage::Journal { entries, .. } if entries.iter().any(|e| e.word.contains(if kind == "draw_mark" { "chalked" } else { "scrubbed" }) && e.hops == 0 && e.from.is_none() && e.word.starts_with("You ")))), "{messages:?}");
+    }
+}
+
+/// A provider completion is consequential input too. At the exclusive cutoff,
+/// the ordinary expiry sweep wins over the old right to settle a live notice.
+#[test]
+fn due_expiry_precedes_a_same_instant_provider_action() {
+    for at_expiry in [false, true] {
+        let mut harness = Builder::default().llm().build();
+        harness.ready();
+        let actor = harness
+            .engine
+            .scheduler()
+            .in_flight_actor_id()
+            .unwrap()
+            .clone();
+        let clock = harness.engine.config().clock;
+        let deadline = clock.elapsed_at_day(1.0);
+        let raised = clock.game_days(deadline) - cathedral_sim::notices::NOTICE_LIFE_GAME_DAYS;
+        let notice = harness
+            .engine
+            .world_mut()
+            .notices
+            .raise(
+                "a finite word".into(),
+                "a fixture wrong".into(),
+                None,
+                None,
+                Some(raised),
+                actor.clone(),
+                None,
+                Some(actor),
+                None,
+            )
+            .unwrap();
+        let mut completion = harness.cognition.drain().pop().unwrap();
+        completion.result = Ok(format!("settle_notice {{\"notice_id\":{notice}}}"));
+        let now = if at_expiry {
+            deadline
+        } else {
+            deadline - 0.001
+        };
+        let messages = harness
+            .engine
+            .poll(now, vec![EngineCommand::LlmCompletion(completion)]);
+        let expired_rejection = messages.iter().any(|m| matches!(m,
+            EngineMessage::Diagnostic(line) if line.contains("the ward is saying no notice numbered")));
+        assert_eq!(expired_rejection, at_expiry);
+        assert!(harness.engine.world().notices.get(notice).is_none());
+    }
+}
+
+#[test]
+fn speech_presentation_hold_cannot_pause_motion_calendar_or_release() {
+    let mut harness = Builder {
+        nav_override: Some(timing_nav()),
+        clock: WorldClock::new(60.0, Office::Dayspring, 0, 0.05),
+        ..Builder::default()
+            .walkable()
+            .voices(TtsBackendKind::Local, TtsProbe::available())
+    }
+    .build();
+    harness.ready();
+    // An NPC voice awaiting presentation keeps the floor held through noon.
+    harness.npc(
+        "k0fb1",
+        "say",
+        json!({"text": "A long line of civic history. ".repeat(16)}),
+    );
+    harness.poll();
+    assert!(harness.engine.floor_busy(0.0));
+    let mover = ActorId::from_raw("cb947");
+    {
+        let person = harness
+            .engine
+            .world_mut()
+            .characters
+            .get_mut(&mover)
+            .unwrap();
+        person.state.position_m = Vec3::new(0.0, WALK_Y, 0.0);
+        person.state.movement = Some(Movement {
+            path: vec![Vec3::new(100.0, WALK_Y, 0.0)],
+            speed: WALK_SPEED_MPS,
+            gait_phase: 0.0,
+            patrol: Some(Patrol {
+                a: "here".into(),
+                b: "there".into(),
+                heading_to_b: true,
+            }),
+            exact_local: false,
+            choke_wait: 0.0,
+        });
+    }
+    // An already committed player sentence ends at noon under the same hold.
+    let station = cathedral_sim::custody::Station {
+        place_id: cathedral_sim::PlaceId::from_raw("pl_ston"),
+        name: "fixture station".into(),
+        point: PLAYER_SPAWN,
+        stone_house: true,
+    };
+    harness.engine.world_mut().custody.seize(
+        player(),
+        ActorId::from_raw("k0fb1"),
+        None,
+        station,
+        0.0,
+    );
+    let record = harness
+        .engine
+        .world_mut()
+        .custody
+        .get_mut(&player())
+        .unwrap();
+    record.state = cathedral_sim::custody::Confinement::Committed;
+    record.committed_at = Some(0.0);
+    record.sentence_due_game_days = Some(Office::HighWick.start_fraction());
+    record.sentence_office = Some(Office::HighWick);
+    let mut bells = 0;
+    let mut last_position = harness.engine.world().characters[&mover].position_m();
+    let mut travelled = 0.0;
+    for step in 1..=260 {
+        harness.now = step as f64 * 0.05;
+        bells += harness
+            .poll()
+            .iter()
+            .filter(|message| is_town_bell(message))
+            .count();
+        let position = harness.engine.world().characters[&mover].position_m();
+        travelled += position.distance(last_position);
+        last_position = position;
+    }
+    assert!(
+        harness.engine.floor_busy(harness.now),
+        "presentation still held"
+    );
+    assert!(
+        travelled > 1.0,
+        "ordinary route travelled {travelled} metres while presentation held"
+    );
+    assert_eq!(
+        harness.engine.world().current_time.unwrap().office,
+        Office::HighWick
+    );
+    assert!(bells > 0);
+    assert!(!harness.engine.world().custody.holds(&player()));
+}
+
+/// Changing slope must preserve an exact calendar boundary bit for bit. An
+/// ulp backwards at zero elapsed time used to lower the processed cursor and
+/// let the next poll ring Kindling twice.
+#[test]
+fn exact_office_rate_change_never_replays_the_bell() {
+    let clock = WorldClock::new(60.0, Office::Dayspring, 0, 0.05);
+    let now = (1.0 + Office::Kindling.start_fraction() - Office::Dayspring.start_fraction()) * 60.0;
+    let mut harness = Builder {
+        clock,
+        ..Builder::default()
+    }
+    .build();
+    harness.engine.poll(now - 0.001, vec![]);
+    let first = harness
+        .engine
+        .poll(now, vec![EngineCommand::CycleTimeScale]);
+    assert_eq!(first.iter().filter(|m| is_town_bell(m)).count(), 1);
+    let calendar = harness.engine.world().current_time.unwrap().game_days();
+    let same = harness.engine.poll(now, vec![]);
+    assert_eq!(
+        harness.engine.world().current_time.unwrap().game_days(),
+        calendar
+    );
+    assert_eq!(same.iter().filter(|m| is_town_bell(m)).count(), 0);
+    let next = harness.engine.poll(now + 0.001, vec![]);
+    assert_eq!(next.iter().filter(|m| is_town_bell(m)).count(), 0);
+    for rate in [1.0, 10.0, 60.0, 1.0] {
+        let changed = clock.with_scale(now, rate);
+        assert_eq!(changed.game_days(now), clock.game_days(now));
     }
 }

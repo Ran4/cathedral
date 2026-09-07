@@ -9018,3 +9018,82 @@ fn an_office_lag_is_always_walked_off_inside_its_own_office() {
         }
     }
 }
+
+/// The Round can skip the poll which changes the clock rate; the next tick
+/// still owes the same Kindling and never re-stocks an already processed one.
+#[test]
+fn skipped_round_tick_across_rate_change_preserves_actual_restock_once() {
+    for (old_rate, new_rate) in [(1.0, 60.0), (60.0, 1.0)] {
+        for already_processed in [false, true] {
+            let (mut world, mut round, vendor, _, _) = bread_stall_world();
+            round.people.insert(
+                vendor.clone(),
+                Townsperson {
+                    home: None,
+                    base: Vec3::ZERO,
+                    legs: vec![leg(Office::HighWick, "The Wickmarket", None)],
+                    leash_m: 2.0,
+                    curfew_exempt: false,
+                    source: None,
+                    is_household: false,
+                    food: None,
+                    phase: Phase::Idle,
+                    travel_target: None,
+                    travel_for_intent: false,
+                    motion_cause: motion::MotionCause::Other,
+                    next_decision: 0.0,
+                    epoch: 0,
+                    evening_seed: None,
+                    leg_lag_share: 0.0,
+                    excused: false,
+                },
+            );
+            let trade = round.food_trades.get_mut("bread").unwrap();
+            trade.listings.push(ItemMatcher::new("herring"));
+            trade.restock.push(StockSpec {
+                kind: "herring".into(),
+                metadata: BTreeMap::new(),
+                quantity: 2,
+            });
+            let clock = WorldClock::new(240.0, Office::Watch, 2, 0.05).with_scale(0.0, old_rate);
+            let crossing = clock.elapsed_at_day(2.0 + Office::Kindling.start_fraction());
+            round.last_office_days = Some(clock.game_days(crossing - 0.01));
+            let mut nudges = Vec::new();
+            if already_processed {
+                tick_food_economy(
+                    &mut round,
+                    &mut world,
+                    &clock,
+                    crossing + 0.001,
+                    &mut nudges,
+                );
+                assert_eq!(
+                    world.held_quantity(&vendor, &ItemMatcher::new("herring")),
+                    2
+                );
+                let fish = world.characters[&vendor]
+                    .state
+                    .holds
+                    .iter()
+                    .find(|id| world.items[*id].kind == "herring".into())
+                    .unwrap()
+                    .clone();
+                world.items.get_mut(&fish).unwrap().quantity = 1;
+            }
+            let change_at = crossing + 0.005; // the intervening poll has no Round tick
+            let clock = clock.with_scale(change_at, new_rate);
+            tick_food_economy(
+                &mut round,
+                &mut world,
+                &clock,
+                change_at + 0.02,
+                &mut nudges,
+            );
+            assert_eq!(
+                world.held_quantity(&vendor, &ItemMatcher::new("herring")),
+                if already_processed { 1 } else { 2 },
+                "actual stock after {old_rate} to {new_rate}, processed={already_processed}"
+            );
+        }
+    }
+}

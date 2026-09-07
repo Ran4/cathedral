@@ -3246,16 +3246,21 @@ mod tests {
     /// subprocess, no network, no `uv` — pumped until the cast is online.
     fn ready_fake_plugin_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
-            .init_asset::<Mesh>()
-            .init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
-            .init_asset::<StandardMaterial>()
-            .init_asset::<Image>()
-            .init_asset::<AudioSource>()
-            .init_resource::<ButtonInput<KeyCode>>()
-            .init_resource::<ButtonInput<MouseButton>>()
-            .init_resource::<AccumulatedMouseScroll>()
-            .init_resource::<crate::controller::CollisionWorld>();
+        app.add_plugins((
+            MinimalPlugins,
+            AssetPlugin::default(),
+            TransformPlugin,
+            crate::live_time::LiveTimePlugin,
+        ))
+        .init_asset::<Mesh>()
+        .init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
+        .init_asset::<StandardMaterial>()
+        .init_asset::<Image>()
+        .init_asset::<AudioSource>()
+        .init_resource::<ButtonInput<KeyCode>>()
+        .init_resource::<ButtonInput<MouseButton>>()
+        .init_resource::<AccumulatedMouseScroll>()
+        .init_resource::<crate::controller::CollisionWorld>();
         app.world_mut().spawn((
             crate::controller::PlayerController::default(),
             Transform::from_xyz(0.0, 0.91, 111.0),
@@ -3302,6 +3307,122 @@ mod tests {
         assert!(app.world().resource::<SmartActorRuntime>().ready);
         app.update();
         app
+    }
+
+    /// Uses the production plugin/pump and actual overlay keys. Rendering is
+    /// intentionally absent; this proves scheduling, not GPU/focus pacing.
+    #[test]
+    fn ordinary_overlays_keep_accepted_time_and_npc_motion_live() {
+        let mut app = ready_fake_plugin_app();
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::from_millis(50),
+        ));
+        let keys = [
+            KeyCode::Enter,
+            KeyCode::KeyI,
+            journal_key(),
+            KeyCode::Escape,
+        ];
+        for (index, key) in keys.into_iter().enumerate() {
+            // Ready is the handshake, not an assurance that the round has
+            // furnished a walk yet. Establish actual motion on the loaded
+            // city's routes before testing an overlay's scheduling.
+            let mut moving = false;
+            for _ in 0..100 {
+                let positions: Vec<_> = app
+                    .world()
+                    .non_send::<local_engine::LocalEngine>()
+                    .world()
+                    .unwrap()
+                    .characters
+                    .iter()
+                    .filter(|(id, _)| id.as_str() != "player")
+                    .map(|(id, person)| (id.clone(), person.position_m()))
+                    .collect();
+                app.update();
+                let engine = app.world().non_send::<local_engine::LocalEngine>();
+                moving = positions.iter().any(|(id, before)| {
+                    engine
+                        .world()
+                        .unwrap()
+                        .characters
+                        .get(id)
+                        .is_some_and(|person| person.position_m().distance(*before) > 0.01)
+                });
+                if moving {
+                    break;
+                }
+            }
+            assert!(
+                moving,
+                "the city's authored routes must be walking before overlay {index}"
+            );
+            tap_overlay_key(&mut app, key);
+            match index {
+                0 => assert!(app.world().resource::<ChatInputState>().open),
+                1 => assert!(app.world().resource::<InventoryUiState>().open),
+                2 => assert!(app.world().resource::<JournalUiState>().open),
+                _ => assert!(app.world().resource::<ConfigMenuState>().open),
+            }
+            let before = app
+                .world()
+                .non_send::<local_engine::LocalEngine>()
+                .accepted_boundary
+                .unwrap()
+                .elapsed
+                .seconds();
+            // Watch actual city routes; (0,0) is inside the cathedral, so a
+            // fabricated straight leg there would correctly fail collision.
+            let positions: Vec<_> = app
+                .world()
+                .non_send::<local_engine::LocalEngine>()
+                .world()
+                .unwrap()
+                .characters
+                .iter()
+                .filter(|(id, _)| id.as_str() != "player")
+                .map(|(id, person)| (id.clone(), person.position_m()))
+                .collect();
+            let mut advanced = 0.0;
+            for _ in 0..4 {
+                app.update();
+                advanced += app
+                    .world()
+                    .resource::<crate::live_time::LiveTime>()
+                    .last_frame
+                    .unwrap()
+                    .accepted_delta
+                    .as_secs_f64();
+            }
+            let engine = app.world().non_send::<local_engine::LocalEngine>();
+            let boundary = engine.accepted_boundary.unwrap();
+            assert!((boundary.elapsed.seconds() - before - advanced).abs() < 1e-6);
+            assert!((0.2..=0.4).contains(&advanced));
+            let continuation = app
+                .world()
+                .resource::<crate::live_time::LiveTime>()
+                .continuation;
+            assert_eq!(continuation.wall, continuation.elapsed + continuation.debt);
+            assert!(
+                positions.iter().any(|(id, before)| engine
+                    .world()
+                    .unwrap()
+                    .characters
+                    .get(id)
+                    .is_some_and(|person| person.position_m().distance(*before) > 0.01)),
+                "ordinary NPC motion continues through overlay {index}"
+            );
+            assert_eq!(
+                boundary.elapsed.seconds(),
+                app.world().resource::<Time>().elapsed_secs_f64()
+            );
+            match index {
+                0 => tap_overlay_key(&mut app, KeyCode::Escape),
+                1 => tap_overlay_key(&mut app, KeyCode::KeyI),
+                2 => tap_overlay_key(&mut app, journal_key()),
+                _ => tap_overlay_key(&mut app, KeyCode::Escape),
+            }
+        }
     }
 
     /// The hot channels reach [`process_engine_message`] as their `ResMut`

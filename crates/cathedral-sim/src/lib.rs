@@ -51,6 +51,7 @@ pub mod snapshot;
 pub mod sounds;
 pub mod speech_router;
 pub mod status;
+pub mod timeline;
 pub mod traits;
 pub mod weather;
 pub mod world;

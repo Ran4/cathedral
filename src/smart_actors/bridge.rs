@@ -307,6 +307,21 @@ pub enum BridgeCommand {
 }
 
 impl BridgeCommand {
+    pub(super) fn spatial_sequence(&self) -> Option<u64> {
+        match self {
+            Self::Hello { spatial_seq, .. }
+            | Self::SpatialUpdate { spatial_seq, .. }
+            | Self::PlayerRecording { spatial_seq, .. }
+            | Self::DebugPlayerSay { spatial_seq, .. }
+            | Self::PlayerSay { spatial_seq, .. }
+            | Self::PlayerOffer { spatial_seq, .. }
+            | Self::PlayerAccept { spatial_seq, .. }
+            | Self::PlayerDecline { spatial_seq, .. }
+            | Self::PlayerSpit { spatial_seq, .. } => Some(*spatial_seq),
+            _ => None,
+        }
+    }
+
     /// Only a position update may be dropped when the queue is full: the next
     /// one supersedes it. Everything else — including a streamed audio chunk —
     /// is a fact the engine has to see.

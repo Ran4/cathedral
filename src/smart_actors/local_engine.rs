@@ -50,6 +50,7 @@ use cathedral_sim::{
 };
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
+use super::interaction::PlayerSpatialState;
 use super::{
     SmartActorsConfig,
     bridge::{
@@ -59,6 +60,20 @@ use super::{
     model::Position,
 };
 use crate::config::WeatherSettings;
+use crate::controller::{PhysicalPosition, PlayerController};
+
+/// Complete ordinary pump boundary, suitable for capture without an extra poll.
+/// M2 persists the watermark and matching physical identity with host dynamics.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct AcceptedHostBoundary {
+    pub input_watermark: u64,
+    pub physical_sequence: u64,
+    pub position: Vec3,
+    pub yaw: f32,
+    pub elapsed: cathedral_sim::timeline::LogicalTime,
+}
+
+const MAX_COMPLETIONS_PER_PUMP: usize = 128;
 
 /// The asset half of the sim's authored data. Assets and lore ship with the
 /// repository, not the player's save, so both resolve against the crate root
@@ -153,6 +168,8 @@ pub struct LocalEngine {
     /// A dead engine still drains its command queue (so producers never block)
     /// but never polls again.
     dead: bool,
+    input_watermark: u64,
+    pub(super) accepted_boundary: Option<AcceptedHostBoundary>,
 }
 
 impl LocalEngine {
@@ -233,6 +250,8 @@ pub fn spawn(
         commands: commands_rx,
         events: events_tx.clone(),
         dead: false,
+        input_watermark: 0,
+        accepted_boundary: None,
     };
     let mut guard = EngineGuard { _backends: None };
 
@@ -518,10 +537,22 @@ pub fn pump_local_engine(
     time: Res<Time>,
     mut engine: NonSendMut<LocalEngine>,
     mut timer: Local<PumpTimer>,
+    players: Query<(&PlayerController, Option<&PhysicalPosition>, &Transform)>,
+    mut spatial: ResMut<PlayerSpatialState>,
+    live: Option<Res<crate::live_time::LiveTime>>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::EnginePump);
     let started = std::time::Instant::now();
-    engine.pump(time.elapsed_secs_f64());
+    // Physics already finished. Transform is only the no-controller-physics
+    // fixture fallback; production always has PhysicalPosition.current.
+    let physical = players.single().ok().map(|(controller, body, transform)| {
+        (
+            &mut *spatial,
+            body.map_or(transform.translation, |body| body.current),
+            controller.yaw(),
+        )
+    });
+    engine.pump_with_sample(time.elapsed_secs_f64(), physical);
     // The whole sim runs inside this call on the main thread; the same rolling
     // report the pose system keeps, so a slow poll is attributable from
     // `logs.jsonl` instead of a profiler.
@@ -537,6 +568,18 @@ pub fn pump_local_engine(
                 timer.accum_us / f64::from(timer.frames.max(1)),
                 timer.max_us,
                 timer.frames,
+            );
+        }
+        if let Some(boundary) = engine.accepted_boundary
+            && let Some(live) = live
+        {
+            info!(
+                "[time] wall={:.3}s accepted={:.3}s debt={:.3}s input_watermark={} physical_sequence={}",
+                live.continuation.wall.as_secs_f64(),
+                boundary.elapsed.seconds(),
+                live.continuation.debt.as_secs_f64(),
+                boundary.input_watermark,
+                boundary.physical_sequence
             );
         }
         *timer = PumpTimer {
@@ -555,20 +598,46 @@ pub struct PumpTimer {
 }
 
 impl LocalEngine {
-    /// One pump. `now` is monotonic seconds since app start; the sim reads no
-    /// clock of its own.
+    /// Legacy explicit-clock harness. Production uses `pump_with_sample`.
+    #[cfg(test)]
     pub(super) fn pump(&mut self, now: f64) {
+        self.pump_with_sample(now, None);
+    }
+
+    fn pump_with_sample(
+        &mut self,
+        now: f64,
+        physical: Option<(&mut PlayerSpatialState, Vec3, f32)>,
+    ) {
+        // Freeze a finite input cohort before allocating the final body sample.
+        // New arrivals are next-boundary inputs even if producers stay busy.
+        let cohort_len = self.commands.len().min(COMMAND_QUEUE_CAPACITY);
         if self.dead {
             // Keep the queue moving so `try_send` never wrongly reports a full
             // bridge to a player whose engine simply died.
-            while self.commands.try_recv().is_ok() {}
+            for _ in 0..cohort_len {
+                let _ = self.commands.try_recv();
+            }
             return;
         }
 
         let mut commands: Vec<EngineCommand> = Vec::new();
         self.collect_completions(&mut commands);
 
-        while let Ok(command) = self.commands.try_recv() {
+        let mut max_spatial_sequence = self
+            .engine
+            .as_ref()
+            .map_or(0, |engine| engine.world().spatial_sequence.max(0) as u64);
+        for _ in 0..cohort_len {
+            let Ok(command) = self.commands.try_recv() else {
+                break;
+            };
+            self.input_watermark = self
+                .input_watermark
+                .checked_add(1)
+                .expect("input watermark overflow");
+            max_spatial_sequence =
+                max_spatial_sequence.max(command.spatial_sequence().unwrap_or(0));
             match command {
                 // The one command the engine cannot take: it *is* the engine's
                 // construction.
@@ -591,10 +660,62 @@ impl LocalEngine {
             return;
         };
 
+        let boundary = if let Some((spatial, position, yaw)) = physical {
+            let Some(sequence) = spatial.mark_boundary_sample(position, yaw, max_spatial_sequence)
+            else {
+                self.fail("physical sample sequence exhausted".into());
+                return;
+            };
+            commands.push(EngineCommand::SpatialUpdate {
+                spatial_seq: sequence as i64,
+                updates: vec![SpatialActorUpdate::new(
+                    SimActorId::from_raw(PLAYER_ID),
+                    SimVec3::new(
+                        f64::from(position.x),
+                        f64::from(position.y),
+                        f64::from(position.z),
+                    ),
+                    Some(f64::from(yaw)),
+                )],
+            });
+            Some(AcceptedHostBoundary {
+                input_watermark: self.input_watermark,
+                physical_sequence: sequence,
+                position,
+                yaw,
+                elapsed: cathedral_sim::timeline::LogicalTime::new(now)
+                    .expect("host supplies accepted logical time"),
+            })
+        } else {
+            None
+        };
+
         match panic::catch_unwind(AssertUnwindSafe(|| engine.poll(now, commands))) {
             Ok(messages) => {
+                let matching = boundary.is_none_or(|sample| {
+                    let world = engine.world();
+                    world.spatial_sequence == sample.physical_sequence as i64
+                        && world
+                            .characters
+                            .get(&SimActorId::from_raw(PLAYER_ID))
+                            .is_some_and(|player| {
+                                let position = player.position_m();
+                                position.x == f64::from(sample.position.x)
+                                    && position.y == f64::from(sample.position.y)
+                                    && position.z == f64::from(sample.position.z)
+                                    && player.state.facing_yaw == f64::from(sample.yaw)
+                            })
+                });
                 for message in messages {
                     self.emit(message);
+                }
+                if matching {
+                    self.accepted_boundary = boundary;
+                } else {
+                    self.accepted_boundary = None;
+                    self.fail(
+                        "accepted physical sample did not match the controller boundary".into(),
+                    );
                 }
             }
             Err(payload) => {
@@ -618,7 +739,10 @@ impl LocalEngine {
         let Some(completions) = &self.completions else {
             return;
         };
-        for event in completions.try_iter() {
+        for event in completions
+            .try_iter()
+            .take(completions.len().min(MAX_COMPLETIONS_PER_PUMP))
+        {
             let command = match event {
                 BackendEvent::LlmCompletion(completion) => EngineCommand::LlmCompletion(completion),
                 BackendEvent::Status(status) => EngineCommand::BackendStatus(status),
@@ -1066,6 +1190,68 @@ mod tests {
     /// original trio and within 4 m of Ilse.
     fn player_position() -> Position {
         Position::new(0.0, 0.91, 111.0).unwrap()
+    }
+
+    #[test]
+    fn ordinary_boundary_finishes_at_physical_pose_after_older_action_samples() {
+        let mut harness = Harness::new();
+        harness
+            .handle
+            .try_send(BridgeCommand::Hello {
+                position_m: Position::new(0.0, 0.91, 111.0).unwrap(),
+                spatial_seq: 1,
+            })
+            .unwrap();
+        harness
+            .handle
+            .try_send(BridgeCommand::PlayerSay {
+                request_id: "cohort-action".into(),
+                text: "A moving speaker.".into(),
+                position_m: Position::new(0.0, 0.91, 110.0).unwrap(),
+                spatial_seq: 40,
+            })
+            .unwrap();
+        let mut spatial = PlayerSpatialState::default();
+        let physical = Vec3::new(0.0, 0.91, 109.0);
+        harness
+            .engine
+            .pump_with_sample(0.0, Some((&mut spatial, physical, 1.2)));
+        let accepted = harness.engine.accepted_boundary.unwrap();
+        assert_eq!(accepted.input_watermark, 2);
+        assert_eq!(accepted.physical_sequence, 41);
+        assert_eq!(accepted.position, physical);
+        assert_eq!(accepted.yaw, 1.2);
+        assert_eq!(harness.engine.world().unwrap().spatial_sequence, 41);
+        assert_eq!(
+            harness.engine.world().unwrap().characters[&SimActorId::from_raw(PLAYER_ID)]
+                .position_m()
+                .z,
+            109.0
+        );
+        // A queued older sample in the next ordinary frame cannot move the
+        // accepted body backwards, and no save-only poll is involved.
+        harness
+            .handle
+            .try_send(BridgeCommand::SpatialUpdate {
+                position_m: Position::new(0.0, 0.91, 107.0).unwrap(),
+                spatial_seq: 20,
+                facing_yaw: 0.0,
+            })
+            .unwrap();
+        harness
+            .engine
+            .pump_with_sample(0.05, Some((&mut spatial, physical, 1.2)));
+        assert_eq!(harness.engine.accepted_boundary.unwrap().input_watermark, 3);
+        assert_eq!(
+            harness.engine.accepted_boundary.unwrap().physical_sequence,
+            42
+        );
+        assert_eq!(
+            harness.engine.world().unwrap().characters[&SimActorId::from_raw(PLAYER_ID)]
+                .position_m()
+                .z,
+            109.0
+        );
     }
 
     fn fake_config() -> SmartActorsConfig {

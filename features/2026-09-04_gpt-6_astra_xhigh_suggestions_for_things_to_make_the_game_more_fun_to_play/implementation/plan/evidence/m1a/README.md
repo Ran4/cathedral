@@ -1,0 +1,37 @@
+Status: M1a implemented, regression verified and coordinator reviewed (2026-09-07). External renderer/focus performance acceptance remains pending.
+
+# M1a — connected time and ordinary input boundary
+
+Scope: first cut of M1 only. User resumption is recorded in [EXECUTION_AUTHORITY](../../EXECUTION_AUTHORITY.md). No case content, save/load, receipt ledger or operation kernel is claimed here.
+
+## Runtime contract
+
+- `cathedral-sim::timeline::AcceptedTime::admit(Duration)` retains live wall debt and returns a maximum 100 ms accepted frame. `LogicalTime`, `CalendarTime`, `DueBoundary` and `ExclusiveDeadline` distinguish elapsed work from calendar expiry. Sim remains IO-free.
+- `LiveTimePlugin` runs after Bevy's `time_system` inside `TimeSystems`, preserves `Time<Real>` as wall time, then publishes its owned accepted Virtual/generic clocks before physics and downstream systems. `ControllerPlugin` installs it. Ordinary overload debt is retained; there is no automatic suspension discard or focus/overlay exclusion. Debt can grow under sustained unsupported overload and the UI continues receiving bounded work.
+- Fixed controller motion and collision-bearing gate motion use accepted duration. Engine movers receive at most 100 ms from this host, below the existing 400 ms safety cap. `cathedral-headless` clock watching and turn stepping use at most 50 ms. Direct coarse debug/test polls retain the legacy capped behavior **with an explicit discarded-physical-work diagnostic**; they cannot certify mechanical elapsed timing.
+- `WorldClock` stores a current segment as accepted `elapsed_origin` plus calendar `epoch_days`. Rate changes preserve the calendar bits at their anchor rather than subtracting two large projections; the exact Kindling zero-elapsed regression prevents one-ulp backward replay. Engine/Round/Night office cursors store calendar days. Round's skipped cadence and Night's after-command crossing remain correct when scale changes. Night's ambient reroll also has an independent optional spent-day guard.
+- Engine's due-expiry phase precedes FIFO consequential input and provider completions. Notice expiry uses the shared exclusive deadline adapter. The exact-cutoff completion test proves expired rights are gone before the action validates.
+- LocalEngine snapshots the bounded command queue length, drains only that cohort, and consumes at most 128 backend events. The final body sample gets a sequence above the cohort maximum and current host/sim sequence. `PhysicalPosition.current` plus controller yaw is appended last, then normal semantic event flush occurs and the host verifies pose/yaw/sequence. `AcceptedHostBoundary` stores elapsed time and finite input watermark; there is no save-only poll. Per-five-logical-second `[time]` diagnostics report wall/accepted/debt/watermark/sample sequence.
+
+## Test evidence
+
+Combined current-tree verification passes **1,791 tests, zero failed, eight ignored** across 32 targets. [VERIFICATION.json](VERIFICATION.json) records commands, source/binary hashes and exact totals. The [full no-fail-fast workspace transcript](workspace_before_overlay_warmup.log.gz) passed every target except the new host overlay fixture, which opened an overlay before the authored round had begun walking. The only subsequent source change added actual-route motion warmup to that test. Its [focused rerun](overlay_focused.log.gz) passed, then the [complete host target](host_final.log.gz) passed 527 tests, zero failed, three ignored. Replacing that one target yields the combined total; this is not a claim that the earlier full command exited successfully.
+
+Fixtures cover retained 500 ms stall/400 ms debt recovery and fixed residual equality; physical gate progression under the same stall; actual stocked quantities across 1→60/60→1 skipped Round ticks; Night duties/ambient day through midnight; before/exact-cutoff provider settlement and exact-office rate-change non-replay; held speech while movement/bells/custody release advance; actual chat/inventory/journal/settings keys through the production SmartActorsPlugin; and old action poses followed by a verified final physical sample. All 67 Engine integration tests pass, including the held presentation and exact office witnesses.
+
+The accepted fixture asserts the **actual summed accepted deltas**, including startup debt recovery, rather than assuming four 50 ms wall samples always mean exactly 200 ms of accepted time. Before each overlay, it establishes observed NPC motion on the loaded city's ordinary routes, with a bounded 100-frame warmup. It then independently asserts motion and advancing accepted time while the overlay is open. Original golden prompt fixtures remain unchanged.
+
+The [development clock-watcher trace](watcher.log.gz) uses the repaired 50 ms stepping for 1,560 polls / 78 logical seconds, from Waning through Snuffing at 300 seconds/day. Its last sample has 426 authored NPCs walking. It emits no discarded-physical-span diagnostic. This is a semantic CLI trace, not a renderer or runtime budget measurement.
+
+## M2 handoff and limits
+
+Coordinator review independently checked production time-system ordering, physical gate progression, finite input/final-sample sequencing, exact rate-change continuity and the calendar initialization repair. Raw workspace/host transcripts reconcile to 1,791 passing tests and eight ignored checks. The 19 changed Rust files pass scoped formatting and whitespace checks; the current selected-owner capture matches 26 owners and 324 fields. Calendar magnitude validation, callback generation/memory bounds and the remaining M1 contracts are explicitly assigned rather than claimed complete here.
+
+[The field delta](../../PERSISTENCE_INVENTORY.md#m1a-accepted-time-owner-delta--2026-09-07) assigns every added mutable field. `owner_fields.json` is the current selected-owner capture, with `field_delta.json` recording the three cursor migrations and ambient guard; `m0_baseline/owner_fields.json` remains the historical baseline. Preserve ordinary debt, accepted fixed residual, sim movement residual and logical/calendar origins separately. Calendar range/counter validation and complete DTOs remain M2.
+
+The added `WorldClock.elapsed_origin` and changed meaning of `epoch_days` are explicitly covered in the field delta table, outside the selected-owner JSON scope.
+
+No rendered Bevy app ran. Renderer, real GPU/frame costs, controller feel, production unfocused pacing, overload recovery on reference hardware, and literal full 20,000-extra stress remain unmeasured. Source audit: ordinary Winit game settings remain Continuous focused and reactive-low-power with 1/60 s timeout unfocused; only headless uses the explicit continuous override. No focus state is consulted by time admission. The key tests use the real UI schedules without a renderer; future evidence/document/settings UI must reuse this no-pause stream as it ships. Journal reading is today's implemented reading surface.
+
+M1c still must bound callback producer/channel memory and fence generations. M1b/M1d remain required before claiming M1 complete.
+Build maintenance: workspace compilation reduced free disk space to 1.5 GiB. Removed only 239 derived `target/debug/incremental/*/s-*` cache sessions last modified before 2026-09-07 UTC; current sessions, binaries, source and unrelated untracked directories were retained. Available disk returned to 7.2 GiB. No source/data cleanup was performed.
