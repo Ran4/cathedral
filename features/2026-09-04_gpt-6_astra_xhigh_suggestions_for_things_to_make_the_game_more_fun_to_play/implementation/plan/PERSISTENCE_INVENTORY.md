@@ -1,4 +1,4 @@
-Status: Initial source-backed inventory (2026-09-05); M0 must reconcile it after knowledge M5 ships.
+Status: Reconciled source-backed M0 inventory (2026-09-07), including shipped knowledge M5, generated residents and conversation continuity. DTO/restore implementation remains M2/M3.
 
 # Whole-world continuation inventory
 
@@ -34,7 +34,7 @@ M2/M3 must preserve the state that changes future behaviour, not only what is vi
 | M2 `Fact` social context | `quiet_among`, `craft_ear`, seeded origins and claimed-source data | S as recorded on the fact. Recomputing mint-time context from today's household/trade may change later spread |
 | M2 engine/round polling | `Engine.next_player_pollen_game_days`, `Round.next_pollen` and `last_game_days` | S on the calendar basis, including valid Never sentinels. Do not reseed per-person polls or reinterpret old cursors through a new calendar rate |
 | M2 derived spatial/salience support | `World.area_adjacency`, salience table, `pollen::WardGrid` process cache | R from the exact accepted content/geometry/behavior manifest. If later packs can change those inputs in-process, key/invalidate caches by that identity rather than keeping the first world's `OnceLock` result. Persist explicit measurement behavior overrides when supported, not a default guessed from current config |
-| Knowledge M2 and remaining M3–M5 | Air heat, hop/garble/provenance state, polling anchors, player learning, occasions, systemic consequences | S. M2's status advanced during the review: include `Drift` heat/hops/via/stir and private holdings, then expand this row against the entire accepted feature in M0. M1's small `Knowledge` struct is not the final inventory |
+| Accepted knowledge M0–M5 | Air heat, hop/garble/provenance state, polling anchors, player learning, occasions, systemic consequences | S. The exact remaining field groups and time bases are reconciled below; do not hydrate only the original M1 store |
 | `World.events` | Undrained domain events | Require and assert a complete event-flush capture boundary. Persist resulting committed receipts not yet consumed by the host; never silently drop an event buffer that unexpectedly remains nonempty |
 | `World.spoke_this_turn` | Same-turn seizure guard | T only at a guaranteed completed-turn/transaction boundary; capture must never cut a multi-action application in half |
 | World catalogs/maps | Items, facts, marks, sounds, areas, shelters, places and nav | R through an exact content manifest, except genuinely mutable place/catalog state which needs its own S record |
@@ -59,6 +59,22 @@ M2/M3 must preserve the state that changes future behaviour, not only what is vi
 | Worksites and resolved data | Worksites, resolved trade/production specs, counter groups | R only if exact definitions and stable bindings reproduce them; dynamic changes are S |
 | Traces/scratch | `food_log`, `observed_cart_loads`, `departed_this_tick`, `ladder_scratch` | T or explicit flush boundary. An undelivered departure is a domain effect and cannot be dropped with scratch data |
 
+### Current generated-resident controller (2026-09-07)
+
+`Round.residents` in `round/residents.rs` is an additional authoritative service. Generated sheets come from `generate_ambient(nav, count, first_index, occupied, overrides)`, including patch/spot/housing assignment; `first_index` affects stable actor IDs and `overrides` contains worker declarations. Preserve the generator/content manifest separately from any world seed. M2 owns its private DTO together with Round; it cannot be recreated by placing the same number of new people.
+
+| Exact field group | Time basis and policy | Validation / continuation obligation |
+|---|---|---|
+| `Residents.people`, per-resident `patch`, `preferred_spot`, `spot`, `target`, `phase`, `retiring`, `support_was_eligible`, `missed_meal`, `recovery_remaining` | S. `recovery_remaining` is elapsed duration; eligibility/missed-meal are semantic interval state | Preserve actual interrupted/returning/sheltering state and household support. Save stable patch/spot IDs or explicitly remap indexes against the exact resident-place manifest. |
+| `Resident.dwell_until`, `epoch`, `weather_retry_until` | S elapsed deadlines; `epoch` is opaque deterministic sequence | Rebase deadlines, not epoch. Loading cannot reroll a lingering citizen or reset a failed path's recovery budget. |
+| `Resident.weather { slot, intent, arrived }`; `WeatherShelterIntent { shelter, target, release_threshold, below_since_days, release_after_days }` | S active claim and hysteresis; suffix-days values use calendar time | Exact shelter/slot binding, preserved arrival and release hysteresis; invalid/missing compatible shelters reject hydration. |
+| `Residents.reservations`; `SpotReservations.owners`, `.actors` including occupied/target claims | S exclusive reservations; R `.positions` from accepted resident-place geometry | Bidirectional owner/actor agreement, no duplicate occupancy or destination, present compatible actor. A target claim cannot become occupied early at restore. |
+| `Residents.order`, `cursor`, `optional`, `departing` | S fairness/admission/departure sets and cursor | Preserve bounded optional movement admission and fairness. Pending departure releases its reservations exactly once. |
+| `Residents.changed`, `local_shelters`; `CharacterState.resident` | R changed-publication set/status from saved controller; R nearby static shelter index | Dedicated full restored publication, no new behavior tick or knowledge grant. `ResidentStatus` remaining dwell is a projection, not the source deadline. |
+| `Townsperson.motion_cause` | S diagnostic attribution, or explicit reset to unknown without changing the route | Retain if runtime evidence/inspection depends on the cause; never infer a newly started route from rebuilding a display. |
+
+M2 must continue a world while someone lingers, another owns an optional route, another waits to return, and a weather shelter is occupied. Compare control/restored reservation ownership, displacement, needs/support, next decision and fairness. This is additional to the older occupational queue/production/road-party tests.
+
 ## Engine time, scheduling and external work
 
 | Source | State | Policy |
@@ -77,6 +93,29 @@ M2/M3 must preserve the state that changes future behaviour, not only what is vi
 | `Engine` presentation caches | Last snapshot/law/chalk/lamp revisions, dogs-published, ready flag | T/R. Force complete initial publication to the new host without replaying world creation |
 | `Engine.transcript` | Session transcript | Preserve the player's durable readable history through an explicit transcript/journal policy; developer omniscient logs may remain session artefacts. Do not conflate the two |
 | Provider traits/env | Cognition/STT/TTS/Sight handles, prompt environment, capabilities | R using current services and validated content. No sockets, threads, secrets or old job handles are serialized |
+
+### Accepted knowledge and conversation fields (2026-09-07)
+
+These rows supersede the earlier generic social/knowledge descriptions; they are an exhaustive grouping of `Knowledge` and `Conversation`'s fields at audited HEAD. Existing World/Round/host owner rows still apply to their other state.
+
+| Owner / exact fields | Time basis and policy | Validation / continuation obligation |
+|---|---|---|
+| `Knowledge.live`, `by_id`, `next_key`, `next_sequence`, `holdings`, `air` | S canonical facts, counters and private holdings/air; R `by_id` with exact saved keys | Unique IDs/keys/sequence, compatible actor/ward references, current count caps; sealed `FactSource` exported only through private owner DTO. Fact includes seeded/own/quiet/craft context, mint calendar time and source. |
+| `Holding { key,hops,heat_at_learn,learned_on,from,view }`; `Drift { heat,hops,via,stir }` | S; learned-on/mint use game days, stir is opaque roll identity | Do not turn garbled hearsay into canonical firsthand truth or reroll a carried view. Keep first-hand seeded defaults distinct from stored override. |
+| `Knowledge.last_sweep_game_days`, `last_hearsay_beat_game_days`; `Engine.next_stage_hop_at`, `next_player_pollen_game_days`; `Round.next_pollen` | S sweep/player/round polling on game-day basis; stage hop on elapsed basis | Preserve Never sentinel; restore cadence without duplicate receipt/hearsay or clock-rate-dependent extra pickup. |
+| `Round.pollen_due` | R from `next_pollen` using exact finite/deadline ordering and valid Never policy | No missing/duplicate due actor; discard only entries proven stale by the saved authoritative deadline. |
+| `Knowledge.occasions`, `Occasion { subject,from,at_game_days,offered }`, `raises` | S occasions and `(day,office,count)` quota | Offered occasion belongs with scheduler's pending prompt; an external retry does not restore already spent quota. |
+| `Knowledge.player_learned`, `LearnedHow { word,at,place,from,hops,tellings,wards,wards_seen,mouths_seen,unattributed_seen }`, `receipts_revision` | S recorded words/acquisition and distinct-mouth bookkeeping; `at` game days | Maintain max 64 ordinary receipts and dedupe across A→B→A tellings. An unknown source stays unknown after load. Future retained history follows M5's archive extension, not silent pinning of this cap. |
+| `Knowledge.seated`, `player_stage_stir`, `player_stage_tellings`, `hearsay_raised` | S pending reheat seats and deterministic dedupe | At an asserted fully completed prompt boundary `seated` may be absent; otherwise save actor/key inputs with that pending request. Never emit another notice from the same fact/wrong subject or count an already accepted stage telling again. |
+| `Round.knowledge_refused_until`, `knowledge_refused_buyers`; `Engine.door_shut_until` | S refusal-until on game days, experienced-buyer set, door diagnostic deadline on game days | Maintain first-refusal experience and alternative-stall selection; stale IDs pruned only under ordinary policy. Distinguish from elapsed `chalk_refused_until`. |
+| `Engine.last_ward_heat`, `last_journal`, `last_journal_receipts`, `last_journal_at` | R publication caches from saved receipts/standing; restart publication cadence on adoption | No new receipt/news to force a message. Publish the complete current learned view to the new host. |
+| `Conversation.engagement { actor,at,reciprocal,witnesses }`, `invitation`, `focus` | S social evidence; `at`, invitation and focus since/last samples are elapsed anchors | Preserve incumbent player choice, 30-second warm interval, 10-second invitation, 0.65-second focus dwell/1-second freshness and max 128 prior witnesses. Rebase together; do not invent past dialogue for newcomers. |
+| `Conversation.next_utterance`, `latest_applied_utterance` | S monotonic utterance ordering | Keep latest ≤ next. Restored stale completions cannot overwrite a newer group/name/gaze choice even when actor IDs match. Still fence external jobs with M1 runtime generation. |
+| `CapturedAttention { captured_at,sequence,focus,engagement,invitation }`; `SpeechRouter.captures`, `TranscriptionTask.attention` | Preserve already committed speech attribution; T in-progress microphone/STT execution under checkpoint interrupted-draft policy | At most eight captures with 120-second expiry. Discard interrupted unsent attention/job handles rather than auto-speaking after restore; preserve counters and all earlier committed suffixes through inbox/history. |
+| `SpeechSelection.witnesses` and rendered conversation suffix | S rendered percept in pending/inbox/recent history and saved in-flight prompt input | Attribution is event-time metadata, never rerendered from the newly loaded conversation partner. |
+| `SpeechRouter` remaining `streams`, `parked`, `timings`, `recording_jobs`, `stream_jobs`, `tts_backends`, `next_job`, `stt_stream_grace_seconds` | T external handles/buffers; S readable committed/unsent text, input purpose and interruption status per checkpoint protocol; R provider configuration | Preserve category and user text, not a live socket. No replay of committed `say`, no automatic draft submission, new generation job IDs. Timing probes are diagnostics, not permission to keep speech active. |
+
+`Engine.npc_exchanges`, novelty/context salts and pending floor/scheduler inputs retain their prior S policy. Backend prompt archives and omniscient transcript are not a substitute for these private semantic records. New archive/root types do not exist yet; M5/M9 extend this same inventory when they introduce them.
 
 ## Host continuation
 
@@ -124,4 +163,4 @@ At restore, preserve committed effects, restore exact held completions, and rest
 
 Reject unsupported versions, invalid counts/coordinates, duplicate ownership, cycles, dangling IDs, impossible reservations, multiple exclusive duty owners and contradictory custody/order references before adoption. Validate content hashes and stable references before placing any restored body into geometry.
 
-Keep a machine-readable field-policy inventory or equivalent review aid as implementation evolves. Every added mutable field must be assigned a policy. Continue real behaviour across capture/restore boundaries to verify those policies; a serialization round trip alone cannot catch a schedule that silently reseeded.
+The [M0 field index](evidence/m0_baseline/owner_fields.json) records 323 named fields across 26 private owner structs. Run `uv run --cache-dir /tmp/alibi-m0-uv evidence/inventory_fields.py` from this plan directory to detect declaration changes; `--write` is an intentional rebaseline after reviewing the policies above. This selected-owner index is a review aid, not an exhaustive Rust parser or proof of a working DTO. Host/module policies above still apply outside its selected structs. Every added mutable field must be assigned a policy. Continue real behaviour across capture/restore boundaries to verify those policies; a serialization round trip alone cannot catch a schedule that silently reseeded.

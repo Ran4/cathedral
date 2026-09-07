@@ -1,6 +1,8 @@
-Status: Read-only baseline audit recorded (2026-09-05). Findings below are not implemented fixes.
+Status: Historical read-only audit (2026-09-05), reconciled against current source in BASELINE_RECONCILIATION (2026-09-07). Findings below are not implemented fixes.
 
-# What the current code actually provides
+# What the 2026-09-05 code provided
+
+[M0’s current-source reconciliation](BASELINE_RECONCILIATION.md) supersedes the dated knowledge/prerequisite state and hearsay-seizure gap below. The existing clock, save, geometry, authority and escort limitations remain. Current ownership is in [PERSISTENCE_INVENTORY](PERSISTENCE_INVENTORY.md).
 
 The audit used working-tree source at HEAD `f56a2c306ec1523fc569c7c2de232b8c90d4d4ef`, including uncommitted knowledge M1 changes. HEAD alone does not describe that working tree. Existing unrelated modifications were retained.
 

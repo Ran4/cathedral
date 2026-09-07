@@ -1,0 +1,15 @@
+{
+  "checked_at_utc": "2026-09-07T17:46:06.377658+00:00",
+  "command": "CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 cargo test --workspace --offline",
+  "exit_code": 0,
+  "passed": 1780,
+  "failed": 0,
+  "ignored": 8,
+  "result_blocks": 32,
+  "initial_failure": "14 shared host integration tests lacked Assets<SkinnedMeshInverseBindposes>; fixed by one test-only asset registration.",
+  "logs": [
+    "workspace_initial.log.gz",
+    "host_failure.log.gz",
+    "workspace_final.log.gz"
+  ]
+}

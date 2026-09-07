@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "date": "2026-09-07",
+  "gate": "V03 partial; targets are not evidence of unimplemented work",
+  "ordinary": {
+    "step_seconds": 0.05,
+    "warmup_polls": 100,
+    "measured_polls": 1200,
+    "pairs": 3,
+    "paired_p95_p99_regression_fraction_max": 0.10,
+    "pump_ms_limits": {
+      "0": {"p95": 2.0, "p99": 3.5},
+      "1000": {"p95": 6.0, "p99": 8.0},
+      "2000": {"p95": 10.0, "p99": 12.0}
+    }
+  },
+  "host_frames": {
+    "measured": false,
+    "reason": "No accessible display or GPU",
+    "resolution": [1920, 1080],
+    "vsync_for_cost": false,
+    "p95_ms_max": 16.67,
+    "p99_ms_max": 33.33
+  },
+  "stress": {
+    "requested_extra": 20000,
+    "actual_placed_extra": 9072,
+    "unplaced": 10928,
+    "warmup_polls": 100,
+    "measured_polls": 1000,
+    "pairs": 1,
+    "full_population_acceptance": false
+  },
+  "foundation": {
+    "measured": false,
+    "owner": "M13 using M1/M4-M12 adapters",
+    "extra_residents": 2000,
+    "operations": {"travel": 8, "work_or_examination": 4, "contention_or_wait": 4},
+    "appointments": 8,
+    "pending_orders": 4,
+    "observation_tracks": 16,
+    "off_stage_fraction": 0.5,
+    "cognition_available": false,
+    "incremental_p95_ms_max": 2.0,
+    "incremental_p99_ms_max": 3.0,
+    "total_p95_ms_max": 12.0,
+    "total_p99_ms_max": 16.0,
+    "added_resident_bytes_max": 134217728
+  },
+  "save": {
+    "measured": false,
+    "owner": "M2/M3",
+    "frame_p99_ms_max": 2.0,
+    "frame_max_ms": 5.0,
+    "payload_bytes_max": {"0": 67108864, "2000": 134217728},
+    "cohorts": {"running": 1, "save_payload": 1, "load_candidate": 1, "retiring": 1},
+    "shared_resident_bytes_max": 1073741824
+  },
+  "replay": {
+    "measured": false,
+    "owner": "M1/M2",
+    "recent_envelopes_max": 4096,
+    "receipt_metadata_bytes_max": 1024,
+    "ledger_bytes_max": 4194304,
+    "active_operations_max": 256,
+    "producers_max": 32
+  },
+  "archive": {
+    "measured": false,
+    "owner": "shared knowledge extended by M5/M9, private DTO by M2",
+    "identities_max": 16384,
+    "identity_payload_bytes_max": 1024,
+    "provenance_links_max": 65536,
+    "link_encoded_bytes_max": 128,
+    "protected_roots_max": 4096,
+    "allocation_bytes_max": 33554432
+  },
+  "publication": {
+    "prompt_canary_bytes_max": 65536,
+    "original_snapshot_fixture_bytes_max": 163840,
+    "nav_round_snapshot_bytes_max": {"0": 262144, "2000": 2097152},
+    "future_learned_page_bytes_max": 32768,
+    "future_unsolicited_page_hz_max": 2.0
+  }
+}

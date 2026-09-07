@@ -1,14 +1,24 @@
-Status: Planned (2026-09-05). Read-only architecture audit started; prerequisite acceptance pending.
+Status: Partial (2026-09-07). Knowledge/source/ownership reconciliation and CPU baseline delivered; V03 reference-renderer and full stress acceptance remain unavailable. M1 must not advance yet.
 
 # M0 — Baseline and prerequisite gate
 
 Build from what has actually shipped. This milestone closes the knowledge prerequisite, fixes the implementation contracts and identifies risks that could invalidate later content. It does not author the real quest prematurely.
 
+## Execution record — 2026-09-07
+
+- **V01 reconciled:** knowledge M0–M5 was already accepted on 2026-09-06. [BASELINE_RECONCILIATION](BASELINE_RECONCILIATION.md) records the actual interfaces, source privacy, receipt/provenance caps, completed provider evidence and explicitly owned archive extension. Historical records were preserved.
+- **V02 reconciled:** source `46e24abf429b3113d3c5745324e5746d82345140`; [persistence inventory](PERSISTENCE_INVENTORY.md) now includes complete shared knowledge, conversation onset/utterance/witness state and generated resident reservations/cursors. The reconciliation maps actual law citizens, migration regressions and three district designs to their owners. Requirements/scenario IDs stay unchanged.
+- **V03 partial:** 1,063 current sim tests passed, one ignored. [Runtime evidence](evidence/m0_baseline/README.md) contains 26 sequential release runs / 13 pairs, 0.05-second polls, identical paired semantic counters, raw timing/RSS/source/hardware records, numerical budgets and explicit scope. Default authored, configured 1,000 and target 2,000 additional residents are measured. Production generation admits only 9,072 of the requested 20,000 stress residents; this is capacity-limited stress, not 20,000-body acceptance.
+- **Workspace baseline repaired and verified:** the shared host test fixture now registers the skinning asset required by the current dog renderer. All 1,780 workspace tests pass, with eight ignored; [the coordinator review](BASELINE_REVIEW.md) and [archived gate](evidence/m0_baseline/workspace_gate.json) record the initial failure and final rerun.
+- **Gate remains unaccepted:** no display or GPU is accessible, including the checked outside-sandbox environment. There is no current host frame/focus/overlay trace. Save/replay/archive DTO byte costs and active foundation workload have finite declared admission targets, but do not exist to measure yet. No dependent gameplay milestone is implemented or marked accepted.
+
+To close M0, obtain the reference renderer and capture ordinary host/frame/input behavior with the same source/content identity, reconcile the stress admission limit honestly, and review V03 against [RUNTIME_BUDGETS](RUNTIME_BUDGETS.md). Later owners must measure their own DTO/active-work bytes and cost before claiming those separate gates. An offline CPU pair or historical software UI screenshot cannot substitute for the missing frame evidence.
+
 ## Entry and existing sources
 
-Read [DECISIONS.md](DECISIONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), `features/AGENTS.md`, `crates/cathedral-sim/AGENTS.md`, and `features/knowledge_and_rumor/README.md`.
+Read [DECISIONS.md](DECISIONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), `features/AGENTS.md`, `crates/cathedral-sim/AGENTS.md`, and `features/implemented/knowledge_and_rumor/README.md`.
 
-At the opening planning audit, knowledge M1 was present in the working tree; concurrent work then committed it and continued M2. The final status read reports M1/M2 implemented and M3–M5 pending. The existing simulation suite passed on the opening tree. These facts are a dated baseline, not permission to mark the remaining knowledge milestones complete or attribute concurrent implementation to this plan.
+At the opening 2026-09-05 planning audit, knowledge M1 was present in the working tree; concurrent work then committed it and continued M2. That dated audit's final status was M1/M2 implemented and M3–M5 pending. The 2026-09-07 reconciliation above supersedes that prerequisite status using the feature's actual later acceptance evidence; its implementation is not attributed to this plan.
 
 ## Work
 

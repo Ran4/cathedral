@@ -1,0 +1,16 @@
+{
+  "checked_at_utc": "2026-09-07T17:39:54.082033+00:00",
+  "result": "passed",
+  "scope": "Independent recomputation from archived raw baseline samples; no game acceptance certification.",
+  "raw_runs_verified": 26,
+  "paired_semantic_outputs_verified": 13,
+  "source_hashes_verified": 744,
+  "raw_samples_verified": 30800,
+  "checks": [
+    "Raw sample counts, positive finite timings and 0.05-second poll pattern",
+    "Nearest-rank percentiles and sample totals match RESULTS.json",
+    "All non-timing raw fields match between paired runs",
+    "All paired percentile changes match PAIRS.json",
+    "Every recorded source hash matches the current tree"
+  ]
+}

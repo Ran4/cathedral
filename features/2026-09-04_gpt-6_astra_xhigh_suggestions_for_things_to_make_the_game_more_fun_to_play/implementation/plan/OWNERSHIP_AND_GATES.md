@@ -1,4 +1,4 @@
-Status: Proposed implementation handoffs (2026-09-05). Planning deliverable only; no implementation milestone accepted here.
+Status: M0 ownership handoffs reconciled (2026-09-07); runtime gate remains partial. Downstream contracts remain required implementation, not accepted milestones.
 
 # Ownership and acceptance handoffs
 
@@ -8,9 +8,9 @@ Current source references below describe the audited working tree, including con
 
 ## The prerequisite belongs to knowledge and rumour
 
-The [knowledge feature](../../../knowledge_and_rumor/README.md) explicitly requires its complete end-to-end release before quest work resumes. Its final status read reports M0 measured, M1/M2 implemented and M3–M5 pending; M2 advanced through concurrent work during this review. Neither partial implementation nor an individual successful test certifies the complete feature's acceptance. Let its existing owner finish its own sequential [plan](../../../knowledge_and_rumor/plan/README.md). Do not take over its remaining milestones or build a second fact/journal service here.
+The [knowledge feature](../../../implemented/knowledge_and_rumor/README.md) completed its end-to-end release and independent M5 acceptance on 2026-09-06 under its own [plan](../../../implemented/knowledge_and_rumor/plan/README.md). [The M0 reconciliation](BASELINE_RECONCILIATION.md) records actual accepted interfaces, limits, retained provider evidence and source revision. Its prerequisite is satisfied; this investigation does not build a second fact/journal service. M0 itself remains partial because V03 renderer/full-stress evidence is unavailable.
 
-The current source is already [knowledge/mod.rs](../../../../crates/cathedral-sim/src/knowledge/mod.rs), with separate catalog, source, mint and pollen modules; older references to `knowledge.rs` have drifted. At the final prerequisite handoff, record the accepted revision **and** relevant working-tree changes, then resolve these interfaces from actual source:
+The current source is already [knowledge/mod.rs](../../../../crates/cathedral-sim/src/knowledge/mod.rs), with separate catalog, source, mint and pollen modules; older references to `knowledge.rs` have drifted. The final prerequisite handoff is now recorded in BASELINE_RECONCILIATION. At each dependent milestone, re-read the accepted revision **and** relevant working-tree changes, then resolve these interfaces from actual source:
 
 - Stable `FactId`/dense-key lifetime, `knowledge::holds`, creation/invalidation, direct versus claimed sources, garbled views and origin chains.
 - Player learning and journal receipts, disclosure/utterance identity, event recipient ordering and prompt relevance/ignorance behavior.

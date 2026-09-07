@@ -1,4 +1,4 @@
-Status: Rewritten quest GDD delivered (2026-09-04); implementation plan delivered (2026-09-05). Game implementation pending.
+Status: GDD/implementation plan delivered; M0 partially executed (2026-09-07): knowledge/source audit and CPU baseline recorded, reference-renderer/full-stress acceptance pending. M1–M19 not started.
 
 # An Alibi in Stone
 
@@ -18,7 +18,7 @@ The [implementation plan](implementation/plan/README.md) records the 2026-09-05 
 systems-first M0–M19 delivery. Its [decision record](implementation/plan/DECISIONS.md) and
 [case contract](implementation/plan/CASE_CONTRACT.md) supersede conflicting GDD recommendations,
 including pausing, save/load scope, dynamic enforcement and the repaired evidence/timing routes.
-The original DOCX/PDF and model remain the earlier proposal.
+The original DOCX/PDF and model remain the earlier proposal. [M0’s current execution record](implementation/plan/M0_baseline_and_prerequisites.md) and [baseline reconciliation](implementation/plan/BASELINE_RECONCILIATION.md) explain the completed audit, real measurements and remaining gate; no quest gameplay has shipped from this plan.
 
 | File | Purpose |
 |---|---|

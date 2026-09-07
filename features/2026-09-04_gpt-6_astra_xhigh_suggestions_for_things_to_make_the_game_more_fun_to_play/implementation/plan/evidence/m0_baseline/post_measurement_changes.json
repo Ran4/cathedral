@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "date": "2026-09-07",
+  "source": "46e24abf429b3113d3c5745324e5746d82345140",
+  "changes_after_cpu_measurement": [
+    {
+      "path": "src/smart_actors/mod.rs",
+      "before_sha256": "a5ce4a93897a77fee278d716d309429cf2235c7066295c7535d4ae193e395649",
+      "after_sha256": "47726ccd7d3a7ad80f3ce5c10c9f7f3eeb414a5fe357c17fe07dfddb279733a9",
+      "scope": "test-only ready_fake_plugin_app asset registration; no production systems or sim/backend runtime edits",
+      "reason": "Existing shared MinimalPlugins harness omitted SkinnedMeshInverseBindposes required by dogs::sync_dogs; production MeshPlugin already supplies it",
+      "change": "init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()",
+      "focused_command": "cargo test --offline --bin cathedralbevy smart_actors::tests -- --nocapture",
+      "focused_result": "29 passed; 497 filtered out; 0 failed",
+      "cpu_rerun_required": false,
+      "cpu_rerun_reason": "Release cathedral-backends example does not compile host src/smart_actors/mod.rs"
+    }
+  ]
+}

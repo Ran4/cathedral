@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Validate local plan structure/links/provenance, never game implementation."""
+"""Validate roadmap structure/links/provenance, never certify game acceptance."""
 
 from __future__ import annotations
 
@@ -47,9 +47,17 @@ def main():
     parser.add_argument("--write", action="store_true", help="write structural_validation.json")
     args = parser.parse_args()
     milestones = plan_catalog.milestone_files()
-    for number, filename in milestones.items():
+    milestone_statuses = {}
+    for number, filename in sorted(milestones.items()):
         first = (PLAN / filename).read_text().splitlines()[0]
-        assert first.startswith("Status: Planned"), f"Unexpected implementation claim in M{number}: {first}"
+        assert re.match(
+            r"^Status: (?:Planned|In progress|Partial|Accepted|Implemented|Blocked)\b", first
+        ), f"Missing or unrecognized milestone status in M{number}: {first}"
+        assert re.search(r"\b\d{4}-\d{2}-\d{2}\b", first), \
+            f"Milestone status needs an absolute date in M{number}: {first}"
+        # Status is an author's evidence-backed record, not a conclusion this
+        # structural checker can reach. Keep the exact claim visible for review.
+        milestone_statuses[f"M{number}"] = first.removeprefix("Status: ")
 
     for path, expected in plan_catalog.outputs().items():
         assert path.read_text() == expected, f"Generated catalog drift: {path.name}"
@@ -109,9 +117,10 @@ def main():
     report = {
         "checked_at_utc": datetime.now(timezone.utc).isoformat(),
         "head_observed": head,
-        "scope": "Local planning structure, generated traceability and current site-source hashes only.",
-        "game_acceptance": f"Not run or certified by this tool; all {len(plan_catalog.SCENARIOS)} scenarios remain planned.",
+        "scope": "Local roadmap structure, generated traceability and current site-source hashes only.",
+        "game_acceptance": "Not run or certified by this tool; consult milestone evidence for acceptance results.",
         "milestones": len(milestones),
+        "milestone_statuses": milestone_statuses,
         "requirements": len(plan_catalog.REQUIREMENTS),
         "planned_scenarios": len(plan_catalog.SCENARIOS),
         "markdown_files_checked": len(markdown),

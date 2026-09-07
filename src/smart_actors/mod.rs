@@ -3248,6 +3248,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
             .init_asset::<Mesh>()
+            .init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
             .init_asset::<StandardMaterial>()
             .init_asset::<Image>()
             .init_asset::<AudioSource>()

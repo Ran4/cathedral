@@ -1,6 +1,8 @@
-Status: Implementation plan delivered (2026-09-05). M0–M19 describe required implementation; no game milestone in this plan is accepted yet.
+Status: M0 partially executed (2026-09-07): V01/V02 reconciled, CPU portion of V03 measured; current renderer/full-stress acceptance pending. No milestone accepted; M1–M19 not started.
 
 # An Alibi in Stone — systems first, then the full quest
+
+The [M0 coordinator review](BASELINE_REVIEW.md) records the delivered baseline, the repaired host test fixture and the remaining acceptance gate.
 
 Build the machinery for investigations that happen inside a living city, then use it to deliver the complete quest. People keep their own time. Physical evidence has a location and a history. A finding may justify an order; available guards must then carry it out. The player can save at any moment and resume a coherent world.
 
@@ -39,7 +41,7 @@ Every milestone is an implementation/review unit under `features/AGENTS.md`: use
 
 ## Existing work and ownership
 
-Knowledge and rumour is a separate shared feature. At the final 2026-09-05 status check, its README reports M0 measured and M1/M2 implemented, with M3–M5 pending; M2 advanced through concurrent work during this review. Its existing end-to-end-first decision remains in force. This roadmap consumes that feature after its acceptance gate; it does not duplicate or silently replace its remaining milestones.
+Knowledge and rumour is a separate shared feature, now [implemented through M5 and independently accepted on 2026-09-06](../../../implemented/knowledge_and_rumor/README.md). M0 reconciles its actual fact, holder, receipt, journal and consequence interfaces at current source `46e24ab`. [BASELINE_RECONCILIATION](BASELINE_RECONCILIATION.md) and [the measured record](evidence/m0_baseline/README.md) supersede the old planning prerequisite status. Shared archived identity remains an explicitly owned M5/M9 extension, not an already shipped retention guarantee. M0 stays partial because the current environment cannot provide required renderer/frame evidence, and production placement does not admit all 20,000 requested stress residents.
 
 Law, movement, items, speech, weather and ordinary NPC rounds already exist. Their implementation is the starting point, including fixes and extensions required by this plan. Historical files under `features/implemented/` are records and must not be rewritten to pretend the new work has shipped.
 
@@ -66,7 +68,8 @@ The review repaired material gaps in the earlier GDD: the complete private trip 
 |---|---|
 | [Decisions](DECISIONS.md) | The user's authoritative choices and the GDD policies they replace |
 | [Architecture](ARCHITECTURE.md) | Shared responsibilities, time, operations, knowledge, evidence and enforcement contracts |
-| [Source audit](SOURCE_AUDIT.md) | Verified current implementation, concrete gaps and audit limits |
+| [Baseline reconciliation](BASELINE_RECONCILIATION.md) | Current shipped interfaces, source/persistence/role handoffs, district risks and acceptance limits |
+| [Source audit](SOURCE_AUDIT.md) | Historical 2026-09-05 implementation audit, superseded where the reconciliation says so |
 | [Ownership and gates](OWNERSHIP_AND_GATES.md) | Producers/consumers, dependency order, keys overlap, subcuts and sequential handoffs |
 | [Persistence inventory](PERSISTENCE_INVENTORY.md) | Existing/planned state owners and restore policies |
 | [Checkpoint protocol](CHECKPOINT_PROTOCOL.md) | Exact capture/adoption, pending cognition, time, callbacks and durable slot policies |

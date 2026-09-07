@@ -1,0 +1,25 @@
+{
+  "checked_at_utc": "2026-09-07T17:30:50.216307+00:00",
+  "environment": {
+    "DISPLAY": null,
+    "XDG_SESSION_TYPE": null,
+    "WAYLAND_DISPLAY": null
+  },
+  "device_paths_present": {
+    "/dev/dri": false,
+    "/dev/nvidia0": false,
+    "/dev/nvidiactl": false
+  },
+  "nvidia_smi": {
+    "command": [
+      "/usr/bin/nvidia-smi",
+      "--query-gpu=name,driver_version,memory.total",
+      "--format=csv,noheader"
+    ],
+    "exit_code": 9,
+    "stdout": "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running.\n\n",
+    "stderr": ""
+  },
+  "additional_check": "An approved unsandboxed check returned the same absent device/display state and NVIDIA query exit code 9.",
+  "scope": "Current real-renderer availability only; no Bevy run or frame measurements performed."
+}

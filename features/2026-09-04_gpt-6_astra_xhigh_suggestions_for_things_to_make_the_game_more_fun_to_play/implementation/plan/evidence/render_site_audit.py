@@ -48,7 +48,8 @@ def main():
     place_xz = nav["nodes"][place["node"]]
     mismatch = math.dist(door_xz, place_xz)
 
-    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10})
+    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10,
+                         "svg.hashsalt": "cathedral-tallage-site-audit"})
     fig, ax = plt.subplots(figsize=(12, 11))
     fig.subplots_adjust(left=0.10, right=0.97, bottom=0.12, top=0.93)
     fig.patch.set_facecolor("#fbf8f0")
@@ -127,7 +128,12 @@ def main():
              "Sources: ombreval_buildings.json and navigation.json. A graph route is not a lower bound on all player movement.",
              fontsize=8, color="#515950")
     for extension in ("png", "svg"):
-        fig.savefig(HERE / f"tallage_existing.{extension}", dpi=170, bbox_inches="tight")
+        destination = HERE / f"tallage_existing.{extension}"
+        metadata = {"Date": None} if extension == "svg" else None
+        fig.savefig(destination, dpi=170, bbox_inches="tight", metadata=metadata)
+        if extension == "svg":
+            # Keep generated evidence stable and free of trailing path whitespace.
+            destination.write_text("\n".join(line.rstrip() for line in destination.read_text().splitlines()) + "\n")
     plt.close(fig)
     report = {
         "scope": "Existing source-data illustration only; no new geometry or route feasibility validated.",
