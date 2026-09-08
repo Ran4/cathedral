@@ -27,6 +27,7 @@ pub mod marks_checkpoint;
 pub use command_policy::CommandPolicy;
 
 pub mod night_checkpoint;
+pub mod scheduler_checkpoint;
 pub mod social_checkpoint;
 
 use crate::receipts::{Admission, LEGACY_PRODUCER, Outcome, Receipt};

@@ -1,0 +1,118 @@
+{
+  "checked_at_utc": "2026-09-08T21:13:37.427907+00:00",
+  "auditor_sha256": "71fab6ad41119a259331626e40f9d2ac9328634741ff8b0bf3d4f203e46271f9",
+  "measurement_summary_sha256": "da6cc19d9cfe9ba6d2f750a4a03a97557f7ceaff58df79061c71bde5b5d750cd",
+  "result": "passed",
+  "checks": [
+    {
+      "case": "percentile",
+      "command": [
+        "/home/ran/.local/bin/uv",
+        "run",
+        "--no-project",
+        "--cache-dir",
+        "/tmp/alibi-uv",
+        "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py",
+        "/tmp/alibi-m2a11-auditor-percentile-81budy93/data",
+        "--report",
+        "/tmp/alibi-m2a11-auditor-percentile-81budy93/unexpected-success.json"
+      ],
+      "exit_code": 1,
+      "expected_failing_gate": "assert quantiles(data[phase]) == row[\"phase_us\"][phase]",
+      "success_report_absent": true,
+      "output": "Traceback (most recent call last):\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 333, in <module>\n    main()\n    ~~~~^^\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 264, in main\n    assert quantiles(data[phase]) == row[\"phase_us\"][phase], (name, phase)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: ('authored-1', 'export_us')\n"
+    },
+    {
+      "case": "working_charge",
+      "command": [
+        "/home/ran/.local/bin/uv",
+        "run",
+        "--no-project",
+        "--cache-dir",
+        "/tmp/alibi-uv",
+        "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py",
+        "/tmp/alibi-m2a11-auditor-working_charge-_tyg1boz/data",
+        "--report",
+        "/tmp/alibi-m2a11-auditor-working_charge-_tyg1boz/unexpected-success.json"
+      ],
+      "exit_code": 1,
+      "expected_failing_gate": "assert validation_working_bytes == 4096 * 1024",
+      "success_report_absent": true,
+      "output": "Traceback (most recent call last):\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 333, in <module>\n    main()\n    ~~~~^^\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 220, in main\n    assert validation_working_bytes == 4096 * 1024\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    },
+    {
+      "case": "lost_retry",
+      "command": [
+        "/home/ran/.local/bin/uv",
+        "run",
+        "--no-project",
+        "--cache-dir",
+        "/tmp/alibi-uv",
+        "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py",
+        "/tmp/alibi-m2a11-auditor-lost_retry-e0161nhr/data",
+        "--report",
+        "/tmp/alibi-m2a11-auditor-lost_retry-e0161nhr/unexpected-success.json"
+      ],
+      "exit_code": 1,
+      "expected_failing_gate": "assert counts == {",
+      "success_report_absent": true,
+      "output": "Traceback (most recent call last):\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 333, in <module>\n    main()\n    ~~~~^^\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 221, in main\n    assert counts == {\n           ^^^^^^^^^^^\n    ...<8 lines>...\n    }\n    ^\nAssertionError\n"
+    },
+    {
+      "case": "coarse_step",
+      "command": [
+        "/home/ran/.local/bin/uv",
+        "run",
+        "--no-project",
+        "--cache-dir",
+        "/tmp/alibi-uv",
+        "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py",
+        "/tmp/alibi-m2a11-auditor-coarse_step-359v8zxv/data",
+        "--report",
+        "/tmp/alibi-m2a11-auditor-coarse_step-359v8zxv/unexpected-success.json"
+      ],
+      "exit_code": 1,
+      "expected_failing_gate": "assert 0 < witnesses[\"maximum_poll_step_seconds\"] <= 0.05 + 1e-12",
+      "success_report_absent": true,
+      "output": "Traceback (most recent call last):\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 333, in <module>\n    main()\n    ~~~~^^\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 238, in main\n    assert 0 < witnesses[\"maximum_poll_step_seconds\"] <= 0.05 + 1e-12\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    },
+    {
+      "case": "changed_provider_budget",
+      "command": [
+        "/home/ran/.local/bin/uv",
+        "run",
+        "--no-project",
+        "--cache-dir",
+        "/tmp/alibi-uv",
+        "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py",
+        "/tmp/alibi-m2a11-auditor-changed_provider_budget-je0vlme7/data",
+        "--report",
+        "/tmp/alibi-m2a11-auditor-changed_provider_budget-je0vlme7/unexpected-success.json"
+      ],
+      "exit_code": 1,
+      "expected_failing_gate": "assert sha(json.dumps(witnesses, sort_keys=True,",
+      "success_report_absent": true,
+      "output": "Traceback (most recent call last):\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 333, in <module>\n    main()\n    ~~~~^^\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 253, in main\n    assert sha(json.dumps(witnesses, sort_keys=True,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                          separators=(\",\", \":\")).encode()) == expected_witness_hash\n                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    },
+    {
+      "case": "missing_runtime_defaults",
+      "command": [
+        "/home/ran/.local/bin/uv",
+        "run",
+        "--no-project",
+        "--cache-dir",
+        "/tmp/alibi-uv",
+        "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py",
+        "/tmp/alibi-m2a11-auditor-missing_runtime_defaults-4_qjkisr/data",
+        "--report",
+        "/tmp/alibi-m2a11-auditor-missing_runtime_defaults-4_qjkisr/unexpected-success.json",
+        "--check-current",
+        "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_scheduler_cost"
+      ],
+      "exit_code": 1,
+      "expected_failing_gate": "assert component_sources() == identity[\"source_sha256\"]",
+      "success_report_absent": true,
+      "output": "Traceback (most recent call last):\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 333, in <module>\n    main()\n    ~~~~^^\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 297, in main\n    assert component_sources() == identity[\"source_sha256\"]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    }
+  ]
+}

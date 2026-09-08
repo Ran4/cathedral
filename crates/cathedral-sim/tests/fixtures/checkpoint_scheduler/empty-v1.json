@@ -1,0 +1,1 @@
+{"version":1,"boundary":0.0,"scheduler":{"order":[],"minimum_delay_seconds":{"at":0.0},"maximum_backoff_seconds":"never","round_robin_index":0,"priority_handoffs":[],"player_reactions":[],"in_flight":null,"retry_work":{},"held_result":null,"next_turn_at":"never","provider_failures":0,"running":false,"submitted":null}}

@@ -216,6 +216,42 @@ def main():
                 )
                 assert sha(json.dumps(witnesses, sort_keys=True,
                                       separators=(",", ":")).encode()) == expected_witness_hash
+            elif data["scenario"] == "scheduler-held-and-retry-v1":
+                assert validation_working_bytes == 4096 * 1024
+                assert counts == {
+                    "characters": 520 + expected_extra, "order_slots": 719 + expected_extra,
+                    "round_robin_index": 0, "priority_handoffs": 1, "player_reactions": 1,
+                    "retry_work": 1, "in_flight": True, "flight_player_reaction": True,
+                    "held_success": True, "held_error": False, "held_bytes": 59,
+                    "prompt_bytes": 19295 if expected_extra else 20119,
+                    "drained_rows": 1, "drained_bytes": 136 if expected_extra else 141,
+                    "presented_rows": 1, "presented_bytes": 136 if expected_extra else 141,
+                    "provider_failures": 1, "running": True, "submitted": False,
+                }
+                witnesses = data["witnesses"]
+                assert witnesses["floor_busy_hold"] is True
+                assert witnesses["boundary_seconds"] == 5.3
+                assert witnesses["provider_submissions"] == 3
+                assert witnesses["submitted_actor"] == witnesses["partner"]
+                assert witnesses["coarse_discard_diagnostics"] == 0
+                assert witnesses["poll_count"] == 136
+                assert 0 < witnesses["maximum_poll_step_seconds"] <= 0.05 + 1e-12
+                prompts = witnesses["submitted_prompts"]
+                assert len(prompts) == 3
+                assert len(prompts[-1][0].encode()) == counts["prompt_bytes"]
+                assert witnesses["late_utterance"] not in prompts[-1][0]
+                assert len(witnesses["held_reply"].encode()) == counts["held_bytes"]
+                assert len(witnesses["speech_messages"]) == 3
+                assert witnesses["all_message_digest_algorithm"] == "fnv1a64-debug-stream-v1"
+                # The FNV publication digest is diagnostic; this SHA-256 binds
+                # all exact primary prompt/budget/text/identity/step witnesses.
+                expected_witness_hash = (
+                    "2780215cd1a54cc48f1cda9dc1c41d7a236cb0f42606d5c57d3e1a26376655c4"
+                    if expected_extra else
+                    "1806248a4bcb736d0ea6b4f56203ee0ef28eda102a17d7823c37ba38437a0459"
+                )
+                assert sha(json.dumps(witnesses, sort_keys=True,
+                                      separators=(",", ":")).encode()) == expected_witness_hash
             else:
                 raise AssertionError("unrecognized component validation workload")
         assert cost["peak_bytes"] == (

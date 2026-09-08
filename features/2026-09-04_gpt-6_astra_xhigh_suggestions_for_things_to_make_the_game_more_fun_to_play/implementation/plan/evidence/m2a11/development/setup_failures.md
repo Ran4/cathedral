@@ -1,0 +1,3 @@
+Setup failure before files existed: uv flags were initially placed before run. Command `/home/ran/.local/bin/uv --no-project --cache-dir /tmp/alibi-uv run python -` exited 2 with `error: unexpected argument --no-project found`. Corrected to `uv run --no-project --cache-dir /tmp/alibi-uv python -`; no source mutation occurred in the failed command. The original tool output is retained in the conversation.
+
+Exact initial uv error bytes from the tool result are retained in `setup_uv_flags.tool-output.log.gz` with provenance/hashes in `setup_uv_flags.json`. No source-at-start manifest is invented for that pre-runner setup failure.

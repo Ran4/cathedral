@@ -1,0 +1,66 @@
+{
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "build",
+    "--offline",
+    "--release",
+    "-p",
+    "cathedral-backends",
+    "--example",
+    "alibi_scheduler_cost",
+    "-j",
+    "1"
+  ],
+  "environment_overrides": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "build_variable_whitelist": {
+    "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "started_utc": "2026-09-08T21:09:40.930927+00:00",
+  "elapsed_seconds": 131.09563526301645,
+  "exit_code": 0,
+  "artifacts": {
+    "release_build.log": {
+      "original_path": "/tmp/alibi-m2a11-release-build-original.log",
+      "original_bytes": 253,
+      "original_sha256": "d43c2d4b54b356d330c581bc03e9e5f8d6fbeeb0c0ba0c9cc05078cb47f6e941",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a11/coordinator/release_build.log.gz",
+      "archive_bytes": 154,
+      "archive_sha256": "ca5453950b22bed5d52b4e434d0cb10891bde62d343abeedffdf92f95f66379e",
+      "normalization": "none; exact original bytes"
+    },
+    "release_build.time": {
+      "original_path": "/tmp/alibi-m2a11-release-build-original.time",
+      "original_bytes": 852,
+      "original_sha256": "741dae2c29cb87795181664195c435ca665c8afb921aa3061299c1cd621fd3e3",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a11/coordinator/release_build.time.gz",
+      "archive_bytes": 471,
+      "archive_sha256": "d69158b6315ad28bc6d9284754b77b65676e4fe6add0f45cfe9e0e40ef12963f",
+      "normalization": "none; exact original bytes"
+    }
+  },
+  "source_scope": "component-inputs-v2",
+  "source_manifest_sha256": "180cb18a172692c1be64bdcedf646ed446905948fbf48055ce139bd515c62be9",
+  "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "exact_source_scope_unchanged_after_build": true,
+  "source_helper_unchanged_after_build": true,
+  "binary_sha256": {
+    "alibi_scheduler_cost": "59af7eebb47a5366467ad2e006021ef11453468950a0a253987821010a2dd237"
+  },
+  "preserved_reference": {
+    "path": "/tmp/alibi-m2a11-scheduler-reference-binary",
+    "sha256": "59af7eebb47a5366467ad2e006021ef11453468950a0a253987821010a2dd237"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "status": "Preserved provisional measurement setup; superseded by bounded ordinary-poll smokes",
+  "reason": "Initial successful-exit probe skipped physical work during a coarse quiet-interval poll; root review required bounded stepping before final measurement acceptance. No owner production defect.",
+  "files": {
+    "authored_smoke.json": {
+      "bytes": 466257,
+      "sha256": "1f7d5d5ec0da843aaee5ccce8290e6d87beecc1e1b4dddfe3978db56d1f02441",
+      "archive": "authored_smoke.json.original.gz",
+      "archive_sha256": "b2cd535e286e34e3908d73149dd466f9537eb7e947c2afcfa99ceceb47220fc2",
+      "decompressed_sha256": "1f7d5d5ec0da843aaee5ccce8290e6d87beecc1e1b4dddfe3978db56d1f02441"
+    },
+    "populated_smoke.json": {
+      "bytes": 2328345,
+      "sha256": "836f93a0191920c45c79576928f6ac69305a1773070af341b1839ad5a9eee390",
+      "archive": "populated_smoke.json.original.gz",
+      "archive_sha256": "8dd6ebdbddcda25dbb8df14054658f504f8e9ac00f886e0b2134d05e75fd1f21",
+      "decompressed_sha256": "836f93a0191920c45c79576928f6ac69305a1773070af341b1839ad5a9eee390"
+    },
+    "provisional_source_freeze.json": {
+      "bytes": 997,
+      "sha256": "8e1d0e617ed40835c3cd3b7868a3dff5da747abc670121a0940086023fb267fd",
+      "archive": "provisional_source_freeze.json.original.gz",
+      "archive_sha256": "00ce1134c938ea72d78609d775f1844cd5f9ea9e31703e1d4dd7e5d812773d05",
+      "decompressed_sha256": "8e1d0e617ed40835c3cd3b7868a3dff5da747abc670121a0940086023fb267fd"
+    },
+    "provisional_source_hashes.json": {
+      "bytes": 110963,
+      "sha256": "1837e0c916ff50b3ccbfa0a7bd9486fcd15ddb3ecfdca3ce233b4859aeaae611",
+      "archive": "provisional_source_hashes.json.original.gz",
+      "archive_sha256": "1f87fa97e78adc2d054a13e7a9eac8d7f273b0db0559e6cfea8a5b40c7030018",
+      "decompressed_sha256": "1837e0c916ff50b3ccbfa0a7bd9486fcd15ddb3ecfdca3ce233b4859aeaae611"
+    }
+  }
+}

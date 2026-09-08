@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d and M2a1–M2a10 implemented and reviewed (2026-09-08). Remaining M2 owner/envelope work and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending; see EXECUTION_AUTHORITY.md.
+Status: M0 baseline delivered; M1a–M1d and M2a1–M2a11 implemented and reviewed (2026-09-08). Remaining M2 owner/envelope work and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending; see EXECUTION_AUTHORITY.md.
 
 # An Alibi in Stone — systems first, then the full quest
 
@@ -106,3 +106,5 @@ Regenerate the site illustration with `uv run --cache-dir /tmp/cathedral-gdd-uv 
 [M2a10’s reviewed handoff](evidence/m2a10/README.md) adds exact Conversation/WarmExchanges/Novelty and original idle configuration. It passes 2,045 workspace tests and 3,600 audited release phase samples; export p99 is 0.004/0.005 ms. Remaining scheduler/speech/Engine ownership and complete envelope/capture/hydration stay pending.
 
 M2a10 [tail review](evidence/m2a10/coordinator/tail_latency_audit.json) retains a slow third populated run: pooled populated export p99 is 3.577735 ms, maximum export 13.120826 ms and maximum decode 55.358842 ms. The smaller figures above are medians of per-run percentiles; they do not establish synchronous host-frame acceptance.
+
+[M2a11’s reviewed scheduler handoff](evidence/m2a11/README.md) preserves weighted fairness, queued reactions/handoffs, retry and exact held/submitted input with independent original Engine pacing configuration. The frozen workspace passes 2,069; all 3,600 release phase samples pass independent review. authored export pooled p99 0.077532 ms, observed maximum 0.093167 ms; populated export pooled p99 0.186618 ms, observed maximum 0.209647 ms. Full phase tails remain in the [measurement record](evidence/m2a11/performance/README.md); complete save/load and host-frame acceptance remain pending.

@@ -467,3 +467,34 @@ impl CommandLedger {
             && (self.is_protected(id) || self.get(id.command(0)).is_some())
     }
 }
+
+// Borrowed Scheduler component context only; full owner-set equality remains the
+// complete-envelope responsibility. No candidate ledger/index allocation.
+impl CommandLedgerDtoV1 {
+    pub(crate) fn checkpoint_turn_root(&self, id: OperationId) -> bool {
+        id.producer == TURN_PRODUCER
+            && id.sequence > 0
+            && self
+                .producers
+                .get(usize::from(id.producer))
+                .is_some_and(|p| id.sequence <= p.issued.max(p.high_water))
+            && (self.protected.0.iter().any(|x| OperationId::from(*x) == id)
+                || self
+                    .recent
+                    .0
+                    .iter()
+                    .chain(&self.retained.0)
+                    .any(|x| CommandId::from(x.receipt.id) == id.command(0)))
+    }
+}
+impl CommandLedger {
+    pub(crate) fn checkpoint_turn_root(&self, id: OperationId) -> bool {
+        id.producer == TURN_PRODUCER
+            && id.sequence > 0
+            && self
+                .producers
+                .get(usize::from(id.producer))
+                .is_some_and(|p| id.sequence <= p.issued.max(p.high_water))
+            && (self.is_protected(id) || self.get(id.command(0)).is_some())
+    }
+}

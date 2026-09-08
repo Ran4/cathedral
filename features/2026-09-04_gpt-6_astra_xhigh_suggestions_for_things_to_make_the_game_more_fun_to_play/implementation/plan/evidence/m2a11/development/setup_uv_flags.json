@@ -1,0 +1,17 @@
+{
+  "exit_code": 2,
+  "command_prefix": [
+    "/home/ran/.local/bin/uv",
+    "--no-project",
+    "--cache-dir",
+    "/tmp/alibi-uv",
+    "run",
+    "python",
+    "-"
+  ],
+  "provenance": "Exact output string returned by original exec_command chunk7b2bd0, copied verbatim from tool result. The command failed before its Python stdin ran or the evidence runner existed; no source-at-start manifest was captured and none is retroactively asserted.",
+  "original_output_bytes": 555,
+  "original_output_sha256": "41fecf6d7723874115b0443fbd4ca4f255f5360ebff866ca24e3737a14d6e8e2",
+  "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a11/development/setup_uv_flags.tool-output.log.gz",
+  "archive_sha256": "48629021eb12aed6a84999e2eab411d4f44a58da38dbdc25283115409be51c85"
+}

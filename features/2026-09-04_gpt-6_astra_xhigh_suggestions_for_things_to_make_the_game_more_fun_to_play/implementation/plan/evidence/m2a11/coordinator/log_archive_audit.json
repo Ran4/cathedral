@@ -1,0 +1,147 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T21:10:16.455123+00:00",
+  "command_records": 20,
+  "cargo_records": 11,
+  "checks": [
+    "archive and exact retained original hashes/lengths",
+    "test totals independently parsed from originals",
+    "per-command source manifest hashes and v2 helper provenance",
+    "final verification uses complete frozen v2 source scope"
+  ],
+  "frozen_source_commands": [
+    "authored_bounded_smoke",
+    "populated_bounded_smoke",
+    "source_freeze_bounded",
+    "checkpoint_bounded_final",
+    "public_bounded_final",
+    "workspace_serial"
+  ],
+  "totals": {
+    "rustc_version": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "fmt_initial": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "rustc_sysroot": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "scheduler_initial": {
+      "passed": 11,
+      "failed": 2,
+      "ignored": 0,
+      "targets": 1
+    },
+    "fmt_development": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "stdlib_audit": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "fixture_generate": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "fmt_additional": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "public_initial": {
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "authored_smoke": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "populated_smoke": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "source_freeze": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "checkpoint_final": {
+      "passed": 151,
+      "failed": 0,
+      "ignored": 23,
+      "targets": 1
+    },
+    "fmt_bounded_probe": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "authored_bounded_smoke": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "populated_bounded_smoke": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "source_freeze_bounded": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "checkpoint_bounded_final": {
+      "passed": 151,
+      "failed": 0,
+      "ignored": 23,
+      "targets": 1
+    },
+    "public_bounded_final": {
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "workspace_serial": {
+      "passed": 2069,
+      "failed": 0,
+      "ignored": 31,
+      "targets": 43
+    }
+  },
+  "development_failures": [
+    "scheduler_initial"
+  ],
+  "source_scope": "component-inputs-v2",
+  "source_manifest_sha256": "180cb18a172692c1be64bdcedf646ed446905948fbf48055ce139bd515c62be9"
+}

@@ -1,0 +1,15 @@
+{
+  "frozen_utc": "2026-09-08T20:45:48.560908+00:00",
+  "base_head": "2a5115060b8dc8731d93ca14d0a015d72898f981",
+  "manifest": "source_hashes.json",
+  "manifest_sha256": "180cb18a172692c1be64bdcedf646ed446905948fbf48055ce139bd515c62be9",
+  "files": 907,
+  "source_scope": "component-inputs-v2",
+  "scope": "Shared v2 complete compiled Rust/tests/examples and input assets plus four new scheduler fixtures, including the independent root public test. Evidence/orchestration hashed separately.",
+  "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "ordinary_source_changes": "Only scheduler/Engine module declarations and appended borrowed TURN-root receipt queries. No existing ordinary behavior edits.",
+  "public_test_included": true,
+  "new_component_fixture_count": 4,
+  "supersedes_provisional_freeze": "development/provisional_source_freeze.json; original probe discarded physical time and final probe uses bounded accepted-time polls",
+  "full_m2_or_host_acceptance": false
+}

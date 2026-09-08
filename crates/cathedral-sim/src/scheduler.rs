@@ -24,6 +24,8 @@
 //! The scheduler is clock-free. Every `time.monotonic()` in Python is a `now`
 //! parameter here.
 
+pub mod checkpoint;
+
 use std::collections::{BTreeMap, VecDeque};
 
 use serde_json::{Map, Value};

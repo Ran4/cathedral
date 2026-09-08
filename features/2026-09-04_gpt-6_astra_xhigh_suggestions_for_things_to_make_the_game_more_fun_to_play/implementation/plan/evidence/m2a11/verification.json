@@ -1,0 +1,79 @@
+{
+  "status": "Accepted M2a11 component after independent coordinator review (2026-09-08); full M2/host pending",
+  "source_freeze": {
+    "frozen_utc": "2026-09-08T20:45:48.560908+00:00",
+    "base_head": "2a5115060b8dc8731d93ca14d0a015d72898f981",
+    "manifest": "source_hashes.json",
+    "manifest_sha256": "180cb18a172692c1be64bdcedf646ed446905948fbf48055ce139bd515c62be9",
+    "files": 907,
+    "source_scope": "component-inputs-v2",
+    "scope": "Shared v2 complete compiled Rust/tests/examples and input assets plus four new scheduler fixtures, including the independent root public test. Evidence/orchestration hashed separately.",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "ordinary_source_changes": "Only scheduler/Engine module declarations and appended borrowed TURN-root receipt queries. No existing ordinary behavior edits.",
+    "public_test_included": true,
+    "new_component_fixture_count": 4,
+    "supersedes_provisional_freeze": "development/provisional_source_freeze.json; original probe discarded physical time and final probe uses bounded accepted-time polls",
+    "full_m2_or_host_acceptance": false
+  },
+  "source_files_verified": 907,
+  "commands_verified": 20,
+  "final_verification": {
+    "checkpoint_bounded_final": {
+      "targets_with_test_results": 1,
+      "passed": 151,
+      "failed": 0,
+      "ignored": 23
+    },
+    "public_bounded_final": {
+      "targets_with_test_results": 1,
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0
+    },
+    "workspace_serial": {
+      "targets_with_test_results": 43,
+      "passed": 2069,
+      "failed": 0,
+      "ignored": 31
+    }
+  },
+  "workspace": {
+    "command_name": "workspace_serial",
+    "targets_with_test_results": 43,
+    "passed": 2069,
+    "failed": 0,
+    "ignored": 31
+  },
+  "layout": {
+    "command_name": "checkpoint_bounded_final",
+    "artifact": "development/layout.json",
+    "lines": [
+      "scheduler_layout engine_dto=432 engine_candidate=432 engine_context=104",
+      "scheduler_layout owner=376 flight=136 retry=24 completion=64 actor=24 operation=16 command=24 retry_node=640 dto=392 candidate=392 context=96 ledger_scratch=2580480 lane_scratch=400000 root_scratch=4112"
+    ]
+  },
+  "smokes": {
+    "authored": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a11/development/authored_bounded_smoke.json",
+      "sha256": "3ca8cabc44a6bc58ea96e11883b138272bd3e92cdc105c06cbdbf5e3138369a3",
+      "samples": 2,
+      "claim": "functional debug smoke only; coordinator release measures frozen source"
+    },
+    "populated": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a11/development/populated_bounded_smoke.json",
+      "sha256": "57a5797ce2ef1f56da01862f30b9c25ecbc44bcbd7754445c8a6fe52e25b5b77",
+      "samples": 2,
+      "claim": "functional debug smoke only; coordinator release measures frozen source"
+    }
+  },
+  "development_failures": [
+    "scheduler_initial"
+  ],
+  "setup_failures": "development/setup_failures.md",
+  "provisional_evidence": "development/provisional_probe_review.json",
+  "pre_runner_setup_failure": "development/setup_uv_flags.json",
+  "full_m2_or_host_acceptance": false,
+  "coordinator_review": "coordinator/review.md",
+  "release_phase_samples": 3600,
+  "release_binary_sha256": "59af7eebb47a5366467ad2e006021ef11453468950a0a253987821010a2dd237"
+}

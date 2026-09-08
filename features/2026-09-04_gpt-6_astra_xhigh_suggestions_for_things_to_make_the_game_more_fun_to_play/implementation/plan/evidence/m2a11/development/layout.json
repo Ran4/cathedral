@@ -1,0 +1,8 @@
+{
+  "source_command": "checkpoint_bounded_final",
+  "manifest_sha256": "180cb18a172692c1be64bdcedf646ed446905948fbf48055ce139bd515c62be9",
+  "lines": [
+    "scheduler_layout engine_dto=432 engine_candidate=432 engine_context=104",
+    "scheduler_layout owner=376 flight=136 retry=24 completion=64 actor=24 operation=16 command=24 retry_node=640 dto=392 candidate=392 context=96 ledger_scratch=2580480 lane_scratch=400000 root_scratch=4112"
+  ]
+}

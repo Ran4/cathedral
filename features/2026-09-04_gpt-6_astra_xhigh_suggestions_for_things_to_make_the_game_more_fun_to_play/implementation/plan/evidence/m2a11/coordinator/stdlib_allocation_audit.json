@@ -1,0 +1,53 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T20:35:06.996689+00:00",
+  "owner_proof_sha256": "9b738fc97a440afd5c6c9e0066a7e3cdab6f84cc4065b2c8d62bb888296e4f31",
+  "compiler_sysroot": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+  "compiler_version": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2\n",
+  "compiler_command_records": [
+    "rustc_sysroot",
+    "rustc_version"
+  ],
+  "checks": [
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/map.rs",
+      "sha256": "85387f4b8283bef443c154979c149dae4c8c61b96ea75432c58a573a13734dae",
+      "verified_excerpts": 2
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/node.rs",
+      "sha256": "2200ca0a4fe38592c314dc7f5f40bbb160e06b6f9e4abd1eb5bc40701540ab25",
+      "verified_excerpts": 3
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/set.rs",
+      "sha256": "a7be8e5e576fac0975d0af0f24407ddd709751820bbb1f5059d55f08414a4888",
+      "verified_excerpts": 1
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/string.rs",
+      "sha256": "f26867da19450cb50a549373c0bc29d1ac4911035e262f0854b2319edb5afd24",
+      "verified_excerpts": 1
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs",
+      "sha256": "cd69f6ef4cf398ff6665c5f3ea428b652755d0e0aea004402e076f6af6a56400",
+      "verified_excerpts": 1
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/slice.rs",
+      "sha256": "b1f0a5f6e3d104d6176699cf05efdfe1725095cd984fdf4422ddc3093726361c",
+      "verified_excerpts": 1
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs",
+      "sha256": "39ae2ccc61fd3bad236978201cda2ad97599403eb103de7eafdf6d7f6dd8b6f3",
+      "verified_excerpts": 4
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/vec_deque/mod.rs",
+      "sha256": "1b3cd1f179c3eef1ba3a3c40bcdbc6406c5bf570a5bd1bb0da31afb7622b5c4b",
+      "verified_excerpts": 1
+    }
+  ]
+}
