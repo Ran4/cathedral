@@ -11,7 +11,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+mod checkpoint;
 mod travel;
+pub(crate) use checkpoint::CommandIdV1;
+pub use checkpoint::CommandLedgerDtoV1;
 pub(crate) use travel::{
     bind_round_edit, commit_actor_action, end_round_edit, end_travel, progress_travel,
     reconcile_travel, release_finished_root,
@@ -543,6 +546,10 @@ impl CommandLedger {
 
     pub fn retained_len(&self) -> usize {
         self.retained.len()
+    }
+
+    pub fn protected_len(&self) -> usize {
+        self.protected.len()
     }
 
     pub(crate) fn operation_pending(&self, id: OperationId) -> bool {

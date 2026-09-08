@@ -242,3 +242,27 @@ The [M1d record](evidence/m1d/README.md) gives the actual adapter, priority and 
 | `CommandLedger` protection / `release_finished_root` | Existing S roots now remain protected while any pending ticket, travel, schedule edit, recording or kernel instance owns them. Operation command controls invoke cleanup again after their own ticket is finished, so cancelling the last sibling cannot leak a root. Preserve owner/root agreement across all these modules. |
 
 No new process clock, channel, IO owner, save writer or UI pause exists in the kernel. `Round.refresh_operation_needs` advances the existing shared `last_game_days` anchor at each accepted boundary while work is active, before duty validation; the later Round pass sees no duplicate decay. This reuses the existing resident/hearth support formulas and can change their sampling cadence while active. It adds no second need clock. The ordinary empty-kernel cadence remains unchanged.
+
+
+## M2a1 private component owner delta — 2026-09-08
+
+This is the first M2a review cut, not a complete save or load path. The
+[coverage ledger](evidence/m2a1/OWNER_COVERAGE.md) keeps all omitted owners explicitly
+pending. Existing S/R/T policies above still apply to them; they are not optional.
+
+| Owner / fields | Implemented component policy |
+|---|---|
+| `CommandLedger` producers, ordinal, recent, retained, protected | S in strict v1 DTO records. Explicit arrays preserve structured IDs; duplicate identities/ordinals/roots reject before rebuilding maps. Issued and high-water remain independent; protected and recent records can legitimately predate a floor. Full u64 exhaustion restores as exhausted, without wrapping or resetting. |
+| Ledger `pending`, `updates` | Must both be empty for owner export after ordinary dispatch and notification flush. Updates are not replayed; committed notifications already handed to the host remain a required complete-envelope owner. |
+| Receipt principal references | Exact bounded typed historical/attempted IDs survive consumed items, removed marks and rejected absent targets. These do not assert current existence. Active owner references must separately resolve to current authority; the complete-envelope root inventory must exactly match protected roots. |
+| `OperationKernel` active and fixtures | S strict v1 records, including all work/retry/recovery anchors and counters, with exact fixture declarations/adapters. R actor/resource indexes only from validated unique active records. Existing shared continuation gate now also rejects materially impossible elapsed work credit and false zero-work progress anchors. |
+| `WorldClock` five fields | S exact original calendar/rate segment through `WorldClockDtoV1`; validate explicit calendar position at the same logical instant. No rounding to an office or reconstructing via normal creation. |
+| `HostTimeV1` | S exact nanosecond elapsed/debt/wall and host fixed step/residual, plus sim movement residual. This is only the time component; host body/controller/custody, mechanisms, vermin, UI and presentation payloads remain pending. |
+| Explicit logical/calendar anchors | S `Never` only for declared negative-infinity owner sentinels; finite logical time is nonnegative, calendar can be negative. DTO validators reject unsupported numeric magnitudes and nonfinite values. Opaque novelty bits are not time anchors and remain pending with their real owner. |
+| `CompatibilityManifestV1` | Exact schema/content/geometry/behavior/generator/hash implementation identity comparison. The host's canonical manifest builder and complete asset resolver remain M2a2+/M2b work; std-hash identity must include toolchain/target/build dependencies. |
+| `CheckpointBudget`, `Reservation`, `Admitted<T>` | Pure runtime admission primitives: at most one running/save/load/retiring cohort under 1 GiB shared bytes. A non-Clone Send-capable admitted component retains its charge through export/decode/encoding and disposal. These counters/tokens are transient coordinator ownership, not serialized city state. M3 must integrate all actual host/worker generations, cancellation and retirement. |
+
+V1 component decode budgets cover input, escaped-string scratch, DTO and candidate
+index allocations. Encoded size, conservative retained heap and reserved peak are
+separate measurements. The real host capture/hydration/staging/frame gates remain
+pending; component microbenchmarks cannot satisfy them.

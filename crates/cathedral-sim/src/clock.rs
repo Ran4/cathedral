@@ -17,6 +17,9 @@ use std::cmp::Ordering;
 
 use serde::{Deserialize, Serialize};
 
+mod checkpoint;
+pub use checkpoint::WorldClockDtoV1;
+
 /// Real seconds between the ordinal strokes a bell rings. The Watch rings one
 /// stroke, the Snuffing seven, at 3 s intervals, so a player anywhere in the
 /// city learns the hour by counting (`lore/second_sun/design/06` §3).

@@ -1,0 +1,131 @@
+{
+  "environment": {
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin"
+  },
+  "checks": [
+    {
+      "name": "focused-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 14.967727674054913,
+      "log": "/tmp/alibi-m2a1-focused-final.log",
+      "sha256": "557044ed877b892df50e948d45bf223a67898da187893263d67b0278261715b1"
+    },
+    {
+      "name": "probe-authored",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "run",
+        "-p",
+        "cathedral-backends",
+        "--example",
+        "alibi_checkpoint_cost",
+        "--",
+        "--mode",
+        "authored",
+        "--samples",
+        "1",
+        "--output",
+        "/tmp/alibi-m2a1-authored-smoke.json"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.1415394339710474,
+      "log": "/tmp/alibi-m2a1-probe-authored.log",
+      "sha256": "28eb364e9c78bd22b2a2fe7a0118a61432ee7f8ad1a7eec05fcf7c350767597c"
+    },
+    {
+      "name": "workspace-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace",
+        "--no-fail-fast"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 504.8672475779895,
+      "log": "/tmp/alibi-m2a1-workspace-final.log",
+      "sha256": "0d11265beee42ecba23de0606e26bbfeaefeba471acf5e74dd879ce6d77fbae3"
+    }
+  ],
+  "workspace_totals": {
+    "targets": 33,
+    "passed": 1881,
+    "failed": 0,
+    "ignored": 9
+  },
+  "focused_checkpoint": {
+    "passed": 16,
+    "failed": 0,
+    "ignored": 1
+  },
+  "environment_preflight": [
+    {
+      "name": "focused-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 101,
+      "wall_seconds": 0.01626332802698016,
+      "log": "/tmp/alibi-m2a1-focused-final.log",
+      "sha256": "235382520425c4841a699c405e75ba1b581db26e68d7ff626656e0302cd25dec"
+    }
+  ],
+  "preflight_note": "Sanitized PATH lacked rustc. Cargo stopped before compilation/tests; corrected with explicit RUSTC/RUSTDOC. The failed log remains archived.",
+  "maximum_probe_smoke": {
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_checkpoint_cost",
+      "--",
+      "--mode",
+      "maximum",
+      "--samples",
+      "1",
+      "--output",
+      "/tmp/alibi-m2a1-maximum-smoke.json"
+    ],
+    "exit_code": 0,
+    "log": "probe-maximum-smoke.log"
+  },
+  "release_build": {
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "build",
+      "--release",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_checkpoint_cost"
+    ],
+    "exit_code": 0,
+    "wall_seconds": 25.302803801954724,
+    "log": "/tmp/alibi-m2a1-release-build.log",
+    "sha256": "79e0790a5ad323095d982449828a2362d07d733cb14b747f733941f655caafc7",
+    "binary": "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_checkpoint_cost",
+    "binary_sha256": "ec3b2960db4f406c1c13a147b8b001ccd0bc5f5f6e39d5be256eafc10c4bbdd8"
+  }
+}

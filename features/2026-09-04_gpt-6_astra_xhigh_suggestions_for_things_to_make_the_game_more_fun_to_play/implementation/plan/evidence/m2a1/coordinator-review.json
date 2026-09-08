@@ -1,0 +1,80 @@
+{
+  "verified_source_files": 23,
+  "workspace": {
+    "targets": 33,
+    "passed": 1881,
+    "failed": 0,
+    "ignored": 9
+  },
+  "verified_final_check_logs": 3,
+  "format": {
+    "files": 14,
+    "command": [
+      "/home/ran/.cargo/bin/rustfmt",
+      "--check",
+      "--edition",
+      "2024",
+      "--config",
+      "skip_children=true",
+      "crates/cathedral-backends/examples/alibi_checkpoint_cost.rs",
+      "crates/cathedral-sim/src/checkpoint/budget.rs",
+      "crates/cathedral-sim/src/checkpoint/manifest.rs",
+      "crates/cathedral-sim/src/checkpoint/mod.rs",
+      "crates/cathedral-sim/src/checkpoint/tests.rs",
+      "crates/cathedral-sim/src/checkpoint/time.rs",
+      "crates/cathedral-sim/src/checkpoint/wire.rs",
+      "crates/cathedral-sim/src/clock.rs",
+      "crates/cathedral-sim/src/clock/checkpoint.rs",
+      "crates/cathedral-sim/src/lib.rs",
+      "crates/cathedral-sim/src/operations.rs",
+      "crates/cathedral-sim/src/operations/checkpoint.rs",
+      "crates/cathedral-sim/src/receipts.rs",
+      "crates/cathedral-sim/src/receipts/checkpoint.rs"
+    ],
+    "exit_code": 0,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "status": "accepted_component_cut",
+  "date": "2026-09-08",
+  "source_manifest_sha256": "6880bb9b054b64a59194483a4faed8a2a2554041f67a11397c95572119e17ec7",
+  "verified_log_archives": 6,
+  "release_build": {
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "build",
+      "--release",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_checkpoint_cost"
+    ],
+    "exit_code": 0,
+    "wall_seconds": 25.302803801954724,
+    "log": "/tmp/alibi-m2a1-release-build.log",
+    "sha256": "79e0790a5ad323095d982449828a2362d07d733cb14b747f733941f655caafc7",
+    "binary": "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_checkpoint_cost",
+    "binary_sha256": "ec3b2960db4f406c1c13a147b8b001ccd0bc5f5f6e39d5be256eafc10c4bbdd8"
+  },
+  "performance": {
+    "runs": 6,
+    "raw_phase_samples": 6000,
+    "verified_percentiles_and_repeatability": true,
+    "identity_sha256": "30fcf763ffed35e51b496a76f120822c210f018fcb66141992395c11594c059d",
+    "runner_sha256": "78336cb8e5e500a96a1e53b16d8573c2747da0db421845753ae6ff2a3b1afbe6",
+    "host_frame_gate": "Not accepted: maximum ledger API phases exceed 2 ms p99 / 5 ms max. M2b/M3 must move/split eligible work and measure the actual host path."
+  },
+  "review_findings": [
+    "Capped geometric vector growth; input and escaped-string scratch charged before decode; counted exact-capacity encoding.",
+    "Admitted values retain a Send-capable non-Clone reservation until actual disposal. Global host/worker integration remains pending.",
+    "Exact float/time/manifest components; numeric format limits do not prove safe effective calendar cadence.",
+    "Ledger preserves out-of-order details below floors, protected roots without receipts, independent issued/high-water counters and exhausted identities.",
+    "Historical/rejected receipt principals are not required to remain live; actual operation claims require matching actors, incarnations, declarations and protected receipts.",
+    "Shared operation validator rejects impossible elapsed work credit and false zero-credit progress anchors.",
+    "All remaining owner/envelope/capture/hydration/retry/adoption gates stay explicit in OWNER_COVERAGE.md."
+  ],
+  "plan_validation": {
+    "result": "passed",
+    "local_links_and_anchors_checked": 807,
+    "sha256": "8c6bf7c5588e2f4783ed9a7314815b4e5e1211ea41379666c6a8702ededd1c56"
+  }
+}

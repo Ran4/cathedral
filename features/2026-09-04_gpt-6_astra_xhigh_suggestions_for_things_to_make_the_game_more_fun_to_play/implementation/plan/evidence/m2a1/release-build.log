@@ -1,0 +1,5 @@
+   Compiling serde_json v1.0.150
+   Compiling reqwest v0.12.28
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+    Finished `release` profile [optimized] target(s) in 25.25s

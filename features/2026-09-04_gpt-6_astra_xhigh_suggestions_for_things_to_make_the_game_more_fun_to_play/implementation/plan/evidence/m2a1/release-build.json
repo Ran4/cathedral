@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "build",
+    "--release",
+    "-p",
+    "cathedral-backends",
+    "--example",
+    "alibi_checkpoint_cost"
+  ],
+  "exit_code": 0,
+  "wall_seconds": 25.302803801954724,
+  "log": "/tmp/alibi-m2a1-release-build.log",
+  "sha256": "79e0790a5ad323095d982449828a2362d07d733cb14b747f733941f655caafc7",
+  "binary": "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_checkpoint_cost",
+  "binary_sha256": "ec3b2960db4f406c1c13a147b8b001ccd0bc5f5f6e39d5be256eafc10c4bbdd8"
+}

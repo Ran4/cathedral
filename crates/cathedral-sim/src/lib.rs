@@ -15,6 +15,7 @@ pub mod appearance;
 pub mod areas;
 pub mod attention;
 pub mod character;
+pub mod checkpoint;
 pub mod clock;
 pub mod conversation;
 pub mod crowd;

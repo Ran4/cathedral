@@ -1,0 +1,62 @@
+{
+  "active_count": 256,
+  "actor_count": 520,
+  "kernel": {
+    "conservative_heap_bytes": 1410048,
+    "decode_validate_us": [
+      895.813
+    ],
+    "drop_us": [
+      30.147000000000002
+    ],
+    "encode_us": [
+      1027.5079999999998
+    ],
+    "encoded_bytes": 169034,
+    "export_us": [
+      926.279
+    ],
+    "index_validate_us": [
+      586.009
+    ],
+    "reserved_peak_bytes": 83886080,
+    "working_allowance_bytes": 8388608
+  },
+  "ledger": {
+    "conservative_heap_bytes": 4121504,
+    "decode_validate_us": [
+      16185.832
+    ],
+    "drop_us": [
+      379.345
+    ],
+    "encode_us": [
+      19067.483
+    ],
+    "encoded_bytes": 3111542,
+    "export_us": [
+      12207.238000000001
+    ],
+    "index_validate_us": [
+      12412.791
+    ],
+    "reserved_peak_bytes": 83886080,
+    "working_allowance_bytes": 16777216
+  },
+  "mode": "maximum",
+  "phase_notes": {
+    "conservative_heap_bytes": "ledger recent BTree allocation upper bound; kernel all retained authoritative and derived allocations",
+    "decode_validate_us": "bounded JSON decode and validation; operations also construct/dispose candidate indexes",
+    "drop_us": "decoded DTO and encoded bytes destruction, including reservation release",
+    "encode_us": "validation, counted JSON sizing, exact-capacity encoding and consumed DTO destruction",
+    "export_us": "live-owner validation, DTO extraction and DTO validation; operation validation also constructs/disposes indexes",
+    "index_validate_us": "ledger validates and constructs/disposes recent/retained BTreeMaps; operations validate and construct/dispose all candidate indexes",
+    "reserved_peak_bytes": "simultaneous per-component save/load allowances, excludes the running Engine and allocator RSS"
+  },
+  "protected_root_count": 256,
+  "recent_count": 4096,
+  "retained_count": 256,
+  "samples": 1,
+  "schema_version": 1,
+  "scope": "nav-less authored Engine; component operations only; no complete world capture, host frame or filesystem timings"
+}

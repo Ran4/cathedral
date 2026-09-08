@@ -85,6 +85,7 @@ Each subcut is reviewed before the next dependent cut. These are portions of one
 | M1c | Whole-runtime generation fencing across every asynchronous channel | Old cognition, speech, status and presentation acknowledgements cannot affect the current world. |
 | M1d | Minimal durable operation/resource/duty kernel | A non-quest operation reserves, progresses, interrupts/completes and cleans up; competing movement writers obey one arbiter. |
 | M2a | Per-owner DTO inventory, explicit time/sentinel policies and manifest | Every authoritative field has a disposition; invalid values/references fail before hydration. |
+| M2a1 | First review cut: strict replay/kernel DTOs, clock/time/manifest components and attached admission | Owner-local and active-reference validation, real array wire records, component fixtures and component CPU/allocation measurements. Complete owner/envelope acceptance remains M2a2+. |
 | M2b | Ordinary-boundary capture and separate hydration path | No creation seeding, extra poll or half-transaction; canonical populated-state round trip. |
 | M2c | Pending cognition/speech/night obligation restoration | Held results apply once; unfinished requests retain one retry obligation; newer inputs remain separate. |
 | M2d | Fresh-engine continuation suite and capture profile | Control/restored runs agree under recorded inputs; intentional live retries prove obligation conservation instead of guessed prose equality. |

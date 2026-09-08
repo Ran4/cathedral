@@ -1,0 +1,5 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling reqwest v0.12.28
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 26.32s
+     Running `target/debug/examples/alibi_checkpoint_cost --mode maximum --samples 1 --output /tmp/alibi-m2a1-maximum-smoke.json`

@@ -1,0 +1,44 @@
+[
+  {
+    "archive": "focused-final.log",
+    "original": "/tmp/alibi-m2a1-focused-final.log",
+    "original_sha256": "557044ed877b892df50e948d45bf223a67898da187893263d67b0278261715b1",
+    "archive_sha256": "30f4179bb5ed7f7fb640aaadc9ec4bad00c0ac56956e2336520dc6ef55042486",
+    "normalization": "only redundant terminal newlines removed"
+  },
+  {
+    "archive": "probe-maximum-smoke.log",
+    "original": "/tmp/alibi-m2a1-probe-smoke.log",
+    "original_sha256": "37ad2c5fdae1b1edf6295af253c012945a2844b5916f2a305d65281cad2f10ea",
+    "archive_sha256": "37ad2c5fdae1b1edf6295af253c012945a2844b5916f2a305d65281cad2f10ea",
+    "normalization": "none"
+  },
+  {
+    "archive": "probe-authored-smoke.log",
+    "original": "/tmp/alibi-m2a1-probe-authored.log",
+    "original_sha256": "28eb364e9c78bd22b2a2fe7a0118a61432ee7f8ad1a7eec05fcf7c350767597c",
+    "archive_sha256": "28eb364e9c78bd22b2a2fe7a0118a61432ee7f8ad1a7eec05fcf7c350767597c",
+    "normalization": "none"
+  },
+  {
+    "archive": "rustc-preflight.log",
+    "original": "/tmp/alibi-m2a1-rustc-preflight.log",
+    "original_sha256": "235382520425c4841a699c405e75ba1b581db26e68d7ff626656e0302cd25dec",
+    "archive_sha256": "235382520425c4841a699c405e75ba1b581db26e68d7ff626656e0302cd25dec",
+    "normalization": "none"
+  },
+  {
+    "archive": "workspace-final.log",
+    "original": "/tmp/alibi-m2a1-workspace-final.log",
+    "original_sha256": "0d11265beee42ecba23de0606e26bbfeaefeba471acf5e74dd879ce6d77fbae3",
+    "archive_sha256": "f3b61b98af2213183eba1a3f8ac60ed76ac069af99c9761ce91f406c917a5e72",
+    "normalization": "only redundant terminal newlines removed"
+  },
+  {
+    "archive": "release-build.log",
+    "original": "/tmp/alibi-m2a1-release-build.log",
+    "original_sha256": "79e0790a5ad323095d982449828a2362d07d733cb14b747f733941f655caafc7",
+    "archive_sha256": "79e0790a5ad323095d982449828a2362d07d733cb14b747f733941f655caafc7",
+    "normalization": "none"
+  }
+]

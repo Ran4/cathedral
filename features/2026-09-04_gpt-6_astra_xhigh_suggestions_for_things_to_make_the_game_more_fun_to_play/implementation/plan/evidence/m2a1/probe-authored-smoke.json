@@ -1,0 +1,62 @@
+{
+  "active_count": 0,
+  "actor_count": 520,
+  "kernel": {
+    "conservative_heap_bytes": 0,
+    "decode_validate_us": [
+      1.89
+    ],
+    "drop_us": [
+      0.128
+    ],
+    "encode_us": [
+      1.0759999999999998
+    ],
+    "encoded_bytes": 39,
+    "export_us": [
+      3.6959999999999997
+    ],
+    "index_validate_us": [
+      0.179
+    ],
+    "reserved_peak_bytes": 83886080,
+    "working_allowance_bytes": 8388608
+  },
+  "ledger": {
+    "conservative_heap_bytes": 0,
+    "decode_validate_us": [
+      10.739
+    ],
+    "drop_us": [
+      0.48
+    ],
+    "encode_us": [
+      10.781
+    ],
+    "encoded_bytes": 1621,
+    "export_us": [
+      8.161
+    ],
+    "index_validate_us": [
+      4.561999999999999
+    ],
+    "reserved_peak_bytes": 83886080,
+    "working_allowance_bytes": 16777216
+  },
+  "mode": "authored",
+  "phase_notes": {
+    "conservative_heap_bytes": "ledger recent BTree allocation upper bound; kernel all retained authoritative and derived allocations",
+    "decode_validate_us": "bounded JSON decode and validation; operations also construct/dispose candidate indexes",
+    "drop_us": "decoded DTO and encoded bytes destruction, including reservation release",
+    "encode_us": "validation, counted JSON sizing, exact-capacity encoding and consumed DTO destruction",
+    "export_us": "live-owner validation, DTO extraction and DTO validation; operation validation also constructs/disposes indexes",
+    "index_validate_us": "ledger validates and constructs/disposes recent/retained BTreeMaps; operations validate and construct/dispose all candidate indexes",
+    "reserved_peak_bytes": "simultaneous per-component save/load allowances, excludes the running Engine and allocator RSS"
+  },
+  "protected_root_count": 0,
+  "recent_count": 0,
+  "retained_count": 0,
+  "samples": 1,
+  "schema_version": 1,
+  "scope": "nav-less authored Engine; component operations only; no complete world capture, host frame or filesystem timings"
+}

@@ -1,4 +1,4 @@
-Status: Planned (2026-09-05).
+Status: In progress (2026-09-08). M2a1 private component DTOs and admission are implemented and reviewed; the complete M2a envelope and remaining owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
 
 # M2 — Complete simulation checkpoints
 
@@ -19,6 +19,21 @@ Each owning module exports and validates its own DTO. Include `World`, `Characte
 Admit capture/hydration work through the global count/byte budgets in [RUNTIME_BUDGETS](RUNTIME_BUDGETS.md). Measure extraction and index building as well as encoding; a plain DTO is not automatically cheap to obtain. Establish small versioned supported-save fixtures here so M3 can exercise the real file/adoption path against them.
 
 Every field has one policy: saved authoritative state, re-derived state, or discarded transient presentation/IO state with a stated continuation rule. “Private field” is not a reason for omission. An automated field inventory may support review, but behavioural continuation tests are the proof.
+
+#### M2a1 review cut — 2026-09-08
+
+The coordinator accepted a smaller coherent first cut after source reconciliation:
+strict `CommandLedgerDtoV1` and `OperationKernelDtoV1` owner exports/validation,
+exact compatibility components, `WorldClockDtoV1`, explicit Never/time values,
+`HostTimeV1` and attached count/byte admission. These are actual private owner
+payloads, not an empty complete-save envelope. The [owner coverage ledger](evidence/m2a1/OWNER_COVERAGE.md)
+names covered fields and all remaining M2a owners; [evidence/handoff](evidence/m2a1/README.md)
+records the API boundaries and verification.
+
+The five v1 supported **component** fixtures cannot be loaded as a saved city.
+M2a2+ must compose every remaining owner into the exact versioned envelope and
+supply small complete supported saves before M2a is accepted. The first cut does
+not implement capture, Engine hydration, external retries, adoption or storage.
 
 ### M2b — Capture boundary and hydrate path
 

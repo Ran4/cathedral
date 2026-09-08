@@ -1,0 +1,2 @@
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.09s
+     Running `target/debug/examples/alibi_checkpoint_cost --mode authored --samples 1 --output /tmp/alibi-m2a1-authored-smoke.json`

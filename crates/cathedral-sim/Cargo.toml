@@ -12,7 +12,9 @@ license = "MIT OR Apache-2.0"
 glam = { workspace = true }
 minijinja = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
+# Checkpoint continuation compares accepted/calendar anchors exactly; use the
+# correctly rounded parser so encoding then decoding cannot move a deadline.
+serde_json = { workspace = true, features = ["float_roundtrip"] }
 sha2 = { version = "0.10.9", default-features = false }
 # The two data-file formats the loaders parse from `&str`: world, area, lore,
 # and occupation JSON plus sound/prompt TOML. Pure parsers, no IO of their own.

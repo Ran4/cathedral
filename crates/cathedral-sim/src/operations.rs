@@ -7,6 +7,9 @@ use crate::{ActorId, Control, Vec3, World, WorldClock, round::Round};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+mod checkpoint;
+pub use checkpoint::OperationKernelDtoV1;
+
 pub const MAX_INSTANCES: usize = 256;
 pub const MAX_FIXTURES: usize = 256;
 pub const MAX_KERNEL_ALLOCATED_BYTES: usize = 2 * 1024 * 1024;
@@ -172,6 +175,20 @@ fn valid_budget(
         && deadline.0.seconds() - accepted.seconds() > work
         && deadline.0.seconds() - accepted.seconds() <= MAX_DURATION_SECONDS
 }
+
+/// Credit is a sum of accepted elapsed spans, some separated by obstruction.
+/// Permit 1 ns per credited second for accumulated arithmetic plus 64 epsilon
+/// units of the absolute logical anchor for subtraction near large origins.
+/// At the v1 checkpoint ceiling (1e9 s, <=86400 s work) this is <101 microseconds;
+/// it cannot legitimize a material extra work interval. A never-started operation
+/// retains its original progress anchor exactly.
+fn valid_credit(op: &ActiveOperation) -> bool {
+    let span = op.last_progress_at.seconds() - op.accepted_at.seconds();
+    let tolerance =
+        span.max(1.0) * 1e-9 + 64.0 * f64::EPSILON * op.last_progress_at.seconds().abs().max(1.0);
+    op.completed_work <= span + tolerance
+        && (op.completed_work != 0.0 || op.last_progress_at == op.accepted_at)
+}
 fn validate_adapter(adapter: &AdapterDeclaration) -> Result<(), &'static str> {
     if adapter.name != TIMED_FIXTURE {
         return Err("unknown_adapter");
@@ -272,6 +289,7 @@ impl OperationKernel {
                 || op.retries_spent > op.retry_limit
                 || op.plan_revision != u32::from(op.retries_spent)
                 || op.running != (op.completed_work > 0.0)
+                || !valid_credit(op)
             {
                 return Err("invalid operation continuation budget".into());
             }
