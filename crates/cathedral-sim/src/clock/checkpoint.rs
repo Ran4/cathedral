@@ -111,3 +111,15 @@ impl WorldClockDtoV1 {
         }
     }
 }
+
+impl WorldClockDtoV1 {
+    /// Exact borrowed descriptor agreement for composed checkpoint owners.
+    pub(crate) fn checkpoint_bits_eq(&self, other: &Self) -> bool {
+        self.version == other.version
+            && self.seconds_per_day.to_bits() == other.seconds_per_day.to_bits()
+            && self.epoch_days.to_bits() == other.epoch_days.to_bits()
+            && self.elapsed_origin.seconds().to_bits() == other.elapsed_origin.seconds().to_bits()
+            && self.scale.to_bits() == other.scale.to_bits()
+            && self.night_brightness.to_bits() == other.night_brightness.to_bits()
+    }
+}

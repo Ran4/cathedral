@@ -1,0 +1,106 @@
+{
+  "explicit_cargo_environment": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "build_variable_whitelist": {
+    "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "absent_build_variables": {
+    "RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_TARGET_DIR": null,
+    "RUSTUP_TOOLCHAIN": null,
+    "CC": null,
+    "CXX": null,
+    "CARGO_BUILD_JOBS": null
+  },
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "machine": "x86_64",
+  "compiler": {
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a9/development/rustc_version.source.json",
+    "source_manifest_sha256": "30680ecc8d659ab3e970e1d93b37902b7bc6a706e02da12d6069e50201712df8",
+    "name": "rustc_version",
+    "command": [
+      "/home/ran/.cargo/bin/rustc",
+      "-vV"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T15:21:42.134908+00:00",
+    "wall_seconds": 0.009205176960676908,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a9-rustc_version.log",
+    "original_bytes": 196,
+    "original_sha256": "f64c55ed9f210d80a9b248206104a47175faf5ec94a093e4ad132549209089fc",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a9/development/rustc_version.original.log.gz",
+    "archive_bytes": 170,
+    "archive_sha256": "e36a53ac54854950df1c6ce2a8167c3ff8182cb454c575fcef2eb618eddca082",
+    "decompressed_sha256": "f64c55ed9f210d80a9b248206104a47175faf5ec94a093e4ad132549209089fc",
+    "test_results": []
+  },
+  "capture_note": "Every command captured its source manifest, explicit environment and inherited build-variable whitelist from START.",
+  "workspace_path_recovery": {
+    "failed_command": "workspace_retry",
+    "replacement_command": "workspace_path_retry",
+    "old_PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+    "new_PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "reason": "Previously cached libudev-sys rebuild invokes Command::new(\"rustc\") directly; the old PATH omitted the same pinned compiler directory despite the absolute RUSTC variable. No source/dependency/compiler changes.",
+    "dependency_build_script": {
+      "path": "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libudev-sys-0.1.4/build.rs",
+      "bytes": 1373,
+      "sha256": "b801576b83a52794c739b5af6cbb7231e8fe1d35949d59ecdd47498d0f58d1c0",
+      "lines_28_to_32": [
+        "    let output = Command::new(\"rustc\").",
+        "        arg(&test_file_name).",
+        "        arg(\"--out-dir\").arg(&out_dir).",
+        "        arg(\"-l\").arg(\"udev\").",
+        "        output().unwrap();"
+      ]
+    }
+  },
+  "explicit_cargo_environment_scope": "Initial command environment through workspace_retry; each commands.json record remains authoritative for its exact environment. The final successful workspace differs only by the documented appended compiler directory.",
+  "final_workspace_environment": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "final_workspace_build_variable_whitelist": {
+    "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  }
+}

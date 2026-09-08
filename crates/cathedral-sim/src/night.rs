@@ -40,6 +40,8 @@
 //! a diagnostic and nothing more; it never lands in an inbox, because a private
 //! thought at midnight must not become the morning's news.
 
+pub mod checkpoint;
+
 use crate::receipts::{
     self, AffectedRef, BatchAdmission, NIGHT_PRODUCER, OperationId, Outcome, Ticket,
 };

@@ -1,0 +1,216 @@
+{
+  "checked_at_utc": "2026-09-08T15:27:31.864342+00:00",
+  "result": "passed",
+  "checks": [
+    {
+      "path": "crates/cathedral-backends/examples/alibi_night_cost.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/examples/alibi_night_cost.rs"
+      ],
+      "source_sha256": "41511368c70534c0495a36d138a40dc77009d636924240ef9c35180ed15f8218",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/clock/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/clock/checkpoint.rs"
+      ],
+      "source_sha256": "0e54d2be44f9203cc8c09919581f43796abe389c1b933966b3f0923457c997e3",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine.rs"
+      ],
+      "source_sha256": "9ac5089f4a32b8487294e72797c724e984fd73f059523a566261f424f196a48e",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/night_checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/night_checkpoint.rs"
+      ],
+      "source_sha256": "5f1d97be6221dfd57337b5c9516ced71c8d7f86d32646ac514cc9e44b559687c",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/night_checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/night_checkpoint/tests.rs"
+      ],
+      "source_sha256": "2cb4fca438b73bd5245165952478e38f0e8f5ed55ef4f9da58315cf5df6cbe9c",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night.rs"
+      ],
+      "source_sha256": "342a01e15566c0add7c8739dfacc96152239654d381f85b30b08d835277480f3",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night/checkpoint.rs"
+      ],
+      "source_sha256": "f08e405e93790ca8027dfe03134032ea83ceefafb87414f057746b147f91e9a6",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night/checkpoint/context.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night/checkpoint/context.rs"
+      ],
+      "source_sha256": "43cf183dfd377fd6b2ac12ce520803131aebf77374dac4751b204756993d6c02",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night/checkpoint/records.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night/checkpoint/records.rs"
+      ],
+      "source_sha256": "06bd937b5db6841a1e47b19df3676bbc744545f1ca9528cc72c6256b26cc6c3e",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night/checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night/checkpoint/tests.rs"
+      ],
+      "source_sha256": "987e40c7184495dda3c89fe84d933a6f49fa10f2fa462acae256074a7b9661c8",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/receipts/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/receipts/checkpoint.rs"
+      ],
+      "source_sha256": "53dfdc8de220edba3c8ec3ceea7ae96eef0c87468ce102006f99f19e1667266a",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/traits.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/traits.rs"
+      ],
+      "source_sha256": "3c9eee3a0b0cac3d66c631281bd44413027dcdd18c86097cfc2ffe1f3dc8467f",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/traits/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/traits/checkpoint.rs"
+      ],
+      "source_sha256": "2fb327f658101647f2a8e74daa955617da298cba4b2c8326b4722958bb42f2ad",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/tests/checkpoint_night_boundary.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/tests/checkpoint_night_boundary.rs"
+      ],
+      "source_sha256": "cd684889f78f28409a5f2206f5cd515fac44f008dd7168d203f8bac294480515",
+      "exit_code": 0,
+      "output": ""
+    }
+  ]
+}

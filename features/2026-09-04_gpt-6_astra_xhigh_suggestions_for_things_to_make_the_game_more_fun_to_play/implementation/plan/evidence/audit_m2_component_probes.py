@@ -166,6 +166,26 @@ def main():
                     witnesses["boundary_seconds"] - witnesses["movement_now_seconds"]
                 )
                 assert 0 < witnesses["cadence_residual_seconds"] < 0.05
+            elif data["scenario"] == "night-obligations-v1":
+                assert validation_working_bytes == 4096 * 1024
+                assert counts == {
+                    "characters": 520 + expected_extra, "bedtimes": 30, "queued": 6,
+                    "queued_admitted": 0, "queued_people": 0, "queued_wards": 6,
+                    "in_flight": True, "held_success": True, "held_error": False,
+                    "enabled": True, "seeded": True, "prompt_bytes": 4987,
+                    "held_bytes": 60, "stamps": 8, "reflected": 1, "dropped": 0,
+                    "ward_moods": 1, "ward_mood_bytes": 39,
+                }
+                witnesses = data["witnesses"]
+                assert witnesses["held_deferred_observed"] is True
+                assert witnesses == {
+                    "ambient_reroll_observed": True, "busy_admitted_observed": True,
+                    "submitted_observed": True, "held_deferred_observed": True,
+                    "completed_reflections": 1, "provider_attempts": 3,
+                    "provider_submissions": 2, "maximum_submitted_prompt_bytes": 5301,
+                    "receipt_recent": 4096, "receipt_retained": 256,
+                    "receipt_protected": 19, "boundary_seconds": 20.200000000000003,
+                }
             else:
                 raise AssertionError("unrecognized component validation workload")
         assert cost["peak_bytes"] == (

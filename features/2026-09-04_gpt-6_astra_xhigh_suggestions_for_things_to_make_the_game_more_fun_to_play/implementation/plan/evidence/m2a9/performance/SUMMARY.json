@@ -1,0 +1,226 @@
+{
+  "authored": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 7480,
+        "expanded_upper_bytes": 52832,
+        "peak_bytes": 4432168,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "bedtimes": 30,
+        "characters": 520,
+        "dropped": 0,
+        "enabled": true,
+        "held_bytes": 60,
+        "held_error": false,
+        "held_success": true,
+        "in_flight": true,
+        "prompt_bytes": 4987,
+        "queued": 6,
+        "queued_admitted": 0,
+        "queued_people": 0,
+        "queued_wards": 6,
+        "reflected": 1,
+        "seeded": true,
+        "stamps": 8,
+        "ward_mood_bytes": 39,
+        "ward_moods": 1
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "night-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 8864336,
+      "witnesses": {
+        "ambient_reroll_observed": true,
+        "boundary_seconds": 20.200000000000003,
+        "busy_admitted_observed": true,
+        "completed_reflections": 1,
+        "held_deferred_observed": true,
+        "maximum_submitted_prompt_bytes": 5301,
+        "provider_attempts": 3,
+        "provider_submissions": 2,
+        "receipt_protected": 19,
+        "receipt_recent": 4096,
+        "receipt_retained": 256,
+        "submitted_observed": true
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 16.747,
+        "p95": 21.443,
+        "p99": 25.36,
+        "max": 26.308999999999997
+      },
+      "export_us": {
+        "p50": 33.961000000000006,
+        "p95": 44.01,
+        "p99": 48.061,
+        "max": 49.987
+      },
+      "encode_us": {
+        "p50": 21.339,
+        "p95": 29.391000000000002,
+        "p99": 30.381,
+        "max": 31.251
+      },
+      "decode_validate_us": {
+        "p50": 19.511,
+        "p95": 27.427,
+        "p99": 33.683,
+        "max": 41.168000000000006
+      },
+      "candidate_validate_us": {
+        "p50": 0.369,
+        "p95": 0.458,
+        "p99": 0.774,
+        "max": 0.7829999999999999
+      },
+      "drop_us": {
+        "p50": 0.586,
+        "p95": 0.844,
+        "p99": 0.983,
+        "max": 1.232
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  },
+  "populated": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 7480,
+        "expanded_upper_bytes": 52832,
+        "peak_bytes": 4432168,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "bedtimes": 30,
+        "characters": 2520,
+        "dropped": 0,
+        "enabled": true,
+        "held_bytes": 60,
+        "held_error": false,
+        "held_success": true,
+        "in_flight": true,
+        "prompt_bytes": 4987,
+        "queued": 6,
+        "queued_admitted": 0,
+        "queued_people": 0,
+        "queued_wards": 6,
+        "reflected": 1,
+        "seeded": true,
+        "stamps": 8,
+        "ward_mood_bytes": 39,
+        "ward_moods": 1
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "night-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 8864336,
+      "witnesses": {
+        "ambient_reroll_observed": true,
+        "boundary_seconds": 20.200000000000003,
+        "busy_admitted_observed": true,
+        "completed_reflections": 1,
+        "held_deferred_observed": true,
+        "maximum_submitted_prompt_bytes": 5301,
+        "provider_attempts": 3,
+        "provider_submissions": 2,
+        "receipt_protected": 19,
+        "receipt_recent": 4096,
+        "receipt_retained": 256,
+        "submitted_observed": true
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 16.578999999999997,
+        "p95": 16.803,
+        "p99": 18.426,
+        "max": 19.718999999999998
+      },
+      "export_us": {
+        "p50": 33.546,
+        "p95": 34.282999999999994,
+        "p99": 36.078,
+        "max": 38.145
+      },
+      "encode_us": {
+        "p50": 21.237000000000002,
+        "p95": 21.855999999999998,
+        "p99": 23.548,
+        "max": 30.378
+      },
+      "decode_validate_us": {
+        "p50": 19.227999999999998,
+        "p95": 21.299,
+        "p99": 26.538,
+        "max": 45.882
+      },
+      "candidate_validate_us": {
+        "p50": 0.37,
+        "p95": 0.422,
+        "p99": 0.447,
+        "max": 0.561
+      },
+      "drop_us": {
+        "p50": 0.434,
+        "p95": 0.527,
+        "p99": 0.611,
+        "max": 0.817
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  }
+}

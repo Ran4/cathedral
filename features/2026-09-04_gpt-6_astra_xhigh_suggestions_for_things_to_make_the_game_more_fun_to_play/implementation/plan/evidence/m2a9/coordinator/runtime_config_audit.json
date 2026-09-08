@@ -1,0 +1,11 @@
+{
+  "checked_before_workspace_utc": "2026-09-08T15:29:17.685801+00:00",
+  "path": "default_config.ron",
+  "sha256": "837112f8c183d1b1330f66709c7f7c3e08fe31c39c8f3c117fbb60b3e9f5de1a",
+  "matches_base_head": true,
+  "reason": "Root-level committed defaults are read by src/config.rs tests at runtime; supplemental to the explicit compiled Rust and assets/lore manifest scope.",
+  "checked_after_workspace_utc": "2026-09-08T18:10:22.160936+00:00",
+  "successful_workspace_command": "workspace_path_retry",
+  "result": "passed",
+  "checks": "Exact runtime-default bytes agree with the original pre-workspace pin and committed HEAD after the successful retry."
+}

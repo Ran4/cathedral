@@ -1,0 +1,53 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T18:16:23.350625+00:00",
+  "checks": [
+    "release build success",
+    "exact retained original and archive hashes/lengths",
+    "only permitted terminal LF normalization",
+    "matching build and measurement executable plus preserved reference"
+  ],
+  "binary_sha256": "7923e9eca4e2d0f1e5a8e563a6d557035d59e834b7716e5a54ef6634d2b18ff3",
+  "measurement_source_files": 876,
+  "frozen_source_files": 852,
+  "source_scope_reconciliation": {
+    "checked_after_measurement_utc": "2026-09-08T18:17:45.701936+00:00",
+    "initial_subset_assumption": "Rejected: the inherited freeze and measurement enumerators cover different explicit sets. No common hash differed.",
+    "common_matching_paths": 850,
+    "frozen_only_paths": {
+      "lore/places/ombreval_buildings.json": "0cf1c5b148ce54091d3ed561cd4ef62c042655b9c589172433791d2e47c0c86e",
+      "lore/places/shrink_transform.json": "f02a4adbe7f2b6a95132b5a0cc1760c3ba9e594f73b6485f006f0534a5fa2a80"
+    },
+    "measurement_only_paths": [
+      "crates/cathedral-sim/AGENTS.md",
+      "crates/cathedral-sim/tests/fixtures/checkpoint_v1/README.md",
+      "crates/cathedral-sim/tests/fixtures/prompts/broadcast_offer_bystander.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/broadcast_offer_giver.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/cleared_goal_and_no_memories.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/conny_baseline.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/dangling_item_ids_giver.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/dangling_item_ids_target.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/dangling_target_offer.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/empty_inbox_drain.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/famished_holder.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/full_inbox_drain.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/ilse_all_strangers.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/non_ascii_and_quotes.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/offer_ordering_giver.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/offer_ordering_target.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/sven_alone_empty_people.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/sven_baseline.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/sven_sounds_off.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/targeted_offer_giver.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/targeted_offer_out_of_range_giver.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/targeted_offer_out_of_range_target.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/targeted_offer_target.txt",
+      "crates/cathedral-sim/tests/fixtures/prompts/vendor_with_stock.txt",
+      "lore/characters/AGENTS.md",
+      "lore/characters/CLAUDE.md"
+    ],
+    "all_852_frozen_paths_match_after_measurement": true,
+    "coverage": "The 876-path measurement identity pins its own scope before/after samples. The release build guards all 852 frozen paths before/after compilation; this supplemental check pins all 852 again after measurement, including the two lore/places JSON inputs omitted by the inherited measurement enumerator. No source or runner change and no repeated measurement.",
+    "additional_paths_unchanged_since_committed_m2a8_identity_and_HEAD": true
+  }
+}

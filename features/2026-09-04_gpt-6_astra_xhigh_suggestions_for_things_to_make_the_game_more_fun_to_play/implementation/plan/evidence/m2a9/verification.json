@@ -1,0 +1,73 @@
+{
+  "status": "Owner verification passed; coordinator component review and release acceptance complete",
+  "source_freeze": {
+    "frozen_utc": "2026-09-08T15:26:45.905376+00:00",
+    "base_head": "c9f5b39ad3f5aa0baaad5600b395ea703c4e44ae",
+    "manifest": "source_hashes.json",
+    "manifest_sha256": "fa65084e5e2a2509ec742af39407047dace120badda9176962c638c98f3d6fc3",
+    "files": 852,
+    "scope": "Same M2a8 complete compiled Rust/test/example and JSON/bin/RON/TOML/Jinja asset/lore scope plus new Night source/fixtures. Docs outside compiled source freeze.",
+    "ordinary_source_only_module_wiring": true,
+    "existing_checkpoint_additions": "Only borrowed clock bit identity and Night ledger root queries appended, with prior bytes retained.",
+    "public_test_included": true
+  },
+  "source_files_verified": 852,
+  "commands_verified": 18,
+  "final_verification": {
+    "checkpoint_final": {
+      "targets_with_test_results": 1,
+      "passed": 119,
+      "failed": 0,
+      "ignored": 21
+    },
+    "public_final": {
+      "targets_with_test_results": 1,
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0
+    },
+    "layout": {
+      "targets_with_test_results": 1,
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "workspace_path_retry": {
+      "targets_with_test_results": 41,
+      "passed": 2025,
+      "failed": 0,
+      "ignored": 29
+    }
+  },
+  "workspace": {
+    "command_name": "workspace_path_retry",
+    "targets_with_test_results": 41,
+    "passed": 2025,
+    "failed": 0,
+    "ignored": 29
+  },
+  "smokes": {
+    "authored": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a9/development/authored_smoke.json",
+      "sha256": "2d42194aa994d76283f57d3675aa738109bdb97c229b2b071342a92c493573c2",
+      "samples": 2,
+      "claim": "functional debug smoke only, preceding final source-backed queue validation and test/whitespace additions; coordinator release measures final frozen source"
+    },
+    "populated": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a9/development/populated_smoke.json",
+      "sha256": "9601ebec1f2b9e6f9c6110961df3dd89bcd669d76033bc5b2cd6ca35283cccde",
+      "samples": 2,
+      "claim": "functional debug smoke only, preceding final source-backed queue validation and test/whitespace additions; coordinator release measures final frozen source"
+    }
+  },
+  "format": "Eight new owner/probe files scoped formatted; independent public test also scoped formatted. Ordinary source matches HEAD after module wiring removal; existing clock/ledger checkpoint prefixes are byte-identical with narrow formatted helpers appended.",
+  "development_failures": [
+    "initial_check",
+    "private_first",
+    "public_first",
+    "workspace_serial",
+    "workspace_retry"
+  ],
+  "lossless_logs": "Every command stdout+stderr captured before summaries; deterministic gzip mtime=0, original/archive/decompressed SHA-256 verified. Every command has a source manifest from START; final focused/layout/workspace share one unchanged manifest. The failed workspace_serial bytes are retained exactly as captured; disk exhaustion interrupted its linker diagnostic, so the archive cannot recover output that never reached the original file.",
+  "coordinator_review": "coordinator/review.md"
+}

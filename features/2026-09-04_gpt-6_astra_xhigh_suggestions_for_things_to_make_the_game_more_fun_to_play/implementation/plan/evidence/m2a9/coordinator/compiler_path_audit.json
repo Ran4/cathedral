@@ -1,0 +1,18 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T17:42:48.557135+00:00",
+  "previous_path": "/usr/bin:/bin:/home/ran/.local/bin",
+  "corrected_path": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+  "resolved_rustc": "/home/ran/.cargo/bin/rustc",
+  "version_output_identical": true,
+  "rustc_vv": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2\n",
+  "dependency_build_script": {
+    "path": "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libudev-sys-0.1.4/build.rs",
+    "sha256": "b801576b83a52794c739b5af6cbb7231e8fe1d35949d59ecdd47498d0f58d1c0",
+    "bytes": 1373,
+    "direct_rustc_lookup": true
+  },
+  "meaning": "Adding the pinned compiler directory lets libudev-sys build.rs spawn rustc directly; it resolves the same compiler used by the existing absolute RUSTC setting. No source or dependency edits.",
+  "original_compiler_version_record_matches": true,
+  "original_compiler_version_sha256": "f64c55ed9f210d80a9b248206104a47175faf5ec94a093e4ad132549209089fc"
+}

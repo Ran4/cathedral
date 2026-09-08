@@ -1,0 +1,27 @@
+{
+  "scope": "Pure-Python owner archive/doc finalization after successful full workspace and Cargo/Rust cession. Not additional Cargo tests. All 18 compiler/test/probe command records remain unchanged.",
+  "source_manifest_sha256": "fa65084e5e2a2509ec742af39407047dace120badda9176962c638c98f3d6fc3",
+  "logs": [
+    {
+      "original_path": "/tmp/alibi-m2a9-owner-archive-verify.log",
+      "original_bytes": 3055,
+      "original_sha256": "79d1fc345c7f853b8a18bdb47e96551da5b34a5a3bd988e3f82cce7312d9d19f",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a9/development/owner-archive-verify.original.log.gz",
+      "archive_bytes": 1381,
+      "archive_sha256": "3eab567a93d3798856f48239beda7291f4fdb858464f31b8b0e70f2b7813bdb4",
+      "decompressed_sha256": "79d1fc345c7f853b8a18bdb47e96551da5b34a5a3bd988e3f82cce7312d9d19f"
+    },
+    {
+      "original_path": "/tmp/alibi-m2a9-owner-docs-finish.log",
+      "original_bytes": 161,
+      "original_sha256": "cd7e293abfeccd8e34df493b86cc40b0ebc12cb4df9e54aa923cda737afa7fb7",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a9/development/owner-docs-finish.original.log.gz",
+      "archive_bytes": 140,
+      "archive_sha256": "d44ad67947864fe6d4b52cf0fbb96f1be0583a8154ebeab784d341636864ee4a",
+      "decompressed_sha256": "cd7e293abfeccd8e34df493b86cc40b0ebc12cb4df9e54aa923cda737afa7fb7"
+    }
+  ],
+  "git_diff_check_exit_code": 0,
+  "source_changes_after_cession": false,
+  "parent_acceptance_status_edits": "Reserved to coordinator."
+}

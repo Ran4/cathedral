@@ -1,0 +1,10 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T17:17:45.526347+00:00",
+  "source_files": 4,
+  "checks": [
+    "exact installed allocation source hashes and byte lengths",
+    "exact line excerpts matching retained proof"
+  ],
+  "audit_sha256": "28cfec255e68ba1ecf2ec543204bf047b70cdf2711bd042de16463d4bb59d194"
+}

@@ -1,0 +1,11 @@
+{
+  "frozen_utc": "2026-09-08T15:26:45.905376+00:00",
+  "base_head": "c9f5b39ad3f5aa0baaad5600b395ea703c4e44ae",
+  "manifest": "source_hashes.json",
+  "manifest_sha256": "fa65084e5e2a2509ec742af39407047dace120badda9176962c638c98f3d6fc3",
+  "files": 852,
+  "scope": "Same M2a8 complete compiled Rust/test/example and JSON/bin/RON/TOML/Jinja asset/lore scope plus new Night source/fixtures. Docs outside compiled source freeze.",
+  "ordinary_source_only_module_wiring": true,
+  "existing_checkpoint_additions": "Only borrowed clock bit identity and Night ledger root queries appended, with prior bytes retained.",
+  "public_test_included": true
+}

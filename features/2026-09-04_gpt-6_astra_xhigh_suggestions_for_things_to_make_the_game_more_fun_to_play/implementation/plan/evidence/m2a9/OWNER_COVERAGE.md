@@ -1,0 +1,32 @@
+# M2a9 existing Night authority — 2026-09-08
+
+Status: Implemented; owner verification passed, independent coordinator acceptance pending. Base c9f5b39ad3f5aa0baaad5600b395ea703c4e44ae. Opaque component candidates only.
+
+| Owner | Exact saved authority |
+|---|---|
+| World.ward_moods | Independent BTreeMap<PlanningWard,String>. Preserve every value including empty/blank/Unicode/public edits, not knowledge ward heat or its publication cache. |
+| NightOffice.config | All four enabled/majors/wards/ambients switches independently of Engine's initial config. |
+| NightOffice.queue | Ordered VecDeque<Due>: mandatory nullable semantic OperationId and presence_epoch, Subject Person/Ward and exact owed day. Both unadmitted and Busy-admitted obligations survive. |
+| NightOffice.in_flight | Mandatory nullable Flight: semantic root, owed_day, subject/incarnation, execution RequestId and exact rendered prompt. No rendering against current actor state during decode. |
+| NightOffice.held_result | Mandatory nullable Completion: execution RequestId, exact success or separate CognitionError.kind/detail strings, exact duration_seconds. No new(), failure, idle or drop helper is used. |
+| NightOffice.last_reflected | Exact unique Subject/day map, stamped at queue time. It is not proof of completion. An old flight can coexist with a newer queued day and newer stamp. |
+| NightOffice.bedtimes | All resolved ActorId/Office entries including historical absent actors; no Round::seed or bedtime recomputation. |
+| NightOffice calendar | last_office_days and nullable last_ambient_reroll_day, independent processed/ambient daily authority. |
+| NightOffice pacing | next_attempt_at, next_yield_report; preserve historical clock-rate scheduling rather than recomputing it. |
+| NightOffice status/totals | seeded, reflected and dropped, including retained history when disabled or unseeded. |
+| Engine.config.night_office | Exact original config; no equality assumption with private Night config and no replacement by defaults. |
+| Engine.night | The same Night owner, composed once with World moods. |
+
+Subject actor IDs use the common nonempty, at most 128 Unicode scalar, no-control rule; spaces are valid. RequestId is a numeric u64 execution identity and preserves the entire range. OperationId uses the Night producer and a nonzero issued/received sequence with a matching protected root or existing root receipt. Live ledger must be at an ordinary flushed boundary; unadopted ledger DTO validates and is borrowed directly, without constructing a second ledger. Full global protected-root/owner equality remains the complete-envelope gate.
+
+Context borrows World or unadopted backbone and ledger, and binds the exact current WorldClock descriptor with bitwise float agreement (including signed zero). The clock is a consistency binding to M2a4 authority, not a second independently hydrated clock. Resolved bedtimes are historical saved state. Round, marks, backbone mood consumers, prompt content and external service bindings still require full envelope/content composition. Decoding never calls seed, ring, poll, prompt rendering, ordinary provider failure or provider submission. Public candidates expose only read-only owners and counts.
+
+Ordinary source may leave absent/replaced people, old owed days and pending incarnations in the queue or flight until its usual submit/apply checks. Decode preserves them. Queue subjects are unique and each has its queue-time day stamp. Flights need an existing stamp; a different owed-day stamp must have its same-subject queued row. The same subject/day cannot be queued and flying together. Only one admitted queue row is possible, at the front and without a flight; source submit is the sole admission writer and Busy returns that row to the front. Semantic roots are unique across queued duties and the one flight. A held completion must match that flight's execution ID. Disabled/unseeded owner state is retained without cleanup.
+
+pace_seconds divides by any finite positive scale accepted by the ordinary clock, which can produce +Infinity despite its source comment. DTO next_attempt_at represents +Infinity as explicit Never and any finite nonnegative value as At(f64), preserving -0.0. A tiny historical scale followed by a supported live scale still leaves that dormant future intact. Huge finite historical futures also survive exactly. next_yield_report uses the supported logical range; last_office_days and owed/stamp days use supported calendar ranges. The existing clock DTO rate range remains unchanged. All-consumer time/rate/catch-up and eventual counter horizons remain pending.
+
+Both counters use ordinary +=. Reflected reserves one increment. Dropped reserves 50,017 increments: the admitted queue has at most 25,008 subjects; the next ring can add at most the 25,000 borrowed actors plus eight wards; the next poll can drop both queues and one harvested flight. No later unbounded sequence of polls or clock crossings is claimed safe by this local headroom. Full production capture must validate the broader accepted-time/command horizon.
+
+Continuation tests independently prepare dependencies, scramble covered fields, install only exact covered fields privately and assert immediate canonical equality before normal ring/poll/apply. Tests cover ordinary receipt-capacity deferral, held success once, separate error kind/detail, old incarnation and obsolete queue drops, exact prompt preservation, Busy retry identity at changed-clock pacing, newer queue stamps while old flights remain, ambient same-day suppression, ward mood/mark/pending round edit/receipts and ordinary Engine polling. Rare held errors are test-only completed-at-capture fixtures: current ordinary errors normally apply immediately, while M2c still must retain completed external terminal errors.
+
+M2c remains required: hydrate exact held success/error once; discard old external jobs; give each unfinished flight exactly one load-specific retry with original inputs inside its valid window; fence old callbacks by runtime generation. This component exports/validates those obligations but introduces no production adoption path. Complete Engine/host ownership, accepted player sample/residuals, Ready/initial republish, other scheduling/speech/social owners and full M2a envelope remain pending. Naive prior backbone+Round Save+Load is 1,256,093,444 B before Running, over the unchanged 1 GiB cap; future phase/lifetime coordination must solve it.

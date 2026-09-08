@@ -11,6 +11,8 @@
 //! only [`Cognition`] has an implementation before P6 ([`crate::fake`], and
 //! `HttpCognition` in cathedral-backends).
 
+pub(crate) mod checkpoint;
+
 use std::{
     fmt,
     path::{Path, PathBuf},
