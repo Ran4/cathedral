@@ -22,6 +22,8 @@ use crate::world::World;
 
 const FACTS_JSON: &str = include_str!("../../../../assets/world/facts.json");
 
+pub(crate) mod checkpoint;
+
 /// The three placeholders a template may name, and nothing else.
 const PLACEHOLDERS: [&str; 3] = ["subject", "place", "day"];
 

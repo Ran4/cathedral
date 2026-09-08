@@ -5,6 +5,10 @@ use std::fmt;
 use crate::ids::{ActorId, ItemId};
 use crate::world::World;
 
+// Private wire bridge only; runtime provenance remains non-serializable and
+// redacted. Malformed checkpoint payloads must not escape through serde errors.
+pub(crate) mod checkpoint;
+
 /// Why a fact is true. **Never rendered anywhere** — not a prompt, a projection,
 /// a log line, a journal entry or a `Debug` string.
 ///

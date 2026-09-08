@@ -1,0 +1,57 @@
+{
+  "candidate_validate_us": [
+    730.5840000000001
+  ],
+  "cost": {
+    "encoded_bytes": 501266,
+    "expanded_upper_bytes": 8065826,
+    "peak_bytes": 34033342,
+    "validation_working_bytes": 262144
+  },
+  "counts": {
+    "adjacency_rows": 71,
+    "air": 48,
+    "characters": 520,
+    "door_timers": 0,
+    "facts": 6,
+    "hearsay_raised": 0,
+    "holding_actors": 520,
+    "holdings": 3120,
+    "journal_cached": true,
+    "journal_entries": 7,
+    "occasions": 1,
+    "player_receipts": 7,
+    "seated_keys": 1,
+    "stage_tellings": 0,
+    "ward_heat_rows": 8
+  },
+  "decode_validate_us": [
+    2525.797
+  ],
+  "drop_us": [
+    53.766
+  ],
+  "encode_us": [
+    2542.8740000000003
+  ],
+  "export_us": [
+    6212.678999999999
+  ],
+  "mode": "authored",
+  "placement": {
+    "placed": 0,
+    "requested": 0,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    2401.02
+  ],
+  "samples": 1,
+  "scenario": "carried_news_with_historical_receipts_and_caches",
+  "shared_reserved_peak_excluding_running_bytes": 68066684,
+  "witnesses": {
+    "historical_receipts": 1,
+    "historical_seated_keys": 1,
+    "offered_occasions": 1
+  }
+}

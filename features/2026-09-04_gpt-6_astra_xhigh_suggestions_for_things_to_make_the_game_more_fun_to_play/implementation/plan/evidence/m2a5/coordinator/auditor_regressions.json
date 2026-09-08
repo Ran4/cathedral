@@ -1,0 +1,29 @@
+{
+  "checked_at_utc": "2026-09-08T06:22:00.231045+00:00",
+  "auditor_sha256": "709c16d386233008e57d3443c93b36118010729bfb590855134d89f3e0b73c57",
+  "measurement_summary_sha256": "e73db03bead651b0cabc23764664291ea81c78180bdfd6ff1ca692e610fa9365",
+  "result": "passed",
+  "checks": [
+    {
+      "case": "percentile",
+      "exit_code": 1,
+      "expected_failing_gate": "assert quantiles(data[phase]) == row[\"phase_us\"][phase]",
+      "success_report_absent": true,
+      "output": "Traceback (most recent call last):\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 190, in <module>\n    main()\n    ~~~~^^\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 126, in main\n    assert quantiles(data[phase]) == row[\"phase_us\"][phase], (name, phase)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: ('authored-1', 'export_us')\n"
+    },
+    {
+      "case": "working_charge",
+      "exit_code": 1,
+      "expected_failing_gate": "assert validation_working_bytes == (256 + 4096) * 1024",
+      "success_report_absent": true,
+      "output": "Traceback (most recent call last):\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 190, in <module>\n    main()\n    ~~~~^^\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 102, in main\n    assert validation_working_bytes == (256 + 4096) * 1024\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    },
+    {
+      "case": "missing_historical_receipt",
+      "exit_code": 1,
+      "expected_failing_gate": "assert 1 <= witnesses[\"historical_receipts\"] <= counts[\"player_receipts\"]",
+      "success_report_absent": true,
+      "output": "Traceback (most recent call last):\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 190, in <module>\n    main()\n    ~~~~^^\n  File \"/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/audit_m2_component_probes.py\", line 114, in main\n    assert 1 <= witnesses[\"historical_receipts\"] <= counts[\"player_receipts\"]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    }
+  ]
+}

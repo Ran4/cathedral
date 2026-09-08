@@ -1,0 +1,366 @@
+{
+  "status": "Accepted component cut after final workspace/source/focused/public/layout checks and coordinator release/review. Commit follows staging. No full-envelope/host acceptance.",
+  "source_manifest_sha256": "6f1b57b911cad90e2cbb99b18eccf38b3e978ed1035b9c96c45f27e6d8f51262",
+  "checks": [
+    {
+      "name": "focused-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T06:03:03.706072+00:00",
+      "wall_seconds": 28.613211455987766,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a5-focused-final.log",
+      "original_bytes": 9716,
+      "original_sha256": "32f4aecaadf33bb58455af4c2867c0d9b8915e9493bfbca355dc48d1b43f133f",
+      "archive": "development/focused-final.log.gz",
+      "archive_sha256": "9801633ec96e3da121920d0367bcc3f693b9b4de9782753eb2e614ce12f8e3e0",
+      "archive_bytes": 3099,
+      "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+      "test_results": [
+        {
+          "passed": 66,
+          "failed": 0,
+          "ignored": 9
+        }
+      ],
+      "readable_archive": "focused-final.log",
+      "readable_archive_sha256": "4ac0c0900e0a345c60c0ace93be0233d63a5da155ef7dadb8af003011d2a6f58",
+      "readable_archive_bytes": 9715,
+      "readable_normalization": "Only redundant terminal LF bytes removed: raw.rstrip(b\"\\n\") + b\"\\n\". Exact raw bytes are separately preserved by the lossless gzip archive and original /tmp file.",
+      "source_relationship": "Focused/public precede only module-order formatting, ignored maximum-adjacency diagnostic and allocation-policy comment changes; layout-final includes the diagnostic and precedes only a comment correction. The full workspace verifies final manifest bytes."
+    },
+    {
+      "name": "public-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--test",
+        "checkpoint_knowledge_boundary",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T06:04:31.160049+00:00",
+      "wall_seconds": 27.168000543955714,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a5-public-final.log",
+      "original_bytes": 830,
+      "original_sha256": "3e91a697d9391da25fbc1b71638bfcc7a0ca740c5fb364c4b714a89951bc9460",
+      "archive": "development/public-final.log.gz",
+      "archive_sha256": "ec9f178c2e93e93ec5a4dd07b1cb71fe00d29add0f1d061847e598d372e8e8c5",
+      "archive_bytes": 494,
+      "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+      "test_results": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "readable_archive": "public-final.log",
+      "readable_archive_sha256": "4150507e4cb0561589249ff8660b0103cd907c5e18e6fc65a2c6d70e365c4fa9",
+      "readable_archive_bytes": 829,
+      "readable_normalization": "Only redundant terminal LF bytes removed: raw.rstrip(b\"\\n\") + b\"\\n\". Exact raw bytes are separately preserved by the lossless gzip archive and original /tmp file.",
+      "source_relationship": "Focused/public precede only module-order formatting, ignored maximum-adjacency diagnostic and allocation-policy comment changes; layout-final includes the diagnostic and precedes only a comment correction. The full workspace verifies final manifest bytes."
+    },
+    {
+      "name": "layout-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "knowledge_layout",
+        "--",
+        "--ignored",
+        "--nocapture"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T06:06:50.960618+00:00",
+      "wall_seconds": 25.57388321706094,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a5-layout-final.log",
+      "original_bytes": 1191,
+      "original_sha256": "fe5cf2abb796d84f195d830f44c5d5fbb277f97d2c6ffa2ce70f0bf3a0512656",
+      "archive": "development/layout-final.log.gz",
+      "archive_sha256": "506f63ea5438439aa66a1ddf9df4e3bafbf656de6320d24ac3cd64a2d6f90c93",
+      "archive_bytes": 678,
+      "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+      "test_results": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "readable_archive": "layout-final.log",
+      "readable_archive_sha256": "8cae93429cb6b3c8d8979e9c05c2f983d7a39aa0da210401651a50eb0605690b",
+      "readable_archive_bytes": 1190,
+      "readable_normalization": "Only redundant terminal LF bytes removed: raw.rstrip(b\"\\n\") + b\"\\n\". Exact raw bytes are separately preserved by the lossless gzip archive and original /tmp file.",
+      "source_relationship": "Focused/public precede only module-order formatting, ignored maximum-adjacency diagnostic and allocation-policy comment changes; layout-final includes the diagnostic and precedes only a comment correction. The full workspace verifies final manifest bytes."
+    },
+    {
+      "name": "workspace-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T06:07:55.519884+00:00",
+      "wall_seconds": 591.6555786449462,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a5-workspace-final.log",
+      "original_bytes": 246619,
+      "original_sha256": "71845edd5c8fc531ecf288a98cedc6360e19db9bcbe99f956b4577e56eeba78b",
+      "archive": "development/workspace-final.log.gz",
+      "archive_sha256": "e914f19829329f944e4fd4e44b829d985aa51d4c229d3929ac8e3fec6cb87f9e",
+      "archive_bytes": 48178,
+      "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+      "test_results": [
+        {
+          "passed": 158,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 2
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 671,
+          "failed": 0,
+          "ignored": 9
+        },
+        {
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 26,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 84,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 103,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 43,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 30,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 41,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 19,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 47,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 542,
+          "failed": 0,
+          "ignored": 3
+        },
+        {
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "readable_archive": "workspace-final.log",
+      "readable_archive_sha256": "b6ef83ad6eb4b8b9e8ada0921133f885e2ade1899f2f6b65e2806824c6ebcd11",
+      "readable_archive_bytes": 246618,
+      "readable_normalization": "Only redundant terminal LF bytes removed: raw.rstrip(b\"\\n\") + b\"\\n\". Exact raw bytes are separately preserved by the lossless gzip archive and original /tmp file.",
+      "source_manifest": "source_hashes.json",
+      "source_manifest_sha256": "6f1b57b911cad90e2cbb99b18eccf38b3e978ed1035b9c96c45f27e6d8f51262"
+    }
+  ],
+  "workspace_totals": {
+    "passed": 1949,
+    "failed": 0,
+    "ignored": 17,
+    "targets": 37
+  },
+  "notes": [
+    "No ordinary source changes beyond module wiring/comments. No renderer/GPU/network/provider probe.",
+    "All development failures retained losslessly and explained in development/README.md.",
+    "Source/cargo cession is separately explicit after this final evidence archive."
+  ]
+}

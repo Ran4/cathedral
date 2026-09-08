@@ -1,0 +1,12 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 27.13s
+     Running tests/checkpoint_knowledge_boundary.rs (target/debug/deps/checkpoint_knowledge_boundary-7499c765ad85c316)
+
+running 5 tests
+test nonfinite_household_geometry_cannot_collapse_into_a_valid_context_hash ... ok
+test stale_provenance_survives_while_debug_and_malformed_source_errors_stay_sealed ... ok
+test invalidated_fact_keeps_its_remembered_telling_and_pending_conversation ... ok
+test changed_catalog_text_refuses_context_then_original_binds_to_unadopted_backbone ... ok
+test duplicate_facts_refuse_and_padded_input_charge_survives_candidate_validation ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s

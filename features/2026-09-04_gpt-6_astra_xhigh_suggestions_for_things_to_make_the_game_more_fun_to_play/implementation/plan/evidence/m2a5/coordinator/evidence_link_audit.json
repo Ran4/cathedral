@@ -1,0 +1,96 @@
+{
+  "checked_at_utc": "2026-09-08T06:27:45.092127+00:00",
+  "result": "passed",
+  "markdown_files": 6,
+  "local_links": 22,
+  "checks": [
+    {
+      "source": "ADMISSION.md",
+      "target": "performance/README.md"
+    },
+    {
+      "source": "OWNER_COVERAGE.md",
+      "target": "ADMISSION.md"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/review.md"
+    },
+    {
+      "source": "README.md",
+      "target": "performance/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "OWNER_COVERAGE.md"
+    },
+    {
+      "source": "README.md",
+      "target": "ADMISSION.md"
+    },
+    {
+      "source": "README.md",
+      "target": "development/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "verification.json"
+    },
+    {
+      "source": "README.md",
+      "target": "source_hashes.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "log_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "source_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "format_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../performance/README.md"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/knowledge_performance_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "SUMMARY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "RESULTS.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "IDENTITY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/knowledge_smoke_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/auditor_regressions.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/historical_climate_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/historical_round_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/release_build.json"
+    }
+  ]
+}

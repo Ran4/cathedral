@@ -21,3 +21,5 @@ are mandatory, including explicit null authority. These cannot be loaded as a
 city; the complete owner/manifest envelope and Engine hydration remain pending.
 The explicit ignored `world::checkpoint::tests::regenerate_backbone_fixture`
 generator is separate from the M2a1 component fixtures.
+
+M2a5 adds `knowledge.json` and `engine_knowledge.json`. They preserve the private store (including all sealed provenance variants, historical receipt/seated obligations and a garbled view) and the Engine's pollen deadlines, journal/ward-heat caches and expired door timer. The source-bearing bytes belong only to persistence; runtime Debug/projections and malformed-source errors remain redacted. These are component fixtures, not a complete save or public partial adoption path.

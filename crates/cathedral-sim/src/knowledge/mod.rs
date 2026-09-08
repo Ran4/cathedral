@@ -36,6 +36,7 @@ use crate::prompt::PromptStrings;
 use crate::world::World;
 
 pub mod catalog;
+pub mod checkpoint;
 pub mod garble;
 pub mod mint;
 pub mod pollen;

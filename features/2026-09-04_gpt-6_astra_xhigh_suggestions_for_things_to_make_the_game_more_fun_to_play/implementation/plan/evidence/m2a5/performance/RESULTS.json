@@ -1,0 +1,722 @@
+[
+  {
+    "name": "authored-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_knowledge_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a5/performance/authored-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 501528,
+        "expanded_upper_bytes": 8066338,
+        "peak_bytes": 38230480,
+        "validation_working_bytes": 4456448
+      },
+      "counts": {
+        "adjacency_rows": 71,
+        "air": 48,
+        "characters": 520,
+        "door_timers": 0,
+        "facts": 6,
+        "hearsay_raised": 0,
+        "holding_actors": 520,
+        "holdings": 3120,
+        "journal_cached": true,
+        "journal_entries": 7,
+        "occasions": 1,
+        "player_receipts": 7,
+        "seated_keys": 1,
+        "stage_tellings": 0,
+        "ward_heat_rows": 8
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "carried_news_with_historical_receipts_and_caches",
+      "shared_reserved_peak_excluding_running_bytes": 76460960,
+      "witnesses": {
+        "historical_receipts": 1,
+        "historical_seated_keys": 1,
+        "offered_occasions": 1
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 905.757,
+        "p95": 921.791,
+        "p99": 946.6379999999999,
+        "max": 949.453
+      },
+      "decode_validate_us": {
+        "p50": 2477.1020000000003,
+        "p95": 2514.09,
+        "p99": 2537.437,
+        "max": 2622.163
+      },
+      "drop_us": {
+        "p50": 47.163000000000004,
+        "p95": 50.622,
+        "p99": 55.355000000000004,
+        "max": 63.235
+      },
+      "encode_us": {
+        "p50": 1818.182,
+        "p95": 1871.7079999999999,
+        "p99": 1900.6979999999999,
+        "max": 2767.302
+      },
+      "export_us": {
+        "p50": 5101.302000000001,
+        "p95": 5169.595,
+        "p99": 5201.085999999999,
+        "max": 8430.533000000001
+      },
+      "preflight_us": {
+        "p50": 1835.933,
+        "p95": 1893.3999999999999,
+        "p99": 1924.361,
+        "max": 1976.8590000000002
+      }
+    },
+    "process": {
+      "User time (seconds)": 1.43,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 28664.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "c60b2d52e4380c772a8b69f628d4713ef4acc6a8fcf9a9b06ac18a87deca4aa2",
+      "authored-1.json.gz": "cee7af301e13f7927824effd2a0c02f9334374e7e57d1d0932a22e78dc982b72",
+      "authored-1.time": "d4d2cc33b14885d378130e77dec6b7beb62f2f723b380ef8da5350cf60a889c4",
+      "authored-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_knowledge_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a5/performance/populated-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 2381526,
+        "expanded_upper_bytes": 38050338,
+        "peak_bytes": 163806474,
+        "validation_working_bytes": 4456448
+      },
+      "counts": {
+        "adjacency_rows": 71,
+        "air": 48,
+        "characters": 2520,
+        "door_timers": 0,
+        "facts": 6,
+        "hearsay_raised": 0,
+        "holding_actors": 2520,
+        "holdings": 15120,
+        "journal_cached": true,
+        "journal_entries": 7,
+        "occasions": 1,
+        "player_receipts": 7,
+        "seated_keys": 1,
+        "stage_tellings": 0,
+        "ward_heat_rows": 8
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "carried_news_with_historical_receipts_and_caches",
+      "shared_reserved_peak_excluding_running_bytes": 327612948,
+      "witnesses": {
+        "historical_receipts": 1,
+        "historical_seated_keys": 1,
+        "offered_occasions": 1
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 1375.788,
+        "p95": 1426.145,
+        "p99": 1485.0690000000002,
+        "max": 1526.063
+      },
+      "decode_validate_us": {
+        "p50": 8641.318000000001,
+        "p95": 8829.665,
+        "p99": 9058.086,
+        "max": 9105.357999999998
+      },
+      "drop_us": {
+        "p50": 204.277,
+        "p95": 217.547,
+        "p99": 232.38299999999998,
+        "max": 288.283
+      },
+      "encode_us": {
+        "p50": 8546.761999999999,
+        "p95": 8729.786,
+        "p99": 9420.035,
+        "max": 9528.708
+      },
+      "export_us": {
+        "p50": 17580.168999999998,
+        "p95": 18092.592,
+        "p99": 18357.71,
+        "max": 18382.362999999998
+      },
+      "preflight_us": {
+        "p50": 7462.09,
+        "p95": 7632.44,
+        "p99": 8379.893,
+        "max": 8432.904
+      }
+    },
+    "process": {
+      "User time (seconds)": 5.21,
+      "System time (seconds)": 0.02,
+      "Maximum resident set size (kbytes)": 67908.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "9e21e5e7b1314acc2522e64128634132328cfcb9b81319f02156ea2f6af4c0fe",
+      "populated-1.json.gz": "3a9d28b5dbeb8e7d77c3dc605341d1a35aec432b167b99d36308e27a6f6fdeb9",
+      "populated-1.time": "a08d6a43573279cc96d72235b06187719c06888089f037992ebe09c19f03d7b3",
+      "populated-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-2",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_knowledge_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a5/performance/populated-2.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 2381526,
+        "expanded_upper_bytes": 38050338,
+        "peak_bytes": 163806474,
+        "validation_working_bytes": 4456448
+      },
+      "counts": {
+        "adjacency_rows": 71,
+        "air": 48,
+        "characters": 2520,
+        "door_timers": 0,
+        "facts": 6,
+        "hearsay_raised": 0,
+        "holding_actors": 2520,
+        "holdings": 15120,
+        "journal_cached": true,
+        "journal_entries": 7,
+        "occasions": 1,
+        "player_receipts": 7,
+        "seated_keys": 1,
+        "stage_tellings": 0,
+        "ward_heat_rows": 8
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "carried_news_with_historical_receipts_and_caches",
+      "shared_reserved_peak_excluding_running_bytes": 327612948,
+      "witnesses": {
+        "historical_receipts": 1,
+        "historical_seated_keys": 1,
+        "offered_occasions": 1
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 1373.944,
+        "p95": 1406.749,
+        "p99": 1415.366,
+        "max": 1426.973
+      },
+      "decode_validate_us": {
+        "p50": 8626.211,
+        "p95": 8732.229,
+        "p99": 8752.332,
+        "max": 8796.164999999999
+      },
+      "drop_us": {
+        "p50": 201.866,
+        "p95": 208.607,
+        "p99": 211.809,
+        "max": 213.236
+      },
+      "encode_us": {
+        "p50": 8506.014,
+        "p95": 8615.768,
+        "p99": 8661.372000000001,
+        "max": 8681.433
+      },
+      "export_us": {
+        "p50": 17405.048,
+        "p95": 17727.058,
+        "p99": 17861.096,
+        "max": 18523.772
+      },
+      "preflight_us": {
+        "p50": 7385.273,
+        "p95": 7543.758,
+        "p99": 7556.732,
+        "max": 7634.054999999999
+      }
+    },
+    "process": {
+      "User time (seconds)": 5.19,
+      "System time (seconds)": 0.02,
+      "Maximum resident set size (kbytes)": 67912.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "a64647df5b122263c2932feb433cc424aae39f3299c6f19ed9e81a831eb387e9",
+      "populated-2.json.gz": "6e3fd84332b857b7b392456f93e77f2a8cae0556dd6af4b75f5b4b701039ee4d",
+      "populated-2.time": "37cf33bd1863783bf54e29fc5fcc649c40b8860daa4388837b146aab501904cc",
+      "populated-2.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "authored-2",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_knowledge_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a5/performance/authored-2.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 501528,
+        "expanded_upper_bytes": 8066338,
+        "peak_bytes": 38230480,
+        "validation_working_bytes": 4456448
+      },
+      "counts": {
+        "adjacency_rows": 71,
+        "air": 48,
+        "characters": 520,
+        "door_timers": 0,
+        "facts": 6,
+        "hearsay_raised": 0,
+        "holding_actors": 520,
+        "holdings": 3120,
+        "journal_cached": true,
+        "journal_entries": 7,
+        "occasions": 1,
+        "player_receipts": 7,
+        "seated_keys": 1,
+        "stage_tellings": 0,
+        "ward_heat_rows": 8
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "carried_news_with_historical_receipts_and_caches",
+      "shared_reserved_peak_excluding_running_bytes": 76460960,
+      "witnesses": {
+        "historical_receipts": 1,
+        "historical_seated_keys": 1,
+        "offered_occasions": 1
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 902.604,
+        "p95": 916.125,
+        "p99": 949.51,
+        "max": 1066.76
+      },
+      "decode_validate_us": {
+        "p50": 2465.987,
+        "p95": 2505.21,
+        "p99": 2538.938,
+        "max": 2546.44
+      },
+      "drop_us": {
+        "p50": 46.936,
+        "p95": 49.849000000000004,
+        "p99": 50.966,
+        "max": 51.832
+      },
+      "encode_us": {
+        "p50": 1825.885,
+        "p95": 1870.036,
+        "p99": 1890.202,
+        "max": 1943.4350000000002
+      },
+      "export_us": {
+        "p50": 5101.782,
+        "p95": 5195.481,
+        "p99": 5211.094999999999,
+        "max": 5902.182
+      },
+      "preflight_us": {
+        "p50": 1845.191,
+        "p95": 1897.216,
+        "p99": 1918.147,
+        "max": 1935.9550000000002
+      }
+    },
+    "process": {
+      "User time (seconds)": 1.42,
+      "System time (seconds)": 0.0,
+      "Maximum resident set size (kbytes)": 28496.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "c82ac4d7c1936079b658c078c3b8e1b052b5c64b25c120fad7ad9a23da557591",
+      "authored-2.json.gz": "9e740fbdaa1c89f140ef3f35ec7c26328d59ca900d1a1cedc448df4899d330c5",
+      "authored-2.time": "0fd01871bccbba8a031cc5270a33066c784f29fd24d2da08363d8ba253baa973",
+      "authored-2.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "authored-3",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_knowledge_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a5/performance/authored-3.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 501528,
+        "expanded_upper_bytes": 8066338,
+        "peak_bytes": 38230480,
+        "validation_working_bytes": 4456448
+      },
+      "counts": {
+        "adjacency_rows": 71,
+        "air": 48,
+        "characters": 520,
+        "door_timers": 0,
+        "facts": 6,
+        "hearsay_raised": 0,
+        "holding_actors": 520,
+        "holdings": 3120,
+        "journal_cached": true,
+        "journal_entries": 7,
+        "occasions": 1,
+        "player_receipts": 7,
+        "seated_keys": 1,
+        "stage_tellings": 0,
+        "ward_heat_rows": 8
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "carried_news_with_historical_receipts_and_caches",
+      "shared_reserved_peak_excluding_running_bytes": 76460960,
+      "witnesses": {
+        "historical_receipts": 1,
+        "historical_seated_keys": 1,
+        "offered_occasions": 1
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 907.1329999999999,
+        "p95": 919.8570000000001,
+        "p99": 941.814,
+        "max": 956.7729999999999
+      },
+      "decode_validate_us": {
+        "p50": 2471.908,
+        "p95": 2513.1839999999997,
+        "p99": 2529.1369999999997,
+        "max": 2552.741
+      },
+      "drop_us": {
+        "p50": 47.556,
+        "p95": 50.46,
+        "p99": 51.601000000000006,
+        "max": 54.076
+      },
+      "encode_us": {
+        "p50": 1822.788,
+        "p95": 1863.223,
+        "p99": 1895.377,
+        "max": 1900.163
+      },
+      "export_us": {
+        "p50": 5091.625,
+        "p95": 5184.224999999999,
+        "p99": 5198.147,
+        "max": 5236.905
+      },
+      "preflight_us": {
+        "p50": 1843.941,
+        "p95": 1886.252,
+        "p99": 1898.072,
+        "max": 1907.707
+      }
+    },
+    "process": {
+      "User time (seconds)": 1.43,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 28656.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "2b7960bf515e3cff12bb4868d69c90f56bd6f7eec6fd235ea07967608091d19b",
+      "authored-3.json.gz": "370246a44397e943bf99836e6cfa7b884efe7ec6c01ce9eb05150f4731af45c3",
+      "authored-3.time": "c5a8635408e414620aad2388b79f60c036d3818b51028e43a583a4475a01d4a2",
+      "authored-3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-3",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_knowledge_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a5/performance/populated-3.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 2381526,
+        "expanded_upper_bytes": 38050338,
+        "peak_bytes": 163806474,
+        "validation_working_bytes": 4456448
+      },
+      "counts": {
+        "adjacency_rows": 71,
+        "air": 48,
+        "characters": 2520,
+        "door_timers": 0,
+        "facts": 6,
+        "hearsay_raised": 0,
+        "holding_actors": 2520,
+        "holdings": 15120,
+        "journal_cached": true,
+        "journal_entries": 7,
+        "occasions": 1,
+        "player_receipts": 7,
+        "seated_keys": 1,
+        "stage_tellings": 0,
+        "ward_heat_rows": 8
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "carried_news_with_historical_receipts_and_caches",
+      "shared_reserved_peak_excluding_running_bytes": 327612948,
+      "witnesses": {
+        "historical_receipts": 1,
+        "historical_seated_keys": 1,
+        "offered_occasions": 1
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 1384.298,
+        "p95": 1422.787,
+        "p99": 1432.721,
+        "max": 1469.154
+      },
+      "decode_validate_us": {
+        "p50": 8629.828000000001,
+        "p95": 8783.991999999998,
+        "p99": 9473.355,
+        "max": 9476.313
+      },
+      "drop_us": {
+        "p50": 206.211,
+        "p95": 217.53300000000002,
+        "p99": 224.40900000000002,
+        "max": 224.548
+      },
+      "encode_us": {
+        "p50": 8513.336,
+        "p95": 8650.609,
+        "p99": 8757.41,
+        "max": 9504.179
+      },
+      "export_us": {
+        "p50": 17352.977,
+        "p95": 17724.490999999998,
+        "p99": 18507.801,
+        "max": 19524.166999999998
+      },
+      "preflight_us": {
+        "p50": 7375.865,
+        "p95": 7504.275000000001,
+        "p99": 7630.465999999999,
+        "max": 8169.115
+      }
+    },
+    "process": {
+      "User time (seconds)": 5.19,
+      "System time (seconds)": 0.02,
+      "Maximum resident set size (kbytes)": 67720.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "cd427c5e1b2ed02147be5072f8e716895136016a805d108aed0fd69b51d968b9",
+      "populated-3.json.gz": "1129a1fe07d578a433f7de6a9fe73b2c9196e0adff55625ac85d3026a60f0aa2",
+      "populated-3.time": "1b258a0a65d09aaccf0f88bcdd3e7604f7635973b4669d6eecbd33bc26b26331",
+      "populated-3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+]

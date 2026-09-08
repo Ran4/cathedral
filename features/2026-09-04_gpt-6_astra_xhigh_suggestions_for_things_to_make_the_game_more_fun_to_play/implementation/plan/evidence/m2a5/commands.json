@@ -1,0 +1,553 @@
+[
+  {
+    "name": "compile-initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--no-run"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:28:40.849602+00:00",
+    "wall_seconds": 29.91799010906834,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-compile-initial.log",
+    "original_bytes": 247,
+    "original_sha256": "ea1ad88aa4272a0d6936dcac6d119da28692102e3e3e1bd818f3983f816030f0"
+  },
+  {
+    "name": "public-initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_knowledge_boundary",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:29:30.862888+00:00",
+    "wall_seconds": 37.94193802389782,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-public-initial.log",
+    "original_bytes": 747,
+    "original_sha256": "555fe4822c2d6b1cb3bc385f65af966ea44068f34b7f87c3ec03323422727e5d"
+  },
+  {
+    "name": "engine-compile",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--no-run"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:39:05.033054+00:00",
+    "wall_seconds": 7.774942699004896,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a5-engine-compile.log",
+    "original_bytes": 1108,
+    "original_sha256": "bd9de7da554a58c826df231d9a31b6587f78d2b8fbdaf996fca6a175b9db4be5"
+  },
+  {
+    "name": "public-context",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_knowledge_boundary",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:40:16.470897+00:00",
+    "wall_seconds": 27.94983554095961,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a5-public-context.log",
+    "original_bytes": 1409,
+    "original_sha256": "cb25f38b8beff1210e0a88926a183cb49722a6d834a7b022fac342a9e86fb684"
+  },
+  {
+    "name": "public-context-fixed",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_knowledge_boundary",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:42:10.561437+00:00",
+    "wall_seconds": 0.7176229940960184,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-public-context-fixed.log",
+    "original_bytes": 829,
+    "original_sha256": "f609fc67e445a09f90bab480509d41573121dae5a654865c94b5a4b52b480ccf"
+  },
+  {
+    "name": "private-initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:51:41.532553+00:00",
+    "wall_seconds": 32.31603790493682,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-private-initial.log",
+    "original_bytes": 871,
+    "original_sha256": "bc9554c8c043e9e37eb88e5ecc4e45c5f51f08e95457aaea00964d255ad74218"
+  },
+  {
+    "name": "store-initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge::checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:52:29.452288+00:00",
+    "wall_seconds": 0.11377541697584093,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-store-initial.log",
+    "original_bytes": 1111,
+    "original_sha256": "ddcc53c3f9a53240a125813a5bbdde6be3c270b0634544400cdccf3b912c7bcc"
+  },
+  {
+    "name": "knowledge-layout",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_layout",
+      "--",
+      "--ignored",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:52:58.090656+00:00",
+    "wall_seconds": 0.08702027495019138,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-knowledge-layout.log",
+    "original_bytes": 605,
+    "original_sha256": "0c45d6adc95a743a53dd8464563b426bbd2270e7b479c234c3016c72ce4e3bc8"
+  },
+  {
+    "name": "probe-authored",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_knowledge_cost",
+      "--",
+      "--mode",
+      "authored",
+      "--samples",
+      "1",
+      "--output",
+      "/tmp/alibi-m2a5-probe-authored.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:53:10.031336+00:00",
+    "wall_seconds": 34.689311643945985,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-probe-authored.log",
+    "original_bytes": 392,
+    "original_sha256": "efe7cabed9c507cd3062195db1b7ea6e1b73270aa49396f01d90727ad64ddeb0"
+  },
+  {
+    "name": "private-centroids",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:54:27.816449+00:00",
+    "wall_seconds": 24.373658187920228,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-private-centroids.log",
+    "original_bytes": 972,
+    "original_sha256": "c0c4f3758a327bd6d3279fcca2b39bcc1e3c95337074ec671384c7d379592344"
+  },
+  {
+    "name": "store-rich",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge::checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:56:00.951049+00:00",
+    "wall_seconds": 20.738157756975852,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a5-store-rich.log",
+    "original_bytes": 1930,
+    "original_sha256": "8df4380df9b8e495120183666fea716feae152e05de237de58c091da88f0c4e4"
+  },
+  {
+    "name": "fixtures-written",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_fixture",
+      "--",
+      "--ignored",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:57:06.080585+00:00",
+    "wall_seconds": 17.198452141019516,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-fixtures-written.log",
+    "original_bytes": 508,
+    "original_sha256": "188297a2aaafccd7d74163450939de55e861182bbe772503e541f2f88f2e2493"
+  },
+  {
+    "name": "probe-populated",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_knowledge_cost",
+      "--",
+      "--mode",
+      "populated",
+      "--samples",
+      "1",
+      "--output",
+      "/tmp/alibi-m2a5-probe-populated.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:58:16.614848+00:00",
+    "wall_seconds": 23.085036459029652,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-probe-populated.log",
+    "original_bytes": 394,
+    "original_sha256": "c7393d10f169a8105b73978a1cbad1f6dda51098d6b8627d412ef3330db38931"
+  },
+  {
+    "name": "checkpoint-focused",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:59:08.571121+00:00",
+    "wall_seconds": 25.11910380993504,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a5-checkpoint-focused.log",
+    "original_bytes": 122552,
+    "original_sha256": "a9623926e7ccca113e6393a5a83ad473743b0bb3447783366804db2a18317532"
+  },
+  {
+    "name": "authored-final-smoke",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_knowledge_cost",
+      "--",
+      "--mode",
+      "authored",
+      "--samples",
+      "1",
+      "--output",
+      "/tmp/alibi-m2a5-authored-final-smoke.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:01:07.681888+00:00",
+    "wall_seconds": 0.4002489480189979,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-authored-final-smoke.log",
+    "original_bytes": 207,
+    "original_sha256": "3a3ea43e30794970d45befde851d16066ceaeb52a56ca1c6a2ed8f4f2999aa73"
+  },
+  {
+    "name": "focused-formatted",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:01:30.832408+00:00",
+    "wall_seconds": 30.23146826995071,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-focused-formatted.log",
+    "original_bytes": 9611,
+    "original_sha256": "c11e117691725b2ac65d562ff9720c6145c4ea833543221106d986c4ce220772"
+  },
+  {
+    "name": "focused-final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:03:03.706072+00:00",
+    "wall_seconds": 28.613211455987766,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-focused-final.log",
+    "original_bytes": 9716,
+    "original_sha256": "32f4aecaadf33bb58455af4c2867c0d9b8915e9493bfbca355dc48d1b43f133f"
+  },
+  {
+    "name": "public-final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_knowledge_boundary",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:04:31.160049+00:00",
+    "wall_seconds": 27.168000543955714,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-public-final.log",
+    "original_bytes": 830,
+    "original_sha256": "3e91a697d9391da25fbc1b71638bfcc7a0ca740c5fb364c4b714a89951bc9460"
+  },
+  {
+    "name": "layout-final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_layout",
+      "--",
+      "--ignored",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:06:50.960618+00:00",
+    "wall_seconds": 25.57388321706094,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-layout-final.log",
+    "original_bytes": 1191,
+    "original_sha256": "fe5cf2abb796d84f195d830f44c5d5fbb277f97d2c6ffa2ce70f0bf3a0512656"
+  },
+  {
+    "name": "workspace-final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "--workspace"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:07:55.519884+00:00",
+    "wall_seconds": 591.6555786449462,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-workspace-final.log",
+    "original_bytes": 246619,
+    "original_sha256": "71845edd5c8fc531ecf288a98cedc6360e19db9bcbe99f956b4577e56eeba78b"
+  }
+]

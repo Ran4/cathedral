@@ -1,0 +1,38 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 25.53s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-017f852d3c359e76)
+
+running 2 tests
+Fact=272
+Holding=88
+Drift=40
+LearnedHow=104
+Knowledge=280
+KnowledgeDtoV1=480
+WorldKnowledgeDtoV1=504
+crate::areas::NearestArea<'static>=16
+(&crate::areas::Area, usize, &crate::areas::AreaBox)=24
+crate::homes::HomesDoc=96
+crate::homes::HomeEntry=64
+crate::homes::BedlessEntry=24
+Wire=328
+HoldingRow=48
+AirRow=48
+FactV1=272
+HoldingV1=88
+LearnedV1=104
+FactViewV1=32
+OccasionV1=64
+DriftV1=40
+Wire=1080
+EngineKnowledgeDtoV1=1080
+EngineKnowledgeCandidate=1080
+EngineMessage=232
+JournalEntry=104
+WardHeatRow=56
+test engine::knowledge_checkpoint::tests::engine_knowledge_layout ... ok
+maximum_adjacency_rows=512 row_max_capacity=8 retained_bytes=20480
+homes=ComponentCost { encoded_bytes: 134878, expanded_upper_bytes: 1118084, peak_bytes: 4881066 }; definition_scratch=2771874
+test knowledge::checkpoint::tests::knowledge_layout ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 678 filtered out; finished in 0.02s

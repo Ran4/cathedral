@@ -32,6 +32,8 @@ use crate::lore::PlanningWard;
 use crate::math::Vec3;
 use crate::world::World;
 
+pub(crate) mod checkpoint;
+
 /// The walkable city's own world box, read off `assets/world/navigation.json`'s
 /// `grid` (`x0 -365.0`, `z0 -480.5`, `cell_m 0.25`, `w 2907`, `h 3313`) →
 /// 726.75 × 828.25 m.

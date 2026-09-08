@@ -1,0 +1,923 @@
+[
+  {
+    "name": "compile-initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--no-run"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:28:40.849602+00:00",
+    "wall_seconds": 29.91799010906834,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-compile-initial.log",
+    "original_bytes": 247,
+    "original_sha256": "ea1ad88aa4272a0d6936dcac6d119da28692102e3e3e1bd818f3983f816030f0",
+    "archive": "development/compile-initial.log.gz",
+    "archive_sha256": "78887dfabf6026f31309b0dd57eb45dc1eb0b2955c28000224e171d6ac298af9",
+    "archive_bytes": 198,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": []
+  },
+  {
+    "name": "public-initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_knowledge_boundary",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:29:30.862888+00:00",
+    "wall_seconds": 37.94193802389782,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-public-initial.log",
+    "original_bytes": 747,
+    "original_sha256": "555fe4822c2d6b1cb3bc385f65af966ea44068f34b7f87c3ec03323422727e5d",
+    "archive": "development/public-initial.log.gz",
+    "archive_sha256": "a382f657177513e08f08472e53a52b64d432393e5ca9917ae679f71aa3bc9db6",
+    "archive_bytes": 453,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  {
+    "name": "engine-compile",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--no-run"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:39:05.033054+00:00",
+    "wall_seconds": 7.774942699004896,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a5-engine-compile.log",
+    "original_bytes": 1108,
+    "original_sha256": "bd9de7da554a58c826df231d9a31b6587f78d2b8fbdaf996fca6a175b9db4be5",
+    "archive": "development/engine-compile.log.gz",
+    "archive_sha256": "e9d90d133aa909a752e5e3c77c55e1431c5fd4809a57b4b2ed830551351b6d42",
+    "archive_bytes": 520,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": []
+  },
+  {
+    "name": "public-context",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_knowledge_boundary",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:40:16.470897+00:00",
+    "wall_seconds": 27.94983554095961,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a5-public-context.log",
+    "original_bytes": 1409,
+    "original_sha256": "cb25f38b8beff1210e0a88926a183cb49722a6d834a7b022fac342a9e86fb684",
+    "archive": "development/public-context.log.gz",
+    "archive_sha256": "0b20ab2915d3529456e08cb2ec5002c4d8244f18b90141c36662adb7c98e9cb3",
+    "archive_bytes": 742,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 4,
+        "failed": 1,
+        "ignored": 0
+      }
+    ]
+  },
+  {
+    "name": "public-context-fixed",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_knowledge_boundary",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:42:10.561437+00:00",
+    "wall_seconds": 0.7176229940960184,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-public-context-fixed.log",
+    "original_bytes": 829,
+    "original_sha256": "f609fc67e445a09f90bab480509d41573121dae5a654865c94b5a4b52b480ccf",
+    "archive": "development/public-context-fixed.log.gz",
+    "archive_sha256": "936f06bcfd0079cfd9af29b674a8884c7595368ffd3149db118e9c53c29b4475",
+    "archive_bytes": 491,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  {
+    "name": "private-initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:51:41.532553+00:00",
+    "wall_seconds": 32.31603790493682,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-private-initial.log",
+    "original_bytes": 871,
+    "original_sha256": "bc9554c8c043e9e37eb88e5ecc4e45c5f51f08e95457aaea00964d255ad74218",
+    "archive": "development/private-initial.log.gz",
+    "archive_sha256": "8ba4d0b6e8508f9d9938246c56a9628087a3618fade82a163072f9b8e12e7c7b",
+    "archive_bytes": 470,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 1
+      }
+    ]
+  },
+  {
+    "name": "store-initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge::checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:52:29.452288+00:00",
+    "wall_seconds": 0.11377541697584093,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-store-initial.log",
+    "original_bytes": 1111,
+    "original_sha256": "ddcc53c3f9a53240a125813a5bbdde6be3c270b0634544400cdccf3b912c7bcc",
+    "archive": "development/store-initial.log.gz",
+    "archive_sha256": "c10d3f81a25636b7a10856762ce8839d89afadea205f64ac97cfa65bf762c6a9",
+    "archive_bytes": 539,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 2
+      }
+    ]
+  },
+  {
+    "name": "knowledge-layout",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_layout",
+      "--",
+      "--ignored",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:52:58.090656+00:00",
+    "wall_seconds": 0.08702027495019138,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-knowledge-layout.log",
+    "original_bytes": 605,
+    "original_sha256": "0c45d6adc95a743a53dd8464563b426bbd2270e7b479c234c3016c72ce4e3bc8",
+    "archive": "development/knowledge-layout.log.gz",
+    "archive_sha256": "3f5bd04f624f4605fc5061cb9fb4d38c62a2a4a8f542040b41cbc0d453a15a08",
+    "archive_bytes": 393,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  {
+    "name": "probe-authored",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_knowledge_cost",
+      "--",
+      "--mode",
+      "authored",
+      "--samples",
+      "1",
+      "--output",
+      "/tmp/alibi-m2a5-probe-authored.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:53:10.031336+00:00",
+    "wall_seconds": 34.689311643945985,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-probe-authored.log",
+    "original_bytes": 392,
+    "original_sha256": "efe7cabed9c507cd3062195db1b7ea6e1b73270aa49396f01d90727ad64ddeb0",
+    "archive": "development/probe-authored.log.gz",
+    "archive_sha256": "8ed073c6d783214d77a4c912ce688f0dfd2c03d32edc7980b0fdd93bf8ce7800",
+    "archive_bytes": 239,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": []
+  },
+  {
+    "name": "private-centroids",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:54:27.816449+00:00",
+    "wall_seconds": 24.373658187920228,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-private-centroids.log",
+    "original_bytes": 972,
+    "original_sha256": "c0c4f3758a327bd6d3279fcca2b39bcc1e3c95337074ec671384c7d379592344",
+    "archive": "development/private-centroids.log.gz",
+    "archive_sha256": "61ccf0a86d004278f65f97ad0ed94c564086827033b0ba33bb3517a38acdeef4",
+    "archive_bytes": 505,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 1
+      }
+    ]
+  },
+  {
+    "name": "store-rich",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge::checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:56:00.951049+00:00",
+    "wall_seconds": 20.738157756975852,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a5-store-rich.log",
+    "original_bytes": 1930,
+    "original_sha256": "8df4380df9b8e495120183666fea716feae152e05de237de58c091da88f0c4e4",
+    "archive": "development/store-rich.log.gz",
+    "archive_sha256": "d8b5d21ee854612a7b0f14e52d389b4d63bc0eaad8856730758170ed3076d0dd",
+    "archive_bytes": 870,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 7,
+        "failed": 1,
+        "ignored": 2
+      }
+    ]
+  },
+  {
+    "name": "fixtures-written",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_fixture",
+      "--",
+      "--ignored",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:57:06.080585+00:00",
+    "wall_seconds": 17.198452141019516,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-fixtures-written.log",
+    "original_bytes": 508,
+    "original_sha256": "188297a2aaafccd7d74163450939de55e861182bbe772503e541f2f88f2e2493",
+    "archive": "development/fixtures-written.log.gz",
+    "archive_sha256": "a1bd8f28e7540f9de27cf64558daa59417accfe0c2bd9f800afff009544f2b34",
+    "archive_bytes": 316,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  {
+    "name": "probe-populated",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_knowledge_cost",
+      "--",
+      "--mode",
+      "populated",
+      "--samples",
+      "1",
+      "--output",
+      "/tmp/alibi-m2a5-probe-populated.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:58:16.614848+00:00",
+    "wall_seconds": 23.085036459029652,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-probe-populated.log",
+    "original_bytes": 394,
+    "original_sha256": "c7393d10f169a8105b73978a1cbad1f6dda51098d6b8627d412ef3330db38931",
+    "archive": "development/probe-populated.log.gz",
+    "archive_sha256": "00d2e2c2163f902b7ad28dccc04c18354f96df9fa0cb310f16ba915fe00e9cbd",
+    "archive_bytes": 240,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": []
+  },
+  {
+    "name": "checkpoint-focused",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T05:59:08.571121+00:00",
+    "wall_seconds": 25.11910380993504,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a5-checkpoint-focused.log",
+    "original_bytes": 122552,
+    "original_sha256": "a9623926e7ccca113e6393a5a83ad473743b0bb3447783366804db2a18317532",
+    "archive": "development/checkpoint-focused.log.gz",
+    "archive_sha256": "9bd1efd438787246a5bae75ff1c710fda10abb6bcff43edfe05598cb79829c7d",
+    "archive_bytes": 7969,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 63,
+        "failed": 2,
+        "ignored": 9
+      }
+    ]
+  },
+  {
+    "name": "authored-final-smoke",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_knowledge_cost",
+      "--",
+      "--mode",
+      "authored",
+      "--samples",
+      "1",
+      "--output",
+      "/tmp/alibi-m2a5-authored-final-smoke.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:01:07.681888+00:00",
+    "wall_seconds": 0.4002489480189979,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-authored-final-smoke.log",
+    "original_bytes": 207,
+    "original_sha256": "3a3ea43e30794970d45befde851d16066ceaeb52a56ca1c6a2ed8f4f2999aa73",
+    "archive": "development/authored-final-smoke.log.gz",
+    "archive_sha256": "29fd67dd2c1e94fef3cc3b76424cbde36b271a29126bc44d1b46c82f40c87b04",
+    "archive_bytes": 175,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": []
+  },
+  {
+    "name": "focused-formatted",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:01:30.832408+00:00",
+    "wall_seconds": 30.23146826995071,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-focused-formatted.log",
+    "original_bytes": 9611,
+    "original_sha256": "c11e117691725b2ac65d562ff9720c6145c4ea833543221106d986c4ce220772",
+    "archive": "development/focused-formatted.log.gz",
+    "archive_sha256": "d897a5a3ab9978e1e9b338072d1a6fc3a486c398e606d7286e0dd5c811b6e418",
+    "archive_bytes": 3074,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 65,
+        "failed": 0,
+        "ignored": 9
+      }
+    ]
+  },
+  {
+    "name": "focused-final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:03:03.706072+00:00",
+    "wall_seconds": 28.613211455987766,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-focused-final.log",
+    "original_bytes": 9716,
+    "original_sha256": "32f4aecaadf33bb58455af4c2867c0d9b8915e9493bfbca355dc48d1b43f133f",
+    "archive": "development/focused-final.log.gz",
+    "archive_sha256": "9801633ec96e3da121920d0367bcc3f693b9b4de9782753eb2e614ce12f8e3e0",
+    "archive_bytes": 3099,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 66,
+        "failed": 0,
+        "ignored": 9
+      }
+    ]
+  },
+  {
+    "name": "public-final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_knowledge_boundary",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:04:31.160049+00:00",
+    "wall_seconds": 27.168000543955714,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-public-final.log",
+    "original_bytes": 830,
+    "original_sha256": "3e91a697d9391da25fbc1b71638bfcc7a0ca740c5fb364c4b714a89951bc9460",
+    "archive": "development/public-final.log.gz",
+    "archive_sha256": "ec9f178c2e93e93ec5a4dd07b1cb71fe00d29add0f1d061847e598d372e8e8c5",
+    "archive_bytes": 494,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  {
+    "name": "layout-final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "knowledge_layout",
+      "--",
+      "--ignored",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:06:50.960618+00:00",
+    "wall_seconds": 25.57388321706094,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-layout-final.log",
+    "original_bytes": 1191,
+    "original_sha256": "fe5cf2abb796d84f195d830f44c5d5fbb277f97d2c6ffa2ce70f0bf3a0512656",
+    "archive": "development/layout-final.log.gz",
+    "archive_sha256": "506f63ea5438439aa66a1ddf9df4e3bafbf656de6320d24ac3cd64a2d6f90c93",
+    "archive_bytes": 678,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  {
+    "name": "workspace-final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "--workspace"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T06:07:55.519884+00:00",
+    "wall_seconds": 591.6555786449462,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a5-workspace-final.log",
+    "original_bytes": 246619,
+    "original_sha256": "71845edd5c8fc531ecf288a98cedc6360e19db9bcbe99f956b4577e56eeba78b",
+    "archive": "development/workspace-final.log.gz",
+    "archive_sha256": "e914f19829329f944e4fd4e44b829d985aa51d4c229d3929ac8e3fec6cb87f9e",
+    "archive_bytes": 48178,
+    "archive_policy": "Lossless gzip of exact original raw bytes; mtime=0. Original remains unchanged at original_path.",
+    "test_results": [
+      {
+        "passed": 158,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 2
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 1
+      },
+      {
+        "passed": 15,
+        "failed": 0,
+        "ignored": 1
+      },
+      {
+        "passed": 671,
+        "failed": 0,
+        "ignored": 9
+      },
+      {
+        "passed": 16,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 15,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 26,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 84,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 13,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 1
+      },
+      {
+        "passed": 103,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 43,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 30,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 27,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 41,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 19,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 47,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 542,
+        "failed": 0,
+        "ignored": 3
+      },
+      {
+        "passed": 20,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  }
+]

@@ -22,6 +22,8 @@ use crate::world::World;
 
 const SALIENCE_JSON: &str = include_str!("../../../../assets/world/salience.json");
 
+pub(crate) mod checkpoint;
+
 /// Which rung of the hedge ladder a topic's tellings sit on.
 ///
 /// Authored per topic rather than derived from the base number, so

@@ -91,12 +91,31 @@ def main():
         validation_working_bytes = cost.get("validation_working_bytes", 0)
         assert isinstance(validation_working_bytes, int) and validation_working_bytes >= 0
         if "validation_working_bytes" in cost:
-            assert validation_working_bytes == 64 * 1024
             assert "definition_working_bytes" not in cost
-            assert data["scenario"] == "forced_storm_with_old_rate_bells"
-            assert data["counts"]["bell_strokes"] == 3
-            assert data["counts"]["weather_forced"] is True
-            assert data["counts"]["weather_residue"] is False
+            counts = data["counts"]
+            if data["scenario"] == "forced_storm_with_old_rate_bells":
+                assert validation_working_bytes == 64 * 1024
+                assert counts["bell_strokes"] == 3
+                assert counts["weather_forced"] is True
+                assert counts["weather_residue"] is False
+            elif data["scenario"] == "carried_news_with_historical_receipts_and_caches":
+                assert validation_working_bytes == (256 + 4096) * 1024
+                assert counts["holding_actors"] == counts["characters"]
+                assert counts["holdings"] == 6 * counts["characters"]
+                assert 6 <= counts["facts"] <= 256
+                assert 1 <= counts["air"] <= 192
+                assert 1 <= counts["player_receipts"] <= 64
+                assert 1 <= counts["seated_keys"] <= 3
+                assert counts["occasions"] >= 1
+                assert counts["journal_cached"] is True
+                assert 1 <= counts["journal_entries"] <= 24
+                assert counts["ward_heat_rows"] == 8
+                witnesses = data["witnesses"]
+                assert 1 <= witnesses["historical_receipts"] <= counts["player_receipts"]
+                assert 1 <= witnesses["historical_seated_keys"] <= counts["seated_keys"]
+                assert 1 <= witnesses["offered_occasions"] <= counts["occasions"]
+            else:
+                raise AssertionError("unrecognized component validation workload")
         assert cost["peak_bytes"] == (
             4096 + 4 * cost["expanded_upper_bytes"] + 3 * cost["encoded_bytes"]
             + definition_working_bytes + validation_working_bytes
