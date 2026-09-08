@@ -1,0 +1,67 @@
+{
+  "compiler_version_command": "rustc_version",
+  "compiler_sysroot_command": "rustc_sysroot",
+  "source_files": {
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/string.rs": {
+      "sha256": "f26867da19450cb50a549373c0bc29d1ac4911035e262f0854b2319edb5afd24",
+      "bytes": 115066,
+      "excerpts": [
+        {
+          "start_line": 2349,
+          "end_line": 2355,
+          "text": "#[stable(feature = \"rust1\", since = \"1.0.0\")]\nimpl Clone for String {\n    fn clone(&self) -> Self {\n        String { vec: self.vec.clone() }\n    }\n\n    /// Clones the contents of `source` into `self`.\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs": {
+      "sha256": "cd69f6ef4cf398ff6665c5f3ea428b652755d0e0aea004402e076f6af6a56400",
+      "bytes": 165898,
+      "excerpts": [
+        {
+          "start_line": 3772,
+          "end_line": 3776,
+          "text": "impl<T: Clone, A: Allocator + Clone> Clone for Vec<T, A> {\n    fn clone(&self) -> Self {\n        let alloc = self.allocator().clone();\n        <[T]>::to_vec_in(&**self, alloc)\n    }\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/slice.rs": {
+      "sha256": "b1f0a5f6e3d104d6176699cf05efdfe1725095cd984fdf4422ddc3093726361c",
+      "bytes": 33614,
+      "excerpts": [
+        {
+          "start_line": 407,
+          "end_line": 458,
+          "text": "\n        impl<T: Clone> ConvertVec for T {\n            #[inline]\n            default fn to_vec<A: Allocator>(s: &[Self], alloc: A) -> Vec<Self, A> {\n                struct DropGuard<'a, T, A: Allocator> {\n                    vec: &'a mut Vec<T, A>,\n                    num_init: usize,\n                }\n                impl<'a, T, A: Allocator> Drop for DropGuard<'a, T, A> {\n                    #[inline]\n                    fn drop(&mut self) {\n                        // SAFETY:\n                        // items were marked initialized in the loop below\n                        unsafe {\n                            self.vec.set_len(self.num_init);\n                        }\n                    }\n                }\n                let mut vec = Vec::with_capacity_in(s.len(), alloc);\n                let mut guard = DropGuard { vec: &mut vec, num_init: 0 };\n                let slots = guard.vec.spare_capacity_mut();\n                // .take(slots.len()) is necessary for LLVM to remove bounds checks\n                // and has better codegen than zip.\n                for (i, b) in s.iter().enumerate().take(slots.len()) {\n                    guard.num_init = i;\n                    slots[i].write(b.clone());\n                }\n                core::mem::forget(guard);\n                // SAFETY:\n                // the vec was allocated and initialized above to at least this length.\n                unsafe {\n                    vec.set_len(s.len());\n                }\n                vec\n            }\n        }\n\n        impl<T: TrivialClone> ConvertVec for T {\n            #[inline]\n            fn to_vec<A: Allocator>(s: &[Self], alloc: A) -> Vec<Self, A> {\n                let len = s.len();\n                let mut v = Vec::with_capacity_in(len, alloc);\n                // SAFETY:\n                // allocated above with the capacity of `s`, and initialize to `s.len()` in\n                // ptr::copy_to_non_overlapping below.\n                if len > 0 {\n                    unsafe {\n                        s.as_ptr().copy_to_nonoverlapping(v.as_mut_ptr(), len);\n                        v.set_len(len);\n                    }\n                }\n                v\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs": {
+      "sha256": "39ae2ccc61fd3bad236978201cda2ad97599403eb103de7eafdf6d7f6dd8b6f3",
+      "bytes": 35505,
+      "excerpts": [
+        {
+          "start_line": 158,
+          "end_line": 166,
+          "text": "const fn min_non_zero_cap(size: usize) -> usize {\n    if size == 1 {\n        8\n    } else if size <= 1024 {\n        4\n    } else {\n        1\n    }\n}\n"
+        },
+        {
+          "start_line": 515,
+          "end_line": 525,
+          "text": "        }\n\n        // Nothing we can really do about these checks, sadly.\n        let required_cap = len.checked_add(additional).ok_or(CapacityOverflow)?;\n\n        // This guarantees exponential growth. The doubling cannot overflow\n        // because `cap <= isize::MAX` and the type of `cap` is `usize`.\n        let cap = cmp::max(self.cap.as_inner() * 2, required_cap);\n        let cap = cmp::max(min_non_zero_cap(elem_layout.size()), cap);\n\n        // SAFETY:\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/spec_from_iter_nested.rs": {
+      "sha256": "f3c1a06f43734a65e102b6a107e2fd5adadd7d94d9a226d6ffe1610d1e7e1466",
+      "bytes": 2380,
+      "excerpts": [
+        {
+          "start_line": 14,
+          "end_line": 62,
+          "text": "impl<T, I> SpecFromIterNested<T, I> for Vec<T>\nwhere\n    I: Iterator<Item = T>,\n{\n    default fn from_iter(mut iterator: I) -> Self {\n        // Unroll the first iteration, as the vector is going to be\n        // expanded on this iteration in every case when the iterable is not\n        // empty, but the loop in extend_desugared() is not going to see the\n        // vector being full in the few subsequent loop iterations.\n        // So we get better branch prediction.\n        let mut vector = match iterator.next() {\n            None => return Vec::new(),\n            Some(element) => {\n                let (lower, _) = iterator.size_hint();\n                let initial_capacity =\n                    cmp::max(RawVec::<T>::MIN_NON_ZERO_CAP, lower.saturating_add(1));\n                let mut vector = Vec::with_capacity(initial_capacity);\n                unsafe {\n                    // SAFETY: We requested capacity at least 1\n                    ptr::write(vector.as_mut_ptr(), element);\n                    vector.set_len(1);\n                }\n                vector\n            }\n        };\n        // must delegate to spec_extend() since extend() itself delegates\n        // to spec_from for empty Vecs\n        <Vec<T> as SpecExtend<T, I>>::spec_extend(&mut vector, iterator);\n        vector\n    }\n}\n\nimpl<T, I> SpecFromIterNested<T, I> for Vec<T>\nwhere\n    I: TrustedLen<Item = T>,\n{\n    fn from_iter(iterator: I) -> Self {\n        let mut vector = match iterator.size_hint() {\n            (_, Some(upper)) => Vec::with_capacity(upper),\n            // TrustedLen contract guarantees that `size_hint() == (_, None)` means that there\n            // are more than `usize::MAX` elements.\n            // Since the previous branch would eagerly panic if the capacity is too large\n            // (via `with_capacity`) we do the same here.\n            _ => panic!(\"capacity overflow\"),\n        };\n        // reuse extend specialization for TrustedLen\n        vector.spec_extend(iterator);\n        vector\n    }\n"
+        }
+      ]
+    }
+  },
+  "claim": "Exact installed String/Vec cloning, generic and trivial slice copy, RawVec minimum/doubling capacity, iterator collection. No new BTree nodes or auxiliary validation collections. Closed owner layout and sparse-copy assertions are emitted by focused tests."
+}

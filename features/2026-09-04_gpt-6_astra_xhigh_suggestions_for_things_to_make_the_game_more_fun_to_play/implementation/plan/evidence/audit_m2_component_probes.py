@@ -252,6 +252,49 @@ def main():
                 )
                 assert sha(json.dumps(witnesses, sort_keys=True,
                                       separators=(",", ":")).encode()) == expected_witness_hash
+            elif data["scenario"] == "continuity-ordinary-voiced-reading-cadence-v1":
+                assert validation_working_bytes == 0
+                assert counts == {
+                    "characters": 520 + expected_extra,
+                    "configured_tts_selected": "cloud", "tts_selected": "local",
+                    "floor": {
+                        "awaiting": 1, "foreground_awaiting": 1, "background_awaiting": 0,
+                        "background_pacing": False, "foreground_pacing": True,
+                        "player_hold": True, "event_id_bytes": 8,
+                    },
+                    "lamp_revision_sent": 1,
+                    "last_snapshot_revision": 1103 + 2 * expected_extra,
+                    "ready_emitted": True, "sound_ever_emitted": True,
+                    "startup_diagnostic_bytes": 0, "startup_diagnostics": 0,
+                    "startup_message_bytes": 0,
+                }
+                witnesses = data["witnesses"]
+                assert witnesses["coarse_discard_diagnostics"] == 0
+                assert witnesses["poll_count"] == 25
+                assert 0 < witnesses["maximum_poll_step_seconds"] <= 0.05 + 1e-12
+                assert witnesses["boundary_seconds"] == 0.72
+                assert len(witnesses["submitted_prompts"]) == 3
+                assert len(witnesses["all_speech_messages"]) == 5
+                voices = witnesses["tts_requests"]
+                assert [v["accepted"] for v in voices] == [True, True, True, False]
+                assert [v["kind"] for v in voices] == ["cloud", "cloud", "local", "local"]
+                assert witnesses["ack_ids"] == [v["event_id"] for v in voices[:2]]
+                assert witnesses["all_message_digest_algorithm"] == "fnv1a64-debug-stream-v1"
+                expected_witness_hash = (
+                    "993679db7679e17e80680308de17afa7ae9bf37d170b0ca0df473ccea97a983c"
+                    if expected_extra else
+                    "4defe8f119eca892a1a2e966347dba8e9b2e5b686b6c0c21aaef7b664ec7e84b"
+                )
+                assert sha(json.dumps(witnesses, sort_keys=True,
+                                      separators=(",", ":")).encode()) == expected_witness_hash
+                expected_boundary_hash = (
+                    "f0cc2a94ccb3b3703abb790514454d32f07037a069ff58f59d4dd194c3768498"
+                    if expected_extra else
+                    "510ad3ff0161f9d0d122d317709d3a253bb773be73766c727bebb41dd63d277a"
+                )
+                assert sha(json.dumps(data["boundary_continuity"], sort_keys=True,
+                                      separators=(",", ":")).encode()) == expected_boundary_hash
+                assert data["shared_reserved_peak_excluding_running_bytes"] == 2 * cost["peak_bytes"]
             else:
                 raise AssertionError("unrecognized component validation workload")
         assert cost["peak_bytes"] == (

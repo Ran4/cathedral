@@ -1,0 +1,10 @@
+{
+  "exit_code": 1,
+  "script_sha256": "8e427c1171e1cfaaef005de1e9260f288dd23c8ad422777f0cdb026f1e6936dd",
+  "failed_gate": "assert result.returncode == 0, result.stdout.decode()",
+  "path": "crates/cathedral-sim/src/engine.rs",
+  "reason": "Scoped rustfmt requires mod command_policy before pub mod continuity_checkpoint. Root earlier suggested placing continuity after climate and overlooked the private declaration.",
+  "action": "Wait for active focused command, preserve original freeze/logs/smokes, move declaration only, then refreeze before final checks and workspace.",
+  "observed_source_manifest_sha256": "96e08a4bbc9ff026f5b26474a20645b445c8553d49663bd49fe7df87ebff80c4",
+  "evidence": "Recorded from returned tool output; original stdout/stderr was not redirected to a retained file."
+}

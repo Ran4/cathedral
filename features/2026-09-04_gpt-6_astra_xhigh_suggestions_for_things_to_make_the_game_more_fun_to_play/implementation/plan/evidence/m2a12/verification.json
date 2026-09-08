@@ -1,0 +1,114 @@
+{
+  "status": "Accepted M2a12 component after independent review (2026-09-09); full M2/host pending",
+  "source_freeze": {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "source_hashes.json",
+    "source_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+    "source_files": 917,
+    "frozen_utc": "2026-09-08T21:46:11.077310+00:00",
+    "policy": "No source/input edits during final focused/public/workspace verification or coordinator release checks."
+  },
+  "source_files_verified": 917,
+  "commands_verified": 17,
+  "final_verification": {
+    "checkpoint_frozen_final": {
+      "targets_with_test_results": 33,
+      "passed": 166,
+      "failed": 0,
+      "ignored": 25
+    },
+    "public_final": {
+      "targets_with_test_results": 1,
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0
+    },
+    "workspace_serial": {
+      "targets_with_test_results": 44,
+      "passed": 2090,
+      "failed": 0,
+      "ignored": 33
+    }
+  },
+  "workspace": {
+    "command_name": "workspace_serial",
+    "targets_with_test_results": 44,
+    "passed": 2090,
+    "failed": 0,
+    "ignored": 33
+  },
+  "layout": {
+    "command_name": "checkpoint_frozen_final",
+    "artifact": "development/layout.json",
+    "lines": [
+      "continuity_layout engine_dto=200 engine_candidate=200 engine_view=120 engine_context=24 config=56 config_view=40 engine_wire=200 option_string=24",
+      "continuity_layout awaited=40 floor=48 floor_dto=64 floor_candidate=64 string=24 vec=24 floor_wire=64"
+    ]
+  },
+  "smokes": {
+    "authored": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_frozen_smoke.json",
+      "sha256": "9ce3f574d8db99277204a5732ae03dee43a20b7433129a983206ed7d9317a80a",
+      "samples": 3,
+      "counts": {
+        "characters": 520,
+        "configured_tts_selected": "cloud",
+        "floor": {
+          "awaiting": 1,
+          "background_awaiting": 0,
+          "background_pacing": false,
+          "event_id_bytes": 8,
+          "foreground_awaiting": 1,
+          "foreground_pacing": true,
+          "player_hold": true
+        },
+        "lamp_revision_sent": 1,
+        "last_snapshot_revision": 1103,
+        "ready_emitted": true,
+        "sound_ever_emitted": true,
+        "startup_diagnostic_bytes": 0,
+        "startup_diagnostics": 0,
+        "startup_message_bytes": 0,
+        "tts_selected": "local"
+      },
+      "claim": "Functional debug smoke only; coordinator release measures frozen source"
+    },
+    "populated": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/populated_frozen_smoke.json",
+      "sha256": "a435218560a3a30cba189783c0924c609890c9c1b72400f63626b99e84c731b4",
+      "samples": 3,
+      "counts": {
+        "characters": 2520,
+        "configured_tts_selected": "cloud",
+        "floor": {
+          "awaiting": 1,
+          "background_awaiting": 0,
+          "background_pacing": false,
+          "event_id_bytes": 8,
+          "foreground_awaiting": 1,
+          "foreground_pacing": true,
+          "player_hold": true
+        },
+        "lamp_revision_sent": 1,
+        "last_snapshot_revision": 5103,
+        "ready_emitted": true,
+        "sound_ever_emitted": true,
+        "startup_diagnostic_bytes": 0,
+        "startup_diagnostics": 0,
+        "startup_message_bytes": 0,
+        "tts_selected": "local"
+      },
+      "claim": "Functional debug smoke only; coordinator release measures frozen source"
+    }
+  },
+  "development_failures": [
+    "owner_initial",
+    "owner_fixed"
+  ],
+  "setup_failures": "development/setup_failures.md",
+  "full_m2_or_host_acceptance": false,
+  "coordinator_review": "coordinator/review.md",
+  "release_phase_samples": 3600,
+  "release_binary_sha256": "64e98b1c2db0e36cea9e217382b7a43b30cb51c9472cf25a273016858dc419d4"
+}

@@ -1,0 +1,40 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T22:16:46.606139+00:00",
+  "source_scope": "component-inputs-v2",
+  "source_files": 917,
+  "source_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+  "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "binary_sha256": "64e98b1c2db0e36cea9e217382b7a43b30cb51c9472cf25a273016858dc419d4",
+  "identity_sha256": {
+    "smoke": "a9fb5a761eed821c7e827c76c71345353161ac036e2b2a0b624a0dee1ece1730",
+    "performance": "53366f98ae41607bc0ada138152e2cfe870de7ecb3b1aecee374e6d9bba266b6"
+  },
+  "exact_release_archives": [
+    "release_build.log",
+    "release_build.time"
+  ],
+  "runner_output_archives": {
+    "smoke": {
+      "original_path": "/tmp/alibi-m2a12-release-smoke-runner.log",
+      "original_bytes": 1156,
+      "original_sha256": "ad76258453f9051b6e2e6decd64119a15896185504a05bcbb61dfada98cd4f1b",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/coordinator/smoke_runner.log.gz",
+      "archive_bytes": 334,
+      "archive_sha256": "9fd058eef15e27cb4d2fed75aaa0fa1d74cfe3486f9e34dda1ecc3494f6d187c",
+      "matches_result_rows": true
+    },
+    "performance": {
+      "original_path": "/tmp/alibi-m2a12-release-performance-runner.log",
+      "original_bytes": 3311,
+      "original_sha256": "4caf5edeead26c9cccf9a3a74a8b65c411a9b022590a82c2483306fa0a6384ea",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/coordinator/performance_runner.log.gz",
+      "archive_bytes": 721,
+      "archive_sha256": "2c179b40e0a2141726260036f3cc23e27b2944ae81bafd19b21d4d4bc4c6629b",
+      "matches_result_rows": true
+    }
+  },
+  "debug_and_release_semantic_metadata_agree": true,
+  "stdlib_owner_proof_unchanged": true,
+  "runtime_default_sha256": "837112f8c183d1b1330f66709c7f7c3e08fe31c39c8f3c117fbb60b3e9f5de1a"
+}

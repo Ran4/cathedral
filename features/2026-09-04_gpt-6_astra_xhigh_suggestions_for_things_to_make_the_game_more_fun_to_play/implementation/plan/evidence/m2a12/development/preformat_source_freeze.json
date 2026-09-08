@@ -1,0 +1,9 @@
+{
+  "source_scope": "component-inputs-v2",
+  "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "source_manifest": "source_hashes.json",
+  "source_manifest_sha256": "96e08a4bbc9ff026f5b26474a20645b445c8553d49663bd49fe7df87ebff80c4",
+  "source_files": 917,
+  "frozen_utc": "2026-09-08T21:38:44.276824+00:00",
+  "policy": "No source/input edits during final focused/public/workspace verification or coordinator release checks."
+}

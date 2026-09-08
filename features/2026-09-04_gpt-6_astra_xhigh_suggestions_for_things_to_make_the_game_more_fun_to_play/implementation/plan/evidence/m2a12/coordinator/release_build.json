@@ -1,0 +1,66 @@
+{
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "build",
+    "--offline",
+    "--release",
+    "-p",
+    "cathedral-backends",
+    "--example",
+    "alibi_continuity_cost",
+    "-j",
+    "1"
+  ],
+  "environment_overrides": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "build_variable_whitelist": {
+    "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "started_utc": "2026-09-08T22:12:57.634109+00:00",
+  "elapsed_seconds": 130.24634115304798,
+  "exit_code": 0,
+  "artifacts": {
+    "release_build.log": {
+      "original_path": "/tmp/alibi-m2a12-release-build-original.log",
+      "original_bytes": 253,
+      "original_sha256": "abc0c27a650aa39c9491cbae5d0a6b305580bee59aced8c9c1e6eaf8ee8b31cb",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/coordinator/release_build.log.gz",
+      "archive_bytes": 154,
+      "archive_sha256": "9a7b9a06a914ceda0905a0be64d1c31be4440b803f55437221b016962b75d30b",
+      "normalization": "none; exact original bytes"
+    },
+    "release_build.time": {
+      "original_path": "/tmp/alibi-m2a12-release-build-original.time",
+      "original_bytes": 853,
+      "original_sha256": "db02ca3501bd737d7f5cbdca56d879c973e8a603c02e4dba6e20b4fda12ef3b5",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/coordinator/release_build.time.gz",
+      "archive_bytes": 476,
+      "archive_sha256": "1566a9cae1857390422ed503d000a2d61ab75497f10e5de12fcbc5edde545d93",
+      "normalization": "none; exact original bytes"
+    }
+  },
+  "source_scope": "component-inputs-v2",
+  "source_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+  "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "exact_source_scope_unchanged_after_build": true,
+  "source_helper_unchanged_after_build": true,
+  "binary_sha256": {
+    "alibi_continuity_cost": "64e98b1c2db0e36cea9e217382b7a43b30cb51c9472cf25a273016858dc419d4"
+  },
+  "preserved_reference": {
+    "path": "/tmp/alibi-m2a12-continuity-reference-binary",
+    "sha256": "64e98b1c2db0e36cea9e217382b7a43b30cb51c9472cf25a273016858dc419d4"
+  }
+}

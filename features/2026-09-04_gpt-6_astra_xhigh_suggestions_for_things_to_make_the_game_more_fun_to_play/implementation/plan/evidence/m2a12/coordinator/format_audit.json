@@ -1,0 +1,141 @@
+{
+  "checked_at_utc": "2026-09-08T21:47:10.731146+00:00",
+  "result": "passed",
+  "checks": [
+    {
+      "path": "crates/cathedral-backends/examples/alibi_continuity_cost.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/examples/alibi_continuity_cost.rs"
+      ],
+      "source_sha256": "93136ed0ced8b3373d1ab6fe87ed3cfe31eeea44615255422ca053b0d08ed3ef",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine.rs"
+      ],
+      "source_sha256": "b023be81ddfd5e10ba1a1bfc34ed44cbc2b1b31545db7c923e36b9a88ee8df32",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/continuity_checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/continuity_checkpoint.rs"
+      ],
+      "source_sha256": "680dda58fad474bdb0ccb331ad2a597e74d412344af1bc8eccf0eaa70f0f7fcd",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/continuity_checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/continuity_checkpoint/tests.rs"
+      ],
+      "source_sha256": "ea3a2045c0f73dbcb363d77d343033e4e477b2f5b54f1ede66648bd8a86af649",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/floor.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/floor.rs"
+      ],
+      "source_sha256": "c6017eed934eae31c89a3b0ffa5e6a7c1b873abe07cf7616c46b85c2c0503ee0",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/floor/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/floor/checkpoint.rs"
+      ],
+      "source_sha256": "9fdae0b242b1cca33c032d11a4d78679d5aa65e01eceec44d84d3a9f60607dc9",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/floor/checkpoint/records.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/floor/checkpoint/records.rs"
+      ],
+      "source_sha256": "55cebecc719949c64ea378ee3214ce35c8c767738b13eb4adb1f0331c9f68322",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/floor/checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/floor/checkpoint/tests.rs"
+      ],
+      "source_sha256": "b1d5421ee8c88c59c913bfe79bcae420faf2296b71dd406445cbdec733450a62",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/tests/checkpoint_continuity_boundary.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/tests/checkpoint_continuity_boundary.rs"
+      ],
+      "source_sha256": "7ff468f5467edac3970051a689f51a5ed3a1ba597fefa5ab868dafa1d7bffd8e",
+      "exit_code": 0,
+      "output": ""
+    }
+  ]
+}

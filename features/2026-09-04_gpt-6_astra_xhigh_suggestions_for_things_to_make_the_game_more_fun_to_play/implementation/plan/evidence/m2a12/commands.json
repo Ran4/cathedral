@@ -1,0 +1,1621 @@
+[
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/check_initial.source.json",
+    "source_manifest_sha256": "c8dcc0f17f502f9ea89fc66944b58a1957b66570714a516557c8e1ab7e889c71",
+    "name": "check_initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "check",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "--offline",
+      "-j1"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:23:00.418289+00:00",
+    "wall_seconds": 8.665680642006919,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-check_initial.log",
+    "original_bytes": 160,
+    "original_sha256": "847bff368ed40716cb20a379ba76b8f80704f497cadc8976a6d5941fc679980b",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/check_initial.original.log.gz",
+    "archive_bytes": 146,
+    "archive_sha256": "7238400e8fe65231e7a3dbf80f0fd489559ad32d474afefb86fa8eaf21af0718",
+    "decompressed_sha256": "847bff368ed40716cb20a379ba76b8f80704f497cadc8976a6d5941fc679980b",
+    "test_results": []
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/generate_fixtures.source.json",
+    "source_manifest_sha256": "ac631b34741f0a57832c0ec8be7029ba5e1387ad5b2cdde8bc56e25e5dffeac6",
+    "name": "generate_fixtures",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "regenerate_checkpoint_continuity",
+      "--offline",
+      "-j1",
+      "--",
+      "--ignored",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:25:23.803435+00:00",
+    "wall_seconds": 161.4329726039432,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-generate_fixtures.log",
+    "original_bytes": 546,
+    "original_sha256": "47f40b1bfd1376b76a7ecb8596274efc373ff28396012301dd2517bdd38c50c6",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/generate_fixtures.original.log.gz",
+    "archive_bytes": 326,
+    "archive_sha256": "2193f3cf4b830618a232b8707f38f4627a19751c254060fd06bfcd7c0de8629b",
+    "decompressed_sha256": "47f40b1bfd1376b76a7ecb8596274efc373ff28396012301dd2517bdd38c50c6",
+    "test_results": [
+      {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 791
+      }
+    ]
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/owner_initial.source.json",
+    "source_manifest_sha256": "2553c700ed8fa2b6ccffb7caadbe8e687662a98bf5a46a58f04ccb6ced8899d9",
+    "name": "owner_initial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint_continuity",
+      "--offline",
+      "-j1",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:28:49.312004+00:00",
+    "wall_seconds": 141.35889231495094,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a12-owner_initial.log",
+    "original_bytes": 98535,
+    "original_sha256": "a72965fb3de34d7ab1c45a397c9ffba1dfce359603f8ed208fa862f60526d272",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/owner_initial.original.log.gz",
+    "archive_bytes": 8135,
+    "archive_sha256": "89a33c7c662831236963e333105734cf994332a3c2c7afe6d5fd2661866b6a8b",
+    "decompressed_sha256": "a72965fb3de34d7ab1c45a397c9ffba1dfce359603f8ed208fa862f60526d272",
+    "test_results": [
+      {
+        "passed": 3,
+        "failed": 2,
+        "ignored": 2,
+        "measured": 0,
+        "filtered_out": 786
+      }
+    ]
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/rustc_version.source.json",
+    "source_manifest_sha256": "472bd0144f6beef047dc0808a98f26f8c947b3e67ca7441d1af39b4fe942d20d",
+    "name": "rustc_version",
+    "command": [
+      "/home/ran/.cargo/bin/rustc",
+      "-vV"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:32:59.683872+00:00",
+    "wall_seconds": 0.011717685963958502,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-rustc_version.log",
+    "original_bytes": 196,
+    "original_sha256": "f64c55ed9f210d80a9b248206104a47175faf5ec94a093e4ad132549209089fc",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/rustc_version.original.log.gz",
+    "archive_bytes": 170,
+    "archive_sha256": "e36a53ac54854950df1c6ce2a8167c3ff8182cb454c575fcef2eb618eddca082",
+    "decompressed_sha256": "f64c55ed9f210d80a9b248206104a47175faf5ec94a093e4ad132549209089fc",
+    "test_results": []
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/rustc_sysroot.source.json",
+    "source_manifest_sha256": "472bd0144f6beef047dc0808a98f26f8c947b3e67ca7441d1af39b4fe942d20d",
+    "name": "rustc_sysroot",
+    "command": [
+      "/home/ran/.cargo/bin/rustc",
+      "--print",
+      "sysroot"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:32:59.873637+00:00",
+    "wall_seconds": 0.01545825693756342,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-rustc_sysroot.log",
+    "original_bytes": 61,
+    "original_sha256": "05487909aec46f035739a3dae156eeb1d5930e1089eff6bea0ed55b2756ae510",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/rustc_sysroot.original.log.gz",
+    "archive_bytes": 80,
+    "archive_sha256": "f324fc6a50c250dcea3a162d3379d10caec335a7a03ff207f651cb187dee7e82",
+    "decompressed_sha256": "05487909aec46f035739a3dae156eeb1d5930e1089eff6bea0ed55b2756ae510",
+    "test_results": []
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/generate_fixture_fixed.source.json",
+    "source_manifest_sha256": "472bd0144f6beef047dc0808a98f26f8c947b3e67ca7441d1af39b4fe942d20d",
+    "name": "generate_fixture_fixed",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "regenerate_checkpoint_continuity_engine",
+      "--offline",
+      "-j1",
+      "--",
+      "--ignored",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:32:47.528257+00:00",
+    "wall_seconds": 109.80143895803485,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-generate_fixture_fixed.log",
+    "original_bytes": 459,
+    "original_sha256": "3d49cda0d6c52b48897f5d413b1fc2479f1ac3569f65eb3f93e65a589d2f4f2d",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/generate_fixture_fixed.original.log.gz",
+    "archive_bytes": 309,
+    "archive_sha256": "68ec5a56709ee719106c7e5f1a58564907bd93fdc0bca3b59b0a881891467ef6",
+    "decompressed_sha256": "3d49cda0d6c52b48897f5d413b1fc2479f1ac3569f65eb3f93e65a589d2f4f2d",
+    "test_results": [
+      {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 795
+      }
+    ]
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/owner_fixed.source.json",
+    "source_manifest_sha256": "a7faf81e5c5629a68036c91172e6d1fba94869531424817a38fb663a77cc5638",
+    "name": "owner_fixed",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--offline",
+      "-j1",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:34:48.765732+00:00",
+    "wall_seconds": 6.86857821396552,
+    "exit_code": 101,
+    "original_path": "/tmp/alibi-m2a12-owner_fixed.log",
+    "original_bytes": 23608,
+    "original_sha256": "57bcb0487edb533267fd646299ee9fc2494fc7e0c4bad5caaf4fbb0e07926c4a",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/owner_fixed.original.log.gz",
+    "archive_bytes": 6010,
+    "archive_sha256": "7f86ea65b020898dec8600bc0c2254b2e266ccdb77c0861b2427d136d326cacb",
+    "decompressed_sha256": "57bcb0487edb533267fd646299ee9fc2494fc7e0c4bad5caaf4fbb0e07926c4a",
+    "test_results": [
+      {
+        "passed": 165,
+        "failed": 1,
+        "ignored": 25,
+        "measured": 0,
+        "filtered_out": 605
+      }
+    ]
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_smoke.source.json",
+    "source_manifest_sha256": "ff5665d2f6e5a31435e714c985a40646d1b3e44c6a73e6723590b997f92b9809",
+    "name": "authored_smoke",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_continuity_cost",
+      "--offline",
+      "-j1",
+      "--",
+      "--mode",
+      "authored",
+      "--samples",
+      "3",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_smoke.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:35:34.984807+00:00",
+    "wall_seconds": 138.78595398308244,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-authored_smoke.log",
+    "original_bytes": 519,
+    "original_sha256": "ebcf88100db56fe86d87093be9155545020a90e9d22948640d197494bb4c048c",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_smoke.original.log.gz",
+    "archive_bytes": 317,
+    "archive_sha256": "c780dfdc8d0730714b0ca25464d674362527db34e23895ae2d8f622c74da256f",
+    "decompressed_sha256": "ebcf88100db56fe86d87093be9155545020a90e9d22948640d197494bb4c048c",
+    "test_results": []
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_final_smoke.source.json",
+    "source_manifest_sha256": "96e08a4bbc9ff026f5b26474a20645b445c8553d49663bd49fe7df87ebff80c4",
+    "name": "authored_final_smoke",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_continuity_cost",
+      "--offline",
+      "-j1",
+      "--",
+      "--mode",
+      "authored",
+      "--samples",
+      "3",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_final_smoke.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:39:07.787773+00:00",
+    "wall_seconds": 0.40431535395327955,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-authored_final_smoke.log",
+    "original_bytes": 334,
+    "original_sha256": "d4fe6e60bfcab786d667acf986dc2e29e986fdf28b8a14d4165c8c49c431e8dd",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_final_smoke.original.log.gz",
+    "archive_bytes": 257,
+    "archive_sha256": "06184f2d28ccfa83f56a545de729c1ad51b98de67bc238692b906216112a8653",
+    "decompressed_sha256": "d4fe6e60bfcab786d667acf986dc2e29e986fdf28b8a14d4165c8c49c431e8dd",
+    "test_results": []
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/populated_final_smoke.source.json",
+    "source_manifest_sha256": "96e08a4bbc9ff026f5b26474a20645b445c8553d49663bd49fe7df87ebff80c4",
+    "name": "populated_final_smoke",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_continuity_cost",
+      "--offline",
+      "-j1",
+      "--",
+      "--mode",
+      "populated",
+      "--samples",
+      "3",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/populated_final_smoke.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:39:16.886269+00:00",
+    "wall_seconds": 1.1536156709771603,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-populated_final_smoke.log",
+    "original_bytes": 336,
+    "original_sha256": "03adab8a6d4175eb3a99c16edca9054a6f0ce6411e4d5d4a7be6a3f3de8bcb9c",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/populated_final_smoke.original.log.gz",
+    "archive_bytes": 258,
+    "archive_sha256": "7c3b3589cf4ed95c62421010c90c2c9bbbfa0c71b16ca470ec71192db2095251",
+    "decompressed_sha256": "03adab8a6d4175eb3a99c16edca9054a6f0ce6411e4d5d4a7be6a3f3de8bcb9c",
+    "test_results": []
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/checkpoint_final.source.json",
+    "source_manifest_sha256": "96e08a4bbc9ff026f5b26474a20645b445c8553d49663bd49fe7df87ebff80c4",
+    "name": "checkpoint_final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "checkpoint",
+      "--offline",
+      "-j1",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:39:46.090871+00:00",
+    "wall_seconds": 325.0560452049831,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-checkpoint_final.log",
+    "original_bytes": 29784,
+    "original_sha256": "48bfa84d04914b72bed4da6df6d1245cbd8e484fccd7dea4d745b82714f24a8f",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/checkpoint_final.original.log.gz",
+    "archive_bytes": 6677,
+    "archive_sha256": "c20a8896a2d1c9de1e57b6b014330eb3957aac4850dab42f41596b167720a727",
+    "decompressed_sha256": "48bfa84d04914b72bed4da6df6d1245cbd8e484fccd7dea4d745b82714f24a8f",
+    "test_results": [
+      {
+        "passed": 166,
+        "failed": 0,
+        "ignored": 25,
+        "measured": 0,
+        "filtered_out": 605
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 16
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 5
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 4
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 5
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 5
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 4
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 15
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 26
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 4
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 84
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 13
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 3
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 103
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 43
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 9
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 4
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 8
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 30
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 1
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 27
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 7
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 41
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 19
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 47
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 9
+      }
+    ]
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/scoped_format_final.source.json",
+    "source_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+    "name": "scoped_format_final",
+    "command": [
+      "/home/ran/.cargo/bin/rustfmt",
+      "--edition",
+      "2024",
+      "--config",
+      "skip_children=true",
+      "--check",
+      "crates/cathedral-sim/src/engine.rs",
+      "crates/cathedral-sim/src/floor.rs",
+      "crates/cathedral-sim/src/floor/checkpoint.rs",
+      "crates/cathedral-sim/src/floor/checkpoint/records.rs",
+      "crates/cathedral-sim/src/floor/checkpoint/tests.rs",
+      "crates/cathedral-sim/src/engine/continuity_checkpoint.rs",
+      "crates/cathedral-sim/src/engine/continuity_checkpoint/tests.rs",
+      "crates/cathedral-backends/examples/alibi_continuity_cost.rs",
+      "crates/cathedral-sim/tests/checkpoint_continuity_boundary.rs"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:45:59.674736+00:00",
+    "wall_seconds": 0.06845432100817561,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-scoped_format_final.log",
+    "original_bytes": 0,
+    "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/scoped_format_final.original.log.gz",
+    "archive_bytes": 20,
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+    "decompressed_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "test_results": []
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/checkpoint_frozen_final.source.json",
+    "source_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+    "name": "checkpoint_frozen_final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "checkpoint",
+      "--offline",
+      "-j1",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:46:11.176410+00:00",
+    "wall_seconds": 242.80187107692473,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-checkpoint_frozen_final.log",
+    "original_bytes": 29784,
+    "original_sha256": "241a0b386b815e040b11f65e139f9fe3e729f4fec3b432c82ee6a38418f3b616",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/checkpoint_frozen_final.original.log.gz",
+    "archive_bytes": 6671,
+    "archive_sha256": "453f6cf3d4f7d33543d7abf18beee9bfdfd5470e63e21bd1f3dde175402bc55b",
+    "decompressed_sha256": "241a0b386b815e040b11f65e139f9fe3e729f4fec3b432c82ee6a38418f3b616",
+    "test_results": [
+      {
+        "passed": 166,
+        "failed": 0,
+        "ignored": 25,
+        "measured": 0,
+        "filtered_out": 605
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 16
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 5
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 4
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 5
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 5
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 4
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 15
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 26
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 6
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 4
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 84
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 13
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 3
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 103
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 43
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 9
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 4
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 8
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 30
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 1
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 27
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 7
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 41
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 19
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 47
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 9
+      }
+    ]
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/public_final.source.json",
+    "source_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+    "name": "public_final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_continuity_boundary",
+      "--offline",
+      "-j1",
+      "--",
+      "--nocapture"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:51:58.790059+00:00",
+    "wall_seconds": 0.8716694179456681,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-public_final.log",
+    "original_bytes": 826,
+    "original_sha256": "0e951d661a40de1070af58392fe07804182d37bac118cdf95b58fbc5fd67d6bf",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/public_final.original.log.gz",
+    "archive_bytes": 473,
+    "archive_sha256": "caa5cfc8995c371fb30327a330576d9c0a6c27aa001451099dd8e6af8d11859f",
+    "decompressed_sha256": "0e951d661a40de1070af58392fe07804182d37bac118cdf95b58fbc5fd67d6bf",
+    "test_results": [
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      }
+    ]
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_frozen_smoke.source.json",
+    "source_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+    "name": "authored_frozen_smoke",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_continuity_cost",
+      "--offline",
+      "-j1",
+      "--",
+      "--mode",
+      "authored",
+      "--samples",
+      "3",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_frozen_smoke.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:52:18.683419+00:00",
+    "wall_seconds": 15.893433270975947,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-authored_frozen_smoke.log",
+    "original_bytes": 526,
+    "original_sha256": "f1b3766eec2c0af000d7861df26238640720f4e556f03c34d5b0cd381f729189",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_frozen_smoke.original.log.gz",
+    "archive_bytes": 322,
+    "archive_sha256": "1de0b542af98659e53d840313b248e99df9a70a41c88168ac7dda5881e5bc446",
+    "decompressed_sha256": "f1b3766eec2c0af000d7861df26238640720f4e556f03c34d5b0cd381f729189",
+    "test_results": []
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/populated_frozen_smoke.source.json",
+    "source_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+    "name": "populated_frozen_smoke",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_continuity_cost",
+      "--offline",
+      "-j1",
+      "--",
+      "--mode",
+      "populated",
+      "--samples",
+      "3",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/populated_frozen_smoke.json"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:54:05.751347+00:00",
+    "wall_seconds": 1.1265794689534232,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-populated_frozen_smoke.log",
+    "original_bytes": 337,
+    "original_sha256": "de625deba0edd05bbd5eb82eb7dcc89a6ddafd90bece29628cff532021721dc7",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/populated_frozen_smoke.original.log.gz",
+    "archive_bytes": 259,
+    "archive_sha256": "772981d505ff5cfbb79c7b16d5ec1f4cd90514f3cf7c54f1113edce3555315f3",
+    "decompressed_sha256": "de625deba0edd05bbd5eb82eb7dcc89a6ddafd90bece29628cff532021721dc7",
+    "test_results": []
+  },
+  {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/workspace_serial.source.json",
+    "source_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+    "name": "workspace_serial",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "--offline",
+      "--workspace",
+      "-j1"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "build_variable_whitelist": {
+      "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-08T21:54:38.977404+00:00",
+    "wall_seconds": 1079.5707431959454,
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a12-workspace_serial.log",
+    "original_bytes": 264053,
+    "original_sha256": "d37d71d7adb5efbfd7cfbc8ab3a7223a25e7e4d10e474d112999db838139d23d",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/workspace_serial.original.log.gz",
+    "archive_bytes": 51902,
+    "archive_sha256": "dc54063170c70358b9f250f38c9738ad237abfb0de89f439bb64544bbf047d9d",
+    "decompressed_sha256": "d37d71d7adb5efbfd7cfbc8ab3a7223a25e7e4d10e474d112999db838139d23d",
+    "test_results": [
+      {
+        "passed": 158,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 2,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 15,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 771,
+        "failed": 0,
+        "ignored": 25,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 16,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 15,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 26,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 84,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 13,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 103,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 43,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 30,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 27,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 41,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 19,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 47,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 542,
+        "failed": 0,
+        "ignored": 3,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 20,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      },
+      {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0
+      }
+    ]
+  }
+]

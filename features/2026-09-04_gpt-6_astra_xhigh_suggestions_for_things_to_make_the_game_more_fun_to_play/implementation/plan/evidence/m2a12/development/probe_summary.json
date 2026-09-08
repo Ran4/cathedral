@@ -1,0 +1,116 @@
+{
+  "modes": {
+    "authored": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_final_smoke.json",
+      "sha256": "a8e7f87b23fe86df9f67152249bf5906bcc1b1a220cc687c88234cdc60c4102d",
+      "counts": {
+        "characters": 520,
+        "configured_tts_selected": "cloud",
+        "floor": {
+          "awaiting": 1,
+          "background_awaiting": 0,
+          "background_pacing": false,
+          "event_id_bytes": 8,
+          "foreground_awaiting": 1,
+          "foreground_pacing": true,
+          "player_hold": true
+        },
+        "lamp_revision_sent": 1,
+        "last_snapshot_revision": 1103,
+        "ready_emitted": true,
+        "sound_ever_emitted": true,
+        "startup_diagnostic_bytes": 0,
+        "startup_diagnostics": 0,
+        "startup_message_bytes": 0,
+        "tts_selected": "local"
+      },
+      "cost": {
+        "encoded_bytes": 719,
+        "expanded_upper_bytes": 12264,
+        "peak_bytes": 55309,
+        "validation_working_bytes": 0
+      },
+      "shared_reserved_peak_excluding_running_bytes": 110618,
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "polls": 25,
+      "max_step_seconds": 0.040000000000000036,
+      "coarse_discard_diagnostics": 0,
+      "all_speech_messages": 5,
+      "prompt_bytes_and_budgets": [
+        [
+          19849,
+          1400
+        ],
+        [
+          19889,
+          1400
+        ],
+        [
+          20171,
+          1400
+        ]
+      ]
+    },
+    "populated": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/populated_final_smoke.json",
+      "sha256": "878b1caf6e0aa462002c802f66a43552aa397efe3c44dfcae0ef6baeada6bd30",
+      "counts": {
+        "characters": 2520,
+        "configured_tts_selected": "cloud",
+        "floor": {
+          "awaiting": 1,
+          "background_awaiting": 0,
+          "background_pacing": false,
+          "event_id_bytes": 8,
+          "foreground_awaiting": 1,
+          "foreground_pacing": true,
+          "player_hold": true
+        },
+        "lamp_revision_sent": 1,
+        "last_snapshot_revision": 5103,
+        "ready_emitted": true,
+        "sound_ever_emitted": true,
+        "startup_diagnostic_bytes": 0,
+        "startup_diagnostics": 0,
+        "startup_message_bytes": 0,
+        "tts_selected": "local"
+      },
+      "cost": {
+        "encoded_bytes": 719,
+        "expanded_upper_bytes": 12264,
+        "peak_bytes": 55309,
+        "validation_working_bytes": 0
+      },
+      "shared_reserved_peak_excluding_running_bytes": 110618,
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "polls": 25,
+      "max_step_seconds": 0.040000000000000036,
+      "coarse_discard_diagnostics": 0,
+      "all_speech_messages": 5,
+      "prompt_bytes_and_budgets": [
+        [
+          19029,
+          2400
+        ],
+        [
+          18111,
+          700
+        ],
+        [
+          18728,
+          1400
+        ]
+      ]
+    }
+  },
+  "authored_initial_and_final_witnesses_exact": true,
+  "timing_claim": "Functional debug samples only. Coordinator release measurements pending."
+}

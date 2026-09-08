@@ -21,6 +21,7 @@
 pub mod animals_checkpoint;
 pub mod climate_checkpoint;
 mod command_policy;
+pub mod continuity_checkpoint;
 pub mod knowledge_checkpoint;
 pub mod law_checkpoint;
 pub mod marks_checkpoint;

@@ -1,0 +1,64 @@
+{
+  "sample_epoch_seconds": 1788905413.5082319,
+  "clock_ticks_per_second": 100,
+  "runner_pids": [
+    165444,
+    165449
+  ],
+  "processes": [
+    {
+      "pid": 165444,
+      "comm": "uv",
+      "ppid": 165443,
+      "state": "S",
+      "utime_ticks": 1,
+      "stime_ticks": 0,
+      "start_ticks": 70050776,
+      "rss_bytes": 7045120,
+      "io": "rchar: 614816\nwchar: 380\nsyscr: 169\nsyscw: 3\nread_bytes: 0\nwrite_bytes: 0\ncancelled_write_bytes: 0\n",
+      "wchan": "futex_wait_queue"
+    },
+    {
+      "pid": 165449,
+      "comm": "python3.13",
+      "ppid": 165444,
+      "state": "S",
+      "utime_ticks": 7,
+      "stime_ticks": 1,
+      "start_ticks": 70050779,
+      "rss_bytes": 13754368,
+      "io": "rchar: 16637136\nwchar: 157613\nsyscr: 1995\nsyscw: 13\nread_bytes: 0\nwrite_bytes: 114688\ncancelled_write_bytes: 0\n",
+      "wchan": "do_wait"
+    },
+    {
+      "pid": 165451,
+      "comm": "cargo",
+      "ppid": 165449,
+      "state": "S",
+      "utime_ticks": 43,
+      "stime_ticks": 76,
+      "start_ticks": 70050787,
+      "rss_bytes": 126865408,
+      "io": "rchar: 223931736\nwchar: 3766127058\nsyscr: 20810\nsyscw: 25610\nread_bytes: 16523800576\nwrite_bytes: 23389224960\ncancelled_write_bytes: 35696640\n",
+      "wchan": "futex_wait_queue"
+    },
+    {
+      "pid": 209904,
+      "comm": "rustc",
+      "ppid": 165451,
+      "state": "S",
+      "utime_ticks": 9384,
+      "stime_ticks": 338,
+      "start_ticks": 70132179,
+      "rss_bytes": 2148315136,
+      "io": "rchar: 39058203\nwchar: 764564160\nsyscr: 723\nsyscw: 5376\nread_bytes: 509968384\nwrite_bytes: 764919808\ncancelled_write_bytes: 0\n",
+      "wchan": "futex_wait_queue"
+    }
+  ],
+  "memory_summary": [
+    "MemTotal:       32667680 kB",
+    "MemAvailable:    6809816 kB",
+    "SwapTotal:       2097148 kB",
+    "SwapFree:            184 kB"
+  ]
+}

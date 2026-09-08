@@ -1,0 +1,72 @@
+{
+  "purpose": "Read-only progress diagnostic for the existing long-running workspace Cargo command; not a restart, benchmark, memory-budget measurement, or test result.",
+  "source_freeze_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+  "provenance": "Existing host tmux server /tmp/tmux-1000/default executed the finite inspection helper using run-shell -b. No pane or window opened. Only matching m2a12 workspace runner descendants are emitted; no unrelated process arguments or environment are recorded. Earlier exec and node-repl process views were isolated and exposed no workspace runner.",
+  "helper_sha256": "9c862b0397efbd90cf60a47c0a1ce3dd7876a12a6ee16cf1985e3e86287c0499",
+  "environment": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin"
+  },
+  "command": "tmux run-shell -b <uv run --no-project --cache-dir /tmp/alibi-uv python /tmp/alibi-m2a12-inspect_process.py, redirected to each original sample path>",
+  "samples": [
+    {
+      "original_path": "/tmp/alibi-m2a12-host-process-1.json",
+      "archive_path": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/workspace_host_process_1.json",
+      "bytes": 1852,
+      "sha256": "5fedcb57aaff61cce63edfa4d629f946ae989655385d35096fd90b11e06f42d4"
+    },
+    {
+      "original_path": "/tmp/alibi-m2a12-host-process-2.json",
+      "archive_path": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/workspace_host_process_2.json",
+      "bytes": 1852,
+      "sha256": "d6773a1c46210bfa9aa20aad82f30e4997c5849c87ca12488bf072660d614ec7"
+    }
+  ],
+  "elapsed_seconds": 56.09901762008667,
+  "counter_deltas": [
+    {
+      "pid": 165444,
+      "comm": "uv",
+      "cpu_seconds_delta": 0.0,
+      "rss_bytes_before": 7045120,
+      "rss_bytes_after": 7045120,
+      "io_delta": {
+        "read_bytes": 0,
+        "write_bytes": 0
+      }
+    },
+    {
+      "pid": 165449,
+      "comm": "python3.13",
+      "cpu_seconds_delta": 0.0,
+      "rss_bytes_before": 13754368,
+      "rss_bytes_after": 13754368,
+      "io_delta": {
+        "read_bytes": 0,
+        "write_bytes": 0
+      }
+    },
+    {
+      "pid": 165451,
+      "comm": "cargo",
+      "cpu_seconds_delta": 0.0,
+      "rss_bytes_before": 126865408,
+      "rss_bytes_after": 126865408,
+      "io_delta": {
+        "read_bytes": 0,
+        "write_bytes": 0
+      }
+    },
+    {
+      "pid": 209904,
+      "comm": "rustc",
+      "cpu_seconds_delta": 54.65,
+      "rss_bytes_before": 2594861056,
+      "rss_bytes_after": 2148315136,
+      "io_delta": {
+        "read_bytes": 129998848,
+        "write_bytes": 398647296
+      }
+    }
+  ],
+  "resource_observation": "135 GiB free disk; host MemAvailable roughly 6\u20138 GiB with nearly full 2 GiB swap. rustc CPU and I/O counters advance; no hang or disk exhaustion shown."
+}

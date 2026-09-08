@@ -1,0 +1,1 @@
+{"version":1,"boundary":2.0,"state":{"awaiting":[{"event_id":"\u0000 historical","deadline":{"at":10.9},"blocks_player_reaction":true},{"event_id":"","deadline":{"at":9.6},"blocks_player_reaction":true}],"foreground_floor_until":{"at":0.0},"background_floor_until":{"at":5.0},"player_hold_until":{"at":7.0}}}

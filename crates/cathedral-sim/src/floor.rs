@@ -17,6 +17,7 @@
 //! what lets the next speaker think ahead while the previous line is still on
 //! screen.
 
+pub mod checkpoint;
 use crate::{
     FLOOR_AUDIO_FAILSAFE_MAX_SECONDS, FLOOR_POST_UTTERANCE_BEAT_SECONDS, MAX_FLOOR_AWAITING,
     ids::SpeechEventId,

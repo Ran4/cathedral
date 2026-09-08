@@ -1,0 +1,10 @@
+{
+  "command": "uv run --no-project --cache-dir /tmp/alibi-uv /tmp/alibi-m2a12-audit-source.py",
+  "exit_code": 1,
+  "failed_gate": "assert after.count(addition.encode()) == 1, name",
+  "path": "crates/cathedral-sim/src/floor.rs",
+  "script_sha256": "188d9214a68bf983c91727d65f8bb099598fa92fd7d4d7c1b8df1e0709cb4d9f",
+  "reason": "Coordinator adapter expected declaration plus blank line; the actual accepted change adds only one declaration line.",
+  "production_source_changed": false,
+  "evidence": "Recorded from returned tool output; initial stdout/stderr was not redirected to a retained file."
+}

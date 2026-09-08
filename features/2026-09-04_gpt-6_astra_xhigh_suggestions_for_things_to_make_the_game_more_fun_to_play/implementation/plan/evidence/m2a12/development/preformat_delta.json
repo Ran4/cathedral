@@ -1,0 +1,15 @@
+{
+  "source_files": 917,
+  "changed_paths": [
+    "crates/cathedral-sim/src/engine.rs"
+  ],
+  "change": "Only new continuity_checkpoint module declaration moved after the pre-existing command_policy declaration to satisfy rustfmt ordering. Existing Engine bytes remain identical after removing the one new declaration. No behavior or other source/input changes.",
+  "before": {
+    "crates/cathedral-sim/src/engine.rs": "7a8499696dcc3fe41ed15fc97ba69db4f1bae7791ffec7ade785c55e8676e9e4"
+  },
+  "after": {
+    "crates/cathedral-sim/src/engine.rs": "b023be81ddfd5e10ba1a1bfc34ed44cbc2b1b31545db7c923e36b9a88ee8df32"
+  },
+  "prior_manifest_sha256": "96e08a4bbc9ff026f5b26474a20645b445c8553d49663bd49fe7df87ebff80c4",
+  "final_manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0"
+}

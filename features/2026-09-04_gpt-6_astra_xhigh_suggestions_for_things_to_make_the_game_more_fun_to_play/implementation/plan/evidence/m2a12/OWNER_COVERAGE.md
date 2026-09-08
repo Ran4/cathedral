@@ -1,0 +1,26 @@
+Status: M2a12 component implemented, verified and independently accepted (2026-09-09); see [coordinator review](coordinator/review.md). Complete M2 and host adoption remain pending.
+
+# M2a12 owner coverage — 2026-09-08
+
+Strict admitted read-only components close the existing Floor and remaining Engine continuity field owners. No complete save, production hydration or partial Engine adoption is implemented.
+
+| Owner | Exact fields | Consumer and continuation rule |
+|---|---|---|
+| ConversationFloor | insertion-ordered awaiting Vec; each exact SpeechEventId, deadline, blocks_player_reaction | Acquire trims while len >=32 before duplicate refresh; refresh keeps insertion position. No roster lookup, prefix validation, sorting or expiry pruning on capture/decode. |
+| ConversationFloor | foreground_floor_until, background_floor_until | Independent reading estimates and final-same-scope acknowledgement beat. Unknown/repeated acks do nothing. Exact deadline purge removes awaited work without granting a beat. |
+| ConversationFloor | player_hold_until | Rolling max and explicit clear survive exactly. Protected player work ignores background only. |
+| Engine publication | last_snapshot_revision:i64, lamp_revision_sent:u64, ready_emitted, startup_diagnostics:Vec<String> | Preserve comparison cursors, ready state, and exact ordered diagnostic text, including initial state before first poll. No force-republish reset or extra poll. |
+| Engine cadence | last_player_sound_at:f64, next_round_tick_at:f64 | Preserve sound cooldown anchor (negative infinity means never) and Round cadence anchor. Comparison consumers require no historical rebasing. |
+| Engine voice | actual mutable tts_selected | Independent from originally stored config selection. Decode never calls available, warm, submit, or any provider. |
+| Remaining stored EngineConfig | fake_mode, sounds_enabled, view_cone_degrees, sound_cooldown_seconds, tts_selected, tts_startup_message, stt_stream_grace_seconds | Current stored values, not lost constructor input. Raw IEEE bits retain all supported configuration values without normalization. |
+| Context | immutable player_id and borrowed live World or unadopted BackboneCandidate character map | Exact supplied player identity and membership; no present/in-city/control/roster predicate. No character-map clone or temporary World. |
+
+The Floor remote constructor and explicit copying exhaust its runtime fields, including every awaited row field. Engine subset records are closed V1 records with mandatory fields. All other EngineConfig fields remain assigned to earlier checkpoint components or immutable/rebound configuration. Source audit compares ordinary engine.rs and floor.rs bytes after removing the sole new module declaration in each.
+
+Stored config reachability: Engine::new clamps cooldown to 0..3600 using f64::clamp (retains NaN and signed zero), floors grace with max(0.2) (NaN and negative infinity become 0.2; positive infinity remains), and preserves original view-cone IEEE bits while build_world uses a separately normalized value. This component does not reapply those operations. Cooldown admits NaN and 0..3600, grace admits >=0.2 including positive infinity, and view-cone admits all 64-bit IEEE representations. Tests compare actual constructor outputs, including NaN payloads, rather than guessing pre-constructor persistence.
+
+Floor pacing supports finite nonnegative values (including signed zero) and explicit positive-infinity Never. Arbitrary finite future historical anchors are preserved. Public Floor calls can create huge finite or infinite holds; short current text limits do not imply stored deadlines are sorted or bounded by the present boundary. Last sound admits explicit negative-infinity Never or finite nonnegative timestamps; the Engine poll contract accepts finite nonnegative logical time. Round pacing admits nonnegative finite or positive-infinite anchors as safe dormant comparison state. Numeric comparison cursors preserve the full i64/u64 range and do not advance on decode. These local consumer agreements are not proof of all-future World revision/calendar/cadence horizons.
+
+Capture boundary equality uses f64::to_bits, including signed zero. LogicalTime validates finite nonnegative boundaries; existing shared checkpoint logical horizon policy applies to the boundary, not arbitrary stored future anchors. Unsupported state fails; nothing truncates or repairs.
+
+Full M2c must transform old audio acknowledgements and interrupted player holds together with saved SpeechRouter semantic obligations and owed readable committed text. Restoring this floor alone does not establish audio liveness or microphone continuation. Do not rerun a committed say to regenerate text. SpeechRouter remains the next separate owner. Engine.transcript remains the existing omniscient session artifact; the player's durable readable transcript/journal policy is unresolved. Runtime capabilities, service objects, generation, and path are separately rebound; full composition must reconcile actual/config/router TTS and grace authority with its manifest and runtime binding. M3 initial host publication must be a separate presentation operation that spends no ordinary poll.

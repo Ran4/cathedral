@@ -1,0 +1,66 @@
+{
+  "authored": {
+    "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/authored_frozen_smoke.json",
+    "sha256": "9ce3f574d8db99277204a5732ae03dee43a20b7433129a983206ed7d9317a80a",
+    "primary_witnesses_and_boundary_equal_preformat": true,
+    "counts": {
+      "characters": 520,
+      "configured_tts_selected": "cloud",
+      "floor": {
+        "awaiting": 1,
+        "background_awaiting": 0,
+        "background_pacing": false,
+        "event_id_bytes": 8,
+        "foreground_awaiting": 1,
+        "foreground_pacing": true,
+        "player_hold": true
+      },
+      "lamp_revision_sent": 1,
+      "last_snapshot_revision": 1103,
+      "ready_emitted": true,
+      "sound_ever_emitted": true,
+      "startup_diagnostic_bytes": 0,
+      "startup_diagnostics": 0,
+      "startup_message_bytes": 0,
+      "tts_selected": "local"
+    },
+    "cost": {
+      "encoded_bytes": 719,
+      "expanded_upper_bytes": 12264,
+      "peak_bytes": 55309,
+      "validation_working_bytes": 0
+    }
+  },
+  "populated": {
+    "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a12/development/populated_frozen_smoke.json",
+    "sha256": "a435218560a3a30cba189783c0924c609890c9c1b72400f63626b99e84c731b4",
+    "primary_witnesses_and_boundary_equal_preformat": true,
+    "counts": {
+      "characters": 2520,
+      "configured_tts_selected": "cloud",
+      "floor": {
+        "awaiting": 1,
+        "background_awaiting": 0,
+        "background_pacing": false,
+        "event_id_bytes": 8,
+        "foreground_awaiting": 1,
+        "foreground_pacing": true,
+        "player_hold": true
+      },
+      "lamp_revision_sent": 1,
+      "last_snapshot_revision": 5103,
+      "ready_emitted": true,
+      "sound_ever_emitted": true,
+      "startup_diagnostic_bytes": 0,
+      "startup_diagnostics": 0,
+      "startup_message_bytes": 0,
+      "tts_selected": "local"
+    },
+    "cost": {
+      "encoded_bytes": 719,
+      "expanded_upper_bytes": 12264,
+      "peak_bytes": 55309,
+      "validation_working_bytes": 0
+    }
+  }
+}

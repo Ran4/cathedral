@@ -1,0 +1,8 @@
+{
+  "source_command": "checkpoint_frozen_final",
+  "manifest_sha256": "8da3e505bf2a0fa97e3cf569aa63bb6d3be3074f1d34b48b2055400ed2ed53e0",
+  "lines": [
+    "continuity_layout engine_dto=200 engine_candidate=200 engine_view=120 engine_context=24 config=56 config_view=40 engine_wire=200 option_string=24",
+    "continuity_layout awaited=40 floor=48 floor_dto=64 floor_candidate=64 string=24 vec=24 floor_wire=64"
+  ]
+}
