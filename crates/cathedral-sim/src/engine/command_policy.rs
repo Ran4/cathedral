@@ -34,6 +34,7 @@ impl EngineCommand {
             Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
                 command.policy()
             }
+            Self::Operation(..) => CommandPolicy::Consequential,
             Self::SpatialUpdate { .. } => CommandPolicy::LatestPosition,
             Self::PlayerOffer { .. } => CommandPolicy::Consequential,
             Self::PlayerAccept { .. } => CommandPolicy::Consequential,
@@ -90,6 +91,7 @@ impl EngineCommand {
             Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
                 return command.payload();
             }
+            Self::Operation(request) => json!({"command": "Operation", "request": request}),
             Self::SpatialUpdate { .. } => return None,
             Self::PlayerOffer {
                 item_id,
@@ -276,6 +278,7 @@ impl EngineCommand {
             Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
                 return command.bounded_raw_payload();
             }
+            Self::Operation(request) => request.raw_bytes(),
             Self::SpatialUpdate { .. } => 0usize,
             Self::PlayerOffer {
                 item_id, target_id, ..
@@ -364,6 +367,7 @@ impl EngineCommand {
             Self::Identified { command, .. } | Self::InGeneration { command, .. } => {
                 command.valid_numbers()
             }
+            Self::Operation(request) => request.valid_numbers(),
             Self::PlayerRecording { position_m, .. } => position_m.is_finite(),
             Self::PlayerOffer { position_m, .. }
             | Self::PlayerAccept { position_m, .. }
@@ -407,6 +411,14 @@ impl EngineCommand {
             | Self::PlayerSwallow { item_id, .. }
             | Self::PlayerGargle { item_id, .. }
             | Self::PlayerEat { item_id, .. } => item(item_id).into_iter().collect(),
+            Self::Operation(crate::operations::Request::Start {
+                actor: who,
+                resource,
+                ..
+            }) => [actor(who), AffectedRef::new("fixture", resource)]
+                .into_iter()
+                .flatten()
+                .collect(),
             Self::PlayerGrabbed { holder_id } => actor(holder_id).into_iter().collect(),
             Self::DebugSeize { officer, target } => [Some(officer.as_str()), target.as_deref()]
                 .into_iter()

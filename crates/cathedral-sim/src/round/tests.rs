@@ -9182,3 +9182,6 @@ fn receipted_round_edit_reports_refusal_then_completion_and_teaches_only_committ
         assert!(world.command_ledger.protected.is_empty());
     }
 }
+
+#[path = "operation_tests.rs"]
+mod operation_tests;

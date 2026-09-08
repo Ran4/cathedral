@@ -787,3 +787,132 @@ fn explicit_worker_uses_the_named_workplace_and_ordinary_archetype() {
     );
     assert!(round.people[&id].legs.iter().any(|l| l.is_home));
 }
+
+#[test]
+fn operation_owns_resident_routes_and_reservations_until_explicit_release() {
+    use crate::operations::{
+        self, AdapterDeclaration, FixtureDeclaration, InstanceId, OperationConfig, Request,
+    };
+    use crate::receipts::{Admission, OperationId, ReceiptState};
+    let (mut world, mut round, clock) = fixture(1, Office::Dayspring);
+    let id = round.residents.order[0].clone();
+    let mut residents = std::mem::take(&mut round.residents);
+    let mut resident = residents.people.remove(&id).unwrap();
+    let patch = &nav().resident_places().patches[resident.patch];
+    let target = (resident.preferred_spot + 1) % patch.spots.len();
+    assert!(start_move(
+        &mut round,
+        &mut world,
+        nav(),
+        &mut residents,
+        &id,
+        &mut resident,
+        target,
+        true
+    ));
+    residents.people.insert(id.clone(), resident);
+    round.residents = residents;
+    let initial = world.characters[&id].position_m();
+    world.step_movement(0.05, nav(), None);
+    assert!(
+        world.characters[&id].position_m().distance(initial) > 0.0,
+        "the resident's own route moves before a claim"
+    );
+    let at = world.characters[&id].position_m();
+    world.operations = operations::OperationKernel::from_config(&OperationConfig {
+        fixtures: vec![FixtureDeclaration {
+            id: "resident_work".into(),
+            adapter: AdapterDeclaration::default(),
+            position: at.to_array(),
+        }],
+    })
+    .unwrap();
+    let command = OperationId {
+        producer: 0,
+        sequence: 1,
+    }
+    .command(0);
+    let request = Request::Start {
+        actor: id.clone(),
+        resource: "resident_work".into(),
+        adapter: Default::default(),
+        work_seconds: 5.0,
+        recovery_seconds: 10.0,
+        retries: 1,
+    };
+    let Admission::New(ticket) = world
+        .command_ledger
+        .begin(command, &serde_json::json!({"request":request}))
+    else {
+        panic!("new work");
+    };
+    let outcome = operations::command(
+        &mut world,
+        &mut round,
+        &clock,
+        crate::timeline::LogicalTime::new(0.0).unwrap(),
+        command,
+        request,
+    );
+    assert_eq!(outcome.state, ReceiptState::Accepted);
+    world
+        .command_ledger
+        .finish(ticket, 0.0, outcome, Vec::new());
+    assert_eq!(round.resident_reservations().destination_count(), 0);
+    assert!(!round.residents.optional.contains(&id));
+    for step in 1..=10 {
+        let now = f64::from(step) * 0.05;
+        full_tick(&mut world, &mut round, &clock, now, &BTreeSet::new());
+        crate::round::interrupt_for_conversation(&mut round, &mut world, &id);
+        world.step_movement(0.05, nav(), None);
+        operations::poll(
+            &mut world,
+            &round,
+            &clock,
+            crate::timeline::LogicalTime::new(now).unwrap(),
+        );
+        assert_eq!(world.characters[&id].position_m(), at);
+        assert_eq!(round.resident_reservations().destination_count(), 0);
+    }
+    let mut residents = std::mem::take(&mut round.residents);
+    let mut resident = residents.people.remove(&id).unwrap();
+    assert!(!start_move(
+        &mut round,
+        &mut world,
+        nav(),
+        &mut residents,
+        &id,
+        &mut resident,
+        target,
+        true
+    ));
+    assert_eq!(residents.reservations.destination_count(), 0);
+    residents.people.insert(id.clone(), resident);
+    round.residents = residents;
+    operations::command(
+        &mut world,
+        &mut round,
+        &clock,
+        crate::timeline::LogicalTime::new(0.5).unwrap(),
+        command,
+        Request::Cancel {
+            instance: InstanceId(command),
+        },
+    );
+    let mut residents = std::mem::take(&mut round.residents);
+    let mut resident = residents.people.remove(&id).unwrap();
+    assert!(start_move(
+        &mut round,
+        &mut world,
+        nav(),
+        &mut residents,
+        &id,
+        &mut resident,
+        target,
+        true
+    ));
+    residents.people.insert(id.clone(), resident);
+    round.residents = residents;
+    world.step_movement(0.05, nav(), None);
+    assert!(world.characters[&id].position_m().distance(at) > 0.0);
+}

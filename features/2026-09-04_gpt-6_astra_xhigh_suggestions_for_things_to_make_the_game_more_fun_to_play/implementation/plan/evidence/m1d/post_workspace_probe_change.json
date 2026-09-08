@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "date": "2026-09-08",
+  "scope": "Only the operation measurement example changed after the complete workspace suite. Production source and all tests are unchanged. Add an optional finite positive poll slice <=50ms, allowing the 60Hz probe to expose active need refresh between Round ticks.",
+  "file": "crates/cathedral-backends/examples/alibi_operation_cost.rs",
+  "workspace_sha256": "cf63108893386c57ee2b124b8fe0a44eae0e816cab0d2235913804170e51534a",
+  "measured_sha256": "bcc7030030fcfa25d540f171b796badac02d514fe3f7c8d5aaebef0896d4239c",
+  "patch": "operation_probe_timing.patch",
+  "patch_sha256": "c4d47b9c0595373bba2b35150a26ab344af464f059e10e6e24fa133b6ad0e32b",
+  "validation": "Release compilation and smoke/full probes recorded separately in performance evidence; no duplicate workspace run for this harness-only change."
+}

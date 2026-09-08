@@ -3,6 +3,7 @@
 //! A host origin is disposable; `AcceptedTime` is a logical continuation value.
 //! Only admitted elapsed duration reaches physics and the calendar. Ordinary
 //! wall debt survives a checkpoint separately from either fixed-step residual.
+use serde::{Deserialize, Deserializer, Serialize};
 use std::time::Duration;
 
 /// Roughly twelve 120 Hz controller steps (plus the existing fixed residual)
@@ -54,8 +55,17 @@ impl AcceptedTime {
 
 /// Accepted elapsed seconds. Legacy service floats are adapted at this seam;
 /// new deadlines use the explicit type, never a host process timestamp.
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
 pub struct LogicalTime(f64);
+
+impl<'de> Deserialize<'de> for LogicalTime {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let seconds = f64::deserialize(deserializer)?;
+        Self::new(seconds)
+            .ok_or_else(|| serde::de::Error::custom("logical time must be finite and non-negative"))
+    }
+}
 
 impl LogicalTime {
     pub fn new(seconds: f64) -> Option<Self> {
@@ -80,7 +90,8 @@ impl CalendarTime {
 
 /// Exclusive expiry: a right ending at `until` is already unavailable at the
 /// same-instant command boundary. Extending it then cannot revive the old right.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct ExclusiveDeadline<T>(pub T);
 
 impl<T: Copy + PartialOrd> ExclusiveDeadline<T> {
@@ -109,6 +120,18 @@ impl DueBoundary {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn logical_time_decode_validates_and_preserves_exclusive_deadline() {
+        use serde::de::value::{Error, F64Deserializer};
+        for invalid in [-1.0, f64::NAN, f64::INFINITY] {
+            assert!(LogicalTime::deserialize(F64Deserializer::<Error>::new(invalid)).is_err());
+        }
+        let cutoff: ExclusiveDeadline<LogicalTime> = serde_json::from_str("12.5").unwrap();
+        assert_eq!(serde_json::to_string(&cutoff).unwrap(), "12.5");
+        assert!(!cutoff.is_due(LogicalTime::new(12.4).unwrap()));
+        assert!(cutoff.is_due(LogicalTime::new(12.5).unwrap()));
+    }
 
     #[test]
     fn ordinary_stall_is_retained_and_serviced_without_changing_origin() {

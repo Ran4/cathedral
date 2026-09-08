@@ -193,6 +193,7 @@ impl Capabilities {
 pub struct EngineConfig {
     /// Ephemeral execution fence, supplied by the host, never restored from disk.
     pub runtime_generation: crate::RuntimeGeneration,
+    pub operations: crate::operations::OperationConfig,
     /// `"player"`. The engine refuses to start without this character.
     pub player_id: ActorId,
     /// Gates `DebugPlayerSay` (`server.py:1028-1031`).
@@ -330,6 +331,7 @@ impl Default for EngineConfig {
     fn default() -> Self {
         Self {
             runtime_generation: crate::RuntimeGeneration::INITIAL,
+            operations: Default::default(),
             player_id: ActorId::from_raw("player"),
             fake_mode: false,
             sounds_enabled: true,
@@ -388,6 +390,8 @@ pub enum EngineCommand {
         id: crate::receipts::CommandId,
         command: Box<EngineCommand>,
     },
+    /// Versioned operation adapter request, admitted through the shared ledger.
+    Operation(crate::operations::Request),
     // -------- player / game (formerly the `BridgeCommand` wire types)
     SpatialUpdate {
         spatial_seq: i64,
@@ -1171,7 +1175,7 @@ impl Engine {
     /// suppress and does not exist.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        config: EngineConfig,
+        mut config: EngineConfig,
         seed: &WorldSeed,
         area_map: AreaMap,
         catalog: SoundCatalog,
@@ -1194,6 +1198,9 @@ impl Engine {
                 sound_catalog: catalog,
             },
         );
+        world.operations = crate::operations::OperationKernel::from_config(&config.operations)
+            .map_err(EngineInitError::Operations)?;
+        config.operations.compact();
         if !world.characters.contains_key(&config.player_id) {
             return Err(EngineInitError::MissingPlayer(config.player_id.clone()));
         }
@@ -1454,6 +1461,11 @@ impl Engine {
         // command.
         self.ring_offices(now, &mut out);
         self.update_weather(now, true, &mut out);
+        if let Some(nav) = self.config.nav.as_deref() {
+            self.round
+                .refresh_operation_needs(&mut self.world, nav, &self.clock, now);
+        }
+        crate::operations::reconcile(&mut self.world, &self.round, &self.clock, boundary.elapsed);
 
         // Step the movers on the fixed slice before this poll's stage is
         // computed, so `context_hash` and `characters_within` see where everyone
@@ -1620,6 +1632,10 @@ impl Engine {
             }
         }
 
+        // Mandatory custody/office/need decisions precede fixture completion.
+        // The elapsed span is credited before same-time FIFO controls, so a
+        // cancel or replan delivered after completion observes an inactive job.
+        crate::operations::poll(&mut self.world, &self.round, &self.clock, boundary.elapsed);
         let mut completions: Vec<Completion> = Vec::new();
         for command in commands {
             self.apply_command(now, command, &mut completions, &mut out);
@@ -1815,6 +1831,7 @@ impl Engine {
 
         // The scheduler's turn produced domain events in this same poll; the
         // floor they acquire here gates the *next* one.
+        crate::operations::reconcile(&mut self.world, &self.round, &self.clock, boundary.elapsed);
         crate::receipts::reconcile_travel(&mut self.world, now);
         self.flush(now, &mut out);
 
@@ -2256,6 +2273,7 @@ impl Engine {
         let receipt = match self.world.command_ledger.begin(id, &payload) {
             Admission::New(ticket) => {
                 let recording = matches!(command, EngineCommand::PlayerRecording { .. });
+                let operation = matches!(command, EngineCommand::Operation(..));
                 let outcome = if recording {
                     match self.world.command_ledger.protect(id.operation) {
                         Ok(()) => self
@@ -2281,8 +2299,8 @@ impl Engine {
                     .world
                     .command_ledger
                     .finish(ticket, now, outcome, affected);
-                if recording && rejected {
-                    self.world.command_ledger.unprotect(id.operation);
+                if operation || (recording && rejected) {
+                    crate::receipts::release_finished_root(&mut self.world, id.operation);
                 }
                 receipt
             }
@@ -2357,6 +2375,14 @@ impl Engine {
         out: &mut Vec<EngineMessage>,
     ) -> Option<Outcome> {
         let outcome = match command {
+            EngineCommand::Operation(request) => crate::operations::command(
+                &mut self.world,
+                &mut self.round,
+                &self.clock,
+                crate::timeline::LogicalTime::new(now).expect("validated poll time"),
+                semantic.expect("consequential operation identity"),
+                request,
+            ),
             EngineCommand::Identified { .. } | EngineCommand::InGeneration { .. } => {
                 unreachable!("envelope removed before dispatch")
             }

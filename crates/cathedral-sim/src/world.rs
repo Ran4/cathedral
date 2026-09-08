@@ -6,7 +6,7 @@
 //! needs *insertion* order instead, so [`World::roster`] records it (D12).
 
 use std::{
-    collections::{BTreeMap, hash_map::DefaultHasher},
+    collections::{BTreeMap, BTreeSet, hash_map::DefaultHasher},
     hash::{Hash, Hasher},
     sync::Arc,
 };
@@ -78,10 +78,15 @@ pub struct World {
     /// Private authoritative replay state, shared by explicit commands and
     /// provider action services. Never projected into PublicSnapshot.
     pub command_ledger: crate::receipts::CommandLedger,
+    /// Private durable fixture work, exclusive resources and actor duty claims.
+    pub operations: crate::operations::OperationKernel,
     /// Existing go_to undertakings bound to protected receipt identities.
     /// At most 256; none of these private references enters the snapshot.
     pub(crate) round_actions: BTreeMap<ActorId, crate::receipts::CommandId>,
     pub(crate) travel_actions: BTreeMap<ActorId, crate::receipts::CommandId>,
+    /// At most MAX_ACTIVE_STREAMS accepted SpeechRouter tasks; shared-root
+    /// ownership index, reconstructed and cross-validated from those tasks in M2.
+    pub(crate) speech_actions: BTreeSet<crate::receipts::CommandId>,
     /// Authoritative named geography used whenever a prompt is rendered.
     pub area_map: AreaMap,
     pub characters: BTreeMap<ActorId, Character>,
@@ -254,7 +259,9 @@ impl Default for World {
             transform_jobs: BTreeMap::new(),
             completed_transform_jobs: BTreeMap::new(),
             command_ledger: crate::receipts::CommandLedger::default(),
+            operations: crate::operations::OperationKernel::default(),
             travel_actions: BTreeMap::new(),
+            speech_actions: BTreeSet::new(),
             round_actions: BTreeMap::new(),
             world_revision: 0,
             event_sequence: 0,
@@ -809,7 +816,12 @@ impl World {
 
         let mut moved: Vec<ActorId> = Vec::new();
         for (rank, (id, character)) in self.characters.iter_mut().enumerate() {
-            if character.state.presence != Presence::InCity || character.state.movement.is_none() {
+            if !self
+                .operations
+                .permits(id, crate::operations::DutyPriority::Routine)
+                || character.state.presence != Presence::InCity
+                || character.state.movement.is_none()
+            {
                 continue;
             }
             let start = character.state.position_m;

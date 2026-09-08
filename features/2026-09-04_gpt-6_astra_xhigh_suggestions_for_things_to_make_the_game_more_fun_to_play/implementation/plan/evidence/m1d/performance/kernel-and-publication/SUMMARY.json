@@ -1,0 +1,220 @@
+{
+  "publication": {
+    "0": {
+      "runs": 3,
+      "sample_count": 15000,
+      "actor_count": 518,
+      "encoded_snapshot_bytes": 231570,
+      "charged_message_bytes": 1198767,
+      "median_run_us": {
+        "p50": 1.9520000000000002,
+        "p95": 2.23,
+        "p99": 2.447,
+        "max": 6.122
+      }
+    },
+    "2000": {
+      "runs": 3,
+      "sample_count": 15000,
+      "actor_count": 2518,
+      "encoded_snapshot_bytes": 1732413,
+      "charged_message_bytes": 5020594,
+      "median_run_us": {
+        "p50": 9.624,
+        "p95": 10.171,
+        "p99": 14.713,
+        "max": 26.893
+      }
+    }
+  },
+  "operation": {
+    "0": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            0,
+            16
+          ],
+          "delta_us": {
+            "p50": 87.23299999999998,
+            "p95": 42.874000000000024,
+            "p99": -23.297999999999774,
+            "max": 14.92599999999993
+          },
+          "counter_differences": {
+            "moved_actors": {
+              "empty": 488,
+              "active16": 473
+            },
+            "kernel_heap_upper_bound": {
+              "empty": 92204,
+              "active16": 154312
+            }
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            16,
+            0
+          ],
+          "delta_us": {
+            "p50": 82.73500000000001,
+            "p95": 18.92499999999984,
+            "p99": 49.434999999999945,
+            "max": 55.85199999999986
+          },
+          "counter_differences": {
+            "moved_actors": {
+              "empty": 488,
+              "active16": 473
+            },
+            "kernel_heap_upper_bound": {
+              "empty": 92204,
+              "active16": 154312
+            }
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            0,
+            16
+          ],
+          "delta_us": {
+            "p50": 84.40299999999999,
+            "p95": 29.09199999999987,
+            "p99": 140.96299999999974,
+            "max": 212.14300000000003
+          },
+          "counter_differences": {
+            "moved_actors": {
+              "empty": 488,
+              "active16": 473
+            },
+            "kernel_heap_upper_bound": {
+              "empty": 92204,
+              "active16": 154312
+            }
+          }
+        }
+      ],
+      "median_run_us": {
+        "0": {
+          "p50": 170.072,
+          "p95": 1022.39,
+          "p99": 2509.961,
+          "max": 3577.9
+        },
+        "16": {
+          "p50": 253.00799999999998,
+          "p95": 1041.3149999999998,
+          "p99": 2539.258,
+          "max": 3611.6859999999997
+        }
+      },
+      "median_paired_delta_us": {
+        "p50": 84.40299999999999,
+        "p95": 29.09199999999987,
+        "p99": 49.434999999999945,
+        "max": 55.85199999999986
+      },
+      "same_binary_semantic_counters_repeat": true
+    },
+    "2000": {
+      "pairs": [
+        {
+          "pair": 1,
+          "order": [
+            0,
+            16
+          ],
+          "delta_us": {
+            "p50": 725.3330000000001,
+            "p95": 461.85400000000027,
+            "p99": 645.983000000002,
+            "max": 3401.8780000000006
+          },
+          "counter_differences": {
+            "moved_actors": {
+              "empty": 488,
+              "active16": 473
+            },
+            "kernel_heap_upper_bound": {
+              "empty": 92204,
+              "active16": 154312
+            }
+          }
+        },
+        {
+          "pair": 2,
+          "order": [
+            16,
+            0
+          ],
+          "delta_us": {
+            "p50": 800.7969999999998,
+            "p95": 473.28799999999956,
+            "p99": 430.72299999999996,
+            "max": 636.0499999999993
+          },
+          "counter_differences": {
+            "moved_actors": {
+              "empty": 488,
+              "active16": 473
+            },
+            "kernel_heap_upper_bound": {
+              "empty": 92204,
+              "active16": 154312
+            }
+          }
+        },
+        {
+          "pair": 3,
+          "order": [
+            0,
+            16
+          ],
+          "delta_us": {
+            "p50": 713.6179999999999,
+            "p95": 311.2470000000003,
+            "p99": 133.5,
+            "max": 1400.201000000001
+          },
+          "counter_differences": {
+            "moved_actors": {
+              "empty": 488,
+              "active16": 473
+            },
+            "kernel_heap_upper_bound": {
+              "empty": 92204,
+              "active16": 154312
+            }
+          }
+        }
+      ],
+      "median_run_us": {
+        "0": {
+          "p50": 285.15799999999996,
+          "p95": 7806.728,
+          "p99": 9650.294,
+          "max": 11058.874
+        },
+        "16": {
+          "p50": 1010.4910000000001,
+          "p95": 8224.848,
+          "p99": 10081.017,
+          "max": 12514.146999999999
+        }
+      },
+      "median_paired_delta_us": {
+        "p50": 725.3330000000001,
+        "p95": 461.85400000000027,
+        "p99": 430.72299999999996,
+        "max": 1400.201000000001
+      },
+      "same_binary_semantic_counters_repeat": true
+    }
+  }
+}

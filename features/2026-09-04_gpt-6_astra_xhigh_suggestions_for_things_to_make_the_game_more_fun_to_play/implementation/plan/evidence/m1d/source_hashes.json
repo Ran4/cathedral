@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "head": "a735227aff3d655831a54055ffa2323d3934b99f",
+  "algorithm": "SHA-256",
+  "scope": "Final changed/new Rust source plus unchanged Cargo.lock. Includes coordinator-owned publication CPU probe; coordinator Python/docs excluded.",
+  "files": {
+    "Cargo.lock": "2841224dc4b920978ca744b67dca3a12b0c4e0002bb328e09063469918ac1b43",
+    "crates/cathedral-backends/examples/alibi_operation_cost.rs": "cf63108893386c57ee2b124b8fe0a44eae0e816cab0d2235913804170e51534a",
+    "crates/cathedral-backends/examples/alibi_publication_cost.rs": "b482a96aff1eb2c88422d09eda71f7cc018c22530a900e104da91afc4f60d2e9",
+    "crates/cathedral-backends/src/bin/cathedral_headless.rs": "98207265609c25f89573901fe0fa7c837645721822d851340f532dae76535226",
+    "crates/cathedral-sim/src/actions.rs": "2e8386200be4abd17616595c3f20d7e2480672c7c27bd5e3bbab06d0709f2c85",
+    "crates/cathedral-sim/src/engine.rs": "3e0c23fa414e547050e39b2e02d21f943cee8c809ffaff42e880a904f78b9ea6",
+    "crates/cathedral-sim/src/engine/command_policy.rs": "c5a4ebca33f01aee4bf723d8e79db6cbee269fb3fb750c97d9ccfb2b640caa62",
+    "crates/cathedral-sim/src/error.rs": "8e272061d80f372f1936f3077c895a149b0b18314fc3d8d32458235d369c3651",
+    "crates/cathedral-sim/src/lib.rs": "ed53c5ca8729f26a8c7d69f3be9455f23888aab6fdd3f84e8916ce8189b4ac03",
+    "crates/cathedral-sim/src/operations.rs": "51fd6618cd58476ecf22d16bba3fdfd9bbee1bff4c2d1e35b87f96bb0147bfa1",
+    "crates/cathedral-sim/src/operations/tests.rs": "47dc18d11222e7ff7e49520428f70d20528c46b2abd965bae5a01cf02983bafa",
+    "crates/cathedral-sim/src/receipts.rs": "c93f53f5e08eeb76cceb66618272de560cc6b87c4df8d6b1a780a904ee70405d",
+    "crates/cathedral-sim/src/receipts/travel.rs": "73b0db91f9866cebba8bea2e55e5346967db1ea1c7e764af5644cd370778ae2c",
+    "crates/cathedral-sim/src/round.rs": "22f3d14d7c6727c2800ec681ededff98647591332535f09e2807a832dd0e4c30",
+    "crates/cathedral-sim/src/round/operation_tests.rs": "19e6dc42b0c7ecc099d120477886024b99842339be0f0ac77b42e15cc49f8975",
+    "crates/cathedral-sim/src/round/residents.rs": "09abdd0bb1dd759c9d19ec082b542fbce1b94e9318fdcbad28679ca5dbe789fd",
+    "crates/cathedral-sim/src/round/residents/tests.rs": "5c4fd45e907b3681d775d8e02cca6944dd78f63224cddfa8596f6500c0f992c4",
+    "crates/cathedral-sim/src/round/tests.rs": "9aee367694123f338e02a5ecba99193be2a68248484515d2ddc859e2d278724e",
+    "crates/cathedral-sim/src/speech_router.rs": "2a6b962bfdf83f676c66be4afbaf0119a8f0133f7922bf614e45f081c3410d9f",
+    "crates/cathedral-sim/src/timeline.rs": "164f7aa588b9554ea678a9de96e8509dc89dc3ff9b22c3e627bd052ef4acc2ca",
+    "crates/cathedral-sim/src/world.rs": "f013057081722d5d28d36b0cae436132f1381dab3540760e8226ac839054f77e",
+    "crates/cathedral-sim/tests/engine_operations/mod.rs": "585018e44192fe815907ac93e21a1abf389acb3f2a91b7adef481c4cf1fbe7cc",
+    "crates/cathedral-sim/tests/engine_tests.rs": "ebbeb0d3ba3e952bd8254a2b520cce19abca981fd87a5dc384800e0639f8e37a",
+    "src/smart_actors/local_engine.rs": "09d0c8c44305111bea4135e67a77e2f3116757c462ee2a3b4d25e4dce6fb21b6"
+  }
+}

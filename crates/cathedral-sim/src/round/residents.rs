@@ -449,6 +449,9 @@ fn stop_owned(
     // tick_intents or custody may already have replaced the path this poll.
     // Reservation ownership alone is not ownership of the current feet.
     let owned = claimed
+        && world
+            .operations
+            .permits(id, crate::operations::DutyPriority::Routine)
         && !world.custody.holds(id)
         && round.people.get(id).is_some_and(|p| {
             !p.travel_for_intent
@@ -503,6 +506,12 @@ fn start_move(
     target: usize,
     optional: bool,
 ) -> bool {
+    if !world
+        .operations
+        .permits(id, crate::operations::DutyPriority::Routine)
+    {
+        return false;
+    }
     let spot = &nav.resident_places().patches[r.patch].spots[target];
     if !(people.reservations.is_available(&spot.id)
         || people.reservations.owner(&spot.id) == Some(id))
@@ -579,6 +588,12 @@ fn weather_tick(
     due: bool,
     curfew: bool,
 ) -> bool {
+    if !world
+        .operations
+        .permits(id, crate::operations::DutyPriority::Routine)
+    {
+        return false;
+    }
     let position = world.characters[id].position_m();
     if let Some(weather) = &mut r.weather {
         let precipitation = world
@@ -781,6 +796,13 @@ pub(super) fn tick(
             continue;
         };
         let position = c.position_m();
+        if !world
+            .operations
+            .permits(&id, crate::operations::DutyPriority::Routine)
+        {
+            residents.people.insert(id, r);
+            continue;
+        }
         if !world.is_present(&id)
             || world.custody.holds(&id)
             || world.characters[&id].state.leaving_city

@@ -316,6 +316,14 @@ impl CommandLedger {
         })
     }
 
+    pub(crate) fn command_pending(&self, id: CommandId) -> bool {
+        self.pending.contains(&id)
+    }
+
+    pub fn is_protected(&self, id: OperationId) -> bool {
+        self.protected.contains(&id)
+    }
+
     pub fn protect(&mut self, id: OperationId) -> Result<(), Outcome> {
         if self.protected.contains(&id) {
             return Ok(());

@@ -447,6 +447,7 @@ fn build(
 
     let engine_config = EngineConfig {
         runtime_generation: generation,
+        operations: Default::default(),
         player_id: SimActorId::from_raw(PLAYER_ID),
         fake_mode: config.fake_backend,
         sounds_enabled: config.sounds.enabled,

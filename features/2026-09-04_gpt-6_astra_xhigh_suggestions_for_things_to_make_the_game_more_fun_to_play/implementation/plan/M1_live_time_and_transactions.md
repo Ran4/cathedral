@@ -1,4 +1,4 @@
-Status: In progress (2026-09-08). M1a–M1c implemented and coordinator reviewed; final M1c workspace verification passes 1,840 tests (eight ignored). M1d remains. Renderer/focus performance remains unavailable.
+Status: Implemented and coordinator reviewed (2026-09-08), M1a–M1d. Full workspace: 1,865 passed, zero failed, eight ignored. Matched ordinary CPU limits and preliminary active-fixture ceiling pass; renderer/focus performance remains unavailable.
 
 # M1 — Live time and committed actions
 
@@ -20,7 +20,15 @@ The production host assigns ordered command identities, and the sim checks repla
 
 Whole-runtime generation tags now reach commands, both cognition lanes, fake staging, STT/TTS/PCM, backend/microphone status, pending UI input and speech presentation acknowledgements. Accepted jobs reserve bounded terminal delivery before submission; unexpected producer loss and stream overflow produce one explicit failure. Host publication overflow stops the flush and invalidates the capture boundary. Audio consumers have their own retention limits. Immediate retirement fences the old bundle; saved-world adoption and budgeted destruction remain M3 work.
 
-[The M1c record](evidence/m1c/README.md) gives actual capacities, production seam witnesses, the passing full-workspace verification and explicit cleanup limitations. Coordinator review accepts this implementation cut. No renderer evidence is added. M1d remains unimplemented.
+[The M1c record](evidence/m1c/README.md) gives actual capacities, production seam witnesses, the passing full-workspace verification and explicit cleanup limitations. Coordinator review accepts this implementation cut. No renderer evidence is added. M1d was the remaining implementation cut at that acceptance.
+
+## M1d implementation handoff — 2026-09-08
+
+`World.operations` now owns bounded operation instances, exclusive fixture resources and actor duties. An instance includes the initiating `CommandId` step, so sibling actions under one semantic root remain distinct. The real version-one fixture adapter measures accepted logical elapsed work, increments its declared resource's completion counter exactly once, and advances the original receipt from Accepted through InProgress to its actual terminal state. It is reached through `EngineCommand::Operation`; no investigation UI or prompt verb is introduced.
+
+The shared movement priority policy covers ordinary Round, resident routes/reservations, road return, conversation, LLM travel, critical needs, curfew, danger and custody. Mandatory duty and incarnation checks precede work completion; generic cleanup preserves real custody care. Replanning retains step identity and the original work/retry/recovery budget. Versioned declarations and continuation validation reject unavailable adapters, invalid claims/incarnations, malformed or unrepresentable budgets, missing receipt roots and excessive retained allocation. M2 owns DTOs and actual save/hydration; these tests do not claim restored-world execution.
+
+[The M1d evidence](evidence/m1d/README.md) records API scope, exact bounds, the priority policy, focused production witnesses and final verification. The selected deterministic fixture is a stationary NPC work resource; later milestones register travel/door/examination adapters and compose activities. [Matched CPU measurements](evidence/m1d/performance/README.md) pass the preset ordinary limits and the preliminary timed-fixture ceiling. Coordinator review accepts M1d and hands the completed M1 interfaces to M2. Renderer evidence and the full M13 active mix remain unavailable.
 
 ## Entry
 

@@ -1915,6 +1915,13 @@ impl Round {
         // A fresh return owes every member the excuse-yourself courtesy anew.
         party.departure_excuses.clear();
         for member in &party.members {
+            crate::operations::interrupt(
+                world,
+                member,
+                crate::timeline::LogicalTime::new(now).expect("valid Round boundary"),
+                crate::operations::DutyPriority::RoadReturn,
+                "operation_road_return",
+            );
             self.finish_market_errand(world, member, MarketVisitEnd::Returning);
             for source in &mut self.sources {
                 source.queue.retain(|queued| queued != member);
@@ -4100,6 +4107,82 @@ impl Round {
         self.stalls[s].serving = None;
     }
 
+    /// Refresh the single shared need clock before each active-work boundary.
+    /// Ordinary Round decay then sees the same elapsed origin and cannot double count.
+    pub(crate) fn refresh_operation_needs(
+        &mut self,
+        world: &mut World,
+        nav: &NavData,
+        clock: &WorldClock,
+        now: f64,
+    ) {
+        if self.seeded && world.operations.active_count() != 0 {
+            decay_needs(self, world, nav, clock, now);
+        }
+    }
+
+    /// Atomic service is validated before an operation acquires any claim.
+    pub(crate) fn operation_atomic_busy(&self, id: &ActorId) -> bool {
+        self.people.get(id).is_some_and(|p| {
+            matches!(p.phase, Phase::Queued | Phase::Drawing)
+                || p.food
+                    .as_ref()
+                    .is_some_and(|f| !matches!(f.phase, FoodPhase::Approaching))
+        })
+    }
+
+    pub(crate) fn operation_pressure(
+        &self,
+        world: &World,
+        id: &ActorId,
+        time: WorldTime,
+        now: f64,
+    ) -> Option<(crate::operations::DutyPriority, &'static str)> {
+        use crate::operations::DutyPriority as P;
+        if world.custody.holds(id) || world.custody.is_escorting(id) {
+            return Some((P::Custody, "operation_custody"));
+        }
+        let c = world.characters.get(id)?;
+        if self
+            .lightning_reflex_until
+            .get(id)
+            .is_some_and(|until| now < *until)
+        {
+            return Some((P::UrgentDanger, "operation_danger"));
+        }
+        if c.state.leaving_city {
+            return Some((P::RoadReturn, "operation_road_return"));
+        }
+        let p = self.people.get(id)?;
+        if matches!(time.office, Office::Snuffing | Office::Watch)
+            && !p.curfew_exempt
+            && p.home
+                .is_some_and(|home| c.position_m().distance(home) > HOME_ARRIVE_RADIUS_M)
+        {
+            return Some((P::Curfew, "operation_curfew"));
+        }
+        if (p.source.is_some() && c.needs().thirst < THIRST_PARCHED)
+            || c.needs().hunger < HUNGER_FAMISHED
+        {
+            return Some((P::CriticalNeed, "operation_critical_need"));
+        }
+        None
+    }
+
+    /// The new owner takes over only cancellable routines. Atomic service was
+    /// checked by admission; these are the existing queue/reservation releases.
+    pub(crate) fn prepare_operation(&mut self, world: &mut World, id: &ActorId) {
+        self.abandon_bodily_errands(world, id);
+        residents::interrupt(self, world, id);
+        self.weather_shelter_intents.remove(id);
+        if let Some(p) = self.people.get_mut(id) {
+            p.phase = Phase::Idle;
+            p.travel_target = None;
+            p.travel_for_intent = false;
+            p.next_decision = 0.0;
+        }
+    }
+
     /// Strip one enrolled person's committed bodily errands — the well walk,
     /// queue place or draw; a stall visit not yet at the eating stage; a claimed
     /// weather shelter — and hand them straight back to the ladder, through the
@@ -4745,7 +4828,11 @@ impl Round {
             {
                 continue;
             }
-            if in_conversation.contains(&plan.buyer) {
+            if !world
+                .operations
+                .permits(&plan.buyer, crate::operations::DutyPriority::Routine)
+                || in_conversation.contains(&plan.buyer)
+            {
                 self.hold_stock_travel_deadline(&plan.buyer, now);
                 continue;
             }
@@ -5136,6 +5223,12 @@ impl Round {
         transform: &ResolvedTransformSpec,
         in_conversation: &BTreeSet<ActorId>,
     ) -> bool {
+        if !world
+            .operations
+            .permits(&plan.producer, crate::operations::DutyPriority::Routine)
+        {
+            return false;
+        }
         world.is_present(&plan.producer)
             && !world.characters[&plan.producer].is_walking()
             && world.characters[&plan.producer]
@@ -5929,6 +6022,12 @@ pub fn tick(
     tick_food_economy(round, world, clock, now, &mut nudges);
     round.tick_road_parties(world, nav, clock.at(now), now, in_conversation);
     decay_needs(round, world, nav, clock, now);
+    crate::operations::reconcile(
+        world,
+        round,
+        clock,
+        crate::timeline::LogicalTime::new(now).expect("valid Round boundary"),
+    );
     // The ward's air (`features/knowledge_and_rumor/`). After `decay_needs`
     // because that is where the game-days anchor is already read, and before
     // anything that moves anybody: a person deposits into the ward they are
@@ -5995,6 +6094,12 @@ fn update_weather_shelter_intents(round: &mut Round, world: &mut World, game_day
         }
     }
     for id in release {
+        if !world
+            .operations
+            .permits(&id, crate::operations::DutyPriority::Routine)
+        {
+            continue;
+        }
         let Some(intent) = round.weather_shelter_intents.remove(&id) else {
             continue;
         };
@@ -6138,6 +6243,12 @@ fn lamp_ring(nav: &NavData, centre: Vec3) -> Vec<Vec3> {
 /// *excused* walker: their pressing errand has already outranked the
 /// conversation, and a parting line must not stop them again.
 pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &ActorId) {
+    if !world
+        .operations
+        .permits(id, crate::operations::DutyPriority::Conversation)
+    {
+        return;
+    }
     if round.residents.people.contains_key(id) && round.people.get(id).is_some_and(|p| !p.excused) {
         residents::interrupt(round, world, id);
     }
@@ -6207,6 +6318,12 @@ fn tick_intents(
         )
         .collect();
     for id in ids {
+        if !world
+            .operations
+            .permits(&id, crate::operations::DutyPriority::Routine)
+        {
+            continue;
+        }
         if !world.is_present(&id) {
             continue;
         }
@@ -7819,6 +7936,12 @@ fn run_ladder(
     ids.clear();
     ids.extend(round.people.keys().cloned());
     for id in ids.drain(..) {
+        if !world
+            .operations
+            .permits(&id, crate::operations::DutyPriority::Routine)
+        {
+            continue;
+        }
         if world
             .characters
             .get(&id)
@@ -9300,6 +9423,12 @@ fn round_edit_refusal(
 /// chase and every keeper's round belong to people the law is not holding, and
 /// a slaved body is moved by `follow_escorts` placing it, never through here.
 fn set_route(world: &mut World, id: &ActorId, path: Vec<Vec3>) {
+    if !world
+        .operations
+        .permits(id, crate::operations::DutyPriority::Routine)
+    {
+        return;
+    }
     if world.custody.holds(id) {
         return;
     }

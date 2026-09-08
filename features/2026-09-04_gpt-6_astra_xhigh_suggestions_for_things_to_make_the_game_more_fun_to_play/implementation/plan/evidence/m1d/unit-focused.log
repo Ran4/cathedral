@@ -1,0 +1,21 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 17.41s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-d95704882fac3a6b)
+
+running 13 tests
+test operations::tests::retained_identifiers_discard_arbitrary_caller_spare_capacity ... ok
+test operations::tests::shared_root_capacity_refuses_before_any_domain_claim_or_route_mutation ... ok
+test operations::tests::corrupt_continuations_are_rejected_without_using_unknown_adapters_or_claims ... ok
+test round::tests::operation_tests::operation_pauses_existing_production_without_consuming_reservations_and_resumes_after_release ... ok
+operation_window instances=256 roots=1 active_encoded_bytes=139411 conservative_heap_bytes=1440256
+test operations::tests::full_instance_window_is_bounded_even_with_one_protected_root ... ok
+test round::tests::operation_tests::refreshing_needs_for_work_does_not_decay_other_actors_twice_at_round_tick ... ok
+test round::tests::operation_tests::work_supersedes_the_actual_accepted_travel_receipt ... ok
+test round::tests::operation_tests::operation_holds_real_round_motion_and_conversation_until_completion_then_resumes ... ok
+test round::tests::operation_tests::atomic_draw_refuses_before_receipt_binding_claim_or_queue_mutation ... ok
+test round::tests::operation_tests::operation_cannot_finish_between_round_ticks_before_owed_critical_decay ... ok
+test round::residents::tests::operation_owns_resident_routes_and_reservations_until_explicit_release ... ok
+test round::tests::operation_tests::urgent_curfew_and_critical_need_interrupt_before_fixture_completion ... ok
+test round::tests::operation_tests::operation_yields_to_actual_road_return_and_lightning_writers ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 592 filtered out; finished in 0.11s

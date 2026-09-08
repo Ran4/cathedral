@@ -1,4 +1,4 @@
-Status: M0 CPU workload measured and numerical admission targets recorded (2026-09-07). V03 remains partial: renderer/frame, full 20,000-resident stress and future DTO/active-work measurements are not accepted.
+Status: M0 reference retained; M1 ordinary CPU limits and preliminary timed-fixture ceiling verified (2026-09-08). Renderer/frame, full 20,000-resident stress, complete DTO costs and M13 mixed-workload acceptance remain pending.
 
 # Running continuously within measured limits
 
@@ -34,6 +34,14 @@ These targets are visible before dependent production work. **M0 is still partia
 2. Ordinary nav/round population produces **234,517 B** final snapshot even without extra residents, exceeding the original 160 KiB **fixture's** number. Keep separate fixture contracts instead of silently changing that canary. Crowded snapshot bytes are 986,080 at +1,000, 1,737,971 at +2,000 and 7,048,132 in admitted stress. Render/publication cost of those messages remains unmeasured here.
 3. No display/GPU means frame, production focus scheduling, GPU memory and overload recovery are unavailable. [Availability evidence](evidence/m0_baseline/renderer_availability.json) names the exact checks. The earlier knowledge software UI runs are not current frame measurements. No M0 Bevy window was launched.
 4. Checkpoints, replay DTOs, archived identity and the declared active mix are future types/services. M0 measures public serialized bytes and a knowledge-only heap estimate; it cannot report actual complete-save bytes. Those null/missing measurements remain explicit, with producer gates above.
+
+## M1 implementation measurements — 2026-09-08
+
+[The paired M0/M1 record](evidence/m1d/performance/README.md) uses the unchanged original harness/content and preserved M0 executable. Across three alternating pairs per ordinary workload, current market p95/p99 medians are **1.576/2.542 ms** authored, **4.858/5.902 ms** at +1,000 and **8.530/9.982 ms** at +2,000. Median paired relative changes satisfy the ≤10% gate (largest ordinary increase 2.95%); each preset absolute envelope also passes. All recorded semantic counters match across versions except the added message publications. This comparison accepts the ordinary CPU branch only.
+
+The separate **60 Hz, cognition-unavailable, zero/16 timed-fixture** comparison at +2,000 records added median paired p95/p99 **0.462/0.431 ms**, total median p95/p99 **8.225/10.081 ms**, and added median p50 **0.725 ms**. All 16 owners remain active throughout every measured interval. The 25-second segment includes shared need refresh between Round ticks and ends before generated residents’ minimum dwell expires. These results fit the provisional CPU ceilings but do not execute or accept M13’s complete adapter/appointment/order/observation mix. The maximum 256-instance kernel witness retains a conservative **1,440,256-byte** bound under its 2 MiB limit; this is not allocator/RSS measurement.
+
+Hot repeated production publication accounting takes median p95/p99 **2.230/2.447 µs** authored and **10.171/14.713 µs** at +2,000. Conservative allocation charges are **1,198,767/5,020,594 bytes**, distinct from encoded snapshot bytes. Construction, encoding, queues, consumers and renderer costs remain outside this microbenchmark. The stress pair still admits only 9,072 of 20,000 requested residents and is not ordinary-frame acceptance. Source/binary identity, raw samples, process timings and coordinator checks are linked in the record; no historical M0 figures or numerical targets were changed.
 
 ## Accepted time and overload — M1
 

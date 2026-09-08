@@ -612,11 +612,19 @@ impl SpeechRouter {
             ctx,
             out,
         ) {
-            Ok(()) => crate::receipts::Outcome::new(
-                crate::receipts::ReceiptState::Accepted,
-                "utterance_accepted",
-                "the recording is awaiting its speech result",
-            ),
+            Ok(()) => {
+                // accept_recording bounds the combined jobs/parked/resolved
+                // owner set before submission. Synchronous results are staged
+                // until the outer command receipt has been committed.
+                if let Some(id) = semantic {
+                    ctx.world.speech_actions.insert(id);
+                }
+                crate::receipts::Outcome::new(
+                    crate::receipts::ReceiptState::Accepted,
+                    "utterance_accepted",
+                    "the recording is awaiting its speech result",
+                )
+            }
             Err(error) => {
                 self.take_capture(basename);
                 out.push(EngineMessage::TranscriptionResult {
@@ -996,6 +1004,7 @@ impl SpeechRouter {
         let semantic = task.semantic;
         let request_id = task.request_id.clone();
         if let Some(id) = semantic {
+            ctx.world.speech_actions.remove(&id);
             match ctx.world.command_ledger.get(id) {
                 Some(receipt)
                     if matches!(
@@ -1005,6 +1014,7 @@ impl SpeechRouter {
                 Some(receipt) => {
                     Self::project_speech_result(request_id, &receipt.outcome, out);
                     out.push(EngineMessage::ActionReceipt(receipt.clone()));
+                    crate::receipts::release_finished_root(ctx.world, id.operation);
                     return;
                 }
                 None => {
@@ -1016,6 +1026,7 @@ impl SpeechRouter {
                         ),
                         retryable: false,
                     });
+                    crate::receipts::release_finished_root(ctx.world, id.operation);
                     return;
                 }
             }

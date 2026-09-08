@@ -499,6 +499,7 @@ pub enum EngineInitError {
     MissingPlayer(ActorId),
     /// The player's spawn position could not be applied.
     PlayerSpawn(SpatialUpdateError),
+    Operations(String),
 }
 
 impl fmt::Display for EngineInitError {
@@ -508,6 +509,7 @@ impl fmt::Display for EngineInitError {
                 write!(f, "world has no stable player character '{actor_id}'")
             }
             Self::PlayerSpawn(error) => write!(f, "player spawn was rejected: {error}"),
+            Self::Operations(error) => write!(f, "operation configuration was rejected: {error}"),
         }
     }
 }

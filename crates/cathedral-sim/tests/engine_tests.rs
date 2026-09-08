@@ -11,6 +11,8 @@
 //!   The *same* nudge through a sound is here (48).
 //! * 71 (the scripted conversation) is `e2e_fake.rs`.
 
+#[path = "engine_operations/mod.rs"]
+mod engine_operations;
 mod prompt_support;
 
 use std::{cell::RefCell, rc::Rc, sync::Arc};
@@ -148,6 +150,7 @@ struct Harness {
 }
 
 struct Builder {
+    operations: cathedral_sim::operations::OperationConfig,
     generation: cathedral_sim::RuntimeGeneration,
     night: bool,
     transcription: Option<Box<dyn cathedral_sim::Transcription>>,
@@ -166,6 +169,7 @@ impl Default for Builder {
     fn default() -> Self {
         Self {
             generation: cathedral_sim::RuntimeGeneration::INITIAL,
+            operations: Default::default(),
             night: false,
             transcription: None,
             // The sound/command tests run with `llm_available=False` so the turn
@@ -225,6 +229,7 @@ impl Builder {
         let engine = Engine::new(
             EngineConfig {
                 runtime_generation: self.generation,
+                operations: self.operations,
                 night_office: cathedral_sim::NightOfficeConfig {
                     enabled: self.night,
                     wards: false,

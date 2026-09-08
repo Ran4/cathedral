@@ -1,0 +1,18 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 24.58s
+     Running tests/engine_tests.rs (target/debug/deps/engine_tests-cef5886e71679b84)
+
+running 11 tests
+test engine_operations::operation_custody_interruption_preserves_real_prisoner_and_escort_care ... ok
+test engine_operations::rejected_sibling_recording_does_not_unprotect_a_live_fixture_root ... ok
+test engine_operations::replan_never_renews_progress_step_identity_or_operation_recovery_budget ... ok
+test engine_operations::operation_trace_completes_once_and_releases_both_claims ... ok
+test engine_operations::presence_incarnation_loss_interrupts_before_work_completion ... ok
+test engine_operations::declaration_and_continuation_validation_refuse_unknown_or_changed_adapters ... ok
+test engine_operations::actor_and_resource_contention_refuse_before_mutation_and_siblings_do_not_alias ... ok
+test engine_operations::obstruction_expiry_is_exclusive_and_finish_precedes_same_time_controls ... ok
+test engine_operations::nonzero_time_budgets_validate_continuation_and_unrepresentable_budget_refuses_before_claims ... ok
+test engine_operations::same_root_controls_release_the_last_operation_after_their_own_ticket_finishes ... ok
+test engine_operations::recording_and_fixture_siblings_protect_each_other_until_both_are_terminal ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 73 filtered out; finished in 0.00s

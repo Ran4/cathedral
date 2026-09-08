@@ -1,0 +1,270 @@
+{
+  "schema": 1,
+  "head": "a735227aff3d655831a54055ffa2323d3934b99f",
+  "date": "2026-09-08",
+  "scope": "One complete final full-workspace run on source_hashes.json; focused logs are supporting evidence with scope recorded individually. Coordinator CPU-probe example changes after handoff require separate provenance.",
+  "environment": {
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "full_run": {
+    "command": "/home/ran/.cargo/bin/cargo test --workspace --no-fail-fast",
+    "raw_temporary_log": "/tmp/alibi-m1d-workspace-final.log",
+    "archived_log": "workspace-final.log",
+    "raw_log_sha256": "0335865589b3f46665d6b5b421dc69f9919eb3d15625bb8a8b3e2edc541689dd",
+    "log_sha256": "aaab366f0702acfb1814b9ec95fef6370df4069f6ee54b4432e6a32c19f0d09e",
+    "archive_normalization": "Redundant terminal blank lines removed; all test output bytes preserved.",
+    "process_exit_code": 0,
+    "targets": {
+      "cathedral_backends": {
+        "passed": 158,
+        "failed": 0,
+        "ignored": 0
+      },
+      "cathedral_headless": {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      "curiosity_walk": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      },
+      "knowledge_consequences": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0
+      },
+      "knowledge_provider_probe": {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 2
+      },
+      "place_estimates_evidence": {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 1
+      },
+      "pollen_cadence": {
+        "passed": 15,
+        "failed": 0,
+        "ignored": 1
+      },
+      "cathedral_sim": {
+        "passed": 605,
+        "failed": 0,
+        "ignored": 0
+      },
+      "attention_tests": {
+        "passed": 16,
+        "failed": 0,
+        "ignored": 0
+      },
+      "conversation_tests": {
+        "passed": 15,
+        "failed": 0,
+        "ignored": 0
+      },
+      "custody_tests": {
+        "passed": 26,
+        "failed": 0,
+        "ignored": 0
+      },
+      "dogs_tests": {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      },
+      "e2e_fake": {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      "engine_tests": {
+        "passed": 84,
+        "failed": 0,
+        "ignored": 0
+      },
+      "floor_tests": {
+        "passed": 13,
+        "failed": 0,
+        "ignored": 0
+      },
+      "golden_prompts": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 1
+      },
+      "knowledge_tests": {
+        "passed": 103,
+        "failed": 0,
+        "ignored": 0
+      },
+      "marks_tests": {
+        "passed": 43,
+        "failed": 0,
+        "ignored": 0
+      },
+      "parse_tests": {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0
+      },
+      "place_estimates": {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      },
+      "prompt_quirks": {
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0
+      },
+      "prompt_tests": {
+        "passed": 30,
+        "failed": 0,
+        "ignored": 0
+      },
+      "receipt_allocation_tests": {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      },
+      "scheduler_tests": {
+        "passed": 27,
+        "failed": 0,
+        "ignored": 0
+      },
+      "seed_tests": {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      },
+      "sim_tests": {
+        "passed": 41,
+        "failed": 0,
+        "ignored": 0
+      },
+      "sounds_tests": {
+        "passed": 19,
+        "failed": 0,
+        "ignored": 0
+      },
+      "speech_router_tests": {
+        "passed": 47,
+        "failed": 0,
+        "ignored": 0
+      },
+      "supply_chain_tests": {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0
+      },
+      "cathedralbevy": {
+        "passed": 542,
+        "failed": 0,
+        "ignored": 3
+      },
+      "supply_chain_host_tests": {
+        "passed": 20,
+        "failed": 0,
+        "ignored": 0
+      },
+      "doc-tests:cathedral_backends": {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      "doc-tests:cathedral_sim": {
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    "totals": {
+      "passed": 1865,
+      "failed": 0,
+      "ignored": 8
+    },
+    "target_count": 33
+  },
+  "totals": {
+    "passed": 1865,
+    "failed": 0,
+    "ignored": 8
+  },
+  "target_count": 33,
+  "source_hash_manifest": "source_hashes.json",
+  "source_hash_manifest_sha256": "ac7461c404f05011ed5088ffde3202cec02f05af5b9cca3ec8b80281e681e5bc",
+  "focused_runs": [
+    {
+      "command": "/home/ran/.cargo/bin/cargo test -p cathedral-sim --lib operation -- --nocapture",
+      "raw_temporary_log": "/tmp/alibi-m1d-unit-final2.log",
+      "archived_log": "unit-focused.log",
+      "raw_log_sha256": "d034529b5684ac74b9dc7639d18f37c10a53dc335c538d0d147c81ff4f91393b",
+      "log_sha256": "e152e2f89b8527600e727970ae941d4c0b68d649f677d9c508b33e24a2c64dba",
+      "archive_normalization": "Redundant terminal blank lines removed; all test output bytes preserved.",
+      "process_exit_code": 0,
+      "targets": {
+        "cathedral_sim": {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        }
+      },
+      "totals": {
+        "passed": 13,
+        "failed": 0,
+        "ignored": 0
+      },
+      "target_count": 1,
+      "scope": "Final source; includes printed full-window allocation witness."
+    },
+    {
+      "command": "/home/ran/.cargo/bin/cargo test -p cathedral-sim --test engine_tests engine_operations -- --nocapture",
+      "raw_temporary_log": "/tmp/alibi-m1d-engine-final.log",
+      "archived_log": "engine-focused.log",
+      "raw_log_sha256": "362a162509ef2374b94b2a27e9ea0583eb27a77105722b4ab5962c7c98808ad0",
+      "log_sha256": "50c9948d1834a76c72b0600baa8f18854fa2fdfec2a99ccad68cdc90ff89a3aa",
+      "archive_normalization": "Redundant terminal blank lines removed; all test output bytes preserved.",
+      "process_exit_code": 0,
+      "targets": {
+        "engine_tests": {
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        }
+      },
+      "totals": {
+        "passed": 11,
+        "failed": 0,
+        "ignored": 0
+      },
+      "target_count": 1,
+      "scope": "Supporting focused run before final candidate allocation-bound check, maximum-ID unit fixture and formatting. Full workspace certifies the exact final source."
+    }
+  ],
+  "kernel_window": {
+    "instances": 256,
+    "protected_roots": 1,
+    "maximum_id_bytes": 64,
+    "active_encoded_bytes": 139411,
+    "conservative_heap_bytes": 1440256,
+    "maximum_heap_bytes": 2097152
+  },
+  "selected_field_inventory": {
+    "owners": 26,
+    "fields": 334,
+    "path": "owner_fields.json",
+    "note": "Selected legacy-owner index; new kernel/config owners are additionally named in PERSISTENCE_INVENTORY.md."
+  },
+  "limitations": [
+    "Eight preexisting ignored tests remain ignored.",
+    "No renderer/GPU/focus evidence. Coordinator CPU comparison and operation/publication measurements remain separate.",
+    "Candidate validation does not implement checkpoint DTO encoding, restored-run validation or M2/M3 adoption.",
+    "V1 timed fixture is NPC-only and exposes no player movement lock or new gameplay UI."
+  ],
+  "post_workspace_probe_change": "post_workspace_probe_change.json"
+}

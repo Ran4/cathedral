@@ -87,10 +87,12 @@ pub(crate) fn commit_actor_action(
 
 pub(crate) fn release_finished_root(world: &mut World, id: OperationId) {
     if !world.command_ledger.operation_pending(id)
+        && !world.operations.owns_root(id)
         && !world
             .travel_actions
             .values()
             .chain(world.round_actions.values())
+            .chain(world.speech_actions.iter())
             .any(|command| command.operation == id)
     {
         world.command_ledger.unprotect(id);

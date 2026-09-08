@@ -38,6 +38,7 @@ pub mod nav;
 pub mod night;
 pub mod notices;
 pub mod offer;
+pub mod operations;
 pub mod perception;
 pub mod places;
 pub mod prompt;

@@ -1,0 +1,54 @@
+--- workspace/crates/cathedral-backends/examples/alibi_operation_cost.rs
++++ measured/crates/cathedral-backends/examples/alibi_operation_cost.rs
+@@ -1,5 +1,5 @@
+ //! M1d CPU-only active-duty probe. Identical declared city/config for 0/16
+-//! operations; sample accepted 50ms Engine polls, never wall-clock acceleration.
++//! operations; sample bounded accepted Engine polls, never wall-clock acceleration.
+ use cathedral_backends::world_data::load_world_seed;
+ use cathedral_sim::operations::{AdapterDeclaration, FixtureDeclaration, OperationConfig, Request};
+ use cathedral_sim::receipts::{OperationId, ReceiptState};
+@@ -29,6 +29,9 @@
+     polls: usize,
+     #[arg(long, default_value_t = 100)]
+     warmup: usize,
++    /// Use 1/60 to expose active needs work between the Round's 20 Hz ticks.
++    #[arg(long, default_value_t = 0.05)]
++    step_seconds: f64,
+     /// Short work also emits a deterministic Accepted/Running/Completed trace.
+     #[arg(long, default_value_t = 3600.0)]
+     work_seconds: f64,
+@@ -42,12 +45,15 @@
+         || args.polls == 0
+         || args.polls > 2000
+         || args.warmup > 1200
++        || !args.step_seconds.is_finite()
++        || args.step_seconds <= 0.0
++        || args.step_seconds > 0.05
+         || !args.work_seconds.is_finite()
+         || args.work_seconds <= 0.0
+         || args.work_seconds > 3600.0
+     {
+         return Err(
+-            "require active 0/16, extra <=2000, polls 1..2000, warmup <=1200, work (0,3600]".into(),
++            "require active 0/16, extra <=2000, polls 1..2000, warmup <=1200, step (0,0.05], work (0,3600]".into(),
+         );
+     }
+     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+@@ -178,7 +184,7 @@
+     let mut poll_us = Vec::with_capacity(args.polls);
+     let mut active_counts = Vec::with_capacity(args.polls);
+     for step in 1..=args.warmup + args.polls {
+-        let now = step as f64 * 0.05;
++        let now = step as f64 * args.step_seconds;
+         let begin = Instant::now();
+         let messages = engine.poll(now, Vec::new());
+         let elapsed = begin.elapsed().as_secs_f64() * 1e6;
+@@ -215,7 +221,7 @@
+         &args.output,
+         serde_json::to_vec_pretty(&json!({"probe":"operation_fixture_v1","extra":args.extra,
+         "total_actors":engine.world().characters.len(),"placement":placement,"requested_active":args.active,"admitted":accepted.len(),"polls":args.polls,"warmup":args.warmup,
+-        "step_seconds":0.05,"work_seconds":args.work_seconds,"poll_us":poll_us,"active_counts":active_counts,
++        "step_seconds":args.step_seconds,"work_seconds":args.work_seconds,"poll_us":poll_us,"active_counts":active_counts,
+         "completed_units":completed,"moved_actors":moved,"kernel_heap_upper_bound":engine.world().operations.allocated_upper_bound(),
+         "admission_refusals":refusals,"receipts":final_receipts,"transition_trace":trace,
+         "limits":"CPU Engine only; fixture adapter mix, no renderer, no appointments/orders/observations; active work refreshes shared need decay each boundary"}))?,

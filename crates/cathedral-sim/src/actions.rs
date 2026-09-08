@@ -2836,6 +2836,15 @@ pub(crate) fn route_budget_for(world: &World, actor_id: &ActorId, target: Vec3) 
 /// arrival and lapse are percepts, and a second `go_to` replaces the first
 /// silently — the model issued both; it needs no telling.
 fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    if !world
+        .operations
+        .permits(actor_id, crate::operations::DutyPriority::LlmTravel)
+    {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            "committed work owns your movement; it must finish or be explicitly cancelled",
+        ));
+    }
     if world.characters[actor_id].state.leaving_city {
         return Err(ActionError::new(
             ActionErrorCode::LeavingCity,
@@ -3001,6 +3010,15 @@ fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
 /// Self-initiated, so it emits no percept; the round halts the walk on its
 /// next tick.
 fn stop(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    if !world
+        .operations
+        .permits(actor_id, crate::operations::DutyPriority::LlmTravel)
+    {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            "committed work owns your movement; it must finish or be explicitly cancelled",
+        ));
+    }
     args_object(args, &[], &[])?;
     let actor = world
         .characters

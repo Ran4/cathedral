@@ -500,6 +500,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         EngineConfig {
             // This process owns one world and has no adoption/rebinding path.
             runtime_generation: cathedral_sim::RuntimeGeneration::INITIAL,
+            operations: Default::default(),
             player_id: ActorId::from_raw(PLAYER_ID),
             fake_mode: args.fake,
             sounds_enabled: true,
