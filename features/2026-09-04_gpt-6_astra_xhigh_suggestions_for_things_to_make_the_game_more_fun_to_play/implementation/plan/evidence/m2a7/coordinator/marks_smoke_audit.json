@@ -1,0 +1,36 @@
+{
+  "checked_at_utc": "2026-09-08T14:06:15.998315+00:00",
+  "measurement_directory": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a7/performance-smoke",
+  "result": "passed",
+  "smoke_only": true,
+  "runs": 2,
+  "raw_phase_samples": 24,
+  "checks": [
+    "archive and original hashes",
+    "phase lengths and nearest-rank percentiles",
+    "repeated metadata",
+    "count and byte admission",
+    "process timing metadata",
+    "all summary medians"
+  ],
+  "current_source_binary_runner_hashes_checked": true,
+  "global_max_us": {
+    "authored": {
+      "preflight_us": 329.60900000000004,
+      "export_us": 1096.3100000000002,
+      "encode_us": 11.909,
+      "decode_validate_us": 290.286,
+      "candidate_validate_us": 264.495,
+      "drop_us": 0.963
+    },
+    "populated": {
+      "preflight_us": 1269.219,
+      "export_us": 4339.375,
+      "encode_us": 14.613999999999999,
+      "decode_validate_us": 1096.7279999999998,
+      "candidate_validate_us": 1099.606,
+      "drop_us": 1.317
+    }
+  },
+  "auditor_sha256": "027d8024e93f77b2f6011ed63b5dccf5fd0fc4af2e4916ebdefe42af9b4a3fac"
+}

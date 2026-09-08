@@ -1,0 +1,190 @@
+{
+  "checked_at_utc": "2026-09-08T13:47:19.621070+00:00",
+  "result": "passed",
+  "checks": [
+    {
+      "path": "crates/cathedral-backends/examples/alibi_marks_cost.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/examples/alibi_marks_cost.rs"
+      ],
+      "source_sha256": "a2187937d9aec41dbef26452308673afab4f834e5bfeda79bd6f75c4620a5c1d",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine.rs"
+      ],
+      "source_sha256": "d5dccb79b069b4b4dea6a4f06eac2f8175283bf30f58d0a3957776de7d3667f0",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/marks_checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/marks_checkpoint.rs"
+      ],
+      "source_sha256": "ca9ab26a17692798869a15c99dd3593b7505346a2e67162832b68951ed1c13e5",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/marks_checkpoint/records.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/marks_checkpoint/records.rs"
+      ],
+      "source_sha256": "7d2b308d1ba16a1f5a32f9a037b5d15fc4d4e61ae62102edb87a5440af4439b9",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/marks_checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/marks_checkpoint/tests.rs"
+      ],
+      "source_sha256": "d7ae3a15f0b34a5cf42eaf9019d884807e5d59d85c9463c5c64a7597e96fc4b8",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/marks/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/marks/checkpoint.rs"
+      ],
+      "source_sha256": "e82337d7e0d6ef7885ad27870abde8f127ed729a013281db01425caad5009eda",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/marks/checkpoint/context.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/marks/checkpoint/context.rs"
+      ],
+      "source_sha256": "12e39e11e443e4da1972ed8795306459838af9ebeb90422c2bad2bd2e64637fa",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/marks/checkpoint/records.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/marks/checkpoint/records.rs"
+      ],
+      "source_sha256": "61f0786a3e6e188f4f76d25f2b236378ccd35c068fe55f7f7521c59e398385a4",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/marks/checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/marks/checkpoint/tests.rs"
+      ],
+      "source_sha256": "72db42cac4e813d6a7ada5932fef7869507a543f38b34efa9db458af17219034",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/round/tests.rs"
+      ],
+      "source_sha256": "5cc5c2735c1ed2671010ac6e29e1858e293317a910097a18f0e1c4a75e58b000",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/tests/checkpoint_marks.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/round/tests/checkpoint_marks.rs"
+      ],
+      "source_sha256": "bf67561d37d17a64e2851f3b13b9b237e7e49a5546165e57f17b232efad458d8",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/tests/checkpoint_marks_boundary.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/tests/checkpoint_marks_boundary.rs"
+      ],
+      "source_sha256": "f48eed9bd19e3eb28c161b19449ad33b9de234fed101cae0bf2eb01ae028a7d1",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "baseline_exception": {
+    "path": "crates/cathedral-sim/src/marks.rs",
+    "reason": "Only new module wiring differs from HEAD; independent byte comparison is in source_audit.json. Existing test-comment alignment drift is preserved."
+  }
+}

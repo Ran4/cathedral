@@ -22,6 +22,7 @@ pub mod climate_checkpoint;
 mod command_policy;
 pub mod knowledge_checkpoint;
 pub mod law_checkpoint;
+pub mod marks_checkpoint;
 pub use command_policy::CommandPolicy;
 
 use crate::receipts::{Admission, LEGACY_PRODUCER, Outcome, Receipt};

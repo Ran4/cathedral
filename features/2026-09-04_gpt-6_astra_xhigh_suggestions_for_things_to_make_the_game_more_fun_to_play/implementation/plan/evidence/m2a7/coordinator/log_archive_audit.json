@@ -1,0 +1,92 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T14:04:55.018426+00:00",
+  "cargo_records": 12,
+  "extra_log_archives": 4,
+  "checks": [
+    "archive and exact retained original hashes/lengths",
+    "test totals independently parsed from original logs",
+    "per-command source manifest hashes",
+    "final focused/layout/workspace source equality"
+  ],
+  "frozen_source_commands": [
+    "checkpoint_verified",
+    "layout",
+    "workspace_serial"
+  ],
+  "totals": {
+    "initial_check": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "create_new_fixtures": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "private_marks_first": {
+      "passed": 5,
+      "failed": 0,
+      "ignored": 1,
+      "targets": 1
+    },
+    "owner_checkpoint_tests": {
+      "passed": 89,
+      "failed": 0,
+      "ignored": 15,
+      "targets": 1
+    },
+    "public_marks_first": {
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "probe_authored_first": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "probe_populated_first": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "checkpoint_final": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "checkpoint_final_corrected": {
+      "passed": 91,
+      "failed": 1,
+      "ignored": 15,
+      "targets": 1
+    },
+    "checkpoint_verified": {
+      "passed": 92,
+      "failed": 0,
+      "ignored": 15,
+      "targets": 1
+    },
+    "layout": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "workspace_serial": {
+      "passed": 1986,
+      "failed": 0,
+      "ignored": 23,
+      "targets": 39
+    }
+  },
+  "source_manifest_sha256": "383b1beef65f2e49dc0edac84aaf75f2f83e9506a4712fa4e90d5de75d462c63"
+}

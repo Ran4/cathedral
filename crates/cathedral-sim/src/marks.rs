@@ -46,6 +46,8 @@ use crate::world::World;
 /// the terminal to disagree about what a cross means.
 const MARKS_JSON: &str = include_str!("../../../assets/world/marks.json");
 
+pub mod checkpoint;
+
 /// The hard cap on live marks. **Measured, not chosen**: the public snapshot
 /// is 137,025 bytes against a 160 KiB assertion
 /// (`crates/cathedral-backends/src/world_data.rs`), leaving 26,815 bytes. A

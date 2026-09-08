@@ -128,6 +128,24 @@ def main():
                 assert data["witnesses"] == {
                     "historical_notice_links": 1, "historical_officers": 1,
                 }
+            elif data["scenario"] == "marks-obligations-v1":
+                assert validation_working_bytes == 4096 * 1024
+                expected_counts = {
+                    "marks": 3, "crosses": 1, "tallies": 1, "ward_signs": 1,
+                    "households": 1, "places": 2, "faint": 1,
+                    "historical_authors": 2, "historical_subjects": 0,
+                    "sweep_taken": True, "beat_taken": True,
+                    "chalk_cached": True, "cached_pen": True,
+                    "cached_anchors": 3 if expected_extra else 1,
+                    "cached_kinds": 3 if expected_extra else 1,
+                }
+                assert all(counts[key] == value for key, value in expected_counts.items())
+                witnesses = data["witnesses"]
+                for key in ("scrubbed", "same_day_suppressed", "sweep_changed", "cache_deduped"):
+                    assert witnesses[key] is True
+                assert witnesses["chalk_publications"] == 1
+                assert 0 < witnesses["cross_strength"] < 1
+                assert witnesses["revision_after_setup"] == (5111 if expected_extra else 1111)
             else:
                 raise AssertionError("unrecognized component validation workload")
         assert cost["peak_bytes"] == (

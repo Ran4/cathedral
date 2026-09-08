@@ -1,0 +1,100 @@
+{
+  "checked_at_utc": "2026-09-08T14:08:11.161786+00:00",
+  "result": "passed",
+  "markdown_files": 5,
+  "local_links": 23,
+  "checks": [
+    {
+      "source": "README.md",
+      "target": "coordinator/review.md"
+    },
+    {
+      "source": "README.md",
+      "target": "performance/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "OWNER_COVERAGE.md"
+    },
+    {
+      "source": "README.md",
+      "target": "ADMISSION.md"
+    },
+    {
+      "source": "README.md",
+      "target": "source_freeze.json"
+    },
+    {
+      "source": "README.md",
+      "target": "source_hashes.json"
+    },
+    {
+      "source": "README.md",
+      "target": "development/source_scope_audit.json"
+    },
+    {
+      "source": "README.md",
+      "target": "environment.json"
+    },
+    {
+      "source": "README.md",
+      "target": "commands.json"
+    },
+    {
+      "source": "README.md",
+      "target": "development/run_checked.py"
+    },
+    {
+      "source": "README.md",
+      "target": "verification.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "log_archive_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "source_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../ADMISSION.md"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../performance/README.md"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../../run_m2_marks_probes.py"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "RESULTS.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "SUMMARY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "IDENTITY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/marks_performance_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/marks_smoke_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/release_build.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/auditor_regressions.json"
+    }
+  ]
+}

@@ -9188,3 +9188,5 @@ mod operation_tests;
 
 #[path = "checkpoint/continuation.rs"]
 mod checkpoint_continuation;
+
+mod checkpoint_marks;

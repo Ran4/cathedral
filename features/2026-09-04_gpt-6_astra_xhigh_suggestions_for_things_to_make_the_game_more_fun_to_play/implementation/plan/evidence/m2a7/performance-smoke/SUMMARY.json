@@ -1,0 +1,212 @@
+{
+  "authored": {
+    "runs": 1,
+    "samples_per_phase": 2,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 1850,
+        "expanded_upper_bytes": 29932,
+        "peak_bytes": 4323678,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "beat_taken": true,
+        "cached_anchors": 1,
+        "cached_kinds": 1,
+        "cached_pen": true,
+        "chalk_cached": true,
+        "characters": 520,
+        "crosses": 1,
+        "faint": 1,
+        "historical_authors": 2,
+        "historical_subjects": 0,
+        "households": 1,
+        "marks": 3,
+        "places": 2,
+        "sweep_taken": true,
+        "tallies": 1,
+        "ward_signs": 1
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "marks-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 8647356,
+      "witnesses": {
+        "cache_deduped": true,
+        "chalk_publications": 1,
+        "cross_strength": 0.2143109957132682,
+        "revision_after_setup": 1111,
+        "same_day_suppressed": true,
+        "scrubbed": true,
+        "sweep_changed": true
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 270.005,
+        "p95": 329.60900000000004,
+        "p99": 329.60900000000004,
+        "max": 329.60900000000004
+      },
+      "export_us": {
+        "p50": 1059.241,
+        "p95": 1096.3100000000002,
+        "p99": 1096.3100000000002,
+        "max": 1096.3100000000002
+      },
+      "encode_us": {
+        "p50": 9.47,
+        "p95": 11.909,
+        "p99": 11.909,
+        "max": 11.909
+      },
+      "decode_validate_us": {
+        "p50": 273.05199999999996,
+        "p95": 290.286,
+        "p99": 290.286,
+        "max": 290.286
+      },
+      "candidate_validate_us": {
+        "p50": 263.754,
+        "p95": 264.495,
+        "p99": 264.495,
+        "max": 264.495
+      },
+      "drop_us": {
+        "p50": 0.404,
+        "p95": 0.963,
+        "p99": 0.963,
+        "max": 0.963
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  },
+  "populated": {
+    "runs": 1,
+    "samples_per_phase": 2,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 2021,
+        "expanded_upper_bytes": 33020,
+        "peak_bytes": 4336543,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "beat_taken": true,
+        "cached_anchors": 3,
+        "cached_kinds": 3,
+        "cached_pen": true,
+        "chalk_cached": true,
+        "characters": 2520,
+        "crosses": 1,
+        "faint": 1,
+        "historical_authors": 2,
+        "historical_subjects": 0,
+        "households": 1,
+        "marks": 3,
+        "places": 2,
+        "sweep_taken": true,
+        "tallies": 1,
+        "ward_signs": 1
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "marks-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 8673086,
+      "witnesses": {
+        "cache_deduped": true,
+        "chalk_publications": 1,
+        "cross_strength": 0.2143109957132682,
+        "revision_after_setup": 5111,
+        "same_day_suppressed": true,
+        "scrubbed": true,
+        "sweep_changed": true
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 1103.773,
+        "p95": 1269.219,
+        "p99": 1269.219,
+        "max": 1269.219
+      },
+      "export_us": {
+        "p50": 4323.713,
+        "p95": 4339.375,
+        "p99": 4339.375,
+        "max": 4339.375
+      },
+      "encode_us": {
+        "p50": 11.447000000000001,
+        "p95": 14.613999999999999,
+        "p99": 14.613999999999999,
+        "max": 14.613999999999999
+      },
+      "decode_validate_us": {
+        "p50": 1075.584,
+        "p95": 1096.7279999999998,
+        "p99": 1096.7279999999998,
+        "max": 1096.7279999999998
+      },
+      "candidate_validate_us": {
+        "p50": 1072.56,
+        "p95": 1099.606,
+        "p99": 1099.606,
+        "max": 1099.606
+      },
+      "drop_us": {
+        "p50": 0.565,
+        "p95": 1.317,
+        "p99": 1.317,
+        "max": 1.317
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  }
+}

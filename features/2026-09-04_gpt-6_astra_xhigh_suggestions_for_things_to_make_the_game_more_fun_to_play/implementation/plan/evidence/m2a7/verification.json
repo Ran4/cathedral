@@ -1,0 +1,42 @@
+{
+  "status": "Owner verification passed; coordinator review/release acceptance pending",
+  "source_freeze": {
+    "frozen_utc": "2026-09-08T13:46:19.169338+00:00",
+    "base_head": "cbf441a8daa26d29efa599e55e3bca1989c72546",
+    "manifest": "source_hashes.json",
+    "manifest_sha256": "383b1beef65f2e49dc0edac84aaf75f2f83e9506a4712fa4e90d5de75d462c63",
+    "files": 831,
+    "scope": "All Rust source/tests/examples, JSON/bin/RON/TOML/Jinja assets and lore plus workspace Cargo files. Documentation is not a compiled-source freeze.",
+    "ordinary_source_only_module_wiring": true,
+    "public_test_included": true
+  },
+  "source_files_verified": 831,
+  "commands_verified": 12,
+  "workspace": {
+    "command_name": "workspace_serial",
+    "targets_with_test_results": 39,
+    "passed": 1986,
+    "failed": 0,
+    "ignored": 23
+  },
+  "smokes": {
+    "authored": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a7/development/authored_smoke.json",
+      "sha256": "05e48e1715acc0345073afbc364341c9306f2fe067a728470529a8cae6c3b1fd",
+      "samples": 2,
+      "claim": "functional debug smoke only, not release measurements"
+    },
+    "populated": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a7/development/populated_smoke.json",
+      "sha256": "c956703f3cf53b0248203b6467f10999b3591c04ff0b82f69eb2737a404e8162",
+      "samples": 2,
+      "claim": "functional debug smoke only, not release measurements"
+    }
+  },
+  "format": "12 scoped Rust files pass; marks.rs unchanged test-comment alignment drift independently matches HEAD after module wiring is removed. Original failing check and baseline check retained.",
+  "development_failures": {
+    "checkpoint_final": "New test referred to nonexistent LogicalTime::ZERO; corrected to LogicalTime::new(0.0).unwrap().",
+    "checkpoint_final_corrected": "Duplicate valid MarkId correctly refused; assertion expected duplicate map key instead of the adapter's duplicate owner key; corrected assertion, no production change."
+  },
+  "lossless_logs": "All cargo stdout+stderr captured before summaries; original bytes and gzip mtime=0 archives have independently checked SHA-256. Three early development commands have no retrospective source binding; final workspace/focused/layout commands are source-pinned."
+}

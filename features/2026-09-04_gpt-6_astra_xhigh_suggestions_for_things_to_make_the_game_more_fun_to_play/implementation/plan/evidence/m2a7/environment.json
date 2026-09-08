@@ -1,0 +1,34 @@
+{
+  "explicit_cargo_environment": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "inherited_build_variables_at_final_verification": {
+    "RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_TARGET_DIR": null,
+    "RUSTUP_TOOLCHAIN": null,
+    "CC": null,
+    "CXX": null,
+    "CARGO_BUILD_JOBS": null
+  },
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "machine": "x86_64",
+  "compiler": {
+    "command": [
+      "/home/ran/.cargo/bin/rustc",
+      "-vV"
+    ],
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a7-rustc-version.log",
+    "original_bytes": 196,
+    "original_sha256": "f64c55ed9f210d80a9b248206104a47175faf5ec94a093e4ad132549209089fc",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a7/development/rustc_version.original.log.gz",
+    "archive_sha256": "e36a53ac54854950df1c6ce2a8167c3ff8182cb454c575fcef2eb618eddca082"
+  }
+}

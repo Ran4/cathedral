@@ -1,0 +1,68 @@
+{
+  "candidate_validate_us": [
+    330.027,
+    333.98199999999997
+  ],
+  "cost": {
+    "encoded_bytes": 1850,
+    "expanded_upper_bytes": 29932,
+    "peak_bytes": 4323678,
+    "validation_working_bytes": 4194304
+  },
+  "counts": {
+    "beat_taken": true,
+    "cached_anchors": 1,
+    "cached_kinds": 1,
+    "cached_pen": true,
+    "chalk_cached": true,
+    "characters": 520,
+    "crosses": 1,
+    "faint": 1,
+    "historical_authors": 2,
+    "historical_subjects": 0,
+    "households": 1,
+    "marks": 3,
+    "places": 2,
+    "sweep_taken": true,
+    "tallies": 1,
+    "ward_signs": 1
+  },
+  "decode_validate_us": [
+    358.663,
+    344.3
+  ],
+  "drop_us": [
+    0.43300000000000005,
+    0.34700000000000003
+  ],
+  "encode_us": [
+    17.631,
+    13.254999999999999
+  ],
+  "export_us": [
+    1358.575,
+    1334.61
+  ],
+  "mode": "authored",
+  "placement": {
+    "placed": 0,
+    "requested": 0,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    398.622,
+    338.95099999999996
+  ],
+  "samples": 2,
+  "scenario": "marks-obligations-v1",
+  "shared_reserved_peak_excluding_running_bytes": 8647356,
+  "witnesses": {
+    "cache_deduped": true,
+    "chalk_publications": 1,
+    "cross_strength": 0.2143109957132682,
+    "revision_after_setup": 1111,
+    "same_day_suppressed": true,
+    "scrubbed": true,
+    "sweep_changed": true
+  }
+}
