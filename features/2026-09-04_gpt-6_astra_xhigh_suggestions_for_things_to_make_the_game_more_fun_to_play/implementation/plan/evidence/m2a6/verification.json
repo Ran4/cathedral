@@ -1,0 +1,270 @@
+{
+  "status": "Implemented; owner source and Cargo ceded after successful full workspace. Coordinator independent public tests/review/release measurements and commit pending.",
+  "recorded_utc": "2026-09-08T07:30:16.711075+00:00",
+  "source_manifest_sha256": "6aecaeac977a595305e420324dd2e139a056da19378414cdcc9e9329d2bff64c",
+  "source_files": 135,
+  "source_unchanged_after_workspace_and_smokes": true,
+  "workspace_totals": {
+    "targets": 37,
+    "passed": 1962,
+    "failed": 0,
+    "ignored": 20
+  },
+  "checks": [
+    {
+      "name": "layout",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--offline",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint_law_layout",
+        "--",
+        "--ignored",
+        "--nocapture"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T07:06:02.199752+00:00",
+      "wall_seconds": 28.40635943505913,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a6-layout.log",
+      "original_bytes": 922,
+      "original_sha256": "20f5c7ea75a12b549dfdf592b2826bdebe3c49b86c26f5abe9b217e988001593",
+      "archive": "development/layout.original.log.gz",
+      "archive_bytes": 565,
+      "archive_sha256": "48da52f3a0f3699ed1295eec7c8dc78aaae4452104799ae34083c6a54949fe35",
+      "transformation": "none; gzip decompresses to exact original bytes"
+    },
+    {
+      "name": "focused-complete",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--offline",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T07:09:54.092647+00:00",
+      "wall_seconds": 25.30113356199581,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a6-focused-complete.log",
+      "original_bytes": 11386,
+      "original_sha256": "3b80ed3299d88a3264b8764852edad81855ea9b5585443115c64dab9bba3fd0e",
+      "archive": "development/focused-complete.original.log.gz",
+      "archive_bytes": 3503,
+      "archive_sha256": "bda22001680c616cd299a47fe3ee61c05828c3a3d005442d3e4c0baa20dadffb",
+      "transformation": "none; gzip decompresses to exact original bytes"
+    },
+    {
+      "name": "workspace-serial",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--offline",
+        "--workspace",
+        "-j",
+        "1"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T07:23:31.172016+00:00",
+      "wall_seconds": 154.49602560792118,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a6-workspace-serial.log",
+      "original_bytes": 248099,
+      "original_sha256": "1b048d2df1d65167913618a2b0aca32695350205c788b5cb7991ad5d46909a8f",
+      "archive": "development/workspace-serial.original.log.gz",
+      "archive_bytes": 48567,
+      "archive_sha256": "46516be6fb4f183979f4f2bc1b6c0c336d137043d190519913b1babea3c57956",
+      "transformation": "none; gzip decompresses to exact original bytes"
+    },
+    {
+      "name": "smoke-authored-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "run",
+        "--offline",
+        "-p",
+        "cathedral-backends",
+        "--example",
+        "alibi_law_cost",
+        "--",
+        "--mode",
+        "authored",
+        "--samples",
+        "1",
+        "--output",
+        "/tmp/alibi-m2a6-authored-final-smoke.json"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T07:26:22.446911+00:00",
+      "wall_seconds": 28.54697920405306,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a6-smoke-authored-final.log",
+      "original_bytes": 392,
+      "original_sha256": "756bbf635ba89edce24d4a5f9d0fb959ca18166d6978e2603b489d9f9d08b93a",
+      "archive": "development/smoke-authored-final.original.log.gz",
+      "archive_bytes": 241,
+      "archive_sha256": "23697e352e2c1282bb50fb6f237bb7bdc2f8e1ff4c18419ca01a0a9e408e4e16",
+      "transformation": "none; gzip decompresses to exact original bytes"
+    },
+    {
+      "name": "smoke-populated-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "run",
+        "--offline",
+        "-p",
+        "cathedral-backends",
+        "--example",
+        "alibi_law_cost",
+        "--",
+        "--mode",
+        "populated",
+        "--samples",
+        "1",
+        "--output",
+        "/tmp/alibi-m2a6-populated-final-smoke.json"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T07:26:48.233836+00:00",
+      "wall_seconds": 3.4292206920217723,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a6-smoke-populated-final.log",
+      "original_bytes": 257,
+      "original_sha256": "1cf882dad87fbc9c853d0ce41169ce8dd5199a976dad4d55a7c0e6125b7d45f0",
+      "archive": "development/smoke-populated-final.original.log.gz",
+      "archive_bytes": 204,
+      "archive_sha256": "ca2e7ab1ffaa773bde8e37459a8c34d232bc0b5b09d3c33ca78bfe4afbff0dc4",
+      "transformation": "none; gzip decompresses to exact original bytes"
+    }
+  ],
+  "smokes": [
+    {
+      "mode": "authored",
+      "path": "development/authored_final_smoke.json",
+      "original_path": "/tmp/alibi-m2a6-authored-final-smoke.json",
+      "sha256": "3848f9bab5aab221e285a316648f8d361e01a52e33f87fd2820df10bd9ba5157",
+      "cost": {
+        "encoded_bytes": 6935,
+        "expanded_upper_bytes": 91572,
+        "peak_bytes": 4585493,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "arrests": 3,
+        "authored": 8,
+        "cached_custody": true,
+        "cached_notices": 3,
+        "characters": 520,
+        "closing": 1,
+        "committed": 9,
+        "custody_records": 11,
+        "dated_unissued_summons": 1,
+        "hearsay": 1,
+        "holders": 1,
+        "law_cached": true,
+        "notices": 4,
+        "served_notices": 3,
+        "served_pairs": 6,
+        "summons": 3,
+        "undated_summons": 1,
+        "warrants": 1
+      },
+      "witnesses": {
+        "historical_notice_links": 1,
+        "historical_officers": 1
+      }
+    },
+    {
+      "mode": "populated",
+      "path": "development/populated_final_smoke.json",
+      "original_path": "/tmp/alibi-m2a6-populated-final-smoke.json",
+      "sha256": "580719ea64119a04b855702c2da459bd86bf32696fd733aecb438a1dde8e94b3",
+      "cost": {
+        "encoded_bytes": 6934,
+        "expanded_upper_bytes": 91572,
+        "peak_bytes": 4585490,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "arrests": 3,
+        "authored": 8,
+        "cached_custody": true,
+        "cached_notices": 3,
+        "characters": 2520,
+        "closing": 1,
+        "committed": 9,
+        "custody_records": 11,
+        "dated_unissued_summons": 1,
+        "hearsay": 1,
+        "holders": 1,
+        "law_cached": true,
+        "notices": 4,
+        "served_notices": 3,
+        "served_pairs": 6,
+        "summons": 3,
+        "undated_summons": 1,
+        "warrants": 1
+      },
+      "witnesses": {
+        "historical_notice_links": 1,
+        "historical_officers": 1
+      }
+    }
+  ],
+  "diagnostic_debug_binary": {
+    "path": "target/debug/examples/alibi_law_cost",
+    "sha256": "1f7842bae6bdd819c13156deb3eca1db05bff865e8ae16e4c4eb455b6b23fa31"
+  },
+  "raw_policy": "Original /tmp files preserved and losslessly gzipped with mtime0. No newline normalization or redaction applied to any archived command log.",
+  "source_provenance": "Focused-complete preceded only a checkpoint comment clarification. Layout types/diagnostic are unchanged from layout invocation. Workspace-serial and final smokes use the exact frozen source.",
+  "format": "12 scoped files clean; custody.rs baseline-only drift, ordinary bytes equal HEAD after module removal.",
+  "ordinary_behavior": "Only checkpoint module wiring/comments in ordinary law/Engine files; no ordinary CPU/renderer reprobe.",
+  "pending": [
+    "Coordinator reserved public test checkpoint_law_boundary.rs (unwritten while coordinator infrastructure capacity error persists)",
+    "Independent source/admission/release review and repeated release measurement",
+    "Complete envelope/remaining owners/Running+retiring coexistence/host capture and effective-clock/accounting/batch horizons"
+  ]
+}

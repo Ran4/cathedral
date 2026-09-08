@@ -1,0 +1,48 @@
+{
+  "command": [
+    "/home/ran/.cargo/bin/rustfmt",
+    "--edition",
+    "2024",
+    "--config",
+    "skip_children=true",
+    "--check",
+    "crates/cathedral-backends/examples/alibi_law_cost.rs",
+    "crates/cathedral-sim/src/custody/checkpoint.rs",
+    "crates/cathedral-sim/src/custody/checkpoint/records.rs",
+    "crates/cathedral-sim/src/engine.rs",
+    "crates/cathedral-sim/src/engine/law_checkpoint.rs",
+    "crates/cathedral-sim/src/engine/law_checkpoint/records.rs",
+    "crates/cathedral-sim/src/engine/law_checkpoint/tests.rs",
+    "crates/cathedral-sim/src/notices.rs",
+    "crates/cathedral-sim/src/notices/checkpoint.rs",
+    "crates/cathedral-sim/src/notices/checkpoint/context.rs",
+    "crates/cathedral-sim/src/notices/checkpoint/records.rs",
+    "crates/cathedral-sim/src/notices/checkpoint/tests.rs"
+  ],
+  "exit_code": 0,
+  "files": {
+    "crates/cathedral-backends/examples/alibi_law_cost.rs": "9150fe0bcfbd21ee8f804f5b0d04975927af9b58ec630fdd03d81b94e81e215d",
+    "crates/cathedral-sim/src/custody.rs": "7639a28f29cede221e49f99a1d579005df824870bdd1484b3ed3a2a816146084",
+    "crates/cathedral-sim/src/custody/checkpoint.rs": "b85875d27935f51d3d6409caf24bffb6f76bc8aefef70f53879c61c97aaf15d0",
+    "crates/cathedral-sim/src/custody/checkpoint/records.rs": "2b0d6f9aa03abe3cf6e93dbdf1cc3dca1c0b485856c8700424737ae0001e6f0e",
+    "crates/cathedral-sim/src/engine.rs": "3884c3e7e28246bf0a9b7ae29f73821b9703e0ca2cd98493a78a82da44c7bd1f",
+    "crates/cathedral-sim/src/engine/law_checkpoint.rs": "0e33d2e0853abfe5c28786f40a9c992fa422fecab9ee3d6f4f42614a54b42a23",
+    "crates/cathedral-sim/src/engine/law_checkpoint/records.rs": "77732e48a3ff884adc3217a031f4925f5ea260de45f391b2108735589deb8b90",
+    "crates/cathedral-sim/src/engine/law_checkpoint/tests.rs": "22c8330ffcc89eb80f4823fafbe917d84182f19af25c42181bfdd38e5c6e396e",
+    "crates/cathedral-sim/src/notices.rs": "526a094f69c43dafe617da461beca35d56d356f9359cc32c06f6f20d94af2397",
+    "crates/cathedral-sim/src/notices/checkpoint.rs": "f8ce723133ba3adfbcaaf5632aa3bf905351bb43c3e7908ebfabff13276c2ebd",
+    "crates/cathedral-sim/src/notices/checkpoint/context.rs": "1578fd0589a4e4e30e2d77184474c51d8b517438066bcde4a27594fb23dcd686",
+    "crates/cathedral-sim/src/notices/checkpoint/records.rs": "93132f912638e6c717743a376245b33f30bcb80c970a6cedb59f0e72612c5329",
+    "crates/cathedral-sim/src/notices/checkpoint/tests.rs": "78d93b2df0cf1b1f1f4518ab95387944145b2036f463c7348571969d1ea6837e"
+  },
+  "baseline_exception": {
+    "path": "crates/cathedral-sim/src/custody.rs",
+    "reason": "current minus exactly new module wiring equals HEAD byte-for-byte",
+    "head_sha256": "b70c2605da4aa582314eda5677b00b14d42dac299f6ba8c8a3c5dd808eba58ca",
+    "raw_check_log": "development/format_check.original.log.gz",
+    "raw_sha256": "94dec0e8a84605af5c1cdc89fd5092bc03800b120e806f8b686af501cef0c0b3",
+    "original_path": "/tmp/alibi-m2a6-format-check.log",
+    "archive_sha256": "718af6a9d4d7553647297ddfc964848cb61b685f875bed225efd8f97523abf80",
+    "transformation": "none; gzip decompresses to exact original bytes"
+  }
+}

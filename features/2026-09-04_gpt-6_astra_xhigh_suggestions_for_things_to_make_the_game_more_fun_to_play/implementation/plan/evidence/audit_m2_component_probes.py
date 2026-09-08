@@ -114,6 +114,20 @@ def main():
                 assert 1 <= witnesses["historical_receipts"] <= counts["player_receipts"]
                 assert 1 <= witnesses["historical_seated_keys"] <= counts["seated_keys"]
                 assert 1 <= witnesses["offered_occasions"] <= counts["occasions"]
+            elif data["scenario"] == "law-obligations-v1":
+                assert validation_working_bytes == 4096 * 1024
+                expected_counts = {
+                    "arrests": 3, "authored": 8, "cached_custody": True,
+                    "cached_notices": 3, "closing": 1, "committed": 9,
+                    "custody_records": 11, "dated_unissued_summons": 1,
+                    "hearsay": 1, "holders": 1, "law_cached": True,
+                    "notices": 4, "served_notices": 3, "served_pairs": 6,
+                    "summons": 3, "undated_summons": 1, "warrants": 1,
+                }
+                assert all(counts[key] == value for key, value in expected_counts.items())
+                assert data["witnesses"] == {
+                    "historical_notice_links": 1, "historical_officers": 1,
+                }
             else:
                 raise AssertionError("unrecognized component validation workload")
         assert cost["peak_bytes"] == (

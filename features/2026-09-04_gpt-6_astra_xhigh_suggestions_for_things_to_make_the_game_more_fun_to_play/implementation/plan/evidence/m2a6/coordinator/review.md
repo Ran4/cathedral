@@ -1,0 +1,19 @@
+Status: Accepted M2a6 component cut (2026-09-08). Complete M2 envelope, capture/hydration and host adoption remain pending.
+
+# M2a6 coordinator review
+
+Strict Notices/Custody owners, mandatory WorldLaw composition and the exact Engine law-publication cache preserve existing private authority without expiry, reseeding, release or public partial adoption during load. Historical names, expired notice links and frozen Station copies remain distinct from current prisoner/holder/escort references. Cached publications may legitimately lag public World mutations; the next ordinary publisher resolves that lag exactly once.
+
+Five independent public tests pass: expired notice/departed committed officer history versus missing active officer refusal; confrontation dedupe until each new rung; undated historical obligations; duplicate refusal plus padded-input charge retention; and saved-calendar mismatch followed by borrowing an unadopted backbone. The [public test record](public_boundary.json) pins their source and exact log. Private continuation deliberately scrambles every covered field, restores immediate canonical bytes, then compares law state/events through grip, commitment, sentence, expiry and cache transitions. Counter/headroom and malformed strict-shape tests remain separately covered.
+
+The owner's unchanged source passed **1,962 workspace tests, 0 failures and 20 intentional ignores across 37 targets**. The five later public tests supplement that run; they were not part of its earlier count. Focused checkpoint verification passed 79/0/12 and the layout diagnostic passed. The [log audit](log_audit.json) independently validates all 17 owner command records and exact archives, plus the separate public result. Original development failures and the signal-9 parallel-linker failure remain documented; unchanged source passed with serial linking.
+
+The [source audit](source_audit.json) verifies all 136 final manifest files, every changed implementation/fixture path and 18 unchanged historical fixtures and their README. Ordinary Engine/notices/custody source is byte-identical to HEAD after removing only module wiring/comments. Thirteen changed Rust files pass scoped formatting; custody.rs retains independently verified baseline-only format drift. The original owner manifest and verification remain historical evidence; [source_hashes.json](source_hashes.json) binds the later public test and release build without rewriting those earlier claims.
+
+The [admission proof](../ADMISSION.md) covers sparse BTree roots, collection growth, strict streaming records, raw-input retention and a 4 MiB borrowed-registry validation allowance. Current grip arithmetic uses saved references and rejects overflow. This is a bounded component contract: arbitrary future occupation/status changes, full catch-up and lifetime arithmetic still need complete-envelope agreement. Hash behavior still requires exact build/target/behavior resolution.
+
+The [release review](../performance/README.md) accepts 3,600 audited samples. Export p99 is **1.063/4.490 ms** on 520/2,520-actor worlds. Payloads are 6,935/6,934 bytes and Save+Load admission is 9,170,986/9,170,980 bytes excluding Running. Populated export exceeds the frame budget. The auditor passes three historical workloads and rejects all three deliberately corrupted measurements.
+
+Complete-owner composition, shared Running/retiring admission, effective clock/accounting/command horizons, pending provider authority and actual capture/hydration remain mandatory. The prior backbone+Round coexistence overage cannot be fixed by raising the cap. No complete-save, renderer or full-stress acceptance is added.
+
+Next coherent cut after this commit: marks/catalog/switches and Engine chalk cache. Dogs, ward moods/Night, remaining configuration/cadence, conversation/attention/speech/scheduler and external pending work follow their actual dependencies.

@@ -1,0 +1,246 @@
+[
+  {
+    "name": "authored-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_law_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "2",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a6/performance-smoke/authored-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 6935,
+        "expanded_upper_bytes": 91572,
+        "peak_bytes": 4585493,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "arrests": 3,
+        "authored": 8,
+        "cached_custody": true,
+        "cached_notices": 3,
+        "characters": 520,
+        "closing": 1,
+        "committed": 9,
+        "custody_records": 11,
+        "dated_unissued_summons": 1,
+        "hearsay": 1,
+        "holders": 1,
+        "law_cached": true,
+        "notices": 4,
+        "served_notices": 3,
+        "served_pairs": 6,
+        "summons": 3,
+        "undated_summons": 1,
+        "warrants": 1
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "law-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 9170986,
+      "witnesses": {
+        "historical_notice_links": 1,
+        "historical_officers": 1
+      }
+    },
+    "sample_count_per_phase": 2,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 241.234,
+        "p95": 252.672,
+        "p99": 252.672,
+        "max": 252.672
+      },
+      "decode_validate_us": {
+        "p50": 279.804,
+        "p95": 305.72200000000004,
+        "p99": 305.72200000000004,
+        "max": 305.72200000000004
+      },
+      "drop_us": {
+        "p50": 1.166,
+        "p95": 2.265,
+        "p99": 2.265,
+        "max": 2.265
+      },
+      "encode_us": {
+        "p50": 31.098,
+        "p95": 34.618,
+        "p99": 34.618,
+        "max": 34.618
+      },
+      "export_us": {
+        "p50": 1006.1370000000001,
+        "p95": 1033.318,
+        "p99": 1033.318,
+        "max": 1033.318
+      },
+      "preflight_us": {
+        "p50": 265.306,
+        "p95": 318.557,
+        "p99": 318.557,
+        "max": 318.557
+      }
+    },
+    "process": {
+      "User time (seconds)": 0.21,
+      "System time (seconds)": 0.0,
+      "Maximum resident set size (kbytes)": 28260.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "2845608e2c8861435472d6d5d6c62c945da2e509af2585c7723ece487180e37a",
+      "authored-1.json.gz": "b5925152b9e68660bc375e1caaa2de041be981a5bc7ee5f11d5b6b7d9511e198",
+      "authored-1.time": "dae1e4311cec8941068e2df544d006709e72511fee365598b0be70f1c749c724",
+      "authored-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_law_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "2",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a6/performance-smoke/populated-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 6934,
+        "expanded_upper_bytes": 91572,
+        "peak_bytes": 4585490,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "arrests": 3,
+        "authored": 8,
+        "cached_custody": true,
+        "cached_notices": 3,
+        "characters": 2520,
+        "closing": 1,
+        "committed": 9,
+        "custody_records": 11,
+        "dated_unissued_summons": 1,
+        "hearsay": 1,
+        "holders": 1,
+        "law_cached": true,
+        "notices": 4,
+        "served_notices": 3,
+        "served_pairs": 6,
+        "summons": 3,
+        "undated_summons": 1,
+        "warrants": 1
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "law-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 9170980,
+      "witnesses": {
+        "historical_notice_links": 1,
+        "historical_officers": 1
+      }
+    },
+    "sample_count_per_phase": 2,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 1079.277,
+        "p95": 1082.826,
+        "p99": 1082.826,
+        "max": 1082.826
+      },
+      "decode_validate_us": {
+        "p50": 1140.686,
+        "p95": 1150.873,
+        "p99": 1150.873,
+        "max": 1150.873
+      },
+      "drop_us": {
+        "p50": 1.407,
+        "p95": 2.63,
+        "p99": 2.63,
+        "max": 2.63
+      },
+      "encode_us": {
+        "p50": 33.958999999999996,
+        "p95": 39.275,
+        "p99": 39.275,
+        "max": 39.275
+      },
+      "export_us": {
+        "p50": 4402.063,
+        "p95": 4414.679999999999,
+        "p99": 4414.679999999999,
+        "max": 4414.679999999999
+      },
+      "preflight_us": {
+        "p50": 1104.5720000000001,
+        "p95": 1259.789,
+        "p99": 1259.789,
+        "max": 1259.789
+      }
+    },
+    "process": {
+      "User time (seconds)": 0.85,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 67220.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "a0d0fbc4d9710722ca255595605dde8c07f26b235b5fbc13b22315370ecc9e50",
+      "populated-1.json.gz": "bf295cd3801728284f61311c58872521329d3558d531fbed4af6860d3c38d80c",
+      "populated-1.time": "e77ba59225ad06ed58335ba76f5c124910e9a12628a893c458b0c207d1d29a7e",
+      "populated-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+]

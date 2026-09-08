@@ -1,0 +1,28 @@
+{
+  "original_log": "/tmp/alibi-m2a6-layout.log",
+  "original_sha256": "20f5c7ea75a12b549dfdf592b2826bdebe3c49b86c26f5abe9b217e988001593",
+  "data": {
+    "ActorId": 24,
+    "Custody": 24,
+    "CustodyRecord": 216,
+    "EngineLawDto": 432,
+    "EngineMessage": 232,
+    "Notices": 32,
+    "OptionActorId": 24,
+    "OptionF64": 16,
+    "OptionOffice": 1,
+    "PlayerCustody": 208,
+    "PlayerNotice": 64,
+    "Station": 80,
+    "Summons": 48,
+    "WardNotice": 296,
+    "WorldLawCandidate": 160,
+    "WorldLawDto": 160,
+    "maximum_registry_index_nodes": 5000,
+    "minimal_record_expanded_bytes": 4816,
+    "registry_index_bound_bytes": 1720000,
+    "registry_name_tuple": 16,
+    "sparse_custody_node_bound_bytes": 2808,
+    "validation_working_bytes": 4194304
+  }
+}

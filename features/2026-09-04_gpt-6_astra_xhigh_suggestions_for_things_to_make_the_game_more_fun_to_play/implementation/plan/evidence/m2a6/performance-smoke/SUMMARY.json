@@ -1,0 +1,206 @@
+{
+  "authored": {
+    "runs": 1,
+    "samples_per_phase": 2,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 6935,
+        "expanded_upper_bytes": 91572,
+        "peak_bytes": 4585493,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "arrests": 3,
+        "authored": 8,
+        "cached_custody": true,
+        "cached_notices": 3,
+        "characters": 520,
+        "closing": 1,
+        "committed": 9,
+        "custody_records": 11,
+        "dated_unissued_summons": 1,
+        "hearsay": 1,
+        "holders": 1,
+        "law_cached": true,
+        "notices": 4,
+        "served_notices": 3,
+        "served_pairs": 6,
+        "summons": 3,
+        "undated_summons": 1,
+        "warrants": 1
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "law-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 9170986,
+      "witnesses": {
+        "historical_notice_links": 1,
+        "historical_officers": 1
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 265.306,
+        "p95": 318.557,
+        "p99": 318.557,
+        "max": 318.557
+      },
+      "export_us": {
+        "p50": 1006.1370000000001,
+        "p95": 1033.318,
+        "p99": 1033.318,
+        "max": 1033.318
+      },
+      "encode_us": {
+        "p50": 31.098,
+        "p95": 34.618,
+        "p99": 34.618,
+        "max": 34.618
+      },
+      "decode_validate_us": {
+        "p50": 279.804,
+        "p95": 305.72200000000004,
+        "p99": 305.72200000000004,
+        "max": 305.72200000000004
+      },
+      "candidate_validate_us": {
+        "p50": 241.234,
+        "p95": 252.672,
+        "p99": 252.672,
+        "max": 252.672
+      },
+      "drop_us": {
+        "p50": 1.166,
+        "p95": 2.265,
+        "p99": 2.265,
+        "max": 2.265
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  },
+  "populated": {
+    "runs": 1,
+    "samples_per_phase": 2,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 6934,
+        "expanded_upper_bytes": 91572,
+        "peak_bytes": 4585490,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "arrests": 3,
+        "authored": 8,
+        "cached_custody": true,
+        "cached_notices": 3,
+        "characters": 2520,
+        "closing": 1,
+        "committed": 9,
+        "custody_records": 11,
+        "dated_unissued_summons": 1,
+        "hearsay": 1,
+        "holders": 1,
+        "law_cached": true,
+        "notices": 4,
+        "served_notices": 3,
+        "served_pairs": 6,
+        "summons": 3,
+        "undated_summons": 1,
+        "warrants": 1
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "law-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 9170980,
+      "witnesses": {
+        "historical_notice_links": 1,
+        "historical_officers": 1
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 1104.5720000000001,
+        "p95": 1259.789,
+        "p99": 1259.789,
+        "max": 1259.789
+      },
+      "export_us": {
+        "p50": 4402.063,
+        "p95": 4414.679999999999,
+        "p99": 4414.679999999999,
+        "max": 4414.679999999999
+      },
+      "encode_us": {
+        "p50": 33.958999999999996,
+        "p95": 39.275,
+        "p99": 39.275,
+        "max": 39.275
+      },
+      "decode_validate_us": {
+        "p50": 1140.686,
+        "p95": 1150.873,
+        "p99": 1150.873,
+        "max": 1150.873
+      },
+      "candidate_validate_us": {
+        "p50": 1079.277,
+        "p95": 1082.826,
+        "p99": 1082.826,
+        "max": 1082.826
+      },
+      "drop_us": {
+        "p50": 1.407,
+        "p95": 2.63,
+        "p99": 2.63,
+        "max": 2.63
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  }
+}

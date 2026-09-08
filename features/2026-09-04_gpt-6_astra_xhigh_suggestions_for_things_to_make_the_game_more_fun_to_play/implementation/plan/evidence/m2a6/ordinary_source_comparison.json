@@ -1,0 +1,23 @@
+[
+  {
+    "path": "crates/cathedral-sim/src/engine.rs",
+    "base_sha256": "4003763ec0dc108acce277c654ec458b1d7ec94bd9dd7806547f61f74573ac1e",
+    "current_sha256": "3884c3e7e28246bf0a9b7ae29f73821b9703e0ca2cd98493a78a82da44c7bd1f",
+    "removed_module_bytes": "pub mod law_checkpoint;\n",
+    "ordinary_bytes_equal": true
+  },
+  {
+    "path": "crates/cathedral-sim/src/notices.rs",
+    "base_sha256": "89bbf7d066bd532923c704877a7532d5a06b21cffed3395f706f549222ae7e7c",
+    "current_sha256": "526a094f69c43dafe617da461beca35d56d356f9359cc32c06f6f20d94af2397",
+    "removed_module_bytes": "// Versioned private owner records; ordinary law behavior is unchanged.\npub mod checkpoint;\n\n",
+    "ordinary_bytes_equal": true
+  },
+  {
+    "path": "crates/cathedral-sim/src/custody.rs",
+    "base_sha256": "b70c2605da4aa582314eda5677b00b14d42dac299f6ba8c8a3c5dd808eba58ca",
+    "current_sha256": "7639a28f29cede221e49f99a1d579005df824870bdd1484b3ed3a2a816146084",
+    "removed_module_bytes": "// Versioned private owner records; ordinary law behavior is unchanged.\npub mod checkpoint;\n\n",
+    "ordinary_bytes_equal": true
+  }
+]

@@ -1,0 +1,59 @@
+{
+  "candidate_validate_us": [
+    353.546
+  ],
+  "cost": {
+    "encoded_bytes": 6935,
+    "expanded_upper_bytes": 91572,
+    "peak_bytes": 4585493,
+    "validation_working_bytes": 4194304
+  },
+  "counts": {
+    "arrests": 3,
+    "authored": 8,
+    "cached_custody": true,
+    "cached_notices": 3,
+    "characters": 520,
+    "closing": 1,
+    "committed": 9,
+    "custody_records": 11,
+    "dated_unissued_summons": 1,
+    "hearsay": 1,
+    "holders": 1,
+    "law_cached": true,
+    "notices": 4,
+    "served_notices": 3,
+    "served_pairs": 6,
+    "summons": 3,
+    "undated_summons": 1,
+    "warrants": 1
+  },
+  "decode_validate_us": [
+    411.098
+  ],
+  "drop_us": [
+    1.4100000000000001
+  ],
+  "encode_us": [
+    45.79
+  ],
+  "export_us": [
+    1436.296
+  ],
+  "mode": "authored",
+  "placement": {
+    "placed": 0,
+    "requested": 0,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    414.275
+  ],
+  "samples": 1,
+  "scenario": "law-obligations-v1",
+  "shared_reserved_peak_excluding_running_bytes": 9170986,
+  "witnesses": {
+    "historical_notice_links": 1,
+    "historical_officers": 1
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "result": "passed",
+  "checks": [
+    {
+      "name": "layout",
+      "original_sha256": "20f5c7ea75a12b549dfdf592b2826bdebe3c49b86c26f5abe9b217e988001593",
+      "exact_archive_verified": true,
+      "targets": 1,
+      "totals": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "focused-complete",
+      "original_sha256": "3b80ed3299d88a3264b8764852edad81855ea9b5585443115c64dab9bba3fd0e",
+      "exact_archive_verified": true,
+      "targets": 1,
+      "totals": [
+        79,
+        0,
+        12
+      ]
+    },
+    {
+      "name": "workspace-serial",
+      "original_sha256": "1b048d2df1d65167913618a2b0aca32695350205c788b5cb7991ad5d46909a8f",
+      "exact_archive_verified": true,
+      "targets": 37,
+      "totals": [
+        1962,
+        0,
+        20
+      ]
+    },
+    {
+      "name": "smoke-authored-final",
+      "original_sha256": "756bbf635ba89edce24d4a5f9d0fb959ca18166d6978e2603b489d9f9d08b93a",
+      "exact_archive_verified": true,
+      "targets": 0,
+      "totals": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "smoke-populated-final",
+      "original_sha256": "1cf882dad87fbc9c853d0ce41169ce8dd5199a976dad4d55a7c0e6125b7d45f0",
+      "exact_archive_verified": true,
+      "targets": 0,
+      "totals": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "supplemental_public_tests": 5,
+  "workspace_source_unchanged": true,
+  "note": "Five new public tests supplement the unchanged owner workspace; no claim that the earlier workspace run contained this later test target.",
+  "development_checks": [
+    {
+      "name": "owners-initial",
+      "exit_code": 101,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "83e3ef0a093574fcb4765330738e8b955d3e0b862d0f8ccb59b6a49894aeb2b2"
+    },
+    {
+      "name": "engine-initial",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "9e39a5ab2b3a674ca8d120f842babc45b8847855eef69bab52d178f232c5ce48"
+    },
+    {
+      "name": "fixtures-initial",
+      "exit_code": 101,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "73c0cfd5db543ca9640206a082d7b17cb28864042077dd326a513bdb05966849"
+    },
+    {
+      "name": "fixtures-owner",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "3dcfb43516625bd06a61f2101cf99fa4802ed5343c37b0115278483c9a88342d"
+    },
+    {
+      "name": "fixture-engine",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "82c47b9ab7cd14d53eee2a2a776cfdca0ad332f25f6366a5b2a4a0cdce3bf5e8"
+    },
+    {
+      "name": "private-initial",
+      "exit_code": 101,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "ba88583aebcdb450ff09f1f84b4653dc629d831b8501c45248bfec5ef6380b07"
+    },
+    {
+      "name": "private-corrected",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "e7586ebd0eb4398861df7d56dac13a40d64c28582d4da89adbe61460e5c313bc"
+    },
+    {
+      "name": "probe-authored",
+      "exit_code": 101,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "278f5d376d1d1e3e3d103556e4fd246b5ebf1cb3e092232bc049682c05269335"
+    },
+    {
+      "name": "probe-authored-corrected",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "83043799b944844ab99daa41aa2b4b3becd3d34c0d35042bb02e4c16455a8c5d"
+    },
+    {
+      "name": "probe-populated",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "6dc68095964e0f4e0717079f8231c1a57f51c2d115468887ebf3bc5e17179066"
+    },
+    {
+      "name": "layout",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "20f5c7ea75a12b549dfdf592b2826bdebe3c49b86c26f5abe9b217e988001593"
+    },
+    {
+      "name": "focused-final",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "5b9bad03a03b09bb768686d2428690718b2e5c8b9f8e51f9ed7c081b7cffd943"
+    },
+    {
+      "name": "focused-complete",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "3b80ed3299d88a3264b8764852edad81855ea9b5585443115c64dab9bba3fd0e"
+    },
+    {
+      "name": "workspace-final",
+      "exit_code": 101,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "7757d62c390b1d28073cf9df3dee5e8ac3c43ef4b99ef810495cb05442919c6e"
+    },
+    {
+      "name": "workspace-serial",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "1b048d2df1d65167913618a2b0aca32695350205c788b5cb7991ad5d46909a8f"
+    },
+    {
+      "name": "smoke-authored-final",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "756bbf635ba89edce24d4a5f9d0fb959ca18166d6978e2603b489d9f9d08b93a"
+    },
+    {
+      "name": "smoke-populated-final",
+      "exit_code": 0,
+      "exact_command_and_archive_verified": true,
+      "original_sha256": "1cf882dad87fbc9c853d0ce41169ce8dd5199a976dad4d55a7c0e6125b7d45f0"
+    }
+  ]
+}

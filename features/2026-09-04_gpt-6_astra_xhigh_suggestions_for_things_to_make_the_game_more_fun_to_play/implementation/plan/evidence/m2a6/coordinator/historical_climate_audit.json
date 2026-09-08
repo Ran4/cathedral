@@ -1,0 +1,36 @@
+{
+  "checked_at_utc": "2026-09-08T13:17:49.194858+00:00",
+  "measurement_directory": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a4/performance/climate",
+  "result": "passed",
+  "smoke_only": false,
+  "runs": 6,
+  "raw_phase_samples": 3600,
+  "checks": [
+    "archive and original hashes",
+    "phase lengths and nearest-rank percentiles",
+    "repeated metadata",
+    "count and byte admission",
+    "process timing metadata",
+    "all summary medians"
+  ],
+  "current_source_binary_runner_hashes_checked": false,
+  "global_max_us": {
+    "authored": {
+      "preflight_us": 100.579,
+      "export_us": 152.234,
+      "encode_us": 16.878999999999998,
+      "decode_validate_us": 92.803,
+      "candidate_validate_us": 70.25399999999999,
+      "drop_us": 0.217
+    },
+    "populated": {
+      "preflight_us": 104.377,
+      "export_us": 149.62199999999999,
+      "encode_us": 68.304,
+      "decode_validate_us": 92.965,
+      "candidate_validate_us": 70.823,
+      "drop_us": 0.322
+    }
+  },
+  "auditor_sha256": "e67bbaa178bfc2ded9c66f8105fea542fa2248cd28e23d4f22c5c4793cfb32df"
+}

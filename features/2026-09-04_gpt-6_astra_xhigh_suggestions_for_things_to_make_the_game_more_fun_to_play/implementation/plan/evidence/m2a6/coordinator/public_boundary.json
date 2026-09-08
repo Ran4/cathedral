@@ -1,0 +1,39 @@
+{
+  "name": "coordinator-public",
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "--offline",
+    "-p",
+    "cathedral-sim",
+    "--test",
+    "checkpoint_law_boundary",
+    "-j",
+    "1"
+  ],
+  "environment": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "started_utc": "2026-09-08T13:13:30.989000+00:00",
+  "wall_seconds": 115.28900329803582,
+  "exit_code": 0,
+  "original_path": "/tmp/alibi-m2a6-coordinator-public.log",
+  "original_bytes": 813,
+  "original_sha256": "6f28165c1ea98607b7bdd2dc3e60c1cc8b5c1e5e46e8fe85b0193eadeeaf943b",
+  "archive": "public_boundary.original.log.gz",
+  "archive_sha256": "192666752836dfac9135f38cee7f12e14bd7d77de9ff77d674493885421d31c8",
+  "source_manifest_sha256": "a13e0af8ba263e4b642e43de8774d5f63c903f244365e5802119441b2ff93050",
+  "source_path": "crates/cathedral-sim/tests/checkpoint_law_boundary.rs",
+  "source_sha256": "a273ea37530ddc472d850f55e96659a768e2c2b0c5fa069f09b529cd529131c8",
+  "totals": {
+    "passed": 5,
+    "failed": 0,
+    "ignored": 0
+  },
+  "transformation": "none; gzip decompresses to exact original bytes"
+}

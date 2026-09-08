@@ -41,6 +41,9 @@
 //! (`lore/core_lore/secular_government.md`) is a whole second system, so here
 //! the warrant comes from an ignored summons instead.
 
+// Versioned private owner records; ordinary law behavior is unchanged.
+pub mod checkpoint;
+
 use std::{
     collections::BTreeMap,
     hash::{DefaultHasher, Hash, Hasher},

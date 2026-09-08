@@ -48,6 +48,9 @@
 //! myself" state. Going and dealing with it *is* restitution, or it is talking
 //! the officer round until they call `settle_notice`.
 
+// Versioned private owner records; ordinary law behavior is unchanged.
+pub mod checkpoint;
+
 use std::{
     collections::BTreeSet,
     hash::{DefaultHasher, Hash, Hasher},

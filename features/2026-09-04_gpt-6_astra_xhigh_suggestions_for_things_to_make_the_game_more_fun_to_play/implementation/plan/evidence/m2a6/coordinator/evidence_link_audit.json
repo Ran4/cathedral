@@ -1,0 +1,136 @@
+{
+  "checked_at_utc": "2026-09-08T13:21:21.731206+00:00",
+  "result": "passed",
+  "markdown_files": 6,
+  "local_links": 32,
+  "checks": [
+    {
+      "source": "OWNER_COVERAGE.md",
+      "target": "ADMISSION.md"
+    },
+    {
+      "source": "README.md",
+      "target": "OWNER_COVERAGE.md"
+    },
+    {
+      "source": "README.md",
+      "target": "ADMISSION.md"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/review.md"
+    },
+    {
+      "source": "README.md",
+      "target": "verification.json"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/source_hashes.json"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/source_audit.json"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/log_audit.json"
+    },
+    {
+      "source": "README.md",
+      "target": "performance/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "development/README.md"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "public_boundary.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "log_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "source_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "source_hashes.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../ADMISSION.md"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../performance/README.md"
+    },
+    {
+      "source": "development/README.md",
+      "target": "logs.json"
+    },
+    {
+      "source": "development/README.md",
+      "target": "run_checked.py"
+    },
+    {
+      "source": "development/README.md",
+      "target": "../format_check.json"
+    },
+    {
+      "source": "development/README.md",
+      "target": "../ordinary_source_comparison.json"
+    },
+    {
+      "source": "development/README.md",
+      "target": "../coordinator/public_boundary.json"
+    },
+    {
+      "source": "development/README.md",
+      "target": "../coordinator/review.md"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "IDENTITY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "RESULTS.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "SUMMARY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/law_performance_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/law_smoke_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/auditor_regressions.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/historical_round_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/historical_climate_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/historical_knowledge_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/release_build.json"
+    }
+  ]
+}
