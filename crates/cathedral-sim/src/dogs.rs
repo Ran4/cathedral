@@ -21,6 +21,8 @@
 //! `Movement`/`Lamps` shape: republished whole when any dog moves, never
 //! bumping `world_revision`.
 
+pub mod checkpoint;
+
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 

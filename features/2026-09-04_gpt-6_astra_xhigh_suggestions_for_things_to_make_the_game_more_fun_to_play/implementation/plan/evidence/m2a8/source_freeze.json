@@ -1,0 +1,10 @@
+{
+  "frozen_utc": "2026-09-08T14:28:03.377017+00:00",
+  "base_head": "832f576b9680d4b98f86440a78c605666c272503",
+  "manifest": "source_hashes.json",
+  "manifest_sha256": "4ed36cbf1e4292bd03a512eb8aa2c55dfb7422f08681f4697a2c32e707754c29",
+  "files": 841,
+  "scope": "All Rust source/tests/examples, JSON/bin/RON/TOML/Jinja assets and lore plus workspace Cargo files. Documentation is not a compiled-source freeze.",
+  "ordinary_source_only_module_wiring": true,
+  "public_test_included": true
+}

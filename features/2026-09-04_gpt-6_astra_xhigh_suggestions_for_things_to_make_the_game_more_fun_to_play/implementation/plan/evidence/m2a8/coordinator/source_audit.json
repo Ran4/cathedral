@@ -1,0 +1,64 @@
+{
+  "checked_at_utc": "2026-09-08T14:28:24.736460+00:00",
+  "result": "passed",
+  "source_manifest_sha256": "4ed36cbf1e4292bd03a512eb8aa2c55dfb7422f08681f4697a2c32e707754c29",
+  "source_files_checked": 841,
+  "changed_paths_all_covered": true,
+  "changed_paths": [
+    "crates/cathedral-backends/examples/alibi_animals_cost.rs",
+    "crates/cathedral-sim/src/dogs.rs",
+    "crates/cathedral-sim/src/dogs/checkpoint.rs",
+    "crates/cathedral-sim/src/dogs/checkpoint/context.rs",
+    "crates/cathedral-sim/src/dogs/checkpoint/records.rs",
+    "crates/cathedral-sim/src/dogs/checkpoint/tests.rs",
+    "crates/cathedral-sim/src/engine.rs",
+    "crates/cathedral-sim/src/engine/animals_checkpoint.rs",
+    "crates/cathedral-sim/src/engine/animals_checkpoint/tests.rs",
+    "crates/cathedral-sim/tests/checkpoint_animals_boundary.rs",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/engine_animals.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/world_animals.json"
+  ],
+  "historical_fixtures_unchanged": [
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/backbone.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/backbone_completed.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/backbone_empty.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/climate_active.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/climate_initial.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/clock.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/engine_knowledge.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/engine_law.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/engine_marks.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/host_time.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/knowledge.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/law.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/ledger.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/manifest.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/operations.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/round_active.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/round_empty.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/weather_forced.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/weather_initial.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/weather_residue.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/world_climate_virgin.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/world_marks.json"
+  ],
+  "historical_fixture_documentation_unchanged": [
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/README.md"
+  ],
+  "module_wiring_comparisons": [
+    {
+      "path": "crates/cathedral-sim/src/engine.rs",
+      "baseline_sha256": "d5dccb79b069b4b4dea6a4f06eac2f8175283bf30f58d0a3957776de7d3667f0",
+      "current_sha256": "23bf8a09d174638a91ebae74a3fc1896d267d34b4fd3c19b27f692ad46d8d151",
+      "removed_module_bytes": "pub mod animals_checkpoint;\n",
+      "remaining_bytes_identical": true
+    },
+    {
+      "path": "crates/cathedral-sim/src/dogs.rs",
+      "baseline_sha256": "a33cfb7f234a55d35e8cc78c38df4fcee27bc5c4e4e97d6ef8725570b1d650a5",
+      "current_sha256": "0d958180d6c390c1a66b2dc932d768bda225e7545b7bb2888159a034b71df84d",
+      "removed_module_bytes": "pub mod checkpoint;\n\n",
+      "remaining_bytes_identical": true
+    }
+  ]
+}

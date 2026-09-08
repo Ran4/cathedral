@@ -1,0 +1,40 @@
+{
+  "ordinary_source": {
+    "crates/cathedral-sim/src/dogs.rs": {
+      "head_sha256": "a33cfb7f234a55d35e8cc78c38df4fcee27bc5c4e4e97d6ef8725570b1d650a5",
+      "without_wiring_sha256": "a33cfb7f234a55d35e8cc78c38df4fcee27bc5c4e4e97d6ef8725570b1d650a5",
+      "current_sha256": "0d958180d6c390c1a66b2dc932d768bda225e7545b7bb2888159a034b71df84d"
+    },
+    "crates/cathedral-sim/src/engine.rs": {
+      "head_sha256": "d5dccb79b069b4b4dea6a4f06eac2f8175283bf30f58d0a3957776de7d3667f0",
+      "without_wiring_sha256": "d5dccb79b069b4b4dea6a4f06eac2f8175283bf30f58d0a3957776de7d3667f0",
+      "current_sha256": "23bf8a09d174638a91ebae74a3fc1896d267d34b4fd3c19b27f692ad46d8d151"
+    }
+  },
+  "historical_fixtures_unchanged": {
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/README.md": "7c64d7ce40476696336b2d863af13e0ce7c1b779fc918f64e2ba232e3f2e4e4b",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/backbone.json": "b977de523ca8b999fbf74347b41a5e6551c8a44f51f6c5c9373d672f18067781",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/backbone_completed.json": "ce6920c0d5581d020b07c20faf1ec2f68aabe2433afcd2ffb525e825a32763e4",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/backbone_empty.json": "25f160c3502cbb759b841f76bc4aeffd824980af5465dcafa78150780a53d7df",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/climate_active.json": "0b9d2829cd397a9622cdfb455423fb78a0ff90e1d08dec1306742e93089e0e3d",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/climate_initial.json": "99bd4147618fd60958b48d9bf1d92f9c0f8d7b42a7b4ec63f6cd6fcff13f962b",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/clock.json": "4717d9f1a9f0538af19541428f07ec4156554356fa60d7f434bdffb458e5167c",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/engine_knowledge.json": "ad30ad6b02e154058c408a80308b0fe0b3f99dd7c6450806a031e3e36385d94d",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/engine_law.json": "3a5ebe23dd34da3479bb2e614e2ed7a3f41e31caf1aa282c5d34753f1df5aa8f",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/engine_marks.json": "06990453fdfba76fc32ad5307823be3515506a1719e93480541c137720f9b4c3",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/host_time.json": "3505d1654a61830178a1b31d62cc6adcf223fed75bb632df70860116ed96e692",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/knowledge.json": "d182d295605f758fc26bdb649939247f493266ea370cbaf553921fea5f7f29d4",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/law.json": "e42edf1fde0691ba6ade4d8be136a97f0b648deadd8f8288dd454fa65218799d",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/ledger.json": "e2a0b0fc1b397ef89069ad50439bef2b4b9e68c9147254a9f79d19cb79db2ba0",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/manifest.json": "16c367e701527183765ad423c27f090d86eb10804ebd9517788591f4bfbbb228",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/operations.json": "f444a64d575625c165f5d1ef154ae412cd300f53aec5c7f26cf032404bc46743",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/round_active.json": "5e4fb9e967d2ed0a747dc7fa3691ad0a13fa1ddfbd25d7327a8558e05d749001",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/round_empty.json": "8e3f1e17d45a3e19f348b054c12bf64d0fa17a92a6467e2370f2936bda221318",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/weather_forced.json": "b851b7a6f9fe2fd3f75be023301ca2521640d49467e652fce94dd5c92fc2d04a",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/weather_initial.json": "8f43c4e14966bea1a8ec9ab8707bb3eb0a0e2c8e5a1f974c7f51f2245c6adb9c",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/weather_residue.json": "3da25fbae0ed8f9e39bac36beaf2c5f5906b988eb732e3b3ea2b4c6417618cdb",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/world_climate_virgin.json": "8525b881275528578360eee732a0d905445b160d9967f3575f7f4ee227af10ea",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/world_marks.json": "d76f1fc82ae8a963b0889ca7f9f4964e31a86df7bea98f057873200cd9cb36f9"
+  },
+  "format_scope": "Eight new Rust files formatted with edition2024 skip_children=true; ordinary source retained byte-for-byte except module wiring."
+}

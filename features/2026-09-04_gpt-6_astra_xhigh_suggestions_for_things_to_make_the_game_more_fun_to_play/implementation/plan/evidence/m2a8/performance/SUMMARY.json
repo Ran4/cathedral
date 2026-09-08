@@ -1,0 +1,206 @@
+{
+  "authored": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 4188,
+        "expanded_upper_bytes": 70590,
+        "peak_bytes": 1347596,
+        "validation_working_bytes": 1048576
+      },
+      "counts": {
+        "characters": 520,
+        "decided": 2,
+        "dogs": 10,
+        "dogs_published": true,
+        "engine_nav": true,
+        "moving": 1,
+        "path_dogs": 2,
+        "resting": 8,
+        "stop_pending": 0,
+        "turning": 1,
+        "waypoints": 16
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "animals-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 2695192,
+      "witnesses": {
+        "acceleration_observed": true,
+        "boundary_seconds": 6.061000000000001,
+        "cadence_residual_seconds": 0.011000000000014332,
+        "initial_all_resting": true,
+        "initial_resting_publications": 1,
+        "movement_now_seconds": 6.0499999999999865,
+        "movement_publications": 27,
+        "quiet_publications": 0,
+        "turning_observed": true
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 13.597999999999999,
+        "p95": 14.144,
+        "p99": 14.699,
+        "max": 15.007
+      },
+      "export_us": {
+        "p50": 27.448,
+        "p95": 28.375,
+        "p99": 29.642,
+        "max": 29.703
+      },
+      "encode_us": {
+        "p50": 18.049,
+        "p95": 18.918,
+        "p99": 20.625999999999998,
+        "max": 23.685000000000002
+      },
+      "decode_validate_us": {
+        "p50": 13.978000000000002,
+        "p95": 15.349000000000002,
+        "p99": 18.793000000000003,
+        "max": 30.31
+      },
+      "candidate_validate_us": {
+        "p50": 0.295,
+        "p95": 0.35600000000000004,
+        "p99": 0.41600000000000004,
+        "max": 0.427
+      },
+      "drop_us": {
+        "p50": 0.23900000000000002,
+        "p95": 0.313,
+        "p99": 0.39299999999999996,
+        "max": 0.506
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  },
+  "populated": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 4188,
+        "expanded_upper_bytes": 70590,
+        "peak_bytes": 1347596,
+        "validation_working_bytes": 1048576
+      },
+      "counts": {
+        "characters": 2520,
+        "decided": 2,
+        "dogs": 10,
+        "dogs_published": true,
+        "engine_nav": true,
+        "moving": 1,
+        "path_dogs": 2,
+        "resting": 8,
+        "stop_pending": 0,
+        "turning": 1,
+        "waypoints": 16
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "animals-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 2695192,
+      "witnesses": {
+        "acceleration_observed": true,
+        "boundary_seconds": 6.061000000000001,
+        "cadence_residual_seconds": 0.011000000000014332,
+        "initial_all_resting": true,
+        "initial_resting_publications": 1,
+        "movement_now_seconds": 6.0499999999999865,
+        "movement_publications": 27,
+        "quiet_publications": 0,
+        "turning_observed": true
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 13.745,
+        "p95": 14.280000000000001,
+        "p99": 15.148,
+        "max": 17.309
+      },
+      "export_us": {
+        "p50": 27.758,
+        "p95": 28.947,
+        "p99": 32.385999999999996,
+        "max": 37.397
+      },
+      "encode_us": {
+        "p50": 18.366999999999997,
+        "p95": 19.584,
+        "p99": 23.351,
+        "max": 24.201999999999998
+      },
+      "decode_validate_us": {
+        "p50": 14.125,
+        "p95": 16.027,
+        "p99": 23.457,
+        "max": 30.671
+      },
+      "candidate_validate_us": {
+        "p50": 0.28200000000000003,
+        "p95": 0.348,
+        "p99": 0.375,
+        "max": 0.381
+      },
+      "drop_us": {
+        "p50": 0.24,
+        "p95": 0.31,
+        "p99": 0.41800000000000004,
+        "max": 0.625
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  }
+}

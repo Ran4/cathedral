@@ -1,0 +1,51 @@
+{
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "build",
+    "--offline",
+    "--release",
+    "-p",
+    "cathedral-backends",
+    "--example",
+    "alibi_animals_cost",
+    "-j",
+    "1"
+  ],
+  "environment_overrides": {
+    "PATH": "/home/ran/.cargo/bin:/usr/bin:/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "started_unix_seconds": 1788878784.5046687,
+  "elapsed_seconds": 116.96429684699979,
+  "exit_code": 0,
+  "artifacts": {
+    "release_build.log": {
+      "original_path": "/tmp/alibi-m2a8-release_build.log-original",
+      "original_bytes": 253,
+      "archive_bytes": 253,
+      "original_sha256": "7b5da33d17853c3945f584e3f8416d01e84fa9781417e568ef6e619d27d1cb53",
+      "archive_sha256": "7b5da33d17853c3945f584e3f8416d01e84fa9781417e568ef6e619d27d1cb53",
+      "normalization": "remove only redundant terminal LF bytes"
+    },
+    "release_build.time": {
+      "original_path": "/tmp/alibi-m2a8-release_build.time-original",
+      "original_bytes": 850,
+      "archive_bytes": 850,
+      "original_sha256": "141c7ff9526c1e0235cc59a98960a0ce7bfae29a799736bfd0940806173af05d",
+      "archive_sha256": "141c7ff9526c1e0235cc59a98960a0ce7bfae29a799736bfd0940806173af05d",
+      "normalization": "remove only redundant terminal LF bytes"
+    }
+  },
+  "source_manifest_sha256": "4ed36cbf1e4292bd03a512eb8aa2c55dfb7422f08681f4697a2c32e707754c29",
+  "binary_sha256": {
+    "alibi_animals_cost": "32fd3e1c55ca9247ae327165662c524b94f266e360f7562c36fa53a7f057f5b4"
+  },
+  "preserved_reference": {
+    "path": "/tmp/alibi-m2a8-animals-reference-binary",
+    "sha256": "32fd3e1c55ca9247ae327165662c524b94f266e360f7562c36fa53a7f057f5b4"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T14:46:25.687898+00:00",
+  "command_records": 11,
+  "cargo_records": 9,
+  "checks": [
+    "archive and exact retained original hashes/lengths",
+    "test totals independently parsed from original logs",
+    "all per-command source manifest hashes",
+    "final workspace and focused/layout source equality"
+  ],
+  "frozen_source_commands": [
+    "rustc_version",
+    "checkpoint_final",
+    "layout",
+    "workspace_serial"
+  ],
+  "totals": {
+    "initial_check": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "create_fixtures": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "private_animals_first": {
+      "passed": 11,
+      "failed": 0,
+      "ignored": 2,
+      "targets": 1
+    },
+    "public_animals_first": {
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "probe_authored_first": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "probe_populated_first": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "format_scoped": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "rustc_version": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "checkpoint_final": {
+      "passed": 104,
+      "failed": 0,
+      "ignored": 19,
+      "targets": 29
+    },
+    "layout": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "workspace_serial": {
+      "passed": 2004,
+      "failed": 0,
+      "ignored": 27,
+      "targets": 40
+    }
+  },
+  "source_manifest_sha256": "4ed36cbf1e4292bd03a512eb8aa2c55dfb7422f08681f4697a2c32e707754c29"
+}

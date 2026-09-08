@@ -1,0 +1,65 @@
+{
+  "candidate_validate_us": [
+    0.486,
+    0.424
+  ],
+  "cost": {
+    "encoded_bytes": 4188,
+    "expanded_upper_bytes": 70590,
+    "peak_bytes": 1347596,
+    "validation_working_bytes": 1048576
+  },
+  "counts": {
+    "characters": 520,
+    "decided": 2,
+    "dogs": 10,
+    "dogs_published": true,
+    "engine_nav": true,
+    "moving": 1,
+    "path_dogs": 2,
+    "resting": 8,
+    "stop_pending": 0,
+    "turning": 1,
+    "waypoints": 16
+  },
+  "decode_validate_us": [
+    37.244,
+    21.62
+  ],
+  "drop_us": [
+    0.6519999999999999,
+    0.438
+  ],
+  "encode_us": [
+    31.529999999999998,
+    26.711
+  ],
+  "export_us": [
+    36.43,
+    36.316
+  ],
+  "mode": "authored",
+  "placement": {
+    "placed": 0,
+    "requested": 0,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    18.771,
+    18.389
+  ],
+  "samples": 2,
+  "scenario": "animals-obligations-v1",
+  "shared_reserved_peak_excluding_running_bytes": 2695192,
+  "witnesses": {
+    "acceleration_observed": true,
+    "boundary_seconds": 6.061000000000001,
+    "cadence_residual_seconds": 0.011000000000014332,
+    "initial_all_resting": true,
+    "initial_resting_publications": 1,
+    "movement_now_seconds": 6.0499999999999865,
+    "movement_publications": 27,
+    "quiet_publications": 0,
+    "turning_observed": true
+  }
+}

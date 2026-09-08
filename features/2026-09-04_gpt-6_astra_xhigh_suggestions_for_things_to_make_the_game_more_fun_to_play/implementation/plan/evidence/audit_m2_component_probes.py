@@ -146,6 +146,26 @@ def main():
                 assert witnesses["chalk_publications"] == 1
                 assert 0 < witnesses["cross_strength"] < 1
                 assert witnesses["revision_after_setup"] == (5111 if expected_extra else 1111)
+            elif data["scenario"] == "animals-obligations-v1":
+                assert validation_working_bytes == 1024 * 1024
+                assert counts == {
+                    "characters": 520 + expected_extra, "dogs": 10, "decided": 2,
+                    "path_dogs": 2, "waypoints": 16, "resting": 8, "moving": 1,
+                    "turning": 1, "stop_pending": 0,
+                    "dogs_published": True, "engine_nav": True,
+                }
+                witnesses = data["witnesses"]
+                for key in ("initial_all_resting", "turning_observed", "acceleration_observed"):
+                    assert witnesses[key] is True
+                assert witnesses["initial_resting_publications"] == 1
+                assert witnesses["quiet_publications"] == 0
+                assert witnesses["movement_publications"] == 27
+                assert witnesses["boundary_seconds"] == 6.061000000000001
+                assert witnesses["movement_now_seconds"] == 6.0499999999999865
+                assert witnesses["cadence_residual_seconds"] == (
+                    witnesses["boundary_seconds"] - witnesses["movement_now_seconds"]
+                )
+                assert 0 < witnesses["cadence_residual_seconds"] < 0.05
             else:
                 raise AssertionError("unrecognized component validation workload")
         assert cost["peak_bytes"] == (

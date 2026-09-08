@@ -1,0 +1,156 @@
+{
+  "checked_at_utc": "2026-09-08T14:28:24.736460+00:00",
+  "result": "passed",
+  "checks": [
+    {
+      "path": "crates/cathedral-backends/examples/alibi_animals_cost.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/examples/alibi_animals_cost.rs"
+      ],
+      "source_sha256": "f8003a6b9f899a1618f004cac0f43f2fd3cc7965bb98f3ebec0be7fb997328e8",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/dogs.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/dogs.rs"
+      ],
+      "source_sha256": "0d958180d6c390c1a66b2dc932d768bda225e7545b7bb2888159a034b71df84d",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/dogs/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/dogs/checkpoint.rs"
+      ],
+      "source_sha256": "10096bf7d6c0c1afceb06b318eebee7507b021138dd291da618281effe9d592e",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/dogs/checkpoint/context.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/dogs/checkpoint/context.rs"
+      ],
+      "source_sha256": "efc37104cc329ce5cfb2a3d5db628a2ba111977ddb94bddac06a828bdcefb962",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/dogs/checkpoint/records.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/dogs/checkpoint/records.rs"
+      ],
+      "source_sha256": "e60835a3b195e62875e402ab9bfae72c89faa80c5b78447d3af383943c2041cb",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/dogs/checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/dogs/checkpoint/tests.rs"
+      ],
+      "source_sha256": "175f2349d857805ae652c9a08dd1d863651c13268cc05d536699ecce9b89c683",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine.rs"
+      ],
+      "source_sha256": "23bf8a09d174638a91ebae74a3fc1896d267d34b4fd3c19b27f692ad46d8d151",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/animals_checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/animals_checkpoint.rs"
+      ],
+      "source_sha256": "8975c9a560b65f302a55ff4f91349f3d0f5c81c27d8d4cc42bfc66dc921875d7",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/animals_checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/animals_checkpoint/tests.rs"
+      ],
+      "source_sha256": "5e46a95bce5ca88a5ebcd27c4563cfb1daaee53cf92854d2a486fb544895fb13",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/tests/checkpoint_animals_boundary.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/tests/checkpoint_animals_boundary.rs"
+      ],
+      "source_sha256": "066c37b72d010588067aa79b4d444a30fd684cc57e0fcb4582f3b3c8a9198fa2",
+      "exit_code": 0,
+      "output": ""
+    }
+  ]
+}

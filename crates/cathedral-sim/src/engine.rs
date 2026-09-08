@@ -18,6 +18,7 @@
 //! rides the hot channel and no longer bumps the revision at all
 //! ([`World::update_positions`]), so it neither needs nor triggers that flush.
 
+pub mod animals_checkpoint;
 pub mod climate_checkpoint;
 mod command_policy;
 pub mod knowledge_checkpoint;

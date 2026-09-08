@@ -1,0 +1,246 @@
+[
+  {
+    "name": "authored-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_animals_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "2",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a8/performance-smoke/authored-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 4188,
+        "expanded_upper_bytes": 70590,
+        "peak_bytes": 1347596,
+        "validation_working_bytes": 1048576
+      },
+      "counts": {
+        "characters": 520,
+        "decided": 2,
+        "dogs": 10,
+        "dogs_published": true,
+        "engine_nav": true,
+        "moving": 1,
+        "path_dogs": 2,
+        "resting": 8,
+        "stop_pending": 0,
+        "turning": 1,
+        "waypoints": 16
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "animals-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 2695192,
+      "witnesses": {
+        "acceleration_observed": true,
+        "boundary_seconds": 6.061000000000001,
+        "cadence_residual_seconds": 0.011000000000014332,
+        "initial_all_resting": true,
+        "initial_resting_publications": 1,
+        "movement_now_seconds": 6.0499999999999865,
+        "movement_publications": 27,
+        "quiet_publications": 0,
+        "turning_observed": true
+      }
+    },
+    "sample_count_per_phase": 2,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.33599999999999997,
+        "p95": 0.379,
+        "p99": 0.379,
+        "max": 0.379
+      },
+      "decode_validate_us": {
+        "p50": 18.322,
+        "p95": 30.171,
+        "p99": 30.171,
+        "max": 30.171
+      },
+      "drop_us": {
+        "p50": 0.357,
+        "p95": 0.505,
+        "p99": 0.505,
+        "max": 0.505
+      },
+      "encode_us": {
+        "p50": 19.768,
+        "p95": 25.806,
+        "p99": 25.806,
+        "max": 25.806
+      },
+      "export_us": {
+        "p50": 27.958,
+        "p95": 28.332,
+        "p99": 28.332,
+        "max": 28.332
+      },
+      "preflight_us": {
+        "p50": 14.567,
+        "p95": 14.65,
+        "p99": 14.65,
+        "max": 14.65
+      }
+    },
+    "process": {
+      "User time (seconds)": 0.47,
+      "System time (seconds)": 0.02,
+      "Maximum resident set size (kbytes)": 28932.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "ebde2e509275bd66c5d2aa16d4cbdcb7c6d0b0f4c623a497a760de444faf01e2",
+      "authored-1.json.gz": "7cf5cbc001acc25d9ca297cad25ae0d6b02911547fba127325858bd3a5927759",
+      "authored-1.time": "23083d0890a00168dc06f4e1348e411f8c384bde54f0d664525db82c5571c377",
+      "authored-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_animals_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "2",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a8/performance-smoke/populated-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 4188,
+        "expanded_upper_bytes": 70590,
+        "peak_bytes": 1347596,
+        "validation_working_bytes": 1048576
+      },
+      "counts": {
+        "characters": 2520,
+        "decided": 2,
+        "dogs": 10,
+        "dogs_published": true,
+        "engine_nav": true,
+        "moving": 1,
+        "path_dogs": 2,
+        "resting": 8,
+        "stop_pending": 0,
+        "turning": 1,
+        "waypoints": 16
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "animals-obligations-v1",
+      "shared_reserved_peak_excluding_running_bytes": 2695192,
+      "witnesses": {
+        "acceleration_observed": true,
+        "boundary_seconds": 6.061000000000001,
+        "cadence_residual_seconds": 0.011000000000014332,
+        "initial_all_resting": true,
+        "initial_resting_publications": 1,
+        "movement_now_seconds": 6.0499999999999865,
+        "movement_publications": 27,
+        "quiet_publications": 0,
+        "turning_observed": true
+      }
+    },
+    "sample_count_per_phase": 2,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.31,
+        "p95": 0.327,
+        "p99": 0.327,
+        "max": 0.327
+      },
+      "decode_validate_us": {
+        "p50": 17.774,
+        "p95": 30.889000000000003,
+        "p99": 30.889000000000003,
+        "max": 30.889000000000003
+      },
+      "drop_us": {
+        "p50": 0.362,
+        "p95": 0.502,
+        "p99": 0.502,
+        "max": 0.502
+      },
+      "encode_us": {
+        "p50": 20.068,
+        "p95": 30.328000000000003,
+        "p99": 30.328000000000003,
+        "max": 30.328000000000003
+      },
+      "export_us": {
+        "p50": 28.458000000000002,
+        "p95": 28.974999999999998,
+        "p99": 28.974999999999998,
+        "max": 28.974999999999998
+      },
+      "preflight_us": {
+        "p50": 14.378,
+        "p95": 14.756,
+        "p99": 14.756,
+        "max": 14.756
+      }
+    },
+    "process": {
+      "User time (seconds)": 1.89,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 67316.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "02ac3ba33b2f1e530aa62c756226dc40d9432d8655513d335206694aad65fd43",
+      "populated-1.json.gz": "0020de87e55a488f89067da053d02b561b8d24d4685110415c3dc268dc226e1b",
+      "populated-1.time": "2b9d9076534c6e357459f841ecd0d832d6de1c4eaeedb64ba64665b40204e2d2",
+      "populated-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+]
