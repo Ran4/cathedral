@@ -1,0 +1,20 @@
+[
+  {
+    "name": "focused-final",
+    "original_sha256": "8045de5fb6b1d89e4d705649325a05d5ca338b01a5ac16209f33b1aac5782965",
+    "archive_sha256": "c401fc2341ee15d14c00ba456fcdb68c97e0ee2b0a20205ca47ceaa368618a9c",
+    "original_bytes": 3620,
+    "archive_bytes": 3619,
+    "normalization": "remove only redundant terminal blank lines",
+    "archive": "focused-final.log"
+  },
+  {
+    "name": "workspace-final",
+    "original_sha256": "ded0d3576293662274c311113b7191c36136059d61c7d376db9d2824217ed789",
+    "archive_sha256": "ca3a33bb43d974e1ce67301e4a1fa5a4d8dc72ed1b1b3d0d9774a3af8a18b81d",
+    "original_bytes": 239662,
+    "archive_bytes": 239661,
+    "normalization": "remove only redundant terminal blank lines",
+    "archive": "workspace-final.log"
+  }
+]

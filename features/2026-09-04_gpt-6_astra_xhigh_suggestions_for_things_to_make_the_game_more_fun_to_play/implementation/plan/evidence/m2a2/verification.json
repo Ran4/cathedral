@@ -1,0 +1,80 @@
+{
+  "checks": [
+    {
+      "name": "focused-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint",
+        "--offline",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 12.420455051003955,
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "log": "/tmp/alibi-m2a2-focused-final.log",
+      "sha256": "8045de5fb6b1d89e4d705649325a05d5ca338b01a5ac16209f33b1aac5782965",
+      "archived_log": "focused-final.log"
+    },
+    {
+      "name": "workspace-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace",
+        "--no-fail-fast",
+        "--offline"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 510.50271620601416,
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "log": "/tmp/alibi-m2a2-workspace-final.log",
+      "sha256": "ded0d3576293662274c311113b7191c36136059d61c7d376db9d2824217ed789",
+      "archived_log": "workspace-final.log"
+    }
+  ],
+  "workspace_totals": {
+    "targets": 34,
+    "passed": 1896,
+    "failed": 0,
+    "ignored": 10
+  },
+  "focused_checkpoint": {
+    "passed": 26,
+    "failed": 0,
+    "ignored": 2
+  },
+  "public_character_target": {
+    "passed": 5,
+    "failed": 0,
+    "ignored": 0,
+    "included_in_workspace": true
+  },
+  "source_manifest_files": 45,
+  "source_manifest_sha256": "c79340bf6c16bbe12f0142376b8355d82fa7a8b068c3e81d0e078b909fe3d4f2",
+  "source_unchanged_after_workspace": true,
+  "preserved_m2a1_release_binary": {
+    "path": "target/release/examples/alibi_checkpoint_cost",
+    "sha256": "ec3b2960db4f406c1c13a147b8b001ccd0bc5f5f6e39d5be256eafc10c4bbdd8"
+  },
+  "release_measurements": "Completed: performance/README.md; six sequential runs, 3,600 raw phase samples; coordinator/performance_audit.json verifies raw statistics and hashes.",
+  "formatter_note": "New/affected component files scoped-formatted. The item.rs change is only a module declaration; preexisting formatting drift is preserved and independently checked by coordinator."
+}

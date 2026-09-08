@@ -1,0 +1,7 @@
+{
+  "manifest_sha256": "c79340bf6c16bbe12f0142376b8355d82fa7a8b068c3e81d0e078b909fe3d4f2",
+  "manifest_files": 45,
+  "hash_mismatches": [],
+  "changed_code_or_fixture_files": 21,
+  "missing_changed_source": []
+}

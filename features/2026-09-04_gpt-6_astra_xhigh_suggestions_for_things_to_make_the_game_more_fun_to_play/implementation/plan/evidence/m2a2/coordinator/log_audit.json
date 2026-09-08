@@ -1,0 +1,19 @@
+{
+  "checks": {
+    "focused-final": {
+      "targets": 1,
+      "passed": 26,
+      "failed": 0,
+      "ignored": 2
+    },
+    "workspace-final": {
+      "targets": 34,
+      "passed": 1896,
+      "failed": 0,
+      "ignored": 10
+    }
+  },
+  "final_log_archives_verified": 2,
+  "development_archives_verified": 12,
+  "all_hashes_and_original_bytes_match": true
+}

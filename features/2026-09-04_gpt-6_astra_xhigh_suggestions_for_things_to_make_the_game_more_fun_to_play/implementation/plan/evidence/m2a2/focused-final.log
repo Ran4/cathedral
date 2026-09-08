@@ -1,0 +1,37 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 12.35s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-017f852d3c359e76)
+
+running 28 tests
+test checkpoint::tests::accepted_time_preserves_debt_and_both_residuals_without_offline_work ... ok
+test checkpoint::tests::admission_tracks_all_cohorts_and_attached_values_across_threads ... ok
+test checkpoint::tests::exhausted_command_counters_remain_exhausted_after_component_roundtrip ... ok
+test checkpoint::tests::manifest_requires_exact_content_geometry_behavior_generator_and_hash_build ... ok
+test checkpoint::tests::only_explicit_negative_infinity_becomes_never_and_negative_calendar_is_valid ... ok
+test checkpoint::tests::regenerate_checkpoint_component_fixtures ... ignored, explicit supported-component fixture regeneration only
+test checkpoint::tests::receipt_principals_preserve_historical_and_rejected_absent_targets ... ok
+test checkpoint::tests::ledger_rejects_duplicate_ids_ordinals_roots_and_invalid_numeric_or_string_fields ... ok
+test world::checkpoint::tests::regenerate_backbone_fixture ... ignored, explicit supported component fixture generation
+M2A2_LAYOUTS test world::checkpoint::tests::duplicate_active_transform_id_refuses_before_mutation ... [["Character",1680],["CharacterSheet",808],["CharacterState",872],["LoreProfile",488],["MovementOption",112],["IntentOption",128],["ResidentOption",112],["GeneratedRoutineOption",56],["Item",80],["TransformJob",144],["StockSpec",56],["RestockShare",56],["PlaceEntry",104],["String",24],["VecHeader",24]]ok
+
+test checkpoint::tests::operation_owner_roundtrip_rebuilds_claims_and_preserves_exact_once_completion ... ok
+test checkpoint::tests::operation_credit_cannot_exceed_elapsed_work_and_keeps_obstruction_gaps ... ok
+test checkpoint::tests::supported_component_fixtures_pin_owner_wire_without_claiming_a_complete_save ... ok
+test world::checkpoint::tests::component_boundary_requires_flush_and_valid_numeric_export ... ok
+M2A2_SPARSE_CHARACTER_NODE record_charge=19396 node_bound=18872
+test world::checkpoint::tests::populated_record_layout_has_admitted_inline_and_nested_headroom ... ok
+test checkpoint::tests::operation_wire_rejects_duplicates_impossible_claims_deadlines_and_manifest_mismatch ... ok
+test checkpoint::tests::clock_rate_segment_and_calendar_bits_roundtrip_without_reconstruction ... ok
+test checkpoint::tests::malformed_decode_and_failed_export_release_admission_without_allocating_owner ... ok
+test world::checkpoint::tests::exact_supported_backbone_fixture ... ok
+test world::checkpoint::tests::ordinary_engine_digest_after_component_restore_mints_the_same_item_once ... ok
+test world::checkpoint::tests::private_backbone_round_trip_and_transform_replay_continue ... ok
+test world::checkpoint::tests::escaped_real_fields_numeric_and_set_corruption_are_bounded ... ok
+test world::checkpoint::tests::strict_backbone_corruption_never_constructs_a_candidate ... ok
+test world::checkpoint::tests::strict_wire_and_aggregate_preflight_reject_malicious_shapes ... ok
+test checkpoint::tests::maximum_operation_owner_and_empty_owner_fit_and_roundtrip ... ok
+test world::checkpoint::tests::movement_polyline_patrol_and_gait_continue_from_saved_state ... ok
+test checkpoint::tests::wire_rejects_extra_records_huge_escaped_strings_and_deep_json_before_owner_use ... ok
+test checkpoint::tests::ledger_empty_and_saturated_replay_keep_holes_floors_and_unfinished_roots ... ok
+
+test result: ok. 26 passed; 0 failed; 2 ignored; 0 measured; 605 filtered out; finished in 0.05s

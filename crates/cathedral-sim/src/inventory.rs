@@ -6,6 +6,9 @@
 //! stock.  Every quantity-changing supply-chain path is therefore routed
 //! through the methods in this module.
 
+pub(crate) mod checkpoint;
+pub use checkpoint::InventoryDtoV1;
+
 use std::{
     collections::{BTreeMap, BTreeSet, hash_map::DefaultHasher},
     fmt,
@@ -992,6 +995,16 @@ impl World {
             return Err(InventoryError::new(
                 InventoryErrorCode::DuplicateTransform,
                 format!("{} already has an active transform", job.producer),
+            ));
+        }
+        if self
+            .transform_jobs
+            .values()
+            .any(|active| active.job_id == job.job_id)
+        {
+            return Err(InventoryError::new(
+                InventoryErrorCode::DuplicateTransform,
+                format!("transform job '{}' is already active", job.job_id),
             ));
         }
         if !self.characters.contains_key(&job.producer) {

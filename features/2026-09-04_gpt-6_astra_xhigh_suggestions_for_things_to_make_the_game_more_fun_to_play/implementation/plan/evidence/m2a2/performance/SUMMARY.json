@@ -1,0 +1,170 @@
+{
+  "authored": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 1919795,
+        "expanded_upper_bytes": 19349968,
+        "peak_bytes": 83163353
+      },
+      "counts": {
+        "characters": 520,
+        "completed_transforms": 0,
+        "items": 638,
+        "offers": 0,
+        "places": 491,
+        "transforms": 0
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 166326706
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 4509.657,
+        "p95": 4572.337,
+        "p99": 4603.9169999999995,
+        "max": 4625.447
+      },
+      "export_us": {
+        "p50": 6044.688,
+        "p95": 6266.7080000000005,
+        "p99": 6321.206,
+        "max": 6423.929999999999
+      },
+      "encode_us": {
+        "p50": 5853.893,
+        "p95": 6009.427000000001,
+        "p99": 6084.716,
+        "max": 6314.371
+      },
+      "decode_validate_us": {
+        "p50": 8069.244,
+        "p95": 8170.039000000001,
+        "p99": 8238.003,
+        "max": 8300.378
+      },
+      "candidate_validate_us": {
+        "p50": 831.777,
+        "p95": 860.742,
+        "p99": 893.28,
+        "max": 903.57
+      },
+      "drop_us": {
+        "p50": 513.1410000000001,
+        "p95": 528.784,
+        "p99": 554.963,
+        "max": 570.3499999999999
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  },
+  "populated": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 9118806,
+        "expanded_upper_bytes": 94831668,
+        "peak_bytes": 406687186
+      },
+      "counts": {
+        "characters": 2520,
+        "completed_transforms": 0,
+        "items": 2638,
+        "offers": 0,
+        "places": 1992,
+        "transforms": 0
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 813374372
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 21753.375,
+        "p95": 21938.576,
+        "p99": 22027.707000000002,
+        "max": 22088.084000000003
+      },
+      "export_us": {
+        "p50": 29236.601000000002,
+        "p95": 29712.68,
+        "p99": 30372.183,
+        "max": 32197.667999999998
+      },
+      "encode_us": {
+        "p50": 29500.948,
+        "p95": 30349.568,
+        "p99": 31672.097,
+        "max": 32044.665
+      },
+      "decode_validate_us": {
+        "p50": 36527.51500000001,
+        "p95": 37118.612,
+        "p99": 37434.481,
+        "max": 37748.147000000004
+      },
+      "candidate_validate_us": {
+        "p50": 3663.517,
+        "p95": 3910.574,
+        "p99": 4027.0180000000005,
+        "max": 4255.854
+      },
+      "drop_us": {
+        "p50": 2383.797,
+        "p95": 2776.956,
+        "p99": 2920.013,
+        "max": 3055.104
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  }
+}

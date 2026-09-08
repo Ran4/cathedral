@@ -1,0 +1,86 @@
+[
+  {
+    "original": "/tmp/alibi-m2a2-backbone-final.log",
+    "archive": "development/backbone-final.log.gz",
+    "raw_sha256": "223286e52745ca0b54b59283be8f6a71ad08787ba0b9996bbceffd500dae2869",
+    "gzip_sha256": "dbf610d8ed18dc4fd56ca7e347bffe5f08cf0cef2759fb3d511cc1d539ce3c14",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-backbone-tests.log",
+    "archive": "development/backbone-tests.log.gz",
+    "raw_sha256": "ccafac968079219283191487db2d3722b8c35751b8e9f0824d4f7f29a115b663",
+    "gzip_sha256": "1c0f142a0a6ff4312d0b1d1f6075ecc4ccaa5da0390a35282e40de964897b09f",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-backbone-tests2.log",
+    "archive": "development/backbone-tests2.log.gz",
+    "raw_sha256": "9bdec4915ec8dbf493ce421460540abd71900e6c2f29544284c530d461164f06",
+    "gzip_sha256": "f80910c97b62f1c115098e337c6015497e6723fbdbda7180f1c1647e2ff250fa",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-backbone-tests3.log",
+    "archive": "development/backbone-tests3.log.gz",
+    "raw_sha256": "fb05cba868c812a381955e999a8b6306f8043b5832fc6c2b88ec69ccb590d26e",
+    "gzip_sha256": "a81329d2ff9b0a76619a066498d26580a974c10437dda79cf321f937425d3243",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-backbone-tests4.log",
+    "archive": "development/backbone-tests4.log.gz",
+    "raw_sha256": "bfb2c5be56f3c5e1a3d5cbb2336613a7b67cb0d0128b5ccf3934b90f0dfbee92",
+    "gzip_sha256": "98773641ec944b489a0dd4b1a7c5f809d3bc447b520d60c4b0778a5d737a4be9",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-character-tests.log",
+    "archive": "development/character-tests.log.gz",
+    "raw_sha256": "d3d705d1f70a3158bed424b678650228e30a65dc4ccbfd11e8b44610a8bc130d",
+    "gzip_sha256": "a95976de7b08c96b34bf19db2e9f60f48909bb43bd5e734ad91df4873a2e65dc",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-check.log",
+    "archive": "development/check.log.gz",
+    "raw_sha256": "8db05dee46c13e04cd961677f6f35cba192b8e3a6390034d28006ba1e5679047",
+    "gzip_sha256": "56cedc244ae165125e4242646c124e5de191578deb2b91519eb01cacc4d6677d",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-fixture-generation.log",
+    "archive": "development/fixture-generation.log.gz",
+    "raw_sha256": "fa863d44844aa9ffff35f96559f3aab3333df2ada3066a2e8f980c31b22ebc89",
+    "gzip_sha256": "86891023f30a2b87a2b1dac02d3d82f6c2ec27bc581b14fef338fc774bdf5e36",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-initial-check.log",
+    "archive": "development/initial-check.log.gz",
+    "raw_sha256": "fc692642fcb72b37f837cac59d97fc1a10b29fae538d4e2b12a7f3c113f2b2b9",
+    "gzip_sha256": "72a672a9a77a35fbfd111bd18867a500b45279241cd0b4a6c8d941a284f34f92",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-populated-first.log",
+    "archive": "development/populated-first.log.gz",
+    "raw_sha256": "fba09b67d2a14f1de396859d1da586a72ae1e1aceb0b3db00aa99880098c55b2",
+    "gzip_sha256": "554af5533459d1188b4244d78c21053bf0fda259fb406a40d91b8806efc00856",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-probe-first.log",
+    "archive": "development/probe-first.log.gz",
+    "raw_sha256": "30456743139a8eec2148cdb2e0ae5cb00e0196ca645884c3968ef8f23c26e4b4",
+    "gzip_sha256": "065f43b6afe8a72127d62a830b363cccebbca5bb186ed4ae388f1dfdcb190caa",
+    "normalization": "none"
+  },
+  {
+    "original": "/tmp/alibi-m2a2-probe-second.log",
+    "archive": "development/probe-second.log.gz",
+    "raw_sha256": "be12d6f49a09d01de38e4c32c02b73a11037f7d79bad4a50ef7a9f1e0ca26760",
+    "gzip_sha256": "8d36824d19bb71fbbbe9597f4a7d859bf2563cf64ccd8005ed4f7fbbe1ba82a9",
+    "normalization": "none"
+  }
+]

@@ -11,3 +11,13 @@ The normal `supported_component_fixtures` test validates and byte-compares these
 with production-owner exports. Intentional changes can regenerate them through
 `cargo test -p cathedral-sim --lib regenerate_checkpoint_component_fixtures -- --ignored`.
 Existing prompt/snapshot golden fixtures are unrelated and unchanged.
+
+M2a2 adds three strict **WorldBackbone component** fixtures: `backbone.json`
+(private generated identity/state, live inventory/reservations, offers, restock,
+movement/gut/legacy intent/edit, ordered registry with duplicate display names),
+`backbone_completed.json` (historical completion lineage after every live item
+has been consumed), and `backbone_empty.json` (virgin empty backbone). All fields
+are mandatory, including explicit null authority. These cannot be loaded as a
+city; the complete owner/manifest envelope and Engine hydration remain pending.
+The explicit ignored `world::checkpoint::tests::regenerate_backbone_fixture`
+generator is separate from the M2a1 component fixtures.

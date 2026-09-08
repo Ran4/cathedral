@@ -5,6 +5,9 @@
 //! byte order, which equals Python's code-point order). Round-robin scheduling
 //! needs *insertion* order instead, so [`World::roster`] records it (D12).
 
+pub(crate) mod checkpoint;
+pub use checkpoint::{BackboneCandidate, BackboneCounts, WorldBackboneDtoV1};
+
 use std::{
     collections::{BTreeMap, BTreeSet, hash_map::DefaultHasher},
     hash::{Hash, Hasher},

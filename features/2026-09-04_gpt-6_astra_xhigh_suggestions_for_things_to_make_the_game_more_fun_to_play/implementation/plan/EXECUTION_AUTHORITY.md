@@ -1,4 +1,4 @@
-Status: Implementation resumed after M1b at the developer's instruction; M1a–M1c implemented and reviewed (2026-09-08). Continue sequentially and commit each completed leg.
+Status: Implementation resumed after M1b at the developer's instruction (2026-09-08). Continue sequentially and commit each completed leg; the plan README tracks current progress.
 
 # Continue from the delivered M0 baseline
 

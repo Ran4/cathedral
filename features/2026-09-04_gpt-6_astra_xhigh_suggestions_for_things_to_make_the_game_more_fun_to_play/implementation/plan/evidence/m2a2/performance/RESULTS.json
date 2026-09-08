@@ -1,0 +1,626 @@
+[
+  {
+    "name": "authored-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_backbone_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a2/performance/authored-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 1919795,
+        "expanded_upper_bytes": 19349968,
+        "peak_bytes": 83163353
+      },
+      "counts": {
+        "characters": 520,
+        "completed_transforms": 0,
+        "items": 638,
+        "offers": 0,
+        "places": 491,
+        "transforms": 0
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 166326706
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 833.493,
+        "p95": 852.163,
+        "p99": 868.2040000000001,
+        "max": 874.351
+      },
+      "decode_validate_us": {
+        "p50": 8069.244,
+        "p95": 8170.039000000001,
+        "p99": 8373.556,
+        "max": 8437.944
+      },
+      "drop_us": {
+        "p50": 512.8389999999999,
+        "p95": 526.317,
+        "p99": 537.501,
+        "max": 554.8629999999999
+      },
+      "encode_us": {
+        "p50": 5836.1359999999995,
+        "p95": 6009.427000000001,
+        "p99": 6040.418,
+        "max": 6186.9259999999995
+      },
+      "export_us": {
+        "p50": 6033.013,
+        "p95": 6244.41,
+        "p99": 6321.206,
+        "max": 6423.929999999999
+      },
+      "preflight_us": {
+        "p50": 4497.143,
+        "p95": 4563.921,
+        "p99": 4587.206,
+        "max": 4625.447
+      }
+    },
+    "process": {
+      "User time (seconds)": 2.79,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 30596.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "e4cc84bec91e77ffc5e1797be7255a3753beb1e1c308750855b8b52bdc4f4386",
+      "authored-1.json.gz": "8c49b1bd44e13c9941c63120f7dc5a52fa0b6092ee82e2976469c590ea0b595b",
+      "authored-1.time": "f42097874fdff0daa1fa4ecec70a7d15d0ef48d144c9ccba6f6b58643bc8904a",
+      "authored-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_backbone_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a2/performance/populated-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 9118806,
+        "expanded_upper_bytes": 94831668,
+        "peak_bytes": 406687186
+      },
+      "counts": {
+        "characters": 2520,
+        "completed_transforms": 0,
+        "items": 2638,
+        "offers": 0,
+        "places": 1992,
+        "transforms": 0
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 813374372
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 3663.517,
+        "p95": 3910.574,
+        "p99": 4027.0180000000005,
+        "max": 4255.854
+      },
+      "decode_validate_us": {
+        "p50": 36527.51500000001,
+        "p95": 37118.612,
+        "p99": 37434.481,
+        "max": 37595.017
+      },
+      "drop_us": {
+        "p50": 2383.797,
+        "p95": 2776.956,
+        "p99": 2920.013,
+        "max": 3055.104
+      },
+      "encode_us": {
+        "p50": 29500.948,
+        "p95": 30349.568,
+        "p99": 31672.097,
+        "max": 32044.665
+      },
+      "export_us": {
+        "p50": 29236.601000000002,
+        "p95": 29712.68,
+        "p99": 30372.183,
+        "max": 36656.266
+      },
+      "preflight_us": {
+        "p50": 21801.008,
+        "p95": 21938.576,
+        "p99": 22027.707000000002,
+        "max": 22088.084000000003
+      }
+    },
+    "process": {
+      "User time (seconds)": 13.16,
+      "System time (seconds)": 0.02,
+      "Maximum resident set size (kbytes)": 78216.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "349771996a3189545ba7795ba1f939d0d85be45bccd10513ca2ba23c453d1baf",
+      "populated-1.json.gz": "63e6dc9fe1f67c8f58c636981a00f307b3b84bde8676111109eb4d88d8d1c8d4",
+      "populated-1.time": "e90514c1d58ea936b730a8d04b667cd832d5126b9688de4c271c2d0428d48f55",
+      "populated-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-2",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_backbone_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a2/performance/populated-2.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 9118806,
+        "expanded_upper_bytes": 94831668,
+        "peak_bytes": 406687186
+      },
+      "counts": {
+        "characters": 2520,
+        "completed_transforms": 0,
+        "items": 2638,
+        "offers": 0,
+        "places": 1992,
+        "transforms": 0
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 813374372
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 3760.636,
+        "p95": 4072.781,
+        "p99": 4186.2080000000005,
+        "max": 4382.8460000000005
+      },
+      "decode_validate_us": {
+        "p50": 36993.028999999995,
+        "p95": 37819.312,
+        "p99": 39126.524000000005,
+        "max": 40482.045
+      },
+      "drop_us": {
+        "p50": 2517.366,
+        "p95": 2941.475,
+        "p99": 3094.4900000000002,
+        "max": 3122.799
+      },
+      "encode_us": {
+        "p50": 29822.947999999997,
+        "p95": 30615.88,
+        "p99": 32270.920000000002,
+        "max": 32992.406
+      },
+      "export_us": {
+        "p50": 29327.662,
+        "p95": 30201.487999999998,
+        "p99": 31238.21,
+        "max": 32197.667999999998
+      },
+      "preflight_us": {
+        "p50": 21730.941,
+        "p95": 22091.943,
+        "p99": 25273.302,
+        "max": 27774.490999999998
+      }
+    },
+    "process": {
+      "User time (seconds)": 13.27,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 78124.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "14084ab9594255d5f34205c6fd58100b883ee684428a0386c3973ed4094b2983",
+      "populated-2.json.gz": "c1d76fb875c020bcc1f261a4754594c38e2332fdcb60acc5da1c664a11df0453",
+      "populated-2.time": "8127a7d14487b5be3ae73142608a29df401cb593772f513e4f4adebe28ed835d",
+      "populated-2.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "authored-2",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_backbone_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a2/performance/authored-2.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 1919795,
+        "expanded_upper_bytes": 19349968,
+        "peak_bytes": 83163353
+      },
+      "counts": {
+        "characters": 520,
+        "completed_transforms": 0,
+        "items": 638,
+        "offers": 0,
+        "places": 491,
+        "transforms": 0
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 166326706
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 831.549,
+        "p95": 860.742,
+        "p99": 899.8810000000001,
+        "max": 926.165
+      },
+      "decode_validate_us": {
+        "p50": 8089.587,
+        "p95": 8220.739,
+        "p99": 8238.003,
+        "max": 8300.378
+      },
+      "drop_us": {
+        "p50": 523.423,
+        "p95": 555.089,
+        "p99": 563.777,
+        "max": 570.3499999999999
+      },
+      "encode_us": {
+        "p50": 5853.893,
+        "p95": 5971.904,
+        "p99": 6084.716,
+        "max": 6352.586
+      },
+      "export_us": {
+        "p50": 6068.941,
+        "p95": 6297.324,
+        "p99": 6408.003,
+        "max": 6508.59
+      },
+      "preflight_us": {
+        "p50": 4514.445,
+        "p95": 4572.337,
+        "p99": 4603.9169999999995,
+        "max": 4606.748
+      }
+    },
+    "process": {
+      "User time (seconds)": 2.79,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 30456.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "bcef71afb200163bb0f8802a2971da3d9695dc05a3c7538e4e9c15cde8d03d90",
+      "authored-2.json.gz": "727e1de7ab70e567091e940175c5878afab28e7adc775f586f9d3ade2e6d6ad6",
+      "authored-2.time": "7f420d9fdbb29365d681a20dfead3e6bc13481ac5756677b1314ec1af74b246a",
+      "authored-2.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "authored-3",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_backbone_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a2/performance/authored-3.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 1919795,
+        "expanded_upper_bytes": 19349968,
+        "peak_bytes": 83163353
+      },
+      "counts": {
+        "characters": 520,
+        "completed_transforms": 0,
+        "items": 638,
+        "offers": 0,
+        "places": 491,
+        "transforms": 0
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 166326706
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 831.777,
+        "p95": 864.706,
+        "p99": 893.28,
+        "max": 903.57
+      },
+      "decode_validate_us": {
+        "p50": 7998.468,
+        "p95": 8162.754,
+        "p99": 8236.09,
+        "max": 8245.145
+      },
+      "drop_us": {
+        "p50": 513.1410000000001,
+        "p95": 528.784,
+        "p99": 554.963,
+        "max": 583.014
+      },
+      "encode_us": {
+        "p50": 5919.747,
+        "p95": 6044.5070000000005,
+        "p99": 6310.491,
+        "max": 6314.371
+      },
+      "export_us": {
+        "p50": 6044.688,
+        "p95": 6266.7080000000005,
+        "p99": 6286.565,
+        "max": 6317.765
+      },
+      "preflight_us": {
+        "p50": 4509.657,
+        "p95": 4595.168000000001,
+        "p99": 4640.108,
+        "max": 4656.954
+      }
+    },
+    "process": {
+      "User time (seconds)": 2.79,
+      "System time (seconds)": 0.0,
+      "Maximum resident set size (kbytes)": 30640.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "6ffd63a0d5e8a3fb90493891a8d7f94e49007776d7030b91959980df781c8a84",
+      "authored-3.json.gz": "0275422fb84b80edd547ef8d6330319ad22db7ba91cff4f933e24eb80738a035",
+      "authored-3.time": "12fac8e4ee91e7117fd396f67ed8e6ea00f5d25315d629c686c8146ed244fb0e",
+      "authored-3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-3",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_backbone_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a2/performance/populated-3.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 9118806,
+        "expanded_upper_bytes": 94831668,
+        "peak_bytes": 406687186
+      },
+      "counts": {
+        "characters": 2520,
+        "completed_transforms": 0,
+        "items": 2638,
+        "offers": 0,
+        "places": 1992,
+        "transforms": 0
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 813374372
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 3621.4950000000003,
+        "p95": 3842.66,
+        "p99": 3958.527,
+        "max": 4090.4569999999994
+      },
+      "decode_validate_us": {
+        "p50": 36373.132000000005,
+        "p95": 36961.715,
+        "p99": 37391.557,
+        "max": 37748.147000000004
+      },
+      "drop_us": {
+        "p50": 2368.682,
+        "p95": 2685.953,
+        "p99": 2771.676,
+        "max": 2848.2400000000002
+      },
+      "encode_us": {
+        "p50": 29386.071,
+        "p95": 30103.826,
+        "p99": 31603.451999999997,
+        "max": 31950.222
+      },
+      "export_us": {
+        "p50": 29216.733,
+        "p95": 29557.188000000002,
+        "p99": 29800.371,
+        "max": 29816.601000000002
+      },
+      "preflight_us": {
+        "p50": 21753.375,
+        "p95": 21865.756,
+        "p99": 21960.855,
+        "max": 21980.717
+      }
+    },
+    "process": {
+      "User time (seconds)": 13.11,
+      "System time (seconds)": 0.02,
+      "Maximum resident set size (kbytes)": 78092.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "de9a2fcd0f082c25393aefc0fbe4784229c02590449e19b0c772a0b315cbe401",
+      "populated-3.json.gz": "7499d929e5f2f3c675044bb5385cb43480c22cc8c5eafc5e2ff274086e64ad65",
+      "populated-3.time": "94d4c31cb0c7c895d748b4398ab3c17b852b69ea890a779ae3587a7f03096518",
+      "populated-3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+]

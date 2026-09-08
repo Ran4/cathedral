@@ -3,6 +3,9 @@
 //! The static half ([`CharacterSheet`]) is what a world seed deserializes; the
 //! runtime half ([`CharacterState`]) is everything an action may mutate.
 
+pub(crate) mod checkpoint;
+pub use checkpoint::CharacterDtoV1;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};

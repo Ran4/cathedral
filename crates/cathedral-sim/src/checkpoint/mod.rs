@@ -1,17 +1,22 @@
 //! Private checkpoint components, not a complete save or an Engine loader.
 //!
-//! V1 owner DTOs keep authority separate from PublicSnapshot. The first cut
-//! covers time/compatibility/admission, the command ledger and operation kernel.
+//! V1 owner DTOs keep authority separate from PublicSnapshot. The component cuts
+//! cover time/compatibility/admission, command replay, fixture operations and the
+//! private character/inventory/World reference backbone.
 //! Other city owners and the complete envelope must be added before a host can
 //! capture or adopt a save. No API here polls, seeds, performs IO or submits work.
 
+pub(crate) mod aggregate;
 mod budget;
 mod manifest;
+pub(crate) mod records;
+pub(crate) mod serde_support;
 #[cfg(test)]
 mod tests;
 mod time;
 mod wire;
 
+pub use aggregate::ComponentCost;
 pub use budget::{Admitted, CheckpointBudget, Cohort, MAX_RESIDENT_BYTES, Reservation};
 pub use manifest::{CompatibilityManifestV1, VersionedAlgorithmV1};
 pub use time::{CalendarAnchorV1, HostTimeV1, LogicalAnchorV1};

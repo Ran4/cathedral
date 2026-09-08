@@ -13,6 +13,8 @@
 //! `places_known`, seeded by the round and grown by `tell_way`. The registry is
 //! the world's: one namespace, so a shared id means the same place to everyone.
 
+pub(crate) mod checkpoint;
+
 use std::collections::HashMap;
 
 use serde::Deserialize;

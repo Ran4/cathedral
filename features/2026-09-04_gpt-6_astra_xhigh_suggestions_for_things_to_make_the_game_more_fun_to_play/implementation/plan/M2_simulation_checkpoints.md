@@ -1,4 +1,4 @@
-Status: In progress (2026-09-08). M2a1 private component DTOs and admission are implemented and reviewed; the complete M2a envelope and remaining owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
+Status: In progress (2026-09-08). M2a1–M2a2 private components are implemented and reviewed; the complete M2a envelope and remaining owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
 
 # M2 — Complete simulation checkpoints
 
@@ -34,6 +34,33 @@ The five v1 supported **component** fixtures cannot be loaded as a saved city.
 M2a2+ must compose every remaining owner into the exact versioned envelope and
 supply small complete supported saves before M2a is accepted. The first cut does
 not implement capture, Engine hydration, external retries, adoption or storage.
+
+#### M2a2 review cut — 2026-09-08
+
+`CharacterDtoV1`, `InventoryDtoV1` and `WorldBackboneDtoV1` preserve the real
+private records, with strict mandatory nullable fields, exact catalog binding,
+reconstructed registry indexes and aggregate admission before extraction or
+parsing. This cut also fixes duplicate active transform job-ID admission.
+The [current owner coverage ledger](evidence/m2a2/OWNER_COVERAGE.md) names every
+covered family and the exact pending Round/projection/reference contracts;
+[admission evidence](evidence/m2a2/ADMISSION.md) distinguishes bytes, conservative
+expansion, retained peaks and the measured component phases.
+
+Three additional supported component fixtures cover empty, live/private and
+historically completed inventory state. Behavioral witnesses cover quantity
+commitments, merge/consumption/completion replay, ordered private buffers,
+movement/gait, and ordinary gut formation after restoring the covered body.
+These do not establish whole-Engine continuation: Round, law, knowledge,
+scheduler/IO and complete World/Engine/host composition remain mandatory work.
+The proposed next coherent owner cut is M2a3 Round/residents/production/household/
+road-party state against the actor/item/place foundation, after M2a2 acceptance.
+
+The measured M2a1 ledger export/encode p99 of 7.186/11.884 ms already rules out
+synchronous host-frame placement. M2a2 also preserves conservative cohort peaks
+until disposal; the +2,000 diagnostic reserves 813,374,372 shared bytes excluding
+Running. Complete-envelope coexistence and an effective clock-rate CPU limit
+remain unproved. M3 must supply bounded offload/incremental coordination; no
+component API is represented as satisfying a frame or complete-save budget.
 
 ### M2b — Capture boundary and hydrate path
 

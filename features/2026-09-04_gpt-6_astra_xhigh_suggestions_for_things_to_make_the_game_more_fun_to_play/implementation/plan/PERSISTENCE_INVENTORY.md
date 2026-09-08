@@ -266,3 +266,25 @@ V1 component decode budgets cover input, escaped-string scratch, DTO and candida
 index allocations. Encoded size, conservative retained heap and reserved peak are
 separate measurements. The real host capture/hydration/staging/frame gates remain
 pending; component microbenchmarks cannot satisfy them.
+
+
+## M2a2 private character/inventory/backbone delta — 2026-09-08
+
+The [current coverage ledger](evidence/m2a2/OWNER_COVERAGE.md) supersedes only the
+pending status of the following owner families. All other S/R/T rows remain
+mandatory pending composition; `WorldBackboneDtoV1` is explicitly not World.
+
+| Owner / fields | Implemented component policy |
+|---|---|
+| Full CharacterSheet and CharacterState | S exact separate records, including seed/history versus live ownership, generated lore/appearance, all private memories and ordered percept occurrences, perspective sets, body/gut/needs/statuses, movement/patrol/gait/choke, travel/edit/deadlines, presence epochs and economic state. No seed-loader defaults or implicit missing Options. |
+| Daily-round/vendor/resident projections | S exact current values in this cut. Pending Round owner must supply the shared pure projection validator and any saved cache anchor needed to justify stale values; preserve first read and update only at the next ordinary pass. No reconstruction with Round::seed or silent empty projection. |
+| Item/offer/restock/transform authority | S full kind/metadata/quantity and current holder references, promises, sorted legacy shares, ordered aggregate reservations/output plans/progress, globally unique job IDs and held completion lineage. R candidate owner/commitment validation maps under admission. Historical completion IDs may no longer exist; live inputs must be held by the producer. Source/recipe/day/slot/work compatibility still needs the saved Round planners. |
+| ItemCatalog | R exact supplied immutable catalog by SHA-256 over full schema/definition content; refuse mismatch or unknown kind/invalid metadata/stackability rather than falling back. |
+| PlaceRegistry | S ordered entries and saved home owner/ID bindings. R by_id, first-normal-entry by_name, home_by_owner and owner_by_home indexes. Preserve name collisions and home exclusions; no home ID rehashing. Full static nav/place/home compatibility remains a complete-manifest gate. |
+| World roster/counters/reference slice | S roster order, character/inventory/place/door bindings, round/travel command ownership, world/event/spatial counters, sounds/view-cone, sampled WorldTime, Needle claim, same-turn speech marker. Reject unflushed event/dispatch/receipt updates. All other World and Engine fields remain mandatory later owners. |
+| Nested allocation admission | Streaming nonallocating preflight before typed parsing/cloning, followed by an attached aggregate peak reservation. Covers small/empty records, strings/escapes, concrete inline nullable records, BTree/HashMap/Vec indexes and serde Content/error scratch. Public new DTOs do not expose Deserialize. See the bounded allocation argument and actual +2,000 component peak in the linked evidence. |
+
+No full-envelope capture, Engine hydration, pending IO retry, host adoption or
+save slot is provided by this cut. Numeric clock-format limits are not accepted
+effective-rate CPU limits, and measured component CPU costs require future
+host offload/incremental coordination rather than synchronous frame execution.

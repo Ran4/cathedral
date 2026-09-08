@@ -7,6 +7,8 @@
 //! the embedded catalog (`assets/world/items.json`) so a vendor can never hold a
 //! "loaf" that secretly disagrees with its kind.
 
+pub(crate) mod checkpoint;
+
 use std::{
     collections::BTreeMap,
     fmt,

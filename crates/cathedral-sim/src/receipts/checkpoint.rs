@@ -243,6 +243,13 @@ pub struct CommandLedgerDtoV1 {
     protected: BoundedVec<OperationIdV1, PROTECTED_CAPACITY>,
 }
 impl CommandLedger {
+    pub(crate) fn validate_checkpoint_boundary(&self) -> Result<()> {
+        if !self.pending.is_empty() || !self.updates.is_empty() {
+            return Err(err("incomplete dispatch or receipt notification flush"));
+        }
+        Ok(())
+    }
+
     /// Must run after the ordinary receipt-notification flush. The eventual
     /// envelope preserves already emitted, unread host receipts separately.
     pub fn checkpoint_v1(
@@ -251,9 +258,7 @@ impl CommandLedger {
         reservation: Reservation,
     ) -> Result<Admitted<CommandLedgerDtoV1>> {
         reservation.require(Cohort::SavePayload, WORKING_BYTES)?;
-        if !self.pending.is_empty() || !self.updates.is_empty() {
-            return Err(err("incomplete dispatch or receipt notification flush"));
-        }
+        self.validate_checkpoint_boundary()?;
         if self.recent.len() > RECENT_CAPACITY
             || self.retained.len() > PROTECTED_CAPACITY
             || self.protected.len() > PROTECTED_CAPACITY

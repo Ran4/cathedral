@@ -1,0 +1,131 @@
+{
+  "runs": 6,
+  "raw_phase_samples": 3600,
+  "source_files_verified": 789,
+  "binary_sha256": "08c39b6c673e4e2bbfb407b461fdf4ce961312a5419fd90c76ae9e2b9876b571",
+  "all_raw_statistics_hashes_and_metadata_match": true,
+  "modes": {
+    "authored": {
+      "counts": {
+        "characters": 520,
+        "completed_transforms": 0,
+        "items": 638,
+        "offers": 0,
+        "places": 491,
+        "transforms": 0
+      },
+      "cost": {
+        "encoded_bytes": 1919795,
+        "expanded_upper_bytes": 19349968,
+        "peak_bytes": 83163353
+      },
+      "shared_reserved_peak_excluding_running_bytes": 166326706,
+      "peak_process_rss_kib": 30640.0,
+      "phase_ms": {
+        "preflight_us": {
+          "p50": 4.509657,
+          "p95": 4.572337,
+          "p99": 4.603916999999999,
+          "max": 4.625447,
+          "global_max": 4.656954
+        },
+        "export_us": {
+          "p50": 6.044688,
+          "p95": 6.266708,
+          "p99": 6.321206,
+          "max": 6.4239299999999995,
+          "global_max": 6.50859
+        },
+        "encode_us": {
+          "p50": 5.853893,
+          "p95": 6.0094270000000005,
+          "p99": 6.084716,
+          "max": 6.314371,
+          "global_max": 6.3525860000000005
+        },
+        "decode_validate_us": {
+          "p50": 8.069244,
+          "p95": 8.170039000000001,
+          "p99": 8.238003,
+          "max": 8.300378,
+          "global_max": 8.437944
+        },
+        "candidate_validate_us": {
+          "p50": 0.831777,
+          "p95": 0.860742,
+          "p99": 0.89328,
+          "max": 0.9035700000000001,
+          "global_max": 0.926165
+        },
+        "drop_us": {
+          "p50": 0.5131410000000001,
+          "p95": 0.528784,
+          "p99": 0.554963,
+          "max": 0.5703499999999999,
+          "global_max": 0.583014
+        }
+      }
+    },
+    "populated": {
+      "counts": {
+        "characters": 2520,
+        "completed_transforms": 0,
+        "items": 2638,
+        "offers": 0,
+        "places": 1992,
+        "transforms": 0
+      },
+      "cost": {
+        "encoded_bytes": 9118806,
+        "expanded_upper_bytes": 94831668,
+        "peak_bytes": 406687186
+      },
+      "shared_reserved_peak_excluding_running_bytes": 813374372,
+      "peak_process_rss_kib": 78216.0,
+      "phase_ms": {
+        "preflight_us": {
+          "p50": 21.753375,
+          "p95": 21.938576,
+          "p99": 22.027707000000003,
+          "max": 22.088084000000002,
+          "global_max": 27.774490999999998
+        },
+        "export_us": {
+          "p50": 29.236601000000004,
+          "p95": 29.71268,
+          "p99": 30.372183,
+          "max": 32.197668,
+          "global_max": 36.656266
+        },
+        "encode_us": {
+          "p50": 29.500948,
+          "p95": 30.349567999999998,
+          "p99": 31.672097,
+          "max": 32.044665,
+          "global_max": 32.992406
+        },
+        "decode_validate_us": {
+          "p50": 36.52751500000001,
+          "p95": 37.118612,
+          "p99": 37.434481,
+          "max": 37.748147,
+          "global_max": 40.482045
+        },
+        "candidate_validate_us": {
+          "p50": 3.6635169999999997,
+          "p95": 3.910574,
+          "p99": 4.027018000000001,
+          "max": 4.255854,
+          "global_max": 4.382846000000001
+        },
+        "drop_us": {
+          "p50": 2.383797,
+          "p95": 2.776956,
+          "p99": 2.920013,
+          "max": 3.0551039999999996,
+          "global_max": 3.122799
+        }
+      }
+    }
+  }
+}

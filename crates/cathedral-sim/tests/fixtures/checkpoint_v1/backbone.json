@@ -1,0 +1,447 @@
+{
+  "characters": {
+    "a": {
+      "sheet": {
+        "appearance": {
+          "bespoke": null,
+          "build": "male",
+          "headgear": "none",
+          "outfit": "laborer",
+          "palette_seed": 0
+        },
+        "back_story": "private",
+        "control": "llm",
+        "economic_class": "resident",
+        "facing_yaw": 0.0,
+        "frontbutt": true,
+        "goal": "None",
+        "holds": [
+          "historical"
+        ],
+        "id": "a",
+        "knows": [],
+        "location_description": "here",
+        "lore": {
+          "age": 42,
+          "children": [],
+          "circumstances": [],
+          "conditions": [],
+          "core_character_description": "core",
+          "curiosity": 0.2,
+          "district": "Wick",
+          "extended_character_description": "extended",
+          "faction_role": null,
+          "father": null,
+          "gender": "f",
+          "generated": true,
+          "generated_routine": {
+            "kind": "resident",
+            "patch": "saved_patch",
+            "spot": "saved_spot"
+          },
+          "home": "private home prose",
+          "home_point_m": [
+            0.0,
+            0.0
+          ],
+          "illegal_activity": null,
+          "mother": null,
+          "occupation_display": null,
+          "occupation_id": null,
+          "planning_ward": "wick",
+          "rank": null,
+          "significance": "ambient",
+          "title": null
+        },
+        "memories": [],
+        "name": "Same",
+        "pockets": [],
+        "position_m": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "presence": "in_city",
+        "presence_epoch": 0,
+        "voice_key": null
+      },
+      "state": {
+        "active_gesture": {
+          "deadline": null,
+          "kind": "dance"
+        },
+        "daily_round": [
+          "old committed round prose"
+        ],
+        "debug_urgency": 0.25,
+        "economic_class": "resident",
+        "facing_yaw": 0.0,
+        "goal": "None",
+        "gut": [
+          {
+            "due_game_days": 2.9,
+            "kind": "spark",
+            "metadata": {}
+          }
+        ],
+        "holds": [
+          "stock"
+        ],
+        "inbox": [
+          "repeated prose"
+        ],
+        "intent": {
+          "budget_seconds": 30.0,
+          "deadline": 0.5,
+          "receipt": null,
+          "target": {
+            "Person": {
+              "actor_id": "b",
+              "last_seen": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              },
+              "visible": false
+            }
+          }
+        },
+        "knows": [
+          "b"
+        ],
+        "leaving_city": false,
+        "memories": [
+          "live memory"
+        ],
+        "movement": {
+          "choke_wait": 0.7,
+          "exact_local": false,
+          "gait_phase": 4.2,
+          "path": [
+            {
+              "x": 1.0,
+              "y": 0.0,
+              "z": 1.0
+            }
+          ],
+          "patrol": {
+            "a": "old_a",
+            "b": "old_b",
+            "heading_to_b": true
+          },
+          "speed": 0.3
+        },
+        "needs": {
+          "hunger": 255.0,
+          "thirst": 255.0
+        },
+        "pending_history": [
+          "repeated prose"
+        ],
+        "places_known": [
+          "pl_j197"
+        ],
+        "pockets": [
+          {
+            "item_id": "stock",
+            "slot": "mouth"
+          }
+        ],
+        "position_m": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "presence": "in_city",
+        "presence_epoch": 2,
+        "recent_history": [
+          "repeated prose"
+        ],
+        "resident": {
+          "destination_spot": null,
+          "dwell_remaining_seconds": 0.3,
+          "movement_cause": "other",
+          "optional_walk": false,
+          "patch": "saved_patch",
+          "patch_description": "private frontage",
+          "phase": "lingering",
+          "resting_at_household_frontage": false,
+          "resting_without_home": false,
+          "sheltered": false,
+          "spot": "saved_spot"
+        },
+        "round_edit": {
+          "leg": 0,
+          "place_id": "disappeared_place",
+          "presence_epoch": 0,
+          "receipt": null,
+          "teach_place_on_commit": false
+        },
+        "statuses": {
+          "urgency": 0.25
+        },
+        "urgency_since_game_days": -0.5,
+        "you_sell": [
+          {
+            "name": "spark",
+            "price_sparks": 1
+          }
+        ]
+      }
+    },
+    "b": {
+      "sheet": {
+        "appearance": {
+          "bespoke": null,
+          "build": "male",
+          "headgear": "none",
+          "outfit": "laborer",
+          "palette_seed": 0
+        },
+        "back_story": "private",
+        "control": "llm",
+        "economic_class": "resident",
+        "facing_yaw": 0.0,
+        "frontbutt": true,
+        "goal": "None",
+        "holds": [
+          "historical"
+        ],
+        "id": "b",
+        "knows": [],
+        "location_description": "here",
+        "lore": null,
+        "memories": [],
+        "name": "Same",
+        "pockets": [],
+        "position_m": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "presence": "in_city",
+        "presence_epoch": 0,
+        "voice_key": null
+      },
+      "state": {
+        "active_gesture": null,
+        "daily_round": [],
+        "debug_urgency": null,
+        "economic_class": "resident",
+        "facing_yaw": 0.0,
+        "goal": "None",
+        "gut": [],
+        "holds": [],
+        "inbox": [],
+        "intent": null,
+        "knows": [],
+        "leaving_city": false,
+        "memories": [],
+        "movement": null,
+        "needs": {
+          "hunger": 255.0,
+          "thirst": 255.0
+        },
+        "pending_history": [],
+        "places_known": [],
+        "pockets": [],
+        "position_m": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "presence": "beyond_the_walls",
+        "presence_epoch": 0,
+        "recent_history": [],
+        "resident": null,
+        "round_edit": null,
+        "statuses": {},
+        "urgency_since_game_days": null,
+        "you_sell": []
+      }
+    }
+  },
+  "current_time": {
+    "day": 2,
+    "fraction": 0.7000000000000002,
+    "office": "waning",
+    "weekday": "highmarket"
+  },
+  "event_sequence": 10,
+  "household_doors": {
+    "a": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    }
+  },
+  "inventory": {
+    "catalog": [
+      167,
+      127,
+      13,
+      74,
+      22,
+      70,
+      235,
+      166,
+      227,
+      117,
+      134,
+      139,
+      183,
+      20,
+      175,
+      164,
+      172,
+      195,
+      252,
+      183,
+      82,
+      218,
+      254,
+      40,
+      200,
+      210,
+      88,
+      43,
+      226,
+      182,
+      206,
+      124
+    ],
+    "completed_transform_jobs": {},
+    "items": {
+      "stock": {
+        "id": "stock",
+        "kind": "spark",
+        "metadata": {},
+        "quantity": 23
+      }
+    },
+    "legacy_restock_shares": {
+      "stock": [
+        {
+          "original_vendor": "a",
+          "quantity": 3,
+          "source_id": "fixture_restock"
+        }
+      ]
+    },
+    "offers": {
+      "stock": {
+        "created_seq": 10,
+        "giver_id": "a",
+        "item_id": "stock",
+        "quantity": 2,
+        "target_id": null
+      }
+    },
+    "transform_jobs": {
+      "a": {
+        "inputs": [
+          {
+            "item_id": "stock",
+            "quantity": 2
+          },
+          {
+            "item_id": "stock",
+            "quantity": 3
+          }
+        ],
+        "job_id": "job_1",
+        "outputs": [
+          {
+            "kind": "spark",
+            "metadata": {},
+            "quantity": 1
+          },
+          {
+            "kind": "spark",
+            "metadata": {},
+            "quantity": 2
+          }
+        ],
+        "producer": "a",
+        "production_day": 2,
+        "progress_work_minutes": 0.125,
+        "spec_id": "recipe",
+        "start_slot": 7
+      }
+    },
+    "version": 1
+  },
+  "needle_claim": {
+    "dir": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "holder": "b"
+  },
+  "places": {
+    "entries": [
+      {
+        "coarse": false,
+        "id": "p1",
+        "name": "Same's house",
+        "point": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "ward": null
+      },
+      {
+        "coarse": false,
+        "id": "p2",
+        "name": "Same's house",
+        "point": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "ward": null
+      },
+      {
+        "coarse": false,
+        "id": "pl_j197",
+        "name": "Same's house",
+        "point": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "ward": null
+      },
+      {
+        "coarse": false,
+        "id": "pl_e77v",
+        "name": "Same's house",
+        "point": {
+          "x": 1.0,
+          "y": 0.0,
+          "z": 2.0
+        },
+        "ward": null
+      }
+    ],
+    "homes": {
+      "a": "pl_j197",
+      "b": "pl_e77v"
+    },
+    "version": 1
+  },
+  "roster": [
+    "b",
+    "a"
+  ],
+  "round_actions": {},
+  "sounds_enabled": true,
+  "spatial_sequence": 4,
+  "spoke_this_turn": null,
+  "travel_actions": {},
+  "version": 1,
+  "view_cone_degrees": 135.0,
+  "world_revision": 8
+}

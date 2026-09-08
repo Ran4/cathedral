@@ -1,0 +1,41 @@
+{
+  "candidate_validate_us": [
+    4861.441
+  ],
+  "cost": {
+    "encoded_bytes": 9118806,
+    "expanded_upper_bytes": 94831668,
+    "peak_bytes": 406687186
+  },
+  "counts": {
+    "characters": 2520,
+    "completed_transforms": 0,
+    "items": 2638,
+    "offers": 0,
+    "places": 1992,
+    "transforms": 0
+  },
+  "decode_validate_us": [
+    42195.892
+  ],
+  "drop_us": [
+    3161.18
+  ],
+  "encode_us": [
+    42337.215
+  ],
+  "export_us": [
+    36270.544
+  ],
+  "mode": "populated",
+  "placement": {
+    "placed": 2000,
+    "requested": 2000,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    27143.458
+  ],
+  "samples": 1,
+  "shared_reserved_peak_excluding_running_bytes": 813374372
+}

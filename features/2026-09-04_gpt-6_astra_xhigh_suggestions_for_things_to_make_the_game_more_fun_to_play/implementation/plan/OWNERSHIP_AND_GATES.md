@@ -118,3 +118,16 @@ Follow [features/AGENTS.md](../../../AGENTS.md): ESPFEIT, one fresh-context mile
 Give the agent its milestone, applicable instructions, decisions, relevant protocol sections, allowed file scope and predecessor evidence. Require source-backed changes, focused tests, appropriate repository checks and a bounded handoff containing changed interfaces, schema/content versions, acceptance commands/results, captures and unresolved limitations. Run Bevy evidence only with `CATHEDRAL_HEADLESS=1`. The coordinator reviews that handoff before starting the next agent; a discovered predecessor defect returns to its owner before dependent work proceeds.
 
 Update the milestone and plan README status using absolute dates and actual evidence. Partial subcuts remain explicitly partial; missing human/provider/visual acceptance stays pending. A planning document, new API name or passing unrelated suite is never “implemented.” Move the whole feature into `features/implemented/` and update `features/order.json` only when its full scope is delivered. Record absorbed keys behavior as a tested subset when it actually ships; keep the broader proposal pending. Preserve historical implemented records and their original coordinates.
+
+
+## M2a2 owner handoff — 2026-09-08
+
+The character/item/transform/reference-backbone owner supplies strict private
+components, mandatory fields, aggregate admission and behavior witnesses under
+[evidence/m2a2](evidence/m2a2/README.md). The [coverage ledger](evidence/m2a2/OWNER_COVERAGE.md)
+keeps complete World/Engine/host and all remaining private owners explicitly
+pending. Proposed M2a3 is Round/residents/production/household/road-party authority,
+with saved planner bindings and exact later projection contracts; do not start
+it until the coordinator accepts and commits M2a2. Coordinator owns final release
+measurements/review and commit; no complete-save or host-frame acceptance follows
+from the component handoff. Historical M2a1 reference evidence remains unchanged.

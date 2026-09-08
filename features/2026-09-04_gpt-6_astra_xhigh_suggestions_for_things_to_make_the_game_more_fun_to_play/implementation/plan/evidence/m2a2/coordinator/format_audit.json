@@ -1,0 +1,10 @@
+{
+  "other_changed_rust_files": 17,
+  "format_exit_code": 0,
+  "stdout": "",
+  "stderr": "",
+  "baseline_exception": "crates/cathedral-sim/src/item.rs",
+  "only_source_change": "pub(crate) mod checkpoint declaration",
+  "formatted_versions_equal_after_removing_module_declaration": true,
+  "existing_baseline_has_format_drift": true
+}
