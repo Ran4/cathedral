@@ -1,0 +1,9 @@
+{
+  "source_command": "checkpoint_final",
+  "manifest_sha256": "8080b24cfb5b904c5ed6741554f44002d5249dc0e0c9138a0cb2e85f510f5e7d",
+  "lines": [
+    "social_layout warm=24 novelty=24 memory=32 warm_pair_slot=56 novelty_pair_slot=56 warm_dto=40 novelty_dto=40",
+    "social_layout conversation=152 engagement=64 captured_attention_excluded=128 conversation_dto=168 conversation_candidate=168",
+    "social_layout engine_dto=272 engine_candidate=272 stage=16 curiosity=16 context=88"
+  ]
+}

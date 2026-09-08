@@ -1,0 +1,246 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T19:31:56.135537+00:00",
+  "result_file_sha256": "a328dca3263bb27ca294863b297bcf3ba4fb55fcdaf908190ba9ea22f910b968",
+  "samples_retained_without_remeasurement": 3600,
+  "per_run": [
+    {
+      "run": "authored-1",
+      "export_p99_ms": 0.002757,
+      "export_max_ms": 0.005417999999999999,
+      "decode_p99_ms": 0.004155,
+      "decode_max_ms": 0.015361000000000001
+    },
+    {
+      "run": "populated-1",
+      "export_p99_ms": 0.005404,
+      "export_max_ms": 0.005656,
+      "decode_p99_ms": 0.006624,
+      "decode_max_ms": 0.48046599999999995
+    },
+    {
+      "run": "populated-2",
+      "export_p99_ms": 0.005332999999999999,
+      "export_max_ms": 0.007901,
+      "decode_p99_ms": 0.005817,
+      "decode_max_ms": 0.56878
+    },
+    {
+      "run": "authored-2",
+      "export_p99_ms": 0.004127,
+      "export_max_ms": 0.005050999999999999,
+      "decode_p99_ms": 0.007412,
+      "decode_max_ms": 1.678592
+    },
+    {
+      "run": "authored-3",
+      "export_p99_ms": 0.005874,
+      "export_max_ms": 0.006306,
+      "decode_p99_ms": 0.005043,
+      "decode_max_ms": 0.36373200000000006
+    },
+    {
+      "run": "populated-3",
+      "export_p99_ms": 5.08169,
+      "export_max_ms": 13.120826000000001,
+      "decode_p99_ms": 46.903921000000004,
+      "decode_max_ms": 55.358841999999996
+    }
+  ],
+  "pooled_by_mode": {
+    "authored": {
+      "preflight_us": {
+        "samples": 300,
+        "p99_ms": 0.007016,
+        "max_ms": 0.013613,
+        "over_2_ms": 0
+      },
+      "export_us": {
+        "samples": 300,
+        "p99_ms": 0.005417999999999999,
+        "max_ms": 0.006306,
+        "over_2_ms": 0
+      },
+      "encode_us": {
+        "samples": 300,
+        "p99_ms": 0.005633999999999999,
+        "max_ms": 0.008919,
+        "over_2_ms": 0
+      },
+      "decode_validate_us": {
+        "samples": 300,
+        "p99_ms": 0.007412,
+        "max_ms": 1.678592,
+        "over_2_ms": 0
+      },
+      "candidate_validate_us": {
+        "samples": 300,
+        "p99_ms": 0.00022600000000000002,
+        "max_ms": 0.00040699999999999997,
+        "over_2_ms": 0
+      },
+      "drop_us": {
+        "samples": 300,
+        "p99_ms": 0.0010969999999999999,
+        "max_ms": 0.001757,
+        "over_2_ms": 0
+      }
+    },
+    "populated": {
+      "preflight_us": {
+        "samples": 300,
+        "p99_ms": 13.202431,
+        "max_ms": 39.377835,
+        "over_2_ms": 4
+      },
+      "export_us": {
+        "samples": 300,
+        "p99_ms": 3.5777349999999997,
+        "max_ms": 13.120826000000001,
+        "over_2_ms": 4
+      },
+      "encode_us": {
+        "samples": 300,
+        "p99_ms": 2.4302420000000002,
+        "max_ms": 36.676921,
+        "over_2_ms": 6
+      },
+      "decode_validate_us": {
+        "samples": 300,
+        "p99_ms": 11.295041000000001,
+        "max_ms": 55.358841999999996,
+        "over_2_ms": 4
+      },
+      "candidate_validate_us": {
+        "samples": 300,
+        "p99_ms": 0.009274,
+        "max_ms": 3.470572,
+        "over_2_ms": 1
+      },
+      "drop_us": {
+        "samples": 300,
+        "p99_ms": 0.008116,
+        "max_ms": 0.8662159999999999,
+        "over_2_ms": 0
+      }
+    }
+  },
+  "phase_samples_over_2_ms": [
+    {
+      "run": "populated-3",
+      "phase": "preflight_us",
+      "sample_index_zero_based": 0,
+      "microseconds": 21456.048
+    },
+    {
+      "run": "populated-3",
+      "phase": "preflight_us",
+      "sample_index_zero_based": 1,
+      "microseconds": 39377.835
+    },
+    {
+      "run": "populated-3",
+      "phase": "preflight_us",
+      "sample_index_zero_based": 2,
+      "microseconds": 13202.431
+    },
+    {
+      "run": "populated-3",
+      "phase": "preflight_us",
+      "sample_index_zero_based": 3,
+      "microseconds": 23218.392
+    },
+    {
+      "run": "populated-3",
+      "phase": "export_us",
+      "sample_index_zero_based": 1,
+      "microseconds": 13120.826000000001
+    },
+    {
+      "run": "populated-3",
+      "phase": "export_us",
+      "sample_index_zero_based": 2,
+      "microseconds": 4097.469999999999
+    },
+    {
+      "run": "populated-3",
+      "phase": "export_us",
+      "sample_index_zero_based": 3,
+      "microseconds": 5081.69
+    },
+    {
+      "run": "populated-3",
+      "phase": "export_us",
+      "sample_index_zero_based": 11,
+      "microseconds": 3577.7349999999997
+    },
+    {
+      "run": "populated-3",
+      "phase": "encode_us",
+      "sample_index_zero_based": 0,
+      "microseconds": 2005.1750000000002
+    },
+    {
+      "run": "populated-3",
+      "phase": "encode_us",
+      "sample_index_zero_based": 1,
+      "microseconds": 5998.786
+    },
+    {
+      "run": "populated-3",
+      "phase": "encode_us",
+      "sample_index_zero_based": 2,
+      "microseconds": 36676.921
+    },
+    {
+      "run": "populated-3",
+      "phase": "encode_us",
+      "sample_index_zero_based": 3,
+      "microseconds": 5632.215
+    },
+    {
+      "run": "populated-3",
+      "phase": "encode_us",
+      "sample_index_zero_based": 10,
+      "microseconds": 2013.7789999999998
+    },
+    {
+      "run": "populated-3",
+      "phase": "encode_us",
+      "sample_index_zero_based": 11,
+      "microseconds": 2430.242
+    },
+    {
+      "run": "populated-3",
+      "phase": "decode_validate_us",
+      "sample_index_zero_based": 0,
+      "microseconds": 46903.921
+    },
+    {
+      "run": "populated-3",
+      "phase": "decode_validate_us",
+      "sample_index_zero_based": 1,
+      "microseconds": 55358.842
+    },
+    {
+      "run": "populated-3",
+      "phase": "decode_validate_us",
+      "sample_index_zero_based": 2,
+      "microseconds": 42913.447
+    },
+    {
+      "run": "populated-3",
+      "phase": "decode_validate_us",
+      "sample_index_zero_based": 3,
+      "microseconds": 11295.041000000001
+    },
+    {
+      "run": "populated-3",
+      "phase": "candidate_validate_us",
+      "sample_index_zero_based": 1,
+      "microseconds": 3470.572
+    }
+  ],
+  "cause": "not determined by these timing records",
+  "host_frame_acceptance": false
+}

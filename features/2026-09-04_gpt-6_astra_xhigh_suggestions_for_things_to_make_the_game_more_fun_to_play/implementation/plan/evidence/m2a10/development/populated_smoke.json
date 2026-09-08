@@ -1,0 +1,75 @@
+{
+  "candidate_validate_us": [
+    0.6489999999999999,
+    0.295
+  ],
+  "cost": {
+    "encoded_bytes": 937,
+    "expanded_upper_bytes": 18632,
+    "peak_bytes": 146971,
+    "validation_working_bytes": 65536
+  },
+  "counts": {
+    "characters": 2520,
+    "engaged": true,
+    "focus": true,
+    "invitation": true,
+    "latest_applied_utterance": 1,
+    "next_utterance": 1,
+    "novelty_memories": 6,
+    "novelty_told": 1,
+    "reciprocal": true,
+    "warm_pairs": 1,
+    "witnesses": 6
+  },
+  "decode_validate_us": [
+    27.342,
+    6.869
+  ],
+  "drop_us": [
+    0.726,
+    0.33999999999999997
+  ],
+  "encode_us": [
+    14.102,
+    6.718
+  ],
+  "export_us": [
+    9.329,
+    4.546
+  ],
+  "mode": "populated",
+  "placement": {
+    "placed": 2000,
+    "requested": 2000,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    19.296,
+    4.495
+  ],
+  "samples": 2,
+  "scenario": "social-continuity-v1",
+  "shared_reserved_peak_excluding_running_bytes": 293942,
+  "witnesses": {
+    "boundary_seconds": 0.3,
+    "maximum_submitted_prompt_bytes": 19029,
+    "partner": "aq7ld",
+    "partner_retained": true,
+    "peer": "x01837",
+    "player_position_m": [
+      142.0,
+      0.91,
+      -64.4
+    ],
+    "provider_submissions": 1,
+    "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"x01837\",\"text\":\"Can you join our conversation?\"}",
+    "speech_messages": [
+      "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Aldith, can you tell me about this street?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"aq7ld\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"You\" }",
+      "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }",
+      "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"x01837\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }"
+    ],
+    "submitted_actor": "aq7ld",
+    "utterance": "Aldith, can you tell me about this street?"
+  }
+}

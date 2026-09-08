@@ -1,0 +1,14 @@
+{
+  "frozen_utc": "2026-09-08T18:54:52.714119+00:00",
+  "base_head": "fd2f3d491a313881a6e71985ef6e6f486849903a",
+  "manifest": "source_hashes.json",
+  "manifest_sha256": "8080b24cfb5b904c5ed6741554f44002d5249dc0e0c9138a0cb2e85f510f5e7d",
+  "files": 895,
+  "source_scope": "component-inputs-v2",
+  "scope": "Shared v2 explicit union of prior owner and measurement scopes plus default_config.ron. Includes complete compiled Rust/test/example and input assets plus new social fixtures. Evidence/orchestration hashed separately.",
+  "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "ordinary_source_changes": "Only checkpoint module declarations plus the two superseded do-not-save comments in attention.rs. No existing ordinary behavior edits.",
+  "public_test_included": true,
+  "new_component_fixture_count": 4,
+  "full_m2_or_host_acceptance": false
+}

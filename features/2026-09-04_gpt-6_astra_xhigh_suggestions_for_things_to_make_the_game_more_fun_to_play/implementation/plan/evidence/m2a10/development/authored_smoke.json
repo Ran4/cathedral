@@ -1,0 +1,75 @@
+{
+  "candidate_validate_us": [
+    0.352,
+    0.262
+  ],
+  "cost": {
+    "encoded_bytes": 695,
+    "expanded_upper_bytes": 14296,
+    "peak_bytes": 128901,
+    "validation_working_bytes": 65536
+  },
+  "counts": {
+    "characters": 520,
+    "engaged": true,
+    "focus": true,
+    "invitation": true,
+    "latest_applied_utterance": 1,
+    "next_utterance": 1,
+    "novelty_memories": 2,
+    "novelty_told": 1,
+    "reciprocal": true,
+    "warm_pairs": 1,
+    "witnesses": 3
+  },
+  "decode_validate_us": [
+    18.483,
+    4.665
+  ],
+  "drop_us": [
+    0.551,
+    0.26
+  ],
+  "encode_us": [
+    9.309,
+    4.749
+  ],
+  "export_us": [
+    5.307,
+    3.287
+  ],
+  "mode": "authored",
+  "placement": {
+    "placed": 0,
+    "requested": 0,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    10.924999999999999,
+    3.1879999999999997
+  ],
+  "samples": 2,
+  "scenario": "social-continuity-v1",
+  "shared_reserved_peak_excluding_running_bytes": 257802,
+  "witnesses": {
+    "boundary_seconds": 0.3,
+    "maximum_submitted_prompt_bytes": 19849,
+    "partner": "g7tbn",
+    "partner_retained": true,
+    "peer": "a8ewf",
+    "player_position_m": [
+      -336.75,
+      0.91,
+      -181.1
+    ],
+    "provider_submissions": 1,
+    "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"a8ewf\",\"text\":\"Can you join our conversation?\"}",
+    "speech_messages": [
+      "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Tobin Alder, can you tell me about this street?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"g7tbn\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"You\" }",
+      "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }",
+      "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"a8ewf\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }"
+    ],
+    "submitted_actor": "g7tbn",
+    "utterance": "Tobin Alder, can you tell me about this street?"
+  }
+}

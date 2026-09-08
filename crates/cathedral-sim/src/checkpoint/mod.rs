@@ -11,6 +11,7 @@ mod budget;
 mod manifest;
 pub(crate) mod records;
 pub(crate) mod serde_support;
+pub mod social;
 #[cfg(test)]
 mod tests;
 mod time;

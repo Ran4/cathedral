@@ -1,0 +1,160 @@
+{
+  "checked_at_utc": "2026-09-08T19:32:41.818128+00:00",
+  "result": "passed",
+  "markdown_files": 6,
+  "local_links": 38,
+  "checks": [
+    {
+      "source": "ADMISSION.md",
+      "target": "development/stdlib_allocation_audit.json"
+    },
+    {
+      "source": "ADMISSION.md",
+      "target": "development/stdlib_allocation_initial.json"
+    },
+    {
+      "source": "README.md",
+      "target": "OWNER_COVERAGE.md"
+    },
+    {
+      "source": "README.md",
+      "target": "ADMISSION.md"
+    },
+    {
+      "source": "README.md",
+      "target": "verification.json"
+    },
+    {
+      "source": "README.md",
+      "target": "source_freeze.json"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/source_audit.json"
+    },
+    {
+      "source": "README.md",
+      "target": "development/stdlib_allocation_audit.json"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/stdlib_allocation_audit.json"
+    },
+    {
+      "source": "README.md",
+      "target": "commands.json"
+    },
+    {
+      "source": "README.md",
+      "target": "environment.json"
+    },
+    {
+      "source": "README.md",
+      "target": "development/owner_finalize.json"
+    },
+    {
+      "source": "README.md",
+      "target": "development/authored_smoke.json"
+    },
+    {
+      "source": "README.md",
+      "target": "development/populated_smoke.json"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/review.md"
+    },
+    {
+      "source": "README.md",
+      "target": "performance/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "development/setup_failures.md"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/tail_latency_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../verification.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "log_archive_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../development/setup_failures.md"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "source_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../ADMISSION.md"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "stdlib_allocation_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../performance/README.md"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "tail_latency_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../../run_m2_social_probes.py"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "RESULTS.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "SUMMARY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "IDENTITY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/social_performance_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/social_smoke_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/tail_latency_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../ADMISSION.md"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/release_build.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../../component_input_sources.py"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/release_archive_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/auditor_regressions.json"
+    }
+  ]
+}

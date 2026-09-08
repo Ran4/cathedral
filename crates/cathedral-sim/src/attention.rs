@@ -30,6 +30,7 @@
 //! they always did, and an aloof NPC with no news still answers you the instant
 //! you speak to them.
 
+pub mod checkpoint;
 use std::{
     collections::{BTreeMap, BTreeSet, hash_map::DefaultHasher},
     hash::{Hash, Hasher},
@@ -81,10 +82,9 @@ pub const STAGE_PARTNER_MEMORY_SECONDS: f64 = 30.0;
 /// "conversation over" event. The player's own slot stays separate, because it
 /// also feeds the stage's reserved seat and must keep its exact semantics.
 ///
-/// Like [`Novelty`], this is derived bookkeeping, not world state: it lives on
-/// the engine, never in [`World`], and a save file must not carry it. It is
-/// bounded by the number of *concurrent* conversations — in practice a handful
-/// — so a plain `BTreeMap` is the whole data structure.
+/// Like [`Novelty`], this lives on the engine rather than in [`World`]. Its
+/// exact retained pairs are checkpoint authority: rebuilding them would lose
+/// conversation holds. Ordinary pruning keeps concurrent pairs small in practice.
 #[derive(Debug, Clone, Default)]
 pub struct WarmExchanges {
     pairs: BTreeMap<(ActorId, ActorId), f64>,
@@ -273,10 +273,9 @@ pub const NOVELTY_MEMORY_SECONDS: f64 = 60.0;
 
 /// What each actor had already been told when their last prompt went out.
 ///
-/// This is derived bookkeeping, not world state, and it deliberately does not
-/// live in [`World`]: nothing in the simulation may branch on it, and a save
-/// file must not carry it. The engine owns one and recomputes it beside
-/// [`on_stage`], once per poll (D20).
+/// The engine owns this beside [`on_stage`], outside [`World`]. Its exact context
+/// digests and meeting salts are checkpoint authority: rebuilding them would
+/// change who speaks after loading. Ordinary observation refreshes it per poll.
 #[derive(Debug, Clone, Default)]
 pub struct Novelty {
     last_told: BTreeMap<ActorId, Memory>,

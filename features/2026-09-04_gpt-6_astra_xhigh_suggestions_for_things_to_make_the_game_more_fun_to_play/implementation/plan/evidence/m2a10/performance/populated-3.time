@@ -1,0 +1,23 @@
+	Command being timed: "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_social_cost --mode populated --samples 100 --output features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a10/performance/populated-3.json"
+	User time (seconds): 1.17
+	System time (seconds): 0.34
+	Percent of CPU this job got: 49%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:03.03
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 63592
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 1019
+	Minor (reclaiming a frame) page faults: 16381
+	Voluntary context switches: 1677
+	Involuntary context switches: 65
+	Swaps: 0
+	File system inputs: 222096
+	File system outputs: 24
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

@@ -1,0 +1,226 @@
+{
+  "authored": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 695,
+        "expanded_upper_bytes": 14296,
+        "peak_bytes": 128901,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 2,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 3
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 257802,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19849,
+        "partner": "g7tbn",
+        "partner_retained": true,
+        "peer": "a8ewf",
+        "player_position_m": [
+          -336.75,
+          0.91,
+          -181.1
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"a8ewf\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Tobin Alder, can you tell me about this street?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"g7tbn\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"a8ewf\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }"
+        ],
+        "submitted_actor": "g7tbn",
+        "utterance": "Tobin Alder, can you tell me about this street?"
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 2.3209999999999997,
+        "p95": 2.614,
+        "p99": 6.842,
+        "max": 10.217
+      },
+      "export_us": {
+        "p50": 2.493,
+        "p95": 2.83,
+        "p99": 4.127,
+        "max": 5.417999999999999
+      },
+      "encode_us": {
+        "p50": 3.004,
+        "p95": 3.306,
+        "p99": 4.265,
+        "max": 6.54
+      },
+      "decode_validate_us": {
+        "p50": 2.734,
+        "p95": 3.186,
+        "p99": 5.043,
+        "max": 363.732
+      },
+      "candidate_validate_us": {
+        "p50": 0.149,
+        "p95": 0.188,
+        "p99": 0.20800000000000002,
+        "max": 0.378
+      },
+      "drop_us": {
+        "p50": 0.156,
+        "p95": 0.192,
+        "p99": 0.308,
+        "max": 1.694
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  },
+  "populated": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 937,
+        "expanded_upper_bytes": 18632,
+        "peak_bytes": 146971,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 2520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 6,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 293942,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19029,
+        "partner": "aq7ld",
+        "partner_retained": true,
+        "peer": "x01837",
+        "player_position_m": [
+          142.0,
+          0.91,
+          -64.4
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"x01837\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Aldith, can you tell me about this street?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"aq7ld\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"x01837\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }"
+        ],
+        "submitted_actor": "aq7ld",
+        "utterance": "Aldith, can you tell me about this street?"
+      }
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 3.137,
+        "p95": 3.202,
+        "p99": 6.91,
+        "max": 175.547
+      },
+      "export_us": {
+        "p50": 3.392,
+        "p95": 3.534,
+        "p99": 5.404,
+        "max": 7.901
+      },
+      "encode_us": {
+        "p50": 4.161,
+        "p95": 4.357,
+        "p99": 6.646000000000001,
+        "max": 10.792
+      },
+      "decode_validate_us": {
+        "p50": 3.6380000000000003,
+        "p95": 4.129,
+        "p99": 6.624,
+        "max": 568.78
+      },
+      "candidate_validate_us": {
+        "p50": 0.186,
+        "p95": 0.213,
+        "p99": 0.251,
+        "max": 0.42
+      },
+      "drop_us": {
+        "p50": 0.215,
+        "p95": 0.261,
+        "p99": 0.33999999999999997,
+        "max": 1.691
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  }
+}

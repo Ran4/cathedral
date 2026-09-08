@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d and M2a1–M2a9 implemented and reviewed (2026-09-08). Remaining M2 owner/envelope work and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending; see EXECUTION_AUTHORITY.md.
+Status: M0 baseline delivered; M1a–M1d and M2a1–M2a10 implemented and reviewed (2026-09-08). Remaining M2 owner/envelope work and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending; see EXECUTION_AUTHORITY.md.
 
 # An Alibi in Stone — systems first, then the full quest
 
@@ -102,3 +102,7 @@ uv run --cache-dir /tmp/cathedral-gdd-uv evidence/validate_plan.py --write
 The first checks generated requirement/scenario tables; use `--write` after editing their catalog source. The second reproduces finite arithmetic and original-model recipe observations. The third checks local links/anchors, milestone status, generated coverage, current site-source hashes and the probe's original-model hash. [design_probe.json](evidence/design_probe.json) and [structural_validation.json](evidence/structural_validation.json) record their scope. None is a claim that the planned gameplay acceptance scenarios have run.
 
 Regenerate the site illustration with `uv run --cache-dir /tmp/cathedral-gdd-uv evidence/render_site_audit.py` after its source geometry changes. Keep the original GDD generation separate until its manuscript/model are deliberately reconciled with the implementation authority.
+
+[M2a10’s reviewed handoff](evidence/m2a10/README.md) adds exact Conversation/WarmExchanges/Novelty and original idle configuration. It passes 2,045 workspace tests and 3,600 audited release phase samples; export p99 is 0.004/0.005 ms. Remaining scheduler/speech/Engine ownership and complete envelope/capture/hydration stay pending.
+
+M2a10 [tail review](evidence/m2a10/coordinator/tail_latency_audit.json) retains a slow third populated run: pooled populated export p99 is 3.577735 ms, maximum export 13.120826 ms and maximum decode 55.358842 ms. The smaller figures above are medians of per-run percentiles; they do not establish synchronous host-frame acceptance.

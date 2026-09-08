@@ -1,0 +1,13 @@
+{
+  "audit-docs.py": "ac2887174369aff1f9fb4a60a90836b7032d5d26ca8f2fce7c64a72a9dd7a858",
+  "audit-logs.py": "5abf7871c95ef92f5c07e5bba32b325b3b79fce6052f24cb45535ae20070abfa",
+  "audit-performance.py": "eb36a77fd83a847174f9441eb13ff6d8a0e4fd6233966d52bd6c0e34457ba644",
+  "audit-regressions.py": "e7252ea90a3fdf09ee91efad674027f7915662f8c539e979f25071b50dc131aa",
+  "audit-release.py": "dbe012ae022ca653aea94e072ab17b73f4753cb672c9f14526271e15885baa84",
+  "audit-source.py": "1e2c725524f8f47306a864bd107a7c0016c270436cbd82e5ff262baa319526ea",
+  "audit-stdlib.py": "82ea62245f309545faa83c7b78590ca2036142eefe8be9dd9c59810f2f755994",
+  "audit-tails.py": "a90f48ad7546ad29bb5ca95a04e8727cae29ebbddbeb1829c1298d1952696cb0",
+  "finalize-docs.py": "f04851f9c1b488958136d245d48d5ccc7d8a618ac61ec885e263e373baa41a44",
+  "release-build.py": "44c942fa3c0bb445274c7ef39badb409b48465b5ccf285a321faef8ffbd7d37a",
+  "stage.py": "7824758be3cf6e6a5b414a70a3b1c1d6b43a7fa235fc97156944ee65e0d8208e"
+}

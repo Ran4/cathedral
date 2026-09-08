@@ -1,0 +1,135 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T19:15:38.366861+00:00",
+  "command_records": 18,
+  "cargo_records": 11,
+  "checks": [
+    "archive and exact retained original hashes/lengths",
+    "test totals independently parsed from originals",
+    "per-command source manifest hashes and v2 helper provenance",
+    "final verification uses complete frozen v2 source scope"
+  ],
+  "frozen_source_commands": [
+    "checkpoint_final",
+    "format_frozen",
+    "public_final",
+    "workspace_serial"
+  ],
+  "totals": {
+    "initial_check": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "private_first": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "private_second": {
+      "passed": 10,
+      "failed": 1,
+      "ignored": 0,
+      "targets": 1
+    },
+    "format_first": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "public_first": {
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "rustc_version": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "rustc_sysroot": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "private_complete": {
+      "passed": 14,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "stdlib_audit": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "format_final": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "stdlib_clone_audit": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "probe_authored_first": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "probe_authored_second": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "probe_populated_first": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "checkpoint_final": {
+      "passed": 133,
+      "failed": 0,
+      "ignored": 21,
+      "targets": 1
+    },
+    "format_frozen": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "public_final": {
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "workspace_serial": {
+      "passed": 2045,
+      "failed": 0,
+      "ignored": 29,
+      "targets": 42
+    }
+  },
+  "development_failures": [
+    "private_first",
+    "private_second",
+    "probe_authored_first"
+  ],
+  "source_scope": "component-inputs-v2",
+  "source_manifest_sha256": "8080b24cfb5b904c5ed6741554f44002d5249dc0e0c9138a0cb2e85f510f5e7d"
+}

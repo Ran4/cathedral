@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
+pub mod checkpoint;
 
 use crate::{
     ActorId, Control, HEARING_RADIUS_M, STAGE_PARTNER_MEMORY_SECONDS, World,

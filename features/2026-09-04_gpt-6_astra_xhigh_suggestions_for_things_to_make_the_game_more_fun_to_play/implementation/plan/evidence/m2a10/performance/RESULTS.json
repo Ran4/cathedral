@@ -1,0 +1,794 @@
+[
+  {
+    "name": "authored-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_social_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a10/performance/authored-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 695,
+        "expanded_upper_bytes": 14296,
+        "peak_bytes": 128901,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 2,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 3
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 257802,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19849,
+        "partner": "g7tbn",
+        "partner_retained": true,
+        "peer": "a8ewf",
+        "player_position_m": [
+          -336.75,
+          0.91,
+          -181.1
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"a8ewf\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Tobin Alder, can you tell me about this street?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"g7tbn\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"a8ewf\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }"
+        ],
+        "submitted_actor": "g7tbn",
+        "utterance": "Tobin Alder, can you tell me about this street?"
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.149,
+        "p95": 0.188,
+        "p99": 0.197,
+        "max": 0.33099999999999996
+      },
+      "decode_validate_us": {
+        "p50": 2.714,
+        "p95": 2.926,
+        "p99": 4.155,
+        "max": 15.361
+      },
+      "drop_us": {
+        "p50": 0.148,
+        "p95": 0.182,
+        "p99": 0.21400000000000002,
+        "max": 1.7570000000000001
+      },
+      "encode_us": {
+        "p50": 3.004,
+        "p95": 3.15,
+        "p99": 3.742,
+        "max": 6.059
+      },
+      "export_us": {
+        "p50": 2.493,
+        "p95": 2.5500000000000003,
+        "p99": 2.757,
+        "max": 5.417999999999999
+      },
+      "preflight_us": {
+        "p50": 2.3209999999999997,
+        "p95": 2.3850000000000002,
+        "p99": 2.698,
+        "max": 10.217
+      }
+    },
+    "process": {
+      "User time (seconds)": 0.21,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 27732.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "df2d3c8ce5ac94b1d72637043f479c13112812b0106ecc095f8e79c5ce4b2b93",
+      "authored-1.json.gz": "89d41b04db63e8f112e6cf7ed55f2bbdb09784ed38a92492a79b0d48ae15aeb2",
+      "authored-1.time": "6727bd612d98cbe60f3918bd9fb7e91095520d36252836534803d194bface73f",
+      "authored-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_social_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a10/performance/populated-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 937,
+        "expanded_upper_bytes": 18632,
+        "peak_bytes": 146971,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 2520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 6,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 293942,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19029,
+        "partner": "aq7ld",
+        "partner_retained": true,
+        "peer": "x01837",
+        "player_position_m": [
+          142.0,
+          0.91,
+          -64.4
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"x01837\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Aldith, can you tell me about this street?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"aq7ld\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"x01837\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }"
+        ],
+        "submitted_actor": "aq7ld",
+        "utterance": "Aldith, can you tell me about this street?"
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.182,
+        "p95": 0.213,
+        "p99": 0.222,
+        "max": 0.42
+      },
+      "decode_validate_us": {
+        "p50": 3.577,
+        "p95": 4.129,
+        "p99": 6.624,
+        "max": 480.46599999999995
+      },
+      "drop_us": {
+        "p50": 0.215,
+        "p95": 0.243,
+        "p99": 0.332,
+        "max": 1.136
+      },
+      "encode_us": {
+        "p50": 4.161,
+        "p95": 4.357,
+        "p99": 6.646000000000001,
+        "max": 7.729
+      },
+      "export_us": {
+        "p50": 3.3689999999999998,
+        "p95": 3.534,
+        "p99": 5.404,
+        "max": 5.656
+      },
+      "preflight_us": {
+        "p50": 3.137,
+        "p95": 3.202,
+        "p99": 6.91,
+        "max": 10.959
+      }
+    },
+    "process": {
+      "User time (seconds)": 1.01,
+      "System time (seconds)": 0.06,
+      "Maximum resident set size (kbytes)": 64968.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "e3ca13ba08ce5d77a87657b70d3c9bd668c2c00b3b494a5acb2dda19da30b52e",
+      "populated-1.json.gz": "0e3008d86b3a9cc4b9473f5259295b558a597509d77d1e1bd9af350a103ce7c1",
+      "populated-1.time": "91a650da1a03af86c59ded838e25ec42cf1b9ade3c41fc791c85358041a05390",
+      "populated-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-2",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_social_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a10/performance/populated-2.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 937,
+        "expanded_upper_bytes": 18632,
+        "peak_bytes": 146971,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 2520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 6,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 293942,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19029,
+        "partner": "aq7ld",
+        "partner_retained": true,
+        "peer": "x01837",
+        "player_position_m": [
+          142.0,
+          0.91,
+          -64.4
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"x01837\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Aldith, can you tell me about this street?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"aq7ld\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"x01837\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }"
+        ],
+        "submitted_actor": "aq7ld",
+        "utterance": "Aldith, can you tell me about this street?"
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.186,
+        "p95": 0.213,
+        "p99": 0.251,
+        "max": 0.362
+      },
+      "decode_validate_us": {
+        "p50": 3.6380000000000003,
+        "p95": 3.931,
+        "p99": 5.817,
+        "max": 568.78
+      },
+      "drop_us": {
+        "p50": 0.21,
+        "p95": 0.261,
+        "p99": 0.33999999999999997,
+        "max": 1.691
+      },
+      "encode_us": {
+        "p50": 4.0840000000000005,
+        "p95": 4.353,
+        "p99": 5.777,
+        "max": 10.792
+      },
+      "export_us": {
+        "p50": 3.392,
+        "p95": 3.48,
+        "p99": 5.332999999999999,
+        "max": 7.901
+      },
+      "preflight_us": {
+        "p50": 3.133,
+        "p95": 3.186,
+        "p99": 4.133,
+        "max": 175.547
+      }
+    },
+    "process": {
+      "User time (seconds)": 0.88,
+      "System time (seconds)": 0.07,
+      "Maximum resident set size (kbytes)": 64840.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "ea8a41dfdaa36e16b644ebabafff5ffb30dde6450c4f9f13678296ac4194618e",
+      "populated-2.json.gz": "2c9d6f52a263531c5567607552ba51422c579a5d3be7c5b11ca97620e2407b83",
+      "populated-2.time": "f234f8dbb3fe2ae4aa5d63079ce6d9b35908274c1b3c5df0a71147f4a0d8b64b",
+      "populated-2.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "authored-2",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_social_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a10/performance/authored-2.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 695,
+        "expanded_upper_bytes": 14296,
+        "peak_bytes": 128901,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 2,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 3
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 257802,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19849,
+        "partner": "g7tbn",
+        "partner_retained": true,
+        "peer": "a8ewf",
+        "player_position_m": [
+          -336.75,
+          0.91,
+          -181.1
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"a8ewf\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Tobin Alder, can you tell me about this street?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"g7tbn\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"a8ewf\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }"
+        ],
+        "submitted_actor": "g7tbn",
+        "utterance": "Tobin Alder, can you tell me about this street?"
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.14700000000000002,
+        "p95": 0.17700000000000002,
+        "p99": 0.20800000000000002,
+        "max": 0.378
+      },
+      "decode_validate_us": {
+        "p50": 2.734,
+        "p95": 3.186,
+        "p99": 7.412,
+        "max": 1678.592
+      },
+      "drop_us": {
+        "p50": 0.164,
+        "p95": 0.206,
+        "p99": 1.097,
+        "max": 1.694
+      },
+      "encode_us": {
+        "p50": 2.988,
+        "p95": 3.306,
+        "p99": 5.6339999999999995,
+        "max": 6.54
+      },
+      "export_us": {
+        "p50": 2.483,
+        "p95": 2.947,
+        "p99": 4.127,
+        "max": 5.050999999999999
+      },
+      "preflight_us": {
+        "p50": 2.32,
+        "p95": 2.614,
+        "p99": 6.842,
+        "max": 10.181
+      }
+    },
+    "process": {
+      "User time (seconds)": 0.22,
+      "System time (seconds)": 0.04,
+      "Maximum resident set size (kbytes)": 25244.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "67e4cf578bcfdff691c7aa0658d8318eb1f3dfa89093d746103833478da0511f",
+      "authored-2.json.gz": "820dc764aaafbf0a871403acf7b51a78ad8161984832ce61bc0311b823b76800",
+      "authored-2.time": "f5d14785aee4d7bbe50c82d9c276bdcdf3a467c6ffef71692f3f3c34b1d21830",
+      "authored-2.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "authored-3",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_social_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a10/performance/authored-3.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 695,
+        "expanded_upper_bytes": 14296,
+        "peak_bytes": 128901,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 2,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 3
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 257802,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19849,
+        "partner": "g7tbn",
+        "partner_retained": true,
+        "peer": "a8ewf",
+        "player_position_m": [
+          -336.75,
+          0.91,
+          -181.1
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"a8ewf\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Tobin Alder, can you tell me about this street?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"g7tbn\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"a8ewf\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }"
+        ],
+        "submitted_actor": "g7tbn",
+        "utterance": "Tobin Alder, can you tell me about this street?"
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.153,
+        "p95": 0.19399999999999998,
+        "p99": 0.226,
+        "max": 0.407
+      },
+      "decode_validate_us": {
+        "p50": 2.846,
+        "p95": 3.337,
+        "p99": 5.043,
+        "max": 363.732
+      },
+      "drop_us": {
+        "p50": 0.156,
+        "p95": 0.192,
+        "p99": 0.308,
+        "max": 1.246
+      },
+      "encode_us": {
+        "p50": 3.179,
+        "p95": 3.393,
+        "p99": 4.265,
+        "max": 8.919
+      },
+      "export_us": {
+        "p50": 2.6479999999999997,
+        "p95": 2.83,
+        "p99": 5.874,
+        "max": 6.306
+      },
+      "preflight_us": {
+        "p50": 2.4779999999999998,
+        "p95": 2.624,
+        "p99": 7.016,
+        "max": 13.613
+      }
+    },
+    "process": {
+      "User time (seconds)": 0.27,
+      "System time (seconds)": 0.08,
+      "Maximum resident set size (kbytes)": 25236.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "3ca7d2525245605a03c4760503e99fad6364f319d0752b3069a69b4eb9db5c54",
+      "authored-3.json.gz": "c62b30bb39cc5a202bc170ae4113caab94ca9cbb5f9180be4fc56fd92022113f",
+      "authored-3.time": "c65de520427782431d544afc452d397809e32fc07b33533de3e4c664d03d05e9",
+      "authored-3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-3",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_social_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a10/performance/populated-3.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 937,
+        "expanded_upper_bytes": 18632,
+        "peak_bytes": 146971,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 2520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 6,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 293942,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19029,
+        "partner": "aq7ld",
+        "partner_retained": true,
+        "peer": "x01837",
+        "player_position_m": [
+          142.0,
+          0.91,
+          -64.4
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"x01837\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Aldith, can you tell me about this street?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"aq7ld\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"x01837\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }"
+        ],
+        "submitted_actor": "aq7ld",
+        "utterance": "Aldith, can you tell me about this street?"
+      }
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.9430000000000001,
+        "p95": 2.5050000000000003,
+        "p99": 590.042,
+        "max": 3470.572
+      },
+      "decode_validate_us": {
+        "p50": 19.95,
+        "p95": 111.881,
+        "p99": 46903.921,
+        "max": 55358.842
+      },
+      "drop_us": {
+        "p50": 1.232,
+        "p95": 4.667000000000001,
+        "p99": 62.458000000000006,
+        "max": 866.2159999999999
+      },
+      "encode_us": {
+        "p50": 19.991,
+        "p95": 2005.1750000000002,
+        "p99": 5998.786,
+        "max": 36676.921
+      },
+      "export_us": {
+        "p50": 16.527,
+        "p95": 54.613,
+        "p99": 5081.69,
+        "max": 13120.826000000001
+      },
+      "preflight_us": {
+        "p50": 15.873,
+        "p95": 46.649,
+        "p99": 23218.392,
+        "max": 39377.835
+      }
+    },
+    "process": {
+      "User time (seconds)": 1.17,
+      "System time (seconds)": 0.34,
+      "Maximum resident set size (kbytes)": 63592.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "4791c71274dd392ef73b46dc4b88420eb788022e8da9d4e9ea5ab9d9d133c929",
+      "populated-3.json.gz": "b39bececccde4b8809ad62f8798fe5547a427e7155611bbffa932dc80a93b873",
+      "populated-3.time": "fab5d4f6c956857ef4b419d3d08dd3a3223d7a6b406ca0a2f817824857dde7d5",
+      "populated-3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+]

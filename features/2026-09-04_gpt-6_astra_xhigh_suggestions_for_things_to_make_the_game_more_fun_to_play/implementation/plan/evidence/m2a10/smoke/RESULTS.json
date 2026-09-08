@@ -1,0 +1,266 @@
+[
+  {
+    "name": "authored-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_social_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "2",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a10/smoke/authored-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 695,
+        "expanded_upper_bytes": 14296,
+        "peak_bytes": 128901,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 2,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 3
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 257802,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19849,
+        "partner": "g7tbn",
+        "partner_retained": true,
+        "peer": "a8ewf",
+        "player_position_m": [
+          -336.75,
+          0.91,
+          -181.1
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"a8ewf\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Tobin Alder, can you tell me about this street?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"g7tbn\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"g7tbn\"), target_id: Some(ActorId(\"a8ewf\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(-336.75, 0.91, -181.1), recipient_ids: [ActorId(\"player\"), ActorId(\"a8ewf\")], speaker_name_for_player: \"Tobin Alder\" }"
+        ],
+        "submitted_actor": "g7tbn",
+        "utterance": "Tobin Alder, can you tell me about this street?"
+      }
+    },
+    "sample_count_per_phase": 2,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.206,
+        "p95": 0.36,
+        "p99": 0.36,
+        "max": 0.36
+      },
+      "decode_validate_us": {
+        "p50": 4.481999999999999,
+        "p95": 13.182,
+        "p99": 13.182,
+        "max": 13.182
+      },
+      "drop_us": {
+        "p50": 0.205,
+        "p95": 1.028,
+        "p99": 1.028,
+        "max": 1.028
+      },
+      "encode_us": {
+        "p50": 3.735,
+        "p95": 6.869,
+        "p99": 6.869,
+        "max": 6.869
+      },
+      "export_us": {
+        "p50": 2.755,
+        "p95": 4.847,
+        "p99": 4.847,
+        "max": 4.847
+      },
+      "preflight_us": {
+        "p50": 2.769,
+        "p95": 10.007,
+        "p99": 10.007,
+        "max": 10.007
+      }
+    },
+    "process": {
+      "User time (seconds)": 0.22,
+      "System time (seconds)": 0.0,
+      "Maximum resident set size (kbytes)": 27572.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "3852802b3d064b6c2300b8bb3c5a7af902c3113793ff0e015a25cda88a374b34",
+      "authored-1.json.gz": "ec2d386f02f5ce40fa98b6545d604dba85b515af4104dcca3b433366f53f2c80",
+      "authored-1.time": "8c153a80589078cb7d4cc7347f1068753df0a34acfc61e62c8c62be1b613d169",
+      "authored-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_social_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "2",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a10/smoke/populated-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "encoded_bytes": 937,
+        "expanded_upper_bytes": 18632,
+        "peak_bytes": 146971,
+        "validation_working_bytes": 65536
+      },
+      "counts": {
+        "characters": 2520,
+        "engaged": true,
+        "focus": true,
+        "invitation": true,
+        "latest_applied_utterance": 1,
+        "next_utterance": 1,
+        "novelty_memories": 6,
+        "novelty_told": 1,
+        "reciprocal": true,
+        "warm_pairs": 1,
+        "witnesses": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 2,
+      "scenario": "social-continuity-v1",
+      "shared_reserved_peak_excluding_running_bytes": 293942,
+      "witnesses": {
+        "boundary_seconds": 0.3,
+        "maximum_submitted_prompt_bytes": 19029,
+        "partner": "aq7ld",
+        "partner_retained": true,
+        "peer": "x01837",
+        "player_position_m": [
+          142.0,
+          0.91,
+          -64.4
+        ],
+        "provider_submissions": 1,
+        "reply": "say {\"target\":\"player\",\"text\":\"This street is familiar to me.\"}\nsay {\"target\":\"x01837\",\"text\":\"Can you join our conversation?\"}",
+        "speech_messages": [
+          "Speech { event_id: SpeechEventId(\"speech-2\"), speaker_id: ActorId(\"player\"), target_id: None, text: \"Aldith, can you tell me about this street?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"aq7ld\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"You\" }",
+          "Speech { event_id: SpeechEventId(\"speech-3\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"player\")), text: \"This street is familiar to me.\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }",
+          "Speech { event_id: SpeechEventId(\"speech-4\"), speaker_id: ActorId(\"aq7ld\"), target_id: Some(ActorId(\"x01837\")), text: \"Can you join our conversation?\", speaker_position_m: DVec3(142.0, 0.91, -64.4), recipient_ids: [ActorId(\"player\"), ActorId(\"x01837\"), ActorId(\"x00597\"), ActorId(\"x00471\"), ActorId(\"x01004\")], speaker_name_for_player: \"Aldith\" }"
+        ],
+        "submitted_actor": "aq7ld",
+        "utterance": "Aldith, can you tell me about this street?"
+      }
+    },
+    "sample_count_per_phase": 2,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 0.195,
+        "p95": 0.42100000000000004,
+        "p99": 0.42100000000000004,
+        "max": 0.42100000000000004
+      },
+      "decode_validate_us": {
+        "p50": 5.653,
+        "p95": 19.681,
+        "p99": 19.681,
+        "max": 19.681
+      },
+      "drop_us": {
+        "p50": 0.309,
+        "p95": 1.7120000000000002,
+        "p99": 1.7120000000000002,
+        "max": 1.7120000000000002
+      },
+      "encode_us": {
+        "p50": 4.973,
+        "p95": 8.488999999999999,
+        "p99": 8.488999999999999,
+        "max": 8.488999999999999
+      },
+      "export_us": {
+        "p50": 3.785,
+        "p95": 6.98,
+        "p99": 6.98,
+        "max": 6.98
+      },
+      "preflight_us": {
+        "p50": 3.665,
+        "p95": 14.051,
+        "p99": 14.051,
+        "max": 14.051
+      }
+    },
+    "process": {
+      "User time (seconds)": 0.86,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 67380.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "13537663e6cfd6bd7bbf62b8ea9ea7aefbe42891985bea2cf6494e4eff3c5e92",
+      "populated-1.json.gz": "078f2d702190471861a528384fe4596e7066613b8517fdc6cd6f8c8cea6d2034",
+      "populated-1.time": "f25fb0323416afd1b23759a2806ff481d148267caa3bb1e501ef3d67652d4533",
+      "populated-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+]

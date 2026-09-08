@@ -15,6 +15,8 @@ from pathlib import Path
 import statistics
 import subprocess
 
+from component_input_sources import SOURCE_SCOPE, sources as component_sources
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[4]
 PHASES = (
@@ -45,6 +47,10 @@ def main():
     args = parser.parse_args()
     folder = args.directory.resolve()
     identity = json.loads((folder / "IDENTITY.json").read_text())
+    source_scope = identity.get("source_scope", "legacy-component")
+    assert source_scope in ("legacy-component", SOURCE_SCOPE)
+    if source_scope == SOURCE_SCOPE:
+        assert "component_input_sources.py" in identity["runner_sha256"]
     rows = json.loads((folder / "RESULTS.json").read_text())
     summary = json.loads((folder / "SUMMARY.json").read_text())
     repeats, samples = (1, 2) if identity["smoke_only"] else (3, 100)
@@ -186,6 +192,30 @@ def main():
                     "receipt_recent": 4096, "receipt_retained": 256,
                     "receipt_protected": 19, "boundary_seconds": 20.200000000000003,
                 }
+            elif data["scenario"] == "social-continuity-v1":
+                assert validation_working_bytes == 64 * 1024
+                assert counts == {
+                    "characters": 520 + expected_extra, "engaged": True,
+                    "reciprocal": True, "focus": True, "invitation": True,
+                    "next_utterance": 1, "latest_applied_utterance": 1,
+                    "warm_pairs": 1, "novelty_told": 1,
+                    "novelty_memories": 6 if expected_extra else 2,
+                    "witnesses": 6 if expected_extra else 3,
+                }
+                witnesses = data["witnesses"]
+                assert witnesses["partner_retained"] is True
+                assert witnesses["boundary_seconds"] == 0.3
+                assert witnesses["provider_submissions"] == 1
+                assert witnesses["maximum_submitted_prompt_bytes"] == (19029 if expected_extra else 19849)
+                assert witnesses["submitted_actor"] == witnesses["partner"]
+                assert len(witnesses["speech_messages"]) == 3
+                expected_witness_hash = (
+                    "d08eeb93362977d208c95e23009e8ea78b5cf821c4093dc4d11968b5e538ae14"
+                    if expected_extra else
+                    "1a2e46149cb77aa29b8f4fabfdad4535a2bd28a9db6a59b3321dad76c29426b0"
+                )
+                assert sha(json.dumps(witnesses, sort_keys=True,
+                                      separators=(",", ":")).encode()) == expected_witness_hash
             else:
                 raise AssertionError("unrecognized component validation workload")
         assert cost["peak_bytes"] == (
@@ -227,17 +257,20 @@ def main():
     assert identity["unchanged_source_binary_and_runners_at_end"] is True
     if args.check_current:
         assert sha(args.check_current.read_bytes()) == identity["binary_sha256"]
-        paths = subprocess.check_output(
-            ["/usr/bin/git", "ls-files", "--cached", "--others", "--exclude-standard",
-             "--", "Cargo*", "config.ron", "src", "crates", "assets/world",
-             "assets/prompts", "assets/sounds/catalog.toml", "lore/characters",
-             "lore/core_lore/occupations.json"], cwd=ROOT, text=True,
-        ).splitlines()
-        assert {p for p in paths if (ROOT / p).is_file()} == set(identity["source_sha256"])
-        for filename, expected in identity["source_sha256"].items():
-            path = (ROOT / filename).resolve()
-            assert path.is_relative_to(ROOT)
-            assert sha(path.read_bytes()) == expected, filename
+        if source_scope == SOURCE_SCOPE:
+            assert component_sources() == identity["source_sha256"]
+        else:
+            paths = subprocess.check_output(
+                ["/usr/bin/git", "ls-files", "--cached", "--others", "--exclude-standard",
+                 "--", "Cargo*", "config.ron", "src", "crates", "assets/world",
+                 "assets/prompts", "assets/sounds/catalog.toml", "lore/characters",
+                 "lore/core_lore/occupations.json"], cwd=ROOT, text=True,
+            ).splitlines()
+            assert {p for p in paths if (ROOT / p).is_file()} == set(identity["source_sha256"])
+            for filename, expected in identity["source_sha256"].items():
+                path = (ROOT / filename).resolve()
+                assert path.is_relative_to(ROOT)
+                assert sha(path.read_bytes()) == expected, filename
         for filename, expected in identity["runner_sha256"].items():
             path = (HERE / filename).resolve()
             assert path.parent == HERE
@@ -253,6 +286,8 @@ def main():
         "current_source_binary_runner_hashes_checked": bool(args.check_current),
         "global_max_us": global_max_us,
         "auditor_sha256": sha(Path(__file__).read_bytes()),
+        "source_scope": source_scope,
+        "input_enumerator_sha256": sha((HERE / "component_input_sources.py").read_bytes()),
     }
     args.report.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))
