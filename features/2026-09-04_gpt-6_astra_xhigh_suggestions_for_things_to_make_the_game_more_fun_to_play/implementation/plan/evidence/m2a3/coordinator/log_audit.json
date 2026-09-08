@@ -1,0 +1,141 @@
+{
+  "result": "passed",
+  "archives_checked": 16,
+  "summaries": {
+    "focused-final": {
+      "passed": 38,
+      "failed": 0,
+      "ignored": 3,
+      "targets": 1
+    },
+    "public-final": {
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 2
+    },
+    "workspace-final": {
+      "passed": 1912,
+      "failed": 0,
+      "ignored": 11,
+      "targets": 35
+    }
+  },
+  "logs": [
+    {
+      "name": "compile-initial",
+      "archive_sha256": "cea36ab5004843b487a5e2babe1c084099f54e702bf92d3508bde3c831c1f9a1",
+      "decoded_or_original_bytes": 30169,
+      "original_hash_checked": true
+    },
+    {
+      "name": "compile-second",
+      "archive_sha256": "af0593df4d4080a28d3ba9bc6d9d32024e47d3e3f9045ed632bb57b6ca5d175a",
+      "decoded_or_original_bytes": 134255,
+      "original_hash_checked": true
+    },
+    {
+      "name": "continuation-initial",
+      "archive_sha256": "9caaecab99744f14e1cea81994484a2be0df3ab8c219ee00ca5a0cd2e3071950",
+      "decoded_or_original_bytes": 1014,
+      "original_hash_checked": true
+    },
+    {
+      "name": "continuation-second",
+      "archive_sha256": "4083b6d14e3ad4c59e0bd613ee45b876fa8cb47b59ea0b17096b4df85a668c2e",
+      "decoded_or_original_bytes": 1754,
+      "original_hash_checked": true
+    },
+    {
+      "name": "continuation-third",
+      "archive_sha256": "75c22154b1313fff5d8c997e24dde0028660107bda5ac72513fc7ae13232a99f",
+      "decoded_or_original_bytes": 2131,
+      "original_hash_checked": true
+    },
+    {
+      "name": "continuation-fourth",
+      "archive_sha256": "6d43a37ac37edecad8a928d05e23ffe9ae3ea0234d5f3d398e00e6f786f569f1",
+      "decoded_or_original_bytes": 2321,
+      "original_hash_checked": true
+    },
+    {
+      "name": "checkpoint-focused-initial",
+      "archive_sha256": "cd954fb44a1f5f2e042a8bc542faf2babcf936203ee2657f453767fb0fe5bf59",
+      "decoded_or_original_bytes": 4541,
+      "original_hash_checked": true
+    },
+    {
+      "name": "public-boundary-initial",
+      "archive_sha256": "39ecad581b335924470e89f4465dc6f01ee7bc55217dffc166d8b91cae5b02c9",
+      "decoded_or_original_bytes": 1387,
+      "original_hash_checked": true
+    },
+    {
+      "name": "fixture-write",
+      "archive_sha256": "3e5291daa5c47cdad3997dc3817b48c9b3f41be0b1a3cd9b8653b80d4032f3f0",
+      "decoded_or_original_bytes": 444,
+      "original_hash_checked": true
+    },
+    {
+      "name": "populated-initial",
+      "archive_sha256": "e1fecc3c662b5696ff53bc4b21c994c9de6d4eb31511356256f845afc254691f",
+      "decoded_or_original_bytes": 1166,
+      "original_hash_checked": true
+    },
+    {
+      "name": "authored-static",
+      "archive_sha256": "4d2e9f7952d0a9d722fcdb81069eb776d32185af7f3c02640196d6aef1563790",
+      "decoded_or_original_bytes": 382,
+      "original_hash_checked": true
+    },
+    {
+      "name": "focused-final",
+      "archive_sha256": "f7585d671d1a77369feaefd0e0b7a7811275b99b72cb99175d4b61c4285eb920",
+      "decoded_or_original_bytes": 5664,
+      "original_hash_checked": true,
+      "totals": {
+        "passed": 38,
+        "failed": 0,
+        "ignored": 3
+      },
+      "targets": 1
+    },
+    {
+      "name": "public-final",
+      "archive_sha256": "96f6dfb79252a0d17e8ba0628208ce9ec6233f0ac1b2f48513653b330bea4887",
+      "decoded_or_original_bytes": 1239,
+      "original_hash_checked": true,
+      "totals": {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0
+      },
+      "targets": 2
+    },
+    {
+      "name": "authored-static-diagnostic",
+      "archive_sha256": "8b55a1161c139a59ce1b7741d35961c613773f76d206c81c52ca980509181bc0",
+      "decoded_or_original_bytes": 831,
+      "original_hash_checked": false
+    },
+    {
+      "name": "populated-initial-diagnostic",
+      "archive_sha256": "0a310d2448b6a241977458592518ab53bc341decd764ae5d43308bea82158ef1",
+      "decoded_or_original_bytes": 807,
+      "original_hash_checked": false
+    },
+    {
+      "name": "workspace-final",
+      "archive_sha256": "57bf8f924306a37864416de8ebafc5ac26c7b2f0a463a8de1ca5934e08eda15f",
+      "decoded_or_original_bytes": 241612,
+      "original_hash_checked": true,
+      "totals": {
+        "passed": 1912,
+        "failed": 0,
+        "ignored": 11
+      },
+      "targets": 35
+    }
+  ],
+  "note": "Focused/public original files were losslessly reconstructed by the implementation agent from its recorded terminal-newline delta; the reconstructed bytes match its pre-normalization hashes. Workspace raw bytes were copied before normalization."
+}

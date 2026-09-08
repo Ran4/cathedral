@@ -131,3 +131,10 @@ with saved planner bindings and exact later projection contracts; do not start
 it until the coordinator accepts and commits M2a2. Coordinator owns final release
 measurements/review and commit; no complete-save or host-frame acceptance follows
 from the component handoff. Historical M2a1 reference evidence remains unchanged.
+
+
+## M2a3 owner handoff — 2026-09-08
+
+M2a3 covers complete private Round/resident/market/production/household/road-party state against the accepted backbone. See [coverage](evidence/m2a3/OWNER_COVERAGE.md) and [admission](evidence/m2a3/ADMISSION.md). The milestone owner supplies source, fixtures, raw test/layout logs and source hashes; coordinator owns independent public-boundary tests, source review, release component and matched ordinary-poll measurements, staging and commit. No M2a4 begins before M2a3 acceptance/commit.
+
+Whole-envelope/Running/retiring coexistence, remaining World/Engine/private owners and CPU-safe effective clock/accounting horizons are explicit gates before M2b. Component leases and successful standalone measurements do not establish shared full-save admission. Existing M2a1/M2a2 host-frame failures and preserved reference executables remain binding evidence; no renderer/full-stress reprobe accompanies this cut.

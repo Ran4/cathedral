@@ -221,6 +221,8 @@ pub struct Route {
 /// coordinates are `f64`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NavData {
+    /// Exact admitted source binding; derived path caches are excluded.
+    checkpoint_source: [u8; 32],
     grid: NavGrid,
     bitset: Vec<u8>,
     nodes: Vec<[f64; 2]>,
@@ -378,6 +380,16 @@ impl NavData {
         // tied to the original graph; exact connectors can use every vertex.
         let node_index = NodeIndex::build(&doc.nodes[..endpoint_nodes]);
         let nav = Self {
+            checkpoint_source: {
+                use sha2::{Digest, Sha256};
+                let mut h = Sha256::new();
+                h.update(b"cathedral-navigation-source-v1\0");
+                h.update((json.len() as u64).to_le_bytes());
+                h.update(json.as_bytes());
+                h.update((bitset.len() as u64).to_le_bytes());
+                h.update(bitset);
+                h.finalize().into()
+            },
             grid,
             bitset: bitset.to_vec(),
             nodes: doc.nodes,
@@ -395,6 +407,10 @@ impl NavData {
         };
         nav.resident_places.validate(&nav)?;
         Ok(nav)
+    }
+
+    pub fn checkpoint_fingerprint(&self) -> [u8; 32] {
+        self.checkpoint_source
     }
 
     pub fn grid(&self) -> NavGrid {

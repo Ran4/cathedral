@@ -1,0 +1,31 @@
+{
+  "result": "passed",
+  "base_commit": "3e9c93f5354176b2f506c50ca4de5c63e1de7f17",
+  "manifest_sha256": "3ade416b2fd037ad3aa6cedecbbf2f8086446e8d34d308c20fbae32b23a6c60b",
+  "manifest_files_checked": 77,
+  "changed_source_fixture_paths_covered": [
+    "crates/cathedral-backends/examples/alibi_round_cost.rs",
+    "crates/cathedral-sim/src/checkpoint/aggregate.rs",
+    "crates/cathedral-sim/src/checkpoint/records.rs",
+    "crates/cathedral-sim/src/nav/mod.rs",
+    "crates/cathedral-sim/src/nav/residents.rs",
+    "crates/cathedral-sim/src/nav/residents/checkpoint.rs",
+    "crates/cathedral-sim/src/round.rs",
+    "crates/cathedral-sim/src/round/checkpoint/continuation.rs",
+    "crates/cathedral-sim/src/round/checkpoint/definitions.rs",
+    "crates/cathedral-sim/src/round/checkpoint/mod.rs",
+    "crates/cathedral-sim/src/round/checkpoint/records.rs",
+    "crates/cathedral-sim/src/round/checkpoint/tests.rs",
+    "crates/cathedral-sim/src/round/checkpoint/validate.rs",
+    "crates/cathedral-sim/src/round/residents.rs",
+    "crates/cathedral-sim/src/round/residents/checkpoint.rs",
+    "crates/cathedral-sim/src/round/residents/checkpoint_tests.rs",
+    "crates/cathedral-sim/src/round/residents/tests.rs",
+    "crates/cathedral-sim/src/round/tests.rs",
+    "crates/cathedral-sim/src/world/checkpoint.rs",
+    "crates/cathedral-sim/tests/checkpoint_round_boundary.rs",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/round_active.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/round_empty.json"
+  ],
+  "format_checks_still_match": 20
+}

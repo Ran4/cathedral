@@ -1,0 +1,180 @@
+{
+  "authored": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "definition_working_bytes": 4194304,
+        "encoded_bytes": 1315978,
+        "expanded_upper_bytes": 24203156,
+        "peak_bytes": 104958958
+      },
+      "counts": {
+        "characters": 520,
+        "destination_reservations": 0,
+        "occupied_reservations": 0,
+        "people": 514,
+        "production_plans": 3,
+        "residents": 0,
+        "road_parties": 2,
+        "sources": 9,
+        "stalls": 13,
+        "stock_plans": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 209917916
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 4714.35,
+        "p95": 4981.61,
+        "p99": 5534.427,
+        "max": 6463.1410000000005
+      },
+      "export_us": {
+        "p50": 12529.220000000001,
+        "p95": 13189.004,
+        "p99": 13763.916,
+        "max": 15333.849
+      },
+      "encode_us": {
+        "p50": 5907.941,
+        "p95": 6204.552000000001,
+        "p99": 6475.736,
+        "max": 6522.443
+      },
+      "decode_validate_us": {
+        "p50": 14531.462,
+        "p95": 15161.766,
+        "p99": 15896.771,
+        "max": 16898.955
+      },
+      "candidate_validate_us": {
+        "p50": 7376.621,
+        "p95": 7713.206,
+        "p99": 7955.2570000000005,
+        "max": 8163.673999999999
+      },
+      "drop_us": {
+        "p50": 317.951,
+        "p95": 403.094,
+        "p99": 413.85499999999996,
+        "max": 531.719
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  },
+  "populated": {
+    "runs": 3,
+    "samples_per_phase": 300,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "definition_working_bytes": 4194304,
+        "encoded_bytes": 3510496,
+        "expanded_upper_bytes": 51657412,
+        "peak_bytes": 221359536
+      },
+      "counts": {
+        "characters": 2520,
+        "destination_reservations": 0,
+        "occupied_reservations": 2000,
+        "people": 2514,
+        "production_plans": 3,
+        "residents": 2000,
+        "road_parties": 2,
+        "sources": 9,
+        "stalls": 13,
+        "stock_plans": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 442719072
+    },
+    "median_run_us": {
+      "preflight_us": {
+        "p50": 11321.611,
+        "p95": 11598.956,
+        "p99": 11903.154,
+        "max": 13948.718
+      },
+      "export_us": {
+        "p50": 23740.118000000002,
+        "p95": 24490.594,
+        "p99": 25835.964,
+        "max": 25871.997
+      },
+      "encode_us": {
+        "p50": 14530.423,
+        "p95": 15049.516000000001,
+        "p99": 15438.128,
+        "max": 17680.945
+      },
+      "decode_validate_us": {
+        "p50": 27883.295,
+        "p95": 29277.314,
+        "p99": 29779.873,
+        "max": 29808.259000000002
+      },
+      "candidate_validate_us": {
+        "p50": 10960.228000000001,
+        "p95": 11464.791000000001,
+        "p99": 11924.851999999999,
+        "max": 12029.39
+      },
+      "drop_us": {
+        "p50": 888.592,
+        "p95": 1037.32,
+        "p99": 1177.155,
+        "max": 1187.095
+      }
+    },
+    "same_binary_semantic_counters_repeat": true
+  }
+}

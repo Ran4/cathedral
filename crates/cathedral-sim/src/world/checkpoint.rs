@@ -406,3 +406,37 @@ fn check(ok: bool, reason: &'static str) -> Result<()> {
 
 #[cfg(test)]
 mod tests;
+
+/// Read-only covered authority shared by running export and unadopted candidate
+/// validation. No World construction, seeding, replacement or clone is needed.
+#[derive(Clone, Copy)]
+pub(crate) struct BackboneRefs<'a> {
+    pub characters: &'a BTreeMap<ActorId, Character>,
+    pub items: &'a BTreeMap<ItemId, Item>,
+    pub places: &'a PlaceRegistry,
+    pub household_doors: &'a BTreeMap<ActorId, Vec3>,
+    pub shares: &'a BTreeMap<ItemId, Vec<crate::inventory::LegacyRestockShare>>,
+}
+impl<'a> BackboneRefs<'a> {
+    pub(crate) fn from_world(w: &'a World) -> Self {
+        Self {
+            characters: &w.characters,
+            items: &w.items,
+            places: &w.places,
+            household_doors: &w.household_doors,
+            shares: &w.legacy_restock_shares,
+        }
+    }
+}
+impl BackboneCandidate {
+    pub(crate) fn references(&self) -> BackboneRefs<'_> {
+        let d = &self.data;
+        BackboneRefs {
+            characters: &d.characters,
+            items: &d.inventory.items,
+            places: &d.places,
+            household_doors: &d.household_doors,
+            shares: &d.inventory.legacy_restock_shares,
+        }
+    }
+}

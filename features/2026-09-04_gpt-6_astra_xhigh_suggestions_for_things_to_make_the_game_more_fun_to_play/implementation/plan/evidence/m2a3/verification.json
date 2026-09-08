@@ -1,0 +1,163 @@
+{
+  "status": "Implemented and reviewed component cut; full-envelope/host acceptance pending",
+  "checks": [
+    {
+      "name": "focused-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "archive": "focused-final.log",
+      "original_sha256": "cc00a427e60e743657efcfa969d61fd409a306ddad83b1313d3dee88e85b4bdc",
+      "archive_sha256": "f7585d671d1a77369feaefd0e0b7a7811275b99b72cb99175d4b61c4285eb920",
+      "test_results": [
+        {
+          "passed": 38,
+          "failed": 0,
+          "ignored": 3
+        }
+      ],
+      "original_path": "/tmp/alibi-m2a3-focused-final-original.log",
+      "original_bytes": 5664,
+      "archive_bytes": 5663,
+      "normalization": "Remove only redundant terminal LF bytes: original.rstrip(b\"\\n\") + b\"\\n\". No other byte changes.",
+      "original_preservation": "Exact original bytes restored from the reversible terminal-newline normalization and verified against the original SHA256 and byte count captured before normalization."
+    },
+    {
+      "name": "public-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--test",
+        "checkpoint_round_boundary",
+        "--test",
+        "checkpoint_character"
+      ],
+      "exit_code": 0,
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "archive": "public-final.log",
+      "original_sha256": "71c59a45320d36c9aaf54e6f6205cbf1165bafa931e7da6966d5a707ff1a8e98",
+      "archive_sha256": "96f6dfb79252a0d17e8ba0628208ce9ec6233f0ac1b2f48513653b330bea4887",
+      "test_results": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "original_path": "/tmp/alibi-m2a3-public-final-original.log",
+      "original_bytes": 1239,
+      "archive_bytes": 1238,
+      "normalization": "Remove only redundant terminal LF bytes: original.rstrip(b\"\\n\") + b\"\\n\". No other byte changes.",
+      "original_preservation": "Exact original bytes restored from the reversible terminal-newline normalization and verified against the original SHA256 and byte count captured before normalization."
+    },
+    {
+      "name": "workspace-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a3-workspace-final-original.log",
+      "original_bytes": 241612,
+      "original_sha256": "0aea16bb0bfd732836679909d7f71ac8d6ea3321c4924077b4da83b0581396ec",
+      "archive": "workspace-final.log",
+      "archive_bytes": 241611,
+      "archive_sha256": "57bf8f924306a37864416de8ebafc5ac26c7b2f0a463a8de1ca5934e08eda15f",
+      "normalization": "Remove only redundant terminal LF bytes: original.rstrip(b\"\\n\") + b\"\\n\". No other byte changes.",
+      "original_preservation": "Copied raw output to original_path before normalization.",
+      "test_results": {
+        "targets": 35,
+        "passed": 1912,
+        "failed": 0,
+        "ignored": 11
+      },
+      "build_duration_reported": "7m 37s"
+    }
+  ],
+  "workspace_command": [
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "--workspace"
+  ],
+  "workspace_environment": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "source_manifest_files": 77,
+  "source_manifest_sha256": "3ade416b2fd037ad3aa6cedecbbf2f8086446e8d34d308c20fbae32b23a6c60b",
+  "formatter_note": "Coordinator read-only check passed all 20 changed/new Rust files; their hashes match this source freeze. See coordinator/format_audit.json.",
+  "release_measurements": "Completed coordinator release component and ordinary measurements; see performance/README.md and coordinator/review.md.",
+  "preserved_historical_release_binaries": {
+    "target/release/examples/alibi_checkpoint_cost": "ec3b2960db4f406c1c13a147b8b001ccd0bc5f5f6e39d5be256eafc10c4bbdd8",
+    "target/release/examples/alibi_backbone_cost": "08c39b6c673e4e2bbfb407b461fdf4ce961312a5419fd90c76ae9e2b9876b571"
+  },
+  "workspace_totals": {
+    "targets": 35,
+    "passed": 1912,
+    "failed": 0,
+    "ignored": 11
+  },
+  "source_unchanged_after_workspace": true,
+  "focused_checkpoint": {
+    "passed": 38,
+    "failed": 0,
+    "ignored": 3
+  },
+  "public_targets": {
+    "passed": 9,
+    "failed": 0,
+    "ignored": 0,
+    "included_in_workspace": true
+  },
+  "git_diff_check": {
+    "command": [
+      "/usr/bin/git",
+      "diff",
+      "--check"
+    ],
+    "exit_code": 0
+  }
+}

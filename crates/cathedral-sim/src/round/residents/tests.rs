@@ -916,3 +916,6 @@ fn operation_owns_resident_routes_and_reservations_until_explicit_release() {
     world.step_movement(0.05, nav(), None);
     assert!(world.characters[&id].position_m().distance(at) > 0.0);
 }
+
+#[path = "checkpoint_tests.rs"]
+mod checkpoint_continuation;

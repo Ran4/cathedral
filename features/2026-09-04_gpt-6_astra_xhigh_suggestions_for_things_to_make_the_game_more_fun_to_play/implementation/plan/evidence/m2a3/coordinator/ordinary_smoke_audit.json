@@ -1,0 +1,34 @@
+{
+  "checked_at_utc": "2026-09-08T03:59:10.537721+00:00",
+  "result": "passed",
+  "directory": "/tmp/alibi-m2a3-ordinary-smoke",
+  "smoke_only": true,
+  "runs": 2,
+  "pairs": 1,
+  "raw_poll_samples": 40,
+  "current_inputs_checked": true,
+  "checks": [
+    "run/order/count",
+    "raw percentiles/sums/metadata",
+    "paired deltas/counters",
+    "repeated counters",
+    "all summary medians",
+    "successful process metadata"
+  ],
+  "counter_differences_by_pair": {},
+  "archive_hashes": {
+    "0-market-1-m0": {
+      "raw_sha256": "662308805977ac93ff828029b8b1266d2a1ff909970db7c0cdb7a812d8a87d00",
+      "gzip_sha256": "f9a311b1b39856770f05559adc556192f91fc486e8b0e420e0989f54b4deb58b",
+      "time_sha256": "0163154f7002d6a4253cd34b148b17c44be620694815e8c9b2509a71ce6c5465",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "0-market-1-m1": {
+      "raw_sha256": "08bc5d013d22af889dd849f5587aceb885953d7646ddd627328d0a82eab1d8af",
+      "gzip_sha256": "5fdfcc12f14ad6ad07e19199728e19f154e311666f94b7da8d31ad6211b0cb14",
+      "time_sha256": "78aa2de05a1edab611c0eada49df94e7530ea500b1d5e35bea0c22e503f4fcd3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "auditor_sha256": "274bf34aed58479da099670338023d0c0692ee1e98e9bb1e6b0245a59a00e6df"
+}

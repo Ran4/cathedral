@@ -1,6 +1,7 @@
 //! Baked neighbourhood geometry and authoritative, bounded spot ownership.
 //! No automatic enrollment: the resident routine decides when to claim/move.
 use super::{NavData, NavError, WALK_Y};
+pub(crate) mod checkpoint;
 use crate::{ActorId, math::Vec3};
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet, HashMap};

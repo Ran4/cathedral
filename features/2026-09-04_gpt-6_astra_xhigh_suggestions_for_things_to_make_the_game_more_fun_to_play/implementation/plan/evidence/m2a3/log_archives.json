@@ -1,0 +1,419 @@
+[
+  {
+    "name": "compile-initial",
+    "exit_code": 101,
+    "original_sha256": "f97825bf60a898c98ce61289c0624fb594e1c56ec286536a5771a538d9bac604",
+    "original_bytes": 30169,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command_note": "Intermediate development command not independently pinned; raw compiler/test output retained. Final acceptance commands are exact below.",
+    "archive": "compile-initial.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "cea36ab5004843b487a5e2babe1c084099f54e702bf92d3508bde3c831c1f9a1",
+    "archive_bytes": 1666
+  },
+  {
+    "name": "compile-second",
+    "exit_code": 0,
+    "original_sha256": "a9fda26226b729c6186dc6f6491119ba1521a792b8d1569459f09e62e4870144",
+    "original_bytes": 134255,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command_note": "Intermediate development command not independently pinned; raw compiler/test output retained. Final acceptance commands are exact below.",
+    "archive": "compile-second.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "af0593df4d4080a28d3ba9bc6d9d32024e47d3e3f9045ed632bb57b6ca5d175a",
+    "archive_bytes": 4465
+  },
+  {
+    "name": "continuation-initial",
+    "exit_code": 101,
+    "original_sha256": "b60ed67e26d26d736b4b144bcc986923697523d582680f62cab04675f2ea09ad",
+    "original_bytes": 1014,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command_note": "Intermediate development command not independently pinned; raw compiler/test output retained. Final acceptance commands are exact below.",
+    "archive": "continuation-initial.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "9caaecab99744f14e1cea81994484a2be0df3ab8c219ee00ca5a0cd2e3071950",
+    "archive_bytes": 482
+  },
+  {
+    "name": "continuation-second",
+    "exit_code": 101,
+    "original_sha256": "4ddb29bbbdafb768433759ec8c185e5032ce14817aed0bd2cb9fde4027049c48",
+    "original_bytes": 1754,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command_note": "Intermediate development command not independently pinned; raw compiler/test output retained. Final acceptance commands are exact below.",
+    "archive": "continuation-second.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "4083b6d14e3ad4c59e0bd613ee45b876fa8cb47b59ea0b17096b4df85a668c2e",
+    "archive_bytes": 756,
+    "test_results": [
+      {
+        "passed": 4,
+        "failed": 1,
+        "ignored": 1
+      }
+    ]
+  },
+  {
+    "name": "continuation-third",
+    "exit_code": 101,
+    "original_sha256": "e145c866fec70fe4232664b4dcb3473e2755fb667ad2942804cc442cfe195a63",
+    "original_bytes": 2131,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command_note": "Intermediate development command not independently pinned; raw compiler/test output retained. Final acceptance commands are exact below.",
+    "archive": "continuation-third.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "75c22154b1313fff5d8c997e24dde0028660107bda5ac72513fc7ae13232a99f",
+    "archive_bytes": 825,
+    "test_results": [
+      {
+        "passed": 7,
+        "failed": 1,
+        "ignored": 1
+      }
+    ]
+  },
+  {
+    "name": "continuation-fourth",
+    "exit_code": 101,
+    "original_sha256": "6dbf0b55649714152986bd4ec1a55528aee85dec7257c0439df7249a194650ab",
+    "original_bytes": 2321,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command_note": "Intermediate development command not independently pinned; raw compiler/test output retained. Final acceptance commands are exact below.",
+    "archive": "continuation-fourth.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "6d43a37ac37edecad8a928d05e23ffe9ae3ea0234d5f3d398e00e6f786f569f1",
+    "archive_bytes": 843,
+    "test_results": [
+      {
+        "passed": 9,
+        "failed": 1,
+        "ignored": 1
+      }
+    ]
+  },
+  {
+    "name": "checkpoint-focused-initial",
+    "exit_code": 0,
+    "original_sha256": "1b86593cb073406610ba403af1767933eeb09bd451af6f7156752ed15e359fb5",
+    "original_bytes": 4541,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command_note": "Intermediate development command not independently pinned; raw compiler/test output retained. Final acceptance commands are exact below.",
+    "archive": "checkpoint-focused-initial.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "cd954fb44a1f5f2e042a8bc542faf2babcf936203ee2657f453767fb0fe5bf59",
+    "archive_bytes": 1537,
+    "test_results": [
+      {
+        "passed": 36,
+        "failed": 0,
+        "ignored": 3
+      }
+    ]
+  },
+  {
+    "name": "public-boundary-initial",
+    "exit_code": 0,
+    "original_sha256": "1c9ee8bb0b7266e711cbe9306ba4d5d526d40f1354ba7ceb9e1433f0d75b89a9",
+    "original_bytes": 1387,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command_note": "Intermediate development command not independently pinned; raw compiler/test output retained. Final acceptance commands are exact below.",
+    "archive": "public-boundary-initial.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "39ecad581b335924470e89f4465dc6f01ee7bc55217dffc166d8b91cae5b02c9",
+    "archive_bytes": 741,
+    "test_results": [
+      {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  {
+    "name": "fixture-write",
+    "exit_code": 0,
+    "original_sha256": "4316fed9616698ff7f55e4d7204dee498fb3ef413b791343a8ed5fe846c61c27",
+    "original_bytes": 444,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command_note": "Intermediate development command not independently pinned; raw compiler/test output retained. Final acceptance commands are exact below.",
+    "archive": "fixture-write.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "3e5291daa5c47cdad3997dc3817b48c9b3f41be0b1a3cd9b8653b80d4032f3f0",
+    "archive_bytes": 306,
+    "test_results": [
+      {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    ]
+  },
+  {
+    "name": "populated-initial",
+    "exit_code": 0,
+    "original_sha256": "65084317ba67ced39c07cca82c99f795e06740de87f84f33c6ae8ce5401c619b",
+    "original_bytes": 1166,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_round_cost",
+      "--",
+      "--mode",
+      "populated",
+      "--samples",
+      "1",
+      "--output",
+      "/tmp/alibi-m2a3-populated.json"
+    ],
+    "archive": "populated-initial.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "e1fecc3c662b5696ff53bc4b21c994c9de6d4eb31511356256f845afc254691f",
+    "archive_bytes": 608
+  },
+  {
+    "name": "authored-static",
+    "exit_code": 0,
+    "original_sha256": "42553c0c08724575e9048d027fdc07c143c2e73d72283a098304406d066d4df0",
+    "original_bytes": 382,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "run",
+      "-p",
+      "cathedral-backends",
+      "--example",
+      "alibi_round_cost",
+      "--",
+      "--mode",
+      "authored",
+      "--samples",
+      "1",
+      "--output",
+      "/tmp/alibi-m2a3-authored.json"
+    ],
+    "archive": "authored-static.log.gz",
+    "normalization": "none; gzip decoded bytes exactly equal original",
+    "source_provenance": "Intermediate source before final freeze; not an acceptance run",
+    "archive_sha256": "4d2e9f7952d0a9d722fcdb81069eb776d32185af7f3c02640196d6aef1563790",
+    "archive_bytes": 233
+  },
+  {
+    "name": "focused-final",
+    "exit_code": 0,
+    "original_sha256": "cc00a427e60e743657efcfa969d61fd409a306ddad83b1313d3dee88e85b4bdc",
+    "original_bytes": 5664,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--lib",
+      "checkpoint",
+      "--",
+      "--nocapture"
+    ],
+    "archive": "focused-final.log",
+    "normalization": "Remove only redundant terminal LF bytes: original.rstrip(b\"\\n\") + b\"\\n\". No other byte changes.",
+    "archive_sha256": "f7585d671d1a77369feaefd0e0b7a7811275b99b72cb99175d4b61c4285eb920",
+    "archive_bytes": 5663,
+    "test_results": [
+      {
+        "passed": 38,
+        "failed": 0,
+        "ignored": 3
+      }
+    ],
+    "original_path": "/tmp/alibi-m2a3-focused-final-original.log",
+    "original_preservation": "Exact original bytes restored from the reversible terminal-newline normalization and verified against the original SHA256 and byte count captured before normalization."
+  },
+  {
+    "name": "public-final",
+    "exit_code": 0,
+    "original_sha256": "71c59a45320d36c9aaf54e6f6205cbf1165bafa931e7da6966d5a707ff1a8e98",
+    "original_bytes": 1239,
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "-p",
+      "cathedral-sim",
+      "--test",
+      "checkpoint_round_boundary",
+      "--test",
+      "checkpoint_character"
+    ],
+    "archive": "public-final.log",
+    "normalization": "Remove only redundant terminal LF bytes: original.rstrip(b\"\\n\") + b\"\\n\". No other byte changes.",
+    "archive_sha256": "96f6dfb79252a0d17e8ba0628208ce9ec6233f0ac1b2f48513653b330bea4887",
+    "archive_bytes": 1238,
+    "test_results": [
+      {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 4,
+        "failed": 0,
+        "ignored": 0
+      }
+    ],
+    "original_path": "/tmp/alibi-m2a3-public-final-original.log",
+    "original_preservation": "Exact original bytes restored from the reversible terminal-newline normalization and verified against the original SHA256 and byte count captured before normalization."
+  },
+  {
+    "name": "authored-static-diagnostic",
+    "archive": "authored-static-diagnostic.json",
+    "archive_sha256": "8b55a1161c139a59ce1b7741d35961c613773f76d206c81c52ca980509181bc0",
+    "archive_bytes": 831,
+    "normalization": "none; copied original development JSON unchanged",
+    "source_provenance": "Single development sample, not final-source or release acceptance; populated predates definition_working_bytes admission, authored includes it."
+  },
+  {
+    "name": "populated-initial-diagnostic",
+    "archive": "populated-initial-diagnostic.json",
+    "archive_sha256": "0a310d2448b6a241977458592518ab53bc341decd764ae5d43308bea82158ef1",
+    "archive_bytes": 807,
+    "normalization": "none; copied original development JSON unchanged",
+    "source_provenance": "Single development sample, not final-source or release acceptance; populated predates definition_working_bytes admission, authored includes it."
+  },
+  {
+    "name": "workspace-final",
+    "command": [
+      "/home/ran/.cargo/bin/cargo",
+      "test",
+      "--workspace"
+    ],
+    "environment": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "exit_code": 0,
+    "original_path": "/tmp/alibi-m2a3-workspace-final-original.log",
+    "original_bytes": 241612,
+    "original_sha256": "0aea16bb0bfd732836679909d7f71ac8d6ea3321c4924077b4da83b0581396ec",
+    "archive": "workspace-final.log",
+    "archive_bytes": 241611,
+    "archive_sha256": "57bf8f924306a37864416de8ebafc5ac26c7b2f0a463a8de1ca5934e08eda15f",
+    "normalization": "Remove only redundant terminal LF bytes: original.rstrip(b\"\\n\") + b\"\\n\". No other byte changes.",
+    "original_preservation": "Copied raw output to original_path before normalization.",
+    "test_results": {
+      "targets": 35,
+      "passed": 1912,
+      "failed": 0,
+      "ignored": 11
+    },
+    "build_duration_reported": "7m 37s"
+  }
+]

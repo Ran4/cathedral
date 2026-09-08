@@ -1,0 +1,44 @@
+{
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "build",
+    "--offline",
+    "--release",
+    "-p",
+    "cathedral-backends",
+    "--example",
+    "alibi_round_cost",
+    "--example",
+    "alibi_baseline",
+    "-j",
+    "2"
+  ],
+  "environment_overrides": {
+    "PATH": "/home/ran/.cargo/bin:/usr/bin:/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "started_unix_seconds": 1788839753.7511816,
+  "elapsed_seconds": 62.23468136799056,
+  "exit_code": 0,
+  "artifacts": {
+    "release_build.log": {
+      "original_sha256": "c1a18de3798568fe4abd4b431bbc962a608b7d81479eb20d45ddf1c3134f1a00",
+      "archive_sha256": "c1a18de3798568fe4abd4b431bbc962a608b7d81479eb20d45ddf1c3134f1a00",
+      "normalization": "remove only redundant terminal blank lines"
+    },
+    "release_build.time": {
+      "original_sha256": "f763df1d6bc98ddf852cd63f8f0185f91f63a73c1adb2c8d75b7265e93b87ff8",
+      "archive_sha256": "f763df1d6bc98ddf852cd63f8f0185f91f63a73c1adb2c8d75b7265e93b87ff8",
+      "normalization": "remove only redundant terminal blank lines"
+    }
+  },
+  "source_manifest_sha256": "3ade416b2fd037ad3aa6cedecbbf2f8086446e8d34d308c20fbae32b23a6c60b",
+  "binary_sha256": {
+    "alibi_round_cost": "08f5d2c0a37620cd779bc6b433afe58f40c01390f77e71dd24f14ac9a7a72e95",
+    "alibi_baseline": "fa1ab7d893bd303e07e735c5f927b3a5a1f61874141c9c5a25e86ffee7f6555f"
+  }
+}

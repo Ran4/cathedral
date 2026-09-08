@@ -1,0 +1,46 @@
+{
+  "candidate_validate_us": [
+    8696.321
+  ],
+  "cost": {
+    "definition_working_bytes": 4194304,
+    "encoded_bytes": 1315978,
+    "expanded_upper_bytes": 24203156,
+    "peak_bytes": 104958958
+  },
+  "counts": {
+    "characters": 520,
+    "destination_reservations": 0,
+    "occupied_reservations": 0,
+    "people": 514,
+    "production_plans": 3,
+    "residents": 0,
+    "road_parties": 2,
+    "sources": 9,
+    "stalls": 13,
+    "stock_plans": 6
+  },
+  "decode_validate_us": [
+    22487.375
+  ],
+  "drop_us": [
+    398.83799999999997
+  ],
+  "encode_us": [
+    7954.022
+  ],
+  "export_us": [
+    15024.784
+  ],
+  "mode": "authored",
+  "placement": {
+    "placed": 0,
+    "requested": 0,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    5892.489
+  ],
+  "samples": 1,
+  "shared_reserved_peak_excluding_running_bytes": 209917916
+}

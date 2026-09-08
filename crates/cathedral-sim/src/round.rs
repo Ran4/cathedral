@@ -30,6 +30,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use serde::{Deserialize, Serialize};
 
+pub mod checkpoint;
 pub mod motion;
 pub mod residents;
 
@@ -1185,8 +1186,7 @@ pub struct Round {
     /// [`Self::next_pollen`] indexed by when it falls due, so a tick pops exactly
     /// the people whose turn it is and walks nobody else — O(due) per tick, never
     /// a probe of every one of 20,520 deadlines at 20 Hz. Keyed on the deadline's
-    /// bit pattern ([`pollen_due_key`]; non-negative finite game-days order by
-    /// their bits as they order by value) with the id second, for a total and
+    /// signed numeric order ([`pollen_due_key`]) with the id second, for a total and
     /// deterministic order. Armed together with `next_pollen` at enrolment and
     /// re-armed together in [`tick_pollen`]; an entry whose deadline no longer
     /// matches `next_pollen`'s (a re-enrolment re-armed that person) is stale and
@@ -2415,8 +2415,9 @@ impl Round {
     /// written together (`features/knowledge_and_rumor/`, M2). The one place
     /// besides [`tick_pollen`] that writes either.
     fn arm_pollen(&mut self, id: &ActorId) {
-        self.next_pollen.insert(id.clone(), 0.0);
-        self.pollen_due.insert((pollen_due_key(0.0), id.clone()));
+        self.next_pollen.insert(id.clone(), f64::NEG_INFINITY);
+        self.pollen_due
+            .insert((pollen_due_key(f64::NEG_INFINITY), id.clone()));
     }
 
     /// The staffed water source nearest a point, ties broken by source index so
@@ -3508,6 +3509,63 @@ impl Round {
 // Food stalls and supply-chain counters: binding, retained legacy restock,
 // household settlement, FIFO meals, and purpose-neutral sales.
 // --------------------------------------------------------------------------- //
+fn valid_trade(name: &str, spec: &TradeSpec, catalog: &crate::item::ItemCatalog) -> bool {
+    let listings_unique =
+        spec.listings.iter().collect::<BTreeSet<_>>().len() == spec.listings.len();
+    let valid_listings = spec.listings.iter().all(|matcher| {
+        let probe = matcher.to_item(ItemId::from_raw("listing_probe"), 1);
+        catalog.validate_seed_item(&probe).is_ok()
+    });
+    let valid_restock = spec.restock.iter().all(|stock| {
+        let probe = stock
+            .matcher()
+            .to_item(ItemId::from_raw("restock_probe"), stock.quantity);
+        catalog.validate_seed_item(&probe).is_ok() && spec.listings.contains(&stock.matcher())
+    });
+    let valid_serving = spec.conjure_per_serving.as_ref().is_none_or(|kind| {
+        let probe = Item::new(ItemId::from_raw("serving_probe"), kind.clone());
+        catalog.validate_seed_item(&probe).is_ok() && catalog.price_sparks(&probe).is_some()
+    });
+    !(name.trim().is_empty()
+        || !listings_unique
+        || !valid_listings
+        || !valid_restock
+        || !valid_serving)
+}
+
+fn supply_pitch(nav: &NavData, site: Vec3, offset: [f64; 2]) -> Vec3 {
+    let pitch = Vec3::new(site.x + offset[0], WALK_Y, site.z + offset[1]);
+    if nav.is_walkable(pitch.x, pitch.z) {
+        pitch
+    } else {
+        site
+    }
+}
+fn supply_site(
+    resolver: &PlaceResolver<'_>,
+    worksites: &BTreeMap<String, Vec3>,
+    places: &PlaceRegistry,
+    site: &str,
+    anchor: Option<&ActorId>,
+) -> Option<Vec3> {
+    resolver
+        .resolve(site)
+        .or_else(|| worksites.get(site).copied())
+        .or_else(|| anchor.and_then(|actor| places.home_of(actor).map(|place| place.point)))
+}
+fn resolved_transform(t: TransformSpecDoc, point: Vec3) -> ResolvedTransformSpec {
+    ResolvedTransformSpec {
+        id: t.id,
+        site: t.site,
+        point,
+        consumes: t.consumes,
+        produces: t.produces,
+        allowed_offices: t.allowed_offices,
+        work_minutes: t.work_minutes,
+        desired_output_quantity: t.desired_output_quantity,
+    }
+}
+
 impl Round {
     /// The food stalls, for the census and tests.
     pub fn stalls(&self) -> &[FoodStall] {
@@ -3560,30 +3618,7 @@ impl Round {
             }
         };
         for (name, spec) in doc.trades {
-            let listings_unique =
-                spec.listings.iter().collect::<BTreeSet<_>>().len() == spec.listings.len();
-            let valid_listings = spec.listings.iter().all(|matcher| {
-                let probe = matcher.to_item(ItemId::from_raw("listing_probe"), 1);
-                world.item_catalog.validate_seed_item(&probe).is_ok()
-            });
-            let valid_restock = spec.restock.iter().all(|stock| {
-                let probe = stock
-                    .matcher()
-                    .to_item(ItemId::from_raw("restock_probe"), stock.quantity);
-                world.item_catalog.validate_seed_item(&probe).is_ok()
-                    && spec.listings.contains(&stock.matcher())
-            });
-            let valid_serving = spec.conjure_per_serving.as_ref().is_none_or(|kind| {
-                let probe = Item::new(ItemId::from_raw("serving_probe"), kind.clone());
-                world.item_catalog.validate_seed_item(&probe).is_ok()
-                    && world.item_catalog.price_sparks(&probe).is_some()
-            });
-            if name.trim().is_empty()
-                || !listings_unique
-                || !valid_listings
-                || !valid_restock
-                || !valid_serving
-            {
+            if !valid_trade(&name, &spec, &world.item_catalog) {
                 diagnostics.push(format!(
                     "[smart actors] round: trade {name:?} has invalid catalog/listing content; skipped"
                 ));
@@ -3614,18 +3649,7 @@ impl Round {
                 ));
                 continue;
             };
-            let offset = Vec3::new(
-                site.x + spec.pitch_offset[0],
-                WALK_Y,
-                site.z + spec.pitch_offset[1],
-            );
-            // The offset must stand on pavement, or the queue forms on stone and
-            // nobody can reach it — fall back to the site node itself.
-            let pitch = if nav.is_walkable(offset.x, offset.z) {
-                offset
-            } else {
-                site
-            };
+            let pitch = supply_pitch(nav, site, spec.pitch_offset);
             self.stalls.push(FoodStall {
                 name: spec.name.clone(),
                 site: spec.site.clone(),
@@ -3643,13 +3667,8 @@ impl Round {
             });
         }
 
-        let resolve_site = |site: &str, anchor: Option<&ActorId>| -> Option<Vec3> {
-            resolver
-                .resolve(site)
-                .or_else(|| self.worksites.get(site).copied())
-                .or_else(|| {
-                    anchor.and_then(|actor| world.places.home_of(actor).map(|place| place.point))
-                })
+        let resolve_site = |site: &str, anchor: Option<&ActorId>| {
+            supply_site(resolver, &self.worksites, &world.places, site, anchor)
         };
         for spec in doc.counters {
             if self.counters.contains_key(&spec.id)
@@ -3691,16 +3710,7 @@ impl Round {
                 ));
                 continue;
             };
-            let offset = Vec3::new(
-                site.x + spec.pitch_offset[0],
-                WALK_Y,
-                site.z + spec.pitch_offset[1],
-            );
-            let pitch = if nav.is_walkable(offset.x, offset.z) {
-                offset
-            } else {
-                site
-            };
+            let pitch = supply_pitch(nav, site, spec.pitch_offset);
             self.counters.insert(
                 spec.id.clone(),
                 Counter {
@@ -3855,16 +3865,7 @@ impl Round {
                     ));
                     continue;
                 }
-                transforms.push(ResolvedTransformSpec {
-                    id: transform.id,
-                    site: transform.site,
-                    point,
-                    consumes: transform.consumes,
-                    produces: transform.produces,
-                    allowed_offices: transform.allowed_offices,
-                    work_minutes: transform.work_minutes,
-                    desired_output_quantity: transform.desired_output_quantity,
-                });
+                transforms.push(resolved_transform(transform, point));
             }
             if !transforms.is_empty() {
                 self.production_plans.push(ResolvedProductionPlan {
@@ -4006,17 +4007,24 @@ impl Round {
     /// catalog in template order (`05_the_llm_seam.md` §3). A kind the catalog
     /// does not price is skipped rather than invented.
     fn sell_listings(&self, world: &World, s: usize) -> Vec<VendorListing> {
+        self.sell_listings_from_catalog(&world.item_catalog, s)
+    }
+
+    fn sell_listings_from_catalog(
+        &self,
+        catalog: &crate::item::ItemCatalog,
+        s: usize,
+    ) -> Vec<VendorListing> {
         let Some(trade) = self.food_trades.get(&self.stalls[s].trade) else {
             return Vec::new();
         };
         let probe = |kind: &str, metadata: &BTreeMap<String, String>| -> Option<VendorListing> {
             let mut item = Item::new(ItemId::from_raw("sell_probe"), kind);
             item.metadata = metadata.clone();
-            world
-                .item_catalog
+            catalog
                 .price_sparks(&item)
                 .map(|price_sparks| VendorListing {
-                    name: world.item_catalog.display_name(&item),
+                    name: catalog.display_name(&item),
                     price_sparks,
                 })
         };
@@ -6747,14 +6755,20 @@ fn tick_pollen(round: &mut Round, world: &mut World, clock: &WorldClock, now: f6
     }
 }
 
-/// The index key for a game-days deadline. A non-negative finite `f64` orders by
-/// its bit pattern exactly as it orders by value; a deadline at or before the
-/// world's first instant is `0`, so the first tick finds it due.
+/// Total numeric order for finite signed calendar deadlines. NEG_INFINITY is
+/// this owner's explicit initially-due sentinel, so enrollment works even before
+/// calendar day zero. A strictly later finite deadline always gets a later key;
+/// negative calendars cannot reinsert the current due key forever.
 fn pollen_due_key(game_days: f64) -> u64 {
-    if game_days > 0.0 {
-        game_days.to_bits()
+    let bits = if game_days == 0.0 {
+        0.0_f64.to_bits()
     } else {
-        0
+        game_days.to_bits()
+    };
+    if bits >> 63 == 0 {
+        bits | (1 << 63)
+    } else {
+        !bits
     }
 }
 

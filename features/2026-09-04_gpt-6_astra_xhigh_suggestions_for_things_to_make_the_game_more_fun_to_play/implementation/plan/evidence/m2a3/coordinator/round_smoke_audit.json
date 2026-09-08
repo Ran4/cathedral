@@ -1,0 +1,36 @@
+{
+  "checked_at_utc": "2026-09-08T03:57:45.012346+00:00",
+  "measurement_directory": "/tmp/alibi-m2a3-round-smoke",
+  "result": "passed",
+  "smoke_only": true,
+  "runs": 2,
+  "raw_phase_samples": 24,
+  "checks": [
+    "archive and original hashes",
+    "phase lengths and nearest-rank percentiles",
+    "repeated metadata",
+    "count and byte admission",
+    "process timing metadata",
+    "all summary medians"
+  ],
+  "current_source_binary_runner_hashes_checked": true,
+  "global_max_us": {
+    "authored": {
+      "preflight_us": 4979.777,
+      "export_us": 12735.742,
+      "encode_us": 6248.369000000001,
+      "decode_validate_us": 14860.029,
+      "candidate_validate_us": 7504.908,
+      "drop_us": 324.946
+    },
+    "populated": {
+      "preflight_us": 12901.207,
+      "export_us": 30149.211,
+      "encode_us": 14785.168,
+      "decode_validate_us": 27825.34,
+      "candidate_validate_us": 10941.358,
+      "drop_us": 948.114
+    }
+  },
+  "auditor_sha256": "f63c6eebf1926162efd18800854d4f55fdceefc26af97f78ba83db29ab634c16"
+}

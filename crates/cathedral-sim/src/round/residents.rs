@@ -1,6 +1,7 @@
 //! Local resident ownership, separate from the occupational ladder. Catalogue
 //! indices are resolved once at enrollment; no per-poll linear spot lookup.
 use super::*;
+pub(crate) mod checkpoint;
 use crate::{
     crowd::GeneratedRoutine,
     nav::{
@@ -39,6 +40,8 @@ pub(super) struct Resident {
     pub recovery_remaining: f64,
     weather: Option<ResidentWeather>,
     weather_retry_until: f64,
+    /// Last projection inputs; later speech/motion may change live controller state.
+    projection: Option<ProjectionAnchor>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -109,62 +112,150 @@ impl ResidentStatus {
     }
 }
 
+/// Inputs sampled by `project`, retained independently of later controller and
+/// body changes. Occupied text reuses its allocation on the ordinary hot pass.
+#[derive(Debug, Clone, PartialEq)]
+struct ProjectionAnchor {
+    at: f64,
+    phase: ResidentPhase,
+    spot: Option<usize>,
+    target: Option<usize>,
+    weather_slot: Option<usize>,
+    occupied: Option<String>,
+    dwell_until: f64,
+    position: Vec3,
+    walking: bool,
+    housed: bool,
+    optional: bool,
+    cause: motion::MotionCause,
+    sheltered: bool,
+}
+impl ProjectionAnchor {
+    fn phase(&self, patch: &crate::nav::ResidentPatch) -> ResidentPhase {
+        if matches!(
+            self.phase,
+            ResidentPhase::Lingering | ResidentPhase::Resting
+        ) && !self
+            .spot
+            .is_some_and(|s| patch.spots[s].contains(self.position))
+        {
+            ResidentPhase::WaitingToReturn
+        } else {
+            self.phase
+        }
+    }
+    fn resting(&self, patch: &crate::nav::ResidentPatch) -> bool {
+        self.phase == ResidentPhase::Resting
+            && !self.walking
+            && self
+                .spot
+                .is_some_and(|s| patch.spots[s].contains(self.position))
+    }
+    fn destination<'a>(
+        &self,
+        patch: &'a crate::nav::ResidentPatch,
+        nav: &'a NavData,
+    ) -> Option<&'a str> {
+        self.target.map(|s| patch.spots[s].id.as_str()).or_else(|| {
+            self.weather_slot
+                .map(|s| nav.resident_places().shelter_spots[s].spot.id.as_str())
+        })
+    }
+    /// Shared pure projection used by ordinary publication and checkpoint validation.
+    fn status(&self, patch: &crate::nav::ResidentPatch, nav: &NavData) -> ResidentStatus {
+        let resting = self.resting(patch);
+        ResidentStatus {
+            phase: self.phase(patch),
+            patch: patch.id.clone(),
+            patch_description: patch.description.clone(),
+            spot: self.occupied.clone(),
+            destination_spot: self.destination(patch, nav).map(str::to_owned),
+            dwell_remaining_seconds: (self.dwell_until - self.at).max(0.0),
+            resting_at_household_frontage: resting && self.housed,
+            resting_without_home: resting && !self.housed,
+            optional_walk: self.optional,
+            movement_cause: self.cause,
+            sheltered: self.sheltered,
+        }
+    }
+}
+fn sample(
+    r: &Resident,
+    character: &Character,
+    housed: bool,
+    optional: bool,
+    cause: motion::MotionCause,
+    sheltered: bool,
+    now: f64,
+) -> ProjectionAnchor {
+    ProjectionAnchor {
+        at: now,
+        phase: r.phase,
+        spot: r.spot,
+        target: r.target,
+        weather_slot: r.weather.as_ref().filter(|w| !w.arrived).map(|w| w.slot),
+        occupied: None,
+        dwell_until: r.dwell_until,
+        position: character.position_m(),
+        walking: character.is_walking(),
+        housed,
+        optional,
+        cause,
+        sheltered,
+    }
+}
 fn project(round: &mut Round, world: &mut World, nav: &NavData, now: f64) {
-    for (id, r) in &round.residents.people {
+    // motion_cause reads townsperson/market/custody state, never Residents.
+    let mut residents = std::mem::take(&mut round.residents);
+    for (id, r) in &mut residents.people {
         let Some(c) = world.characters.get(id) else {
             continue;
         };
         let patch = &nav.resident_places().patches[r.patch];
-        let spot = round
-            .residents
+        let mut anchor = sample(
+            r,
+            c,
+            round.people[id].home.is_some(),
+            residents.optional.contains(id),
+            round.motion_cause(world, id),
+            world.shelters.is_sheltered(c.position_m()),
+            now,
+        );
+        anchor.occupied = r.projection.take().and_then(|p| p.occupied);
+        let occupied = residents
             .reservations
             .claims(id)
-            .and_then(|c| c.occupied.as_deref());
-        let target = r.target.map(|s| patch.spots[s].id.as_str()).or_else(|| {
-            r.weather
-                .as_ref()
-                .filter(|w| !w.arrived)
-                .map(|w| nav.resident_places().shelter_spots[w.slot].spot.id.as_str())
-        });
-        let phase = if matches!(r.phase, ResidentPhase::Lingering | ResidentPhase::Resting)
-            && !r
-                .spot
-                .is_some_and(|s| patch.spots[s].contains(c.position_m()))
-        {
-            ResidentPhase::WaitingToReturn
-        } else {
-            r.phase
-        };
-        let sheltered = world.shelters.is_sheltered(c.position_m());
-        let cause = round.motion_cause(world, id);
-        let remaining = (r.dwell_until - now).max(0.0);
+            .and_then(|c| c.occupied.as_ref());
+        match (anchor.occupied.as_mut(), occupied) {
+            (Some(old), Some(new)) => old.clone_from(new),
+            (_, new) => anchor.occupied = new.cloned(),
+        }
+        let remaining = (anchor.dwell_until - now).max(0.0);
         let changed = c.state.resident.as_ref().is_none_or(|s| {
-            s.phase != phase
-                || s.spot.as_deref() != spot
-                || s.destination_spot.as_deref() != target
-                || s.sheltered != sheltered
-                || s.movement_cause != cause
-                || s.optional_walk != round.residents.optional.contains(id)
+            s.phase != anchor.phase(patch)
+                || s.spot != anchor.occupied
+                || s.destination_spot.as_deref() != anchor.destination(patch, nav)
+                || s.sheltered != anchor.sheltered
+                || s.movement_cause != anchor.cause
+                || s.optional_walk != anchor.optional
                 || remaining > s.dwell_remaining_seconds
         });
+        let c = world.characters.get_mut(id).unwrap();
         if changed {
-            let status = round.resident_status(nav, world, id, now);
-            world.characters.get_mut(id).unwrap().state.resident = status;
-            round.residents.changed.insert(id.clone());
+            c.state.resident = Some(anchor.status(patch, nav));
+            residents.changed.insert(id.clone());
         } else {
-            let c = world.characters.get_mut(id).unwrap();
             let status = c.state.resident.as_mut().unwrap();
             status.dwell_remaining_seconds = remaining;
-            status.movement_cause = cause;
-            status.sheltered = sheltered;
-            let resting = r.phase == ResidentPhase::Resting
-                && c.state.movement.as_ref().is_none_or(|m| m.path.is_empty())
-                && r.spot
-                    .is_some_and(|s| patch.spots[s].contains(c.state.position_m));
-            status.resting_at_household_frontage = resting && round.people[id].home.is_some();
-            status.resting_without_home = resting && round.people[id].home.is_none();
+            status.movement_cause = anchor.cause;
+            status.sheltered = anchor.sheltered;
+            let resting = anchor.resting(patch);
+            status.resting_at_household_frontage = resting && anchor.housed;
+            status.resting_without_home = resting && !anchor.housed;
         }
+        r.projection = Some(anchor);
     }
+    round.residents = residents;
 }
 
 pub(super) fn is_resident(character: &Character) -> bool {
@@ -216,47 +307,22 @@ impl Round {
         now: f64,
     ) -> Option<ResidentStatus> {
         let r = self.residents.people.get(id)?;
-        let p = &nav.resident_places().patches[r.patch];
-        let resting = r.phase == ResidentPhase::Resting
-            && world.characters.get(id).is_some_and(|c| {
-                !c.is_walking() && r.spot.is_some_and(|s| p.spots[s].contains(c.position_m()))
-            });
-        let housed = self.people.get(id).is_some_and(|p| p.home.is_some());
-        Some(ResidentStatus {
-            phase: if matches!(r.phase, ResidentPhase::Lingering | ResidentPhase::Resting)
-                && !r.spot.is_some_and(|s| {
-                    world
-                        .characters
-                        .get(id)
-                        .is_some_and(|c| p.spots[s].contains(c.position_m()))
-                }) {
-                ResidentPhase::WaitingToReturn
-            } else {
-                r.phase
-            },
-            patch: p.id.clone(),
-            patch_description: p.description.clone(),
-            spot: self
-                .residents
-                .reservations
-                .claims(id)
-                .and_then(|c| c.occupied.clone()),
-            destination_spot: r.target.map(|s| p.spots[s].id.clone()).or_else(|| {
-                r.weather
-                    .as_ref()
-                    .filter(|w| !w.arrived)
-                    .map(|w| nav.resident_places().shelter_spots[w.slot].spot.id.clone())
-            }),
-            dwell_remaining_seconds: (r.dwell_until - now).max(0.0),
-            resting_at_household_frontage: resting && housed,
-            resting_without_home: resting && !housed,
-            optional_walk: self.residents.optional.contains(id),
-            movement_cause: self.motion_cause(world, id),
-            sheltered: world
-                .characters
-                .get(id)
-                .is_some_and(|c| world.shelters.is_sheltered(c.position_m())),
-        })
+        let c = world.characters.get(id)?;
+        let mut anchor = sample(
+            r,
+            c,
+            self.people.get(id).is_some_and(|p| p.home.is_some()),
+            self.residents.optional.contains(id),
+            self.motion_cause(world, id),
+            world.shelters.is_sheltered(c.position_m()),
+            now,
+        );
+        anchor.occupied = self
+            .residents
+            .reservations
+            .claims(id)
+            .and_then(|c| c.occupied.clone());
+        Some(anchor.status(&nav.resident_places().patches[r.patch], nav))
     }
     pub fn resident_count(&self) -> usize {
         self.residents.people.len()
@@ -264,6 +330,58 @@ impl Round {
     pub fn resident_reservations(&self) -> &SpotReservations {
         &self.residents.reservations
     }
+}
+
+fn local_shelter_candidates<'a>(
+    patch: &'a crate::nav::ResidentPatch,
+    places: &'a crate::nav::ResidentPlaces,
+    shelters: &'a crate::weather::ShelterMap,
+) -> impl Iterator<Item = (usize, usize)> + 'a {
+    places
+        .shelter_spots
+        .iter()
+        .enumerate()
+        .filter_map(move |(slot, s)| {
+            let index = shelters.shelters().iter().position(|shelter| {
+                shelter.id == s.shelter
+                    && shelter.access == ShelterAccess::Public
+                    && shelter.contains(s.spot.position())
+            })?;
+            (patch.spots[0].position().distance(s.spot.position()) <= 30.0).then_some((slot, index))
+        })
+}
+fn local_shelters(
+    places: &crate::nav::ResidentPlaces,
+    shelters: &crate::weather::ShelterMap,
+) -> BTreeMap<usize, Vec<(usize, usize)>> {
+    places
+        .patches
+        .iter()
+        .enumerate()
+        .map(|(p, patch)| {
+            (
+                p,
+                local_shelter_candidates(patch, places, shelters).collect(),
+            )
+        })
+        .collect()
+}
+
+fn daily_round(description: &str, housed: bool) -> Vec<String> {
+    vec![
+        format!(
+            "Spend the day locally {}, lingering and occasionally changing position",
+            description
+        ),
+        if housed {
+            "At night: rest beside your household frontage".into()
+        } else {
+            "At night: rest at your familiar local frontage; you have no settled household door"
+                .into()
+        },
+        "Meals: household or neighbourhood provision here, including breakfast at the Kindling"
+            .into(),
+    ]
 }
 
 pub(super) fn seed(round: &mut Round, world: &mut World, nav: &NavData, time: WorldTime, now: f64) {
@@ -284,23 +402,7 @@ pub(super) fn seed(round: &mut Round, world: &mut World, nav: &NavData, time: Wo
         reservations: SpotReservations::new(places),
         ..Residents::default()
     };
-    for (p, patch) in places.patches.iter().enumerate() {
-        let candidates = places
-            .shelter_spots
-            .iter()
-            .enumerate()
-            .filter_map(|(slot, s)| {
-                let index = world.shelters.shelters().iter().position(|shelter| {
-                    shelter.id == s.shelter
-                        && shelter.access == ShelterAccess::Public
-                        && shelter.contains(s.spot.position())
-                })?;
-                (patch.spots[0].position().distance(s.spot.position()) <= 30.0)
-                    .then_some((slot, index))
-            })
-            .collect();
-        residents.local_shelters.insert(p, candidates);
-    }
+    residents.local_shelters = local_shelters(places, &world.shelters);
     for (id, person) in &mut round.people {
         let character = world.characters.get_mut(id).unwrap();
         let Some(GeneratedRoutine::Resident { patch, spot }) = character
@@ -344,6 +446,7 @@ pub(super) fn seed(round: &mut Round, world: &mut World, nav: &NavData, time: Wo
                 recovery_remaining: HUNGER_MAX,
                 weather: None,
                 weather_retry_until: 0.0,
+                projection: None,
             },
         );
         person.base = character.position_m();
@@ -352,20 +455,8 @@ pub(super) fn seed(round: &mut Round, world: &mut World, nav: &NavData, time: Wo
         person.is_household = false;
         person.leash_m = 0.0;
         person.leg_lag_share = 0.0;
-        character.state.daily_round = vec![
-            format!(
-                "Spend the day locally {}, lingering and occasionally changing position",
-                places.patches[p].description
-            ),
-            if person.home.is_some() {
-                "At night: rest beside your household frontage".into()
-            } else {
-                "At night: rest at your familiar local frontage; you have no settled household door"
-                    .into()
-            },
-            "Meals: household or neighbourhood provision here, including breakfast at the Kindling"
-                .into(),
-        ];
+        character.state.daily_round =
+            daily_round(&places.patches[p].description, person.home.is_some());
     }
     residents.order = residents.people.keys().cloned().collect();
     round.residents = residents;

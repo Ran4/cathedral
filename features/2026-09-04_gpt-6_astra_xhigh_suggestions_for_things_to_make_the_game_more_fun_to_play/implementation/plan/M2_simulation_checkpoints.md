@@ -1,4 +1,4 @@
-Status: In progress (2026-09-08). M2a1–M2a2 private components are implemented and reviewed; the complete M2a envelope and remaining owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
+Status: In progress (2026-09-08). M2a1–M2a3 private components are implemented and reviewed; the complete M2a envelope and remaining owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
 
 # M2 — Complete simulation checkpoints
 
@@ -61,6 +61,12 @@ until disposal; the +2,000 diagnostic reserves 813,374,372 shared bytes excludin
 Running. Complete-envelope coexistence and an effective clock-rate CPU limit
 remain unproved. M3 must supply bounded offload/incremental coordination; no
 component API is represented as satisfying a frame or complete-save budget.
+
+#### M2a3 review cut — 2026-09-08
+
+`RoundDtoV1` preserves the whole Round/resident/market/production/household/road-party component. Its opaque candidate validates against an unadopted M2a2 backbone and exact installed geometry/catalog definitions, without Round::seed or Engine::new. [Owner coverage](evidence/m2a3/OWNER_COVERAGE.md) records every field family, shared projection sampling/writer contracts and remaining composition. [Admission](evidence/m2a3/ADMISSION.md) includes raw-input admission plus explicit definition scratch and the failed whole-envelope coexistence inference.
+
+Supported fixtures and continuation witnesses cover atomic water service, held/rebound market sessions, paused and manual/stranded production, household once-per-day markers, road departures/trips, signed-calendar pollen and resident fairness/support/weather/claim/projection state. This cut corrects nonpositive-calendar pollen ordering. Complete effective clock-rate/accounting horizon validation, all other private owners and full capture/hydration remain pending. M2a3 passes focused/public and full workspace verification (1,912 tests), plus independently audited release component and ordinary CPU measurements. [Coordinator review](evidence/m2a3/coordinator/review.md) accepts this component cut and records its unchanged allocation/frame limits. M2a4 private clock/weather and sampled World climate/context is next after commit; complete M2a and M2b remain pending.
 
 ### M2b — Capture boundary and hydrate path
 

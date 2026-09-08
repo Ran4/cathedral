@@ -1,0 +1,35 @@
+{
+  "result": "passed",
+  "comparison": "All 13 between-binary counter differences are exactly those already recorded in M1d; no new difference at M2a3.",
+  "inputs": {
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m1d/performance/ordinary/PAIRS.json": "299aa48961111f72a05c330a06649ed7fcdf4739160e9f9676765d875029951c",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a3/performance/ordinary/PAIRS.json": "cbff32c9be4099e0a5f311cf03a34ead11442e50c9b4dfa76cfdad7b36c6b130"
+  },
+  "differences_by_workload": {
+    "0-idle": {},
+    "0-market": {
+      "message_count": {
+        "m0": 4896,
+        "m1": 4946
+      }
+    },
+    "1000-market": {
+      "message_count": {
+        "m0": 5152,
+        "m1": 5204
+      }
+    },
+    "2000-market": {
+      "message_count": {
+        "m0": 5273,
+        "m1": 5339
+      }
+    },
+    "20000-market": {
+      "message_count": {
+        "m0": 4285,
+        "m1": 4332
+      }
+    }
+  }
+}

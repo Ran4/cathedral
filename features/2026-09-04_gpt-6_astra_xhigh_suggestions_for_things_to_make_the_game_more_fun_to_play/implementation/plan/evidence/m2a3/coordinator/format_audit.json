@@ -1,0 +1,114 @@
+{
+  "command_template": [
+    "rustfmt",
+    "--check",
+    "--edition",
+    "2024",
+    "--config",
+    "skip_children=true",
+    "PATH"
+  ],
+  "checks": [
+    {
+      "path": "crates/cathedral-backends/examples/alibi_round_cost.rs",
+      "sha256": "914f4bf427d2a512130a3521decb786e62f4f3cb92590352f1a080452ca7287b",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/checkpoint/aggregate.rs",
+      "sha256": "2bd3d6ec5ea5cfef3ac9dc21c77224c887a535b892e33d8b53885eb027febd89",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/checkpoint/records.rs",
+      "sha256": "7fe899e32325df2c91bb38ed5b91de7441e3d96009a8fa8c1988d00e92e13ed2",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/nav/mod.rs",
+      "sha256": "bfb397d4059b5e6090137c0a8aead4fbbbde976d89eca221706369fce5856a6d",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/nav/residents.rs",
+      "sha256": "41a9308399858881e0dd97e43d7cbcd1cfd5b84fc421181e4ffe6752ccb335e0",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/nav/residents/checkpoint.rs",
+      "sha256": "ff40e903935178bf91c20e491770fd084ecc3a4cc541ab889793068d779d94e9",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round.rs",
+      "sha256": "5056713f9bab1d2886774f455c0582701cdf818c6f31291248decb6e2cdc9594",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/checkpoint/continuation.rs",
+      "sha256": "364c65d2f881ea99e9f180f0f2a2ad5da117b63ff99cf4416095778822c7e528",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/checkpoint/definitions.rs",
+      "sha256": "f37a6cfdcf27db6864489404b56ddd567cb19a61ecbbca34fd728aba5a2a19ba",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/checkpoint/mod.rs",
+      "sha256": "9c4176d6e5721f48fb4d26b8c79663c227c4b5f9baea867ec7f942ba527e5ec3",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/checkpoint/records.rs",
+      "sha256": "f0c187fa3d34e42b1c4e329cbf156b86d603d25a1d31188bf16c7836340830b4",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/checkpoint/tests.rs",
+      "sha256": "efde4eac3b51c8c6f14c68e105d7c18639a7ec4190db42ed9e08946b7f68dcf8",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/checkpoint/validate.rs",
+      "sha256": "6474f1ea2ba4af54642701affa89a71d56851e5ef88dd30d3c33a4814304d7ff",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/residents.rs",
+      "sha256": "5fb4e84275eee0ac00e36ea07a48ec94b35e95ae35760ac20e1b6bf16b7cf507",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/residents/checkpoint.rs",
+      "sha256": "f092d377f875c5aa1531bebecd67faa045f8fd40b403e95545ed0b5ec2b635ae",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/residents/checkpoint_tests.rs",
+      "sha256": "bd2ba99a6f16073152c424d5aae6e238c851d518a45846e19162837bdad7ccef",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/residents/tests.rs",
+      "sha256": "6adef1209a570db41c5cc270e9acb84af73e2acafda89ac31d50fc10e78c855b",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/round/tests.rs",
+      "sha256": "58d51c54e5e67d87171f7ad36cd1692c214cd2a292bfbe21abf56802c9728c82",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/world/checkpoint.rs",
+      "sha256": "473f0f6ebda2905d30b4968bafb19eca06fb398f1d8c4daf0667dbb575250c28",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/tests/checkpoint_round_boundary.rs",
+      "sha256": "1337bf1fc2af2ede83f11d6f1063e685497a3c69f49cb32d57ac324889d43d8d",
+      "exit_code": 0
+    }
+  ],
+  "note": "Read-only check; no formatting applied. Source hashes must still match at final acceptance."
+}

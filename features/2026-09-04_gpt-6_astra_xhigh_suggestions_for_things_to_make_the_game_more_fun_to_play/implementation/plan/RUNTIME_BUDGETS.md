@@ -55,6 +55,14 @@ Maximum-ledger median per-run p99 export/encode/decode/index/disposal costs are 
 
 Authored/populated median per-run p99 preflight/export/encode/decode/candidate-validation/disposal is **4.604/6.321/6.085/8.238/0.893/0.555 ms** and **22.028/30.372/31.672/37.434/4.027/2.920 ms** respectively. Populated maximum export/decode is **36.656/40.482 ms**. **Every populated phase exceeds the 2 ms coordinator p99 target.** M2b/M3 must move eligible work or make host-only work incremental, including validation and destruction; these component APIs install no synchronous host save path. Complete-envelope plus Running/retiring coexistence and effective calendar-rate CPU safety remain unproved. Existing numerical targets and historical measurements are unchanged.
 
+## M2a3 component measurements — 2026-09-08
+
+[The Round component record](evidence/m2a3/performance/README.md) preserves six sequential release runs and 3,600 raw phase samples. Authored/+2,000 JSON is **1,315,978/3,510,496 B**, conservative expansion **24,203,156/51,657,412 B**, and standalone simultaneous Save+Load charges **209,917,916/442,719,072 B**, excluding Running. Each cohort includes a separately proved **4 MiB** installed-definition scratch allowance. Counts and charges repeat exactly.
+
+Authored/populated median per-run p99 preflight/export/encode/decode/candidate-validation/disposal is **5.534/13.764/6.476/15.897/7.955/0.414 ms** and **11.903/25.836/15.438/29.780/11.925/1.177 ms**. Populated maximum export/decode is **33.168/30.490 ms**. **Every phase except disposal exceeds the 2 ms coordinator p99 target in both workloads.** These components supply no synchronous host save path.
+
+The populated M2a2 plus M2a3 standalone Save+Load charges total **1,256,093,444 B**, exceeding the unchanged **1 GiB** shared ceiling before Running/retiring or other owners. Full composition needs an explicit staged allocation and ownership-lifetime strategy; component success does not prove a complete save fits. Effective clock-rate CPU safety, full Engine continuation and host-frame/renderer acceptance remain pending. Numerical limits and historical records are unchanged.
+
 ## Accepted time and overload — M1
 
 Use one accepted logical elapsed stream for physical motion and domain deadlines. Host wall time, accepted time, accumulated debt and any deliberately discarded exceptional-suspension time are separately measured. Calendar scaling changes the calendar mapping; it does not excuse losing movement spans or interpreting old crossing cursors through a new slope.

@@ -1,0 +1,22 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 28.40s
+     Running tests/checkpoint_character.rs (target/debug/deps/checkpoint_character-ff40b25b85ea6c24)
+
+running 5 tests
+test duplicate_perspective_identity_is_not_silently_collapsed ... ok
+test full_unread_window_and_repeated_history_occurrences_survive ... ok
+test seed_identity_and_changed_live_state_remain_separate ... ok
+test unicode_identity_uses_the_city_scalar_limit ... ok
+test absent_optional_authority_is_rejected_but_explicit_null_is_retained ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/checkpoint_round_boundary.rs (target/debug/deps/checkpoint_round_boundary-e0225b88aefe5c5b)
+
+running 4 tests
+test navigation_binding_uses_both_exact_inputs_and_ignores_cache_warmth ... ok
+test round_references_can_use_an_unadopted_backbone ... ok
+test wrong_navigation_context_refuses_without_leaking_candidate_admission ... ok
+test noncanonical_input_keeps_its_raw_charge_plus_definition_allowance ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

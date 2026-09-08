@@ -1,0 +1,656 @@
+[
+  {
+    "name": "authored-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_round_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a3/performance/round/authored-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "definition_working_bytes": 4194304,
+        "encoded_bytes": 1315978,
+        "expanded_upper_bytes": 24203156,
+        "peak_bytes": 104958958
+      },
+      "counts": {
+        "characters": 520,
+        "destination_reservations": 0,
+        "occupied_reservations": 0,
+        "people": 514,
+        "production_plans": 3,
+        "residents": 0,
+        "road_parties": 2,
+        "sources": 9,
+        "stalls": 13,
+        "stock_plans": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 209917916
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 7418.286,
+        "p95": 7713.206,
+        "p99": 7955.2570000000005,
+        "max": 8163.673999999999
+      },
+      "decode_validate_us": {
+        "p50": 14585.803,
+        "p95": 15225.377999999999,
+        "p99": 16411.57,
+        "max": 16898.955
+      },
+      "drop_us": {
+        "p50": 329.795,
+        "p95": 396.838,
+        "p99": 413.171,
+        "max": 431.46599999999995
+      },
+      "encode_us": {
+        "p50": 5907.941,
+        "p95": 6262.037,
+        "p99": 6475.736,
+        "max": 9125.074
+      },
+      "export_us": {
+        "p50": 12552.269,
+        "p95": 13189.004,
+        "p99": 13763.916,
+        "max": 15333.849
+      },
+      "preflight_us": {
+        "p50": 4715.597,
+        "p95": 5101.251,
+        "p99": 5534.427,
+        "max": 6463.1410000000005
+      }
+    },
+    "process": {
+      "User time (seconds)": 4.8,
+      "System time (seconds)": 0.0,
+      "Maximum resident set size (kbytes)": 29672.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "743e06b2c8fc58d193e3b82b566c7fdf523f3d3489e4f368efae297afb9d70d1",
+      "authored-1.json.gz": "42b276639ae751b9e43b02e9da58b9d8f29051c510a903982c0a0b021882cdb1",
+      "authored-1.time": "c03437e07c0bd82442db7f0e159c29b8ef3ae4f07d3f826dae396afd0f3fbe4d",
+      "authored-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-1",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_round_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a3/performance/round/populated-1.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "definition_working_bytes": 4194304,
+        "encoded_bytes": 3510496,
+        "expanded_upper_bytes": 51657412,
+        "peak_bytes": 221359536
+      },
+      "counts": {
+        "characters": 2520,
+        "destination_reservations": 0,
+        "occupied_reservations": 2000,
+        "people": 2514,
+        "production_plans": 3,
+        "residents": 2000,
+        "road_parties": 2,
+        "sources": 9,
+        "stalls": 13,
+        "stock_plans": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 442719072
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 10960.228000000001,
+        "p95": 11464.791000000001,
+        "p99": 11670.265000000001,
+        "max": 12029.39
+      },
+      "decode_validate_us": {
+        "p50": 27883.295,
+        "p95": 28732.797000000002,
+        "p99": 29410.260000000002,
+        "max": 29705.242
+      },
+      "drop_us": {
+        "p50": 888.592,
+        "p95": 1037.32,
+        "p99": 1183.319,
+        "max": 1281.007
+      },
+      "encode_us": {
+        "p50": 14524.051,
+        "p95": 14961.257,
+        "p99": 15296.991,
+        "max": 20276.527
+      },
+      "export_us": {
+        "p50": 23740.118000000002,
+        "p95": 24490.594,
+        "p99": 27642.59,
+        "max": 33168.35
+      },
+      "preflight_us": {
+        "p50": 11316.903999999999,
+        "p95": 11598.956,
+        "p99": 11835.384,
+        "max": 15385.638
+      }
+    },
+    "process": {
+      "User time (seconds)": 9.83,
+      "System time (seconds)": 0.02,
+      "Maximum resident set size (kbytes)": 68220.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "798a0e073e7a30ad7ae278a640bae8baa988f78cc988aaf725e484bb573f9cea",
+      "populated-1.json.gz": "ae8cc0e676e4edaf7b79cbef43be4db9204af8cacf23184a8495413c75da5d10",
+      "populated-1.time": "0e4af0e147a9dc57fba7eece450190cba106a7fdec3c0b82b51b4aec286551f7",
+      "populated-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-2",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_round_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a3/performance/round/populated-2.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "definition_working_bytes": 4194304,
+        "encoded_bytes": 3510496,
+        "expanded_upper_bytes": 51657412,
+        "peak_bytes": 221359536
+      },
+      "counts": {
+        "characters": 2520,
+        "destination_reservations": 0,
+        "occupied_reservations": 2000,
+        "people": 2514,
+        "production_plans": 3,
+        "residents": 2000,
+        "road_parties": 2,
+        "sources": 9,
+        "stalls": 13,
+        "stock_plans": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 442719072
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 11124.057999999999,
+        "p95": 11593.127,
+        "p99": 11924.851999999999,
+        "max": 11959.218
+      },
+      "decode_validate_us": {
+        "p50": 28108.149999999998,
+        "p95": 29277.314,
+        "p99": 29779.873,
+        "max": 29808.259000000002
+      },
+      "drop_us": {
+        "p50": 888.089,
+        "p95": 1000.7600000000001,
+        "p99": 1029.1460000000002,
+        "max": 1051.689
+      },
+      "encode_us": {
+        "p50": 14554.996000000001,
+        "p95": 15156.317000000001,
+        "p99": 16047.957000000002,
+        "max": 16388.010000000002
+      },
+      "export_us": {
+        "p50": 23883.213,
+        "p95": 25018.773,
+        "p99": 25835.964,
+        "max": 25871.997
+      },
+      "preflight_us": {
+        "p50": 11321.611,
+        "p95": 11779.81,
+        "p99": 13026.091,
+        "max": 13948.718
+      }
+    },
+    "process": {
+      "User time (seconds)": 9.88,
+      "System time (seconds)": 0.02,
+      "Maximum resident set size (kbytes)": 68424.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "f5e185752a667ed105b1d3d1d010b8a9647fabb300bcd97c94e42a8d005ea43f",
+      "populated-2.json.gz": "299c79f454a7ec81a750dbc3c4b1300a22c3b102b08a3a80244b080406cfe773",
+      "populated-2.time": "3182e57fa966dcf3e95646550fa2ed1d7bb8caea94c0307874e7b0bf965e4b11",
+      "populated-2.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "authored-2",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_round_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a3/performance/round/authored-2.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "definition_working_bytes": 4194304,
+        "encoded_bytes": 1315978,
+        "expanded_upper_bytes": 24203156,
+        "peak_bytes": 104958958
+      },
+      "counts": {
+        "characters": 520,
+        "destination_reservations": 0,
+        "occupied_reservations": 0,
+        "people": 514,
+        "production_plans": 3,
+        "residents": 0,
+        "road_parties": 2,
+        "sources": 9,
+        "stalls": 13,
+        "stock_plans": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 209917916
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 7289.9929999999995,
+        "p95": 7500.914,
+        "p99": 7660.825,
+        "max": 7907.099000000001
+      },
+      "decode_validate_us": {
+        "p50": 14420.961,
+        "p95": 14807.502999999999,
+        "p99": 15002.101999999999,
+        "max": 15411.472000000002
+      },
+      "drop_us": {
+        "p50": 317.951,
+        "p95": 403.094,
+        "p99": 413.85499999999996,
+        "max": 531.719
+      },
+      "encode_us": {
+        "p50": 5899.233,
+        "p95": 6070.586,
+        "p99": 6218.8460000000005,
+        "max": 6446.862
+      },
+      "export_us": {
+        "p50": 12439.203,
+        "p95": 12797.951000000001,
+        "p99": 13211.942000000001,
+        "max": 13323.162
+      },
+      "preflight_us": {
+        "p50": 4714.35,
+        "p95": 4787.87,
+        "p99": 5193.897,
+        "max": 5203.313999999999
+      }
+    },
+    "process": {
+      "User time (seconds)": 4.74,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 29368.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "e3eb0f446f6aa884de78fe3bd9df2b6f57669a9dd286975e24248dbcdbd39304",
+      "authored-2.json.gz": "5f88bc3410501b3a54d176a91a79fca6b650d028479b1d92b85b558086318d5b",
+      "authored-2.time": "376b021bb5d04972c4d291d9b7eda51f259641804af3dfecdfc8fe5473e2dcef",
+      "authored-2.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "authored-3",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_round_cost",
+      "--mode",
+      "authored",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a3/performance/round/authored-3.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "definition_working_bytes": 4194304,
+        "encoded_bytes": 1315978,
+        "expanded_upper_bytes": 24203156,
+        "peak_bytes": 104958958
+      },
+      "counts": {
+        "characters": 520,
+        "destination_reservations": 0,
+        "occupied_reservations": 0,
+        "people": 514,
+        "production_plans": 3,
+        "residents": 0,
+        "road_parties": 2,
+        "sources": 9,
+        "stalls": 13,
+        "stock_plans": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "authored",
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 209917916
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 7376.621,
+        "p95": 7716.0689999999995,
+        "p99": 8160.440999999999,
+        "max": 11677.669
+      },
+      "decode_validate_us": {
+        "p50": 14531.462,
+        "p95": 15161.766,
+        "p99": 15896.771,
+        "max": 18961.563000000002
+      },
+      "drop_us": {
+        "p50": 316.39,
+        "p95": 425.208,
+        "p99": 595.8829999999999,
+        "max": 596.061
+      },
+      "encode_us": {
+        "p50": 5920.835999999999,
+        "p95": 6204.552000000001,
+        "p99": 6520.831,
+        "max": 6522.443
+      },
+      "export_us": {
+        "p50": 12529.220000000001,
+        "p95": 13343.925,
+        "p99": 15698.384999999998,
+        "max": 18665.277000000002
+      },
+      "preflight_us": {
+        "p50": 4713.934,
+        "p95": 4981.61,
+        "p99": 5905.790999999999,
+        "max": 8468.944000000001
+      }
+    },
+    "process": {
+      "User time (seconds)": 4.8,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 29476.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "185dbb4234cd2d21afb6682bc30c571eb71308a784a3d98805882c33418e218e",
+      "authored-3.json.gz": "25963399a291a49fcafd7629870c0f2b2e691ce161e7d8cb3bc781c47ab15922",
+      "authored-3.time": "cda0391dc65e8401dafe98b6df75b820e3de84f92797ff51ac7e63a1de7a7bae",
+      "authored-3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "name": "populated-3",
+    "command": [
+      "/home/ran/src/rust/cathedralbevy/target/release/examples/alibi_round_cost",
+      "--mode",
+      "populated",
+      "--samples",
+      "100",
+      "--output",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a3/performance/round/populated-3.json"
+    ],
+    "exit_code": 0,
+    "metadata": {
+      "candidate_validate_us": {
+        "raw_samples": "candidate_validate_us"
+      },
+      "cost": {
+        "definition_working_bytes": 4194304,
+        "encoded_bytes": 3510496,
+        "expanded_upper_bytes": 51657412,
+        "peak_bytes": 221359536
+      },
+      "counts": {
+        "characters": 2520,
+        "destination_reservations": 0,
+        "occupied_reservations": 2000,
+        "people": 2514,
+        "production_plans": 3,
+        "residents": 2000,
+        "road_parties": 2,
+        "sources": 9,
+        "stalls": 13,
+        "stock_plans": 6
+      },
+      "decode_validate_us": {
+        "raw_samples": "decode_validate_us"
+      },
+      "drop_us": {
+        "raw_samples": "drop_us"
+      },
+      "encode_us": {
+        "raw_samples": "encode_us"
+      },
+      "export_us": {
+        "raw_samples": "export_us"
+      },
+      "mode": "populated",
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "preflight_us": {
+        "raw_samples": "preflight_us"
+      },
+      "samples": 100,
+      "shared_reserved_peak_excluding_running_bytes": 442719072
+    },
+    "sample_count_per_phase": 100,
+    "phase_us": {
+      "candidate_validate_us": {
+        "p50": 10934.205,
+        "p95": 11235.993999999999,
+        "p99": 12278.047999999999,
+        "max": 15922.177
+      },
+      "decode_validate_us": {
+        "p50": 27881.671,
+        "p95": 29429.058,
+        "p99": 30236.632999999998,
+        "max": 30489.834
+      },
+      "drop_us": {
+        "p50": 903.3910000000001,
+        "p95": 1052.179,
+        "p99": 1177.155,
+        "max": 1187.095
+      },
+      "encode_us": {
+        "p50": 14530.423,
+        "p95": 15049.516000000001,
+        "p99": 15438.128,
+        "max": 17680.945
+      },
+      "export_us": {
+        "p50": 23702.285,
+        "p95": 24272.996000000003,
+        "p99": 24603.560999999998,
+        "max": 24701.313
+      },
+      "preflight_us": {
+        "p50": 11322.654,
+        "p95": 11528.600999999999,
+        "p99": 11903.154,
+        "max": 12950.372
+      }
+    },
+    "process": {
+      "User time (seconds)": 9.81,
+      "System time (seconds)": 0.01,
+      "Maximum resident set size (kbytes)": 68336.0
+    },
+    "artifacts": {
+      "uncompressed_json_sha256": "e5e3a12a9a4a1ca5f3620d8be517c5c4838bbb7fe92490e5737232d59662c067",
+      "populated-3.json.gz": "bdefb293f64119e6fa6c915f7645823aaea1256fdb4256feb22213ef706b13c1",
+      "populated-3.time": "af475910637ba069a65cbb7af80546fa40272a220be8c2792dd8a93b10848a9a",
+      "populated-3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+]

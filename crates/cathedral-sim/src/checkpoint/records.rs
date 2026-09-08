@@ -531,15 +531,15 @@ impl PointV1 {
 }
 remote_adapters!(point, Vec3, PointV1);
 
-struct TextV1;
+pub(crate) struct TextV1;
 impl TextV1 {
-    fn serialize<S: serde::Serializer>(v: &str, s: S) -> Result<S::Ok, S::Error> {
+    pub(crate) fn serialize<S: serde::Serializer>(v: &str, s: S) -> Result<S::Ok, S::Error> {
         if v.len() > MAX_TEXT_BYTES {
             return Err(serde::ser::Error::custom("text exceeds v1 byte limit"));
         }
         v.serialize(s)
     }
-    fn deserialize<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    pub(crate) fn deserialize<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
         let text = crate::checkpoint::BoundedText::<MAX_TEXT_BYTES>::deserialize(d)?;
         Ok(text.0)
     }

@@ -1,0 +1,35 @@
+{
+  "historical_positive_checks": {
+    "m1d_ordinary": {
+      "runs": 26,
+      "raw_samples": 30800,
+      "result": "passed"
+    },
+    "m2a2_component": {
+      "runs": 6,
+      "raw_samples": 3600,
+      "result": "passed"
+    }
+  },
+  "negative_checks": [
+    {
+      "auditor": "audit_poll_comparison.py",
+      "dataset": "m1d/performance/ordinary",
+      "mutation": "first export/poll p99 +1us",
+      "result": "rejected",
+      "exit_code": 1,
+      "diagnostic": "ValueError: percentile mismatch: 0-idle-1-m0",
+      "auditor_sha256": "274bf34aed58479da099670338023d0c0692ee1e98e9bb1e6b0245a59a00e6df"
+    },
+    {
+      "auditor": "audit_m2_component_probes.py",
+      "dataset": "m2a2/performance",
+      "mutation": "first export/poll p99 +1us",
+      "result": "rejected",
+      "exit_code": 1,
+      "diagnostic": "AssertionError: ('authored-1', 'export_us')",
+      "auditor_sha256": "f63c6eebf1926162efd18800854d4f55fdceefc26af97f78ba83db29ab634c16"
+    }
+  ],
+  "historical_evidence_modified": false
+}

@@ -125,6 +125,16 @@ pub(crate) fn decode<T: DeserializeOwned>(
     owner: &'static str,
     reservation: &mut Reservation,
 ) -> Result<T> {
+    decode_with_working(bytes, owner, reservation, 0)
+}
+/// Additional closed-owner scratch joins the raw-input peak before typed
+/// parsing. Canonical reserialization must never shrink an untrusted charge.
+pub(crate) fn decode_with_working<T: DeserializeOwned>(
+    bytes: &[u8],
+    owner: &'static str,
+    reservation: &mut Reservation,
+    working_bytes: usize,
+) -> Result<T> {
     // The host must have charged its bounded input buffer before handing it in.
     // The lexer itself allocates only bounded error text, never escape scratch.
     reservation.require(
@@ -135,7 +145,11 @@ pub(crate) fn decode<T: DeserializeOwned>(
     meter
         .write_all(bytes)
         .map_err(|e| CheckpointError::new(owner, e.to_string()))?;
-    let cost = meter.cost();
+    let mut cost = meter.cost();
+    cost.peak_bytes = cost
+        .peak_bytes
+        .checked_add(working_bytes)
+        .ok_or_else(|| CheckpointError::new(owner, "working charge overflow"))?;
     if reservation.bytes() < cost.peak_bytes {
         reservation.resize(cost.peak_bytes)?;
     }
@@ -154,4 +168,12 @@ pub(crate) fn encode<T: Serialize>(
     serde_json::to_writer(&mut bytes, value)
         .map_err(|e| CheckpointError::new(owner, e.to_string()))?;
     Ok(bytes)
+}
+
+pub(crate) fn inspect(bytes: &[u8]) -> Result<ComponentCost> {
+    let mut meter = Meter::default();
+    meter
+        .write_all(bytes)
+        .map_err(|e| CheckpointError::new("aggregate", e.to_string()))?;
+    Ok(meter.cost())
 }
