@@ -1,0 +1,32 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T23:01:12.603016+00:00",
+  "source_manifest_sha256": "d4fa5d5a30d1281111ec54c358a06b0e857a6e008d784c9d175690c039c1d9aa",
+  "original_layout_command": "checkpoint_final",
+  "layouts": {
+    "speech_engine_layout": {
+      "candidate": 120,
+      "context": 112,
+      "dto": 120,
+      "view": 136,
+      "wire": 120
+    },
+    "speech_layout": {
+      "accepted": 248,
+      "affected": 48,
+      "candidate": 96,
+      "context": 104,
+      "dto": 96,
+      "receipt": 120,
+      "recording_view": 128,
+      "state": 80,
+      "stream": 48,
+      "string": 24,
+      "view": 112,
+      "wire": 96
+    }
+  },
+  "loose_saved_ledger_node_bytes": 2580480,
+  "fixed_framing_bytes": 65536,
+  "working_charge_bytes": 4194304
+}

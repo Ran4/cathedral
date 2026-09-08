@@ -1,0 +1,8 @@
+{
+  "recorded_at_utc": "2026-09-08T22:54:40.799963+00:00",
+  "exit_code": 1,
+  "script_sha256": "dedb95e28bb0fd978c73c6fa0dbedae43bb5a9b5a1346bedcf0fbd738915458c",
+  "failure": "AssertionError at allowed fixture scope: auditor assumed checkpoint_speech/ subdirectory; actual fixtures have four flat names. No production source issue.",
+  "original_log_archived": false,
+  "log_provenance": "Original stdout/stderr returned by exec tool, not redirected to a file; this is a summary, not an exact raw log."
+}

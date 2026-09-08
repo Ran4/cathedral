@@ -295,6 +295,41 @@ def main():
                 assert sha(json.dumps(data["boundary_continuity"], sort_keys=True,
                                       separators=(",", ":")).encode()) == expected_boundary_hash
                 assert data["shared_reserved_peak_excluding_running_bytes"] == 2 * cost["peak_bytes"]
+            elif data["scenario"] == "speech-ordinary-interrupted-inputs-v1":
+                assert validation_working_bytes == 4096 * 1024
+                assert counts == {'accepted_recordings': 3,
+                 'available_text_bytes': 85,
+                 'available_texts': 1,
+                 'basename_bytes': 84,
+                 'batch_pending': 2,
+                 'captures': 3,
+                 'characters': 520 + expected_extra,
+                 'parked': 1,
+                 'request_id_bytes': 50,
+                 'semantic_receipts': 3,
+                 'streams': 2,
+                 'terminal_receipts': 0,
+                 'unique_roots': 2}
+                witnesses = data["witnesses"]
+                assert witnesses["coarse_discard_diagnostics"] == 0
+                assert witnesses["poll_count"] == 17
+                assert 0 < witnesses["maximum_poll_step_seconds"] <= 0.05 + 1e-12
+                assert witnesses["boundary_seconds"] == 0.34
+                assert len(witnesses["submitted_prompts"]) == 2
+                assert len(witnesses["all_speech_messages"]) == 2
+                assert len(witnesses["submitted_inputs"]) == 13
+                assert len(witnesses["recording_receipts"]) == 3
+                assert witnesses["provider_submissions"] == 2
+                assert witnesses["all_message_digest_algorithm"] == "fnv1a64-debug-stream-v1"
+                voices = witnesses["tts_requests"]
+                assert len(voices) == 1 and voices[0]["accepted"] and voices[0]["kind"] == "cloud"
+                expected_witness_hash = {'authored': '7050dbf38118bd6a20b1e3defd0294149b6c713f97c0291c32e0391ed814c152', 'populated': '24fb8c6a244d97f83920a9daaccd66ea31b6d5b7aba36afcff8c8ea6adf87dca'}[mode]
+                assert sha(json.dumps(witnesses, sort_keys=True,
+                                      separators=(",", ":")).encode()) == expected_witness_hash
+                expected_boundary_hash = {'authored': 'c2ddace801ea300da6ffd66c61e85713d12fdc33f7e5c5934625de0372617240', 'populated': '3db32db9acdf1d93e81e37b3b48f29a530b9941067949c056907835bac9cb3c4'}[mode]
+                assert sha(json.dumps(data["boundary_speech"], sort_keys=True,
+                                      separators=(",", ":")).encode()) == expected_boundary_hash
+                assert data["shared_reserved_peak_excluding_running_bytes"] == 2 * cost["peak_bytes"]
             else:
                 raise AssertionError("unrecognized component validation workload")
         assert cost["peak_bytes"] == (

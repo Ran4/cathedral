@@ -1,0 +1,26 @@
+{
+  "checked_at_utc": "2026-09-08T23:19:44.116819+00:00",
+  "source_files": 930,
+  "source_manifest_sha256": "d4fa5d5a30d1281111ec54c358a06b0e857a6e008d784c9d175690c039c1d9aa",
+  "status_lines": {
+    "README.md": "Status: M2a13 owner implementation, frozen verification and evidence complete (2026-09-09); independent coordinator acceptance pending. Full M2c/M3 adoption remains pending.",
+    "ADMISSION.md": "Status: M2a13 owner implementation, frozen verification and evidence complete (2026-09-09); independent coordinator acceptance pending. Full M2c/M3 adoption remains pending.",
+    "OWNER_COVERAGE.md": "Status: M2a13 owner implementation, frozen verification and evidence complete (2026-09-09); independent coordinator acceptance pending. Full M2c/M3 adoption remains pending."
+  },
+  "valid_local_links": 9,
+  "finalizer_ast_valid": true,
+  "per_mode_doc_costs": {
+    "authored": {
+      "encoded_bytes": 1824,
+      "peak_bytes": 4330896,
+      "save_load_bytes": 8661792
+    },
+    "populated": {
+      "encoded_bytes": 1815,
+      "peak_bytes": 4330869,
+      "save_load_bytes": 8661738
+    }
+  },
+  "cargo_ownership": "Ceded to coordinator immediately after workspace_serial exit; no further owner Cargo",
+  "documentation_ownership": "Ready for cession after this successful audit"
+}

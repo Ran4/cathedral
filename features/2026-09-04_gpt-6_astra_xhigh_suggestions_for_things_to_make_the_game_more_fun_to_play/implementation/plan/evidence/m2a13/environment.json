@@ -1,0 +1,27 @@
+{
+  "compiler_verbose": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2\n",
+  "compiler_sysroot": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+  "source_freeze": {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "source_hashes.json",
+    "source_manifest_sha256": "d4fa5d5a30d1281111ec54c358a06b0e857a6e008d784c9d175690c039c1d9aa",
+    "source_files": 930,
+    "frozen_utc": "2026-09-08T22:50:04.247316+00:00",
+    "policy": "No source/input edits during final focused/public/workspace verification or coordinator release checks."
+  },
+  "command_environment": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "constraints": [
+    "offline serial Cargo",
+    "headless and fake-backend environment",
+    "pure controlled STT/TTS/Cognition probe; no devices or providers",
+    "GPU unavailable in earlier accepted evidence; not reprobed"
+  ]
+}

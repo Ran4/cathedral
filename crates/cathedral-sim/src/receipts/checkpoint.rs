@@ -498,3 +498,6 @@ impl CommandLedger {
             && (self.is_protected(id) || self.get(id.command(0)).is_some())
     }
 }
+
+mod speech;
+pub(crate) use speech::{CheckpointReceiptRef, validate_speech_receipt};

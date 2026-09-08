@@ -1,0 +1,193 @@
+{
+  "compiler_sysroot_command": "rustc_sysroot",
+  "compiler_version_command": "rustc_version",
+  "source_files": {
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/map.rs": {
+      "sha256": "85387f4b8283bef443c154979c149dae4c8c61b96ea75432c58a573a13734dae",
+      "bytes": 128692,
+      "excerpts": [
+        {
+          "start_line": 226,
+          "end_line": 227,
+          "text": "impl<K: Clone, V: Clone, A: Allocator + Clone> Clone for BTreeMap<K, V, A> {\n    fn clone(&self) -> BTreeMap<K, V, A> {\n"
+        },
+        {
+          "start_line": 303,
+          "end_line": 308,
+          "text": "        if self.is_empty() {\n            BTreeMap::new_in((*self.alloc).clone())\n        } else {\n            clone_subtree(self.root.as_ref().unwrap().reborrow(), (*self.alloc).clone()) // unwrap succeeds because not empty\n        }\n    }\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/node.rs": {
+      "sha256": "2200ca0a4fe38592c314dc7f5f40bbb160e06b6f9e4abd1eb5bc40701540ab25",
+      "bytes": 79123,
+      "excerpts": [
+        {
+          "start_line": 43,
+          "end_line": 45,
+          "text": "const B: usize = 6;\npub(super) const CAPACITY: usize = 2 * B - 1;\npub(super) const MIN_LEN_AFTER_SPLIT: usize = B - 1;\n"
+        },
+        {
+          "start_line": 43,
+          "end_line": 67,
+          "text": "const B: usize = 6;\npub(super) const CAPACITY: usize = 2 * B - 1;\npub(super) const MIN_LEN_AFTER_SPLIT: usize = B - 1;\nconst KV_IDX_CENTER: usize = B - 1;\nconst EDGE_IDX_LEFT_OF_CENTER: usize = B - 1;\nconst EDGE_IDX_RIGHT_OF_CENTER: usize = B;\n\n/// The underlying representation of leaf nodes and part of the representation of internal nodes.\nstruct LeafNode<K, V> {\n    /// We want to be covariant in `K` and `V`.\n    parent: Option<NonNull<InternalNode<K, V>>>,\n\n    /// This node's index into the parent node's `edges` array.\n    /// `*node.parent.edges[node.parent_idx]` should be the same thing as `node`.\n    /// This is only guaranteed to be initialized when `parent` is non-null.\n    parent_idx: MaybeUninit<u16>,\n\n    /// The number of keys and values this node stores.\n    len: u16,\n\n    /// The arrays storing the actual data of the node. Only the first `len` elements of each\n    /// array are initialized and valid.\n    keys: [MaybeUninit<K>; CAPACITY],\n    vals: [MaybeUninit<V>; CAPACITY],\n}\n"
+        },
+        {
+          "start_line": 98,
+          "end_line": 113,
+          "text": "/// behind `BoxedNode`s to prevent dropping uninitialized keys and values. Any pointer to an\n/// `InternalNode` can be directly cast to a pointer to the underlying `LeafNode` portion of the\n/// node, allowing code to act on leaf and internal nodes generically without having to even check\n/// which of the two a pointer is pointing at. This property is enabled by the use of `repr(C)`.\n#[repr(C)]\n// gdb_providers.py uses this type name for introspection.\nstruct InternalNode<K, V> {\n    data: LeafNode<K, V>,\n\n    /// The pointers to the children of this node. `len + 1` of these are considered\n    /// initialized and valid, except that near the end, while the tree is held\n    /// through borrow type `Dying`, some of these pointers are dangling.\n    edges: [MaybeUninit<BoxedNode<K, V>>; 2 * B],\n}\n\nimpl<K, V> InternalNode<K, V> {\n"
+        },
+        {
+          "start_line": 43,
+          "end_line": 67,
+          "text": "const B: usize = 6;\npub(super) const CAPACITY: usize = 2 * B - 1;\npub(super) const MIN_LEN_AFTER_SPLIT: usize = B - 1;\nconst KV_IDX_CENTER: usize = B - 1;\nconst EDGE_IDX_LEFT_OF_CENTER: usize = B - 1;\nconst EDGE_IDX_RIGHT_OF_CENTER: usize = B;\n\n/// The underlying representation of leaf nodes and part of the representation of internal nodes.\nstruct LeafNode<K, V> {\n    /// We want to be covariant in `K` and `V`.\n    parent: Option<NonNull<InternalNode<K, V>>>,\n\n    /// This node's index into the parent node's `edges` array.\n    /// `*node.parent.edges[node.parent_idx]` should be the same thing as `node`.\n    /// This is only guaranteed to be initialized when `parent` is non-null.\n    parent_idx: MaybeUninit<u16>,\n\n    /// The number of keys and values this node stores.\n    len: u16,\n\n    /// The arrays storing the actual data of the node. Only the first `len` elements of each\n    /// array are initialized and valid.\n    keys: [MaybeUninit<K>; CAPACITY],\n    vals: [MaybeUninit<V>; CAPACITY],\n}\n"
+        },
+        {
+          "start_line": 98,
+          "end_line": 113,
+          "text": "/// behind `BoxedNode`s to prevent dropping uninitialized keys and values. Any pointer to an\n/// `InternalNode` can be directly cast to a pointer to the underlying `LeafNode` portion of the\n/// node, allowing code to act on leaf and internal nodes generically without having to even check\n/// which of the two a pointer is pointing at. This property is enabled by the use of `repr(C)`.\n#[repr(C)]\n// gdb_providers.py uses this type name for introspection.\nstruct InternalNode<K, V> {\n    data: LeafNode<K, V>,\n\n    /// The pointers to the children of this node. `len + 1` of these are considered\n    /// initialized and valid, except that near the end, while the tree is held\n    /// through borrow type `Dying`, some of these pointers are dangling.\n    edges: [MaybeUninit<BoxedNode<K, V>>; 2 * B],\n}\n\nimpl<K, V> InternalNode<K, V> {\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/set.rs": {
+      "sha256": "a7be8e5e576fac0975d0af0f24407ddd709751820bbb1f5059d55f08414a4888",
+      "bytes": 83670,
+      "excerpts": [
+        {
+          "start_line": 116,
+          "end_line": 123,
+          "text": "#[stable(feature = \"rust1\", since = \"1.0.0\")]\nimpl<T: Clone, A: Allocator + Clone> Clone for BTreeSet<T, A> {\n    fn clone(&self) -> Self {\n        BTreeSet { map: self.map.clone() }\n    }\n\n    fn clone_from(&mut self, source: &Self) {\n        self.map.clone_from(&source.map);\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/string.rs": {
+      "sha256": "f26867da19450cb50a549373c0bc29d1ac4911035e262f0854b2319edb5afd24",
+      "bytes": 115066,
+      "excerpts": [
+        {
+          "start_line": 2349,
+          "end_line": 2355,
+          "text": "#[stable(feature = \"rust1\", since = \"1.0.0\")]\nimpl Clone for String {\n    fn clone(&self) -> Self {\n        String { vec: self.vec.clone() }\n    }\n\n    /// Clones the contents of `source` into `self`.\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs": {
+      "sha256": "cd69f6ef4cf398ff6665c5f3ea428b652755d0e0aea004402e076f6af6a56400",
+      "bytes": 165898,
+      "excerpts": [
+        {
+          "start_line": 3772,
+          "end_line": 3776,
+          "text": "impl<T: Clone, A: Allocator + Clone> Clone for Vec<T, A> {\n    fn clone(&self) -> Self {\n        let alloc = self.allocator().clone();\n        <[T]>::to_vec_in(&**self, alloc)\n    }\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/slice.rs": {
+      "sha256": "b1f0a5f6e3d104d6176699cf05efdfe1725095cd984fdf4422ddc3093726361c",
+      "bytes": 33614,
+      "excerpts": [
+        {
+          "start_line": 444,
+          "end_line": 457,
+          "text": "        impl<T: TrivialClone> ConvertVec for T {\n            #[inline]\n            fn to_vec<A: Allocator>(s: &[Self], alloc: A) -> Vec<Self, A> {\n                let len = s.len();\n                let mut v = Vec::with_capacity_in(len, alloc);\n                // SAFETY:\n                // allocated above with the capacity of `s`, and initialize to `s.len()` in\n                // ptr::copy_to_non_overlapping below.\n                if len > 0 {\n                    unsafe {\n                        s.as_ptr().copy_to_nonoverlapping(v.as_mut_ptr(), len);\n                        v.set_len(len);\n                    }\n                }\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs": {
+      "sha256": "39ae2ccc61fd3bad236978201cda2ad97599403eb103de7eafdf6d7f6dd8b6f3",
+      "bytes": 35505,
+      "excerpts": [
+        {
+          "start_line": 158,
+          "end_line": 173,
+          "text": "const fn min_non_zero_cap(size: usize) -> usize {\n    if size == 1 {\n        8\n    } else if size <= 1024 {\n        4\n    } else {\n        1\n    }\n}\n\n#[rustc_const_unstable(feature = \"const_heap\", issue = \"79597\")]\n#[rustfmt::skip] // FIXME(fee1-dead): temporary measure before rustfmt is bumped\nconst impl<T, A: [const] Allocator + [const] Destruct> RawVec<T, A> {\n    /// Like `with_capacity`, but parameterized over the choice of\n    /// allocator for the returned `RawVec`.\n    #[cfg(not(no_global_oom_handling))]\n"
+        },
+        {
+          "start_line": 515,
+          "end_line": 525,
+          "text": "        }\n\n        // Nothing we can really do about these checks, sadly.\n        let required_cap = len.checked_add(additional).ok_or(CapacityOverflow)?;\n\n        // This guarantees exponential growth. The doubling cannot overflow\n        // because `cap <= isize::MAX` and the type of `cap` is `usize`.\n        let cap = cmp::max(self.cap.as_inner() * 2, required_cap);\n        let cap = cmp::max(min_non_zero_cap(elem_layout.size()), cap);\n\n        // SAFETY:\n"
+        },
+        {
+          "start_line": 417,
+          "end_line": 429,
+          "text": "    }\n}\n\nunsafe impl<#[may_dangle] T, A: Allocator> Drop for RawVec<T, A> {\n    /// Frees the memory owned by the `RawVec` *without* trying to drop its contents.\n    fn drop(&mut self) {\n        // SAFETY: We are in a Drop impl, self.inner will not be used again.\n        unsafe { self.inner.deallocate(T::LAYOUT) }\n    }\n}\n\n#[rustc_const_unstable(feature = \"const_heap\", issue = \"79597\")]\n#[rustfmt::skip] // FIXME(fee1-dead): temporary measure before rustfmt is bumped\n"
+        },
+        {
+          "start_line": 650,
+          "end_line": 668,
+          "text": "    /// - `elem_layout` must be valid for `self`, i.e. it must be the same `elem_layout` used to\n    ///   initially construct `self`\n    /// - `elem_layout`'s size must be a multiple of its alignment\n    #[cfg(not(no_global_oom_handling))]\n    #[inline]\n    unsafe fn reserve(&mut self, len: usize, additional: usize, elem_layout: Layout) {\n        // Callers expect this function to be very cheap when there is already sufficient capacity.\n        // Therefore, we move all the resizing and error-handling logic from grow_amortized and\n        // handle_reserve behind a call, while making sure that this function is likely to be\n        // inlined as just a comparison and a call if the comparison fails.\n        #[cold]\n        unsafe fn do_reserve_and_handle<A: Allocator>(\n            slf: &mut RawVecInner<A>,\n            len: usize,\n            additional: usize,\n            elem_layout: Layout,\n        ) {\n            // SAFETY: Precondition passed to caller\n            if let Err(err) = unsafe { slf.grow_amortized(len, additional, elem_layout) } {\n"
+        },
+        {
+          "start_line": 417,
+          "end_line": 429,
+          "text": "    }\n}\n\nunsafe impl<#[may_dangle] T, A: Allocator> Drop for RawVec<T, A> {\n    /// Frees the memory owned by the `RawVec` *without* trying to drop its contents.\n    fn drop(&mut self) {\n        // SAFETY: We are in a Drop impl, self.inner will not be used again.\n        unsafe { self.inner.deallocate(T::LAYOUT) }\n    }\n}\n\n#[rustc_const_unstable(feature = \"const_heap\", issue = \"79597\")]\n#[rustfmt::skip] // FIXME(fee1-dead): temporary measure before rustfmt is bumped\n"
+        },
+        {
+          "start_line": 650,
+          "end_line": 668,
+          "text": "    /// - `elem_layout` must be valid for `self`, i.e. it must be the same `elem_layout` used to\n    ///   initially construct `self`\n    /// - `elem_layout`'s size must be a multiple of its alignment\n    #[cfg(not(no_global_oom_handling))]\n    #[inline]\n    unsafe fn reserve(&mut self, len: usize, additional: usize, elem_layout: Layout) {\n        // Callers expect this function to be very cheap when there is already sufficient capacity.\n        // Therefore, we move all the resizing and error-handling logic from grow_amortized and\n        // handle_reserve behind a call, while making sure that this function is likely to be\n        // inlined as just a comparison and a call if the comparison fails.\n        #[cold]\n        unsafe fn do_reserve_and_handle<A: Allocator>(\n            slf: &mut RawVecInner<A>,\n            len: usize,\n            additional: usize,\n            elem_layout: Layout,\n        ) {\n            // SAFETY: Precondition passed to caller\n            if let Err(err) = unsafe { slf.grow_amortized(len, additional, elem_layout) } {\n"
+        }
+      ]
+    },
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/vec_deque/mod.rs": {
+      "sha256": "1b3cd1f179c3eef1ba3a3c40bcdbc6406c5bf570a5bd1bb0da31afb7622b5c4b",
+      "bytes": 132751,
+      "excerpts": [
+        {
+          "start_line": 119,
+          "end_line": 128,
+          "text": "impl<T: Clone, A: Allocator + Clone> Clone for VecDeque<T, A> {\n    fn clone(&self) -> Self {\n        let mut deq = Self::with_capacity_in(self.len(), self.allocator().clone());\n        deq.extend(self.iter().cloned());\n        deq\n    }\n\n    /// Overwrites the contents of `self` with a clone of the contents of `source`.\n    ///\n    /// This method is preferred over simply assigning `source.clone()` to `self`,\n"
+        },
+        {
+          "start_line": 119,
+          "end_line": 128,
+          "text": "impl<T: Clone, A: Allocator + Clone> Clone for VecDeque<T, A> {\n    fn clone(&self) -> Self {\n        let mut deq = Self::with_capacity_in(self.len(), self.allocator().clone());\n        deq.extend(self.iter().cloned());\n        deq\n    }\n\n    /// Overwrites the contents of `self` with a clone of the contents of `source`.\n    ///\n    /// This method is preferred over simply assigning `source.clone()` to `self`,\n"
+        }
+      ]
+    },
+    "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/read.rs": {
+      "sha256": "17a2efe49e5a6937c8d7d4a5c0b9eac84453de0f86bf8e7ee421387e82341bb3",
+      "bytes": 33041,
+      "excerpts": [
+        {
+          "start_line": 494,
+          "end_line": 545,
+          "text": "    fn parse_str_bytes<'s, T, F>(\n        &'s mut self,\n        scratch: &'s mut Vec<u8>,\n        validate: bool,\n        result: F,\n    ) -> Result<Reference<'a, 's, T>>\n    where\n        T: ?Sized + 's,\n        F: for<'f> FnOnce(&'s Self, &'f [u8]) -> Result<&'f T>,\n    {\n        // Index of the first byte not yet copied into the scratch space.\n        let mut start = self.index;\n\n        loop {\n            self.skip_to_escape(validate);\n            if self.index == self.slice.len() {\n                return error(self, ErrorCode::EofWhileParsingString);\n            }\n            match self.slice[self.index] {\n                b'\"' => {\n                    if scratch.is_empty() {\n                        // Fast path: return a slice of the raw JSON without any\n                        // copying.\n                        let borrowed = &self.slice[start..self.index];\n                        self.index += 1;\n                        return result(self, borrowed).map(Reference::Borrowed);\n                    } else {\n                        scratch.extend_from_slice(&self.slice[start..self.index]);\n                        self.index += 1;\n                        return result(self, scratch).map(Reference::Copied);\n                    }\n                }\n                b'\\\\' => {\n                    scratch.extend_from_slice(&self.slice[start..self.index]);\n                    self.index += 1;\n                    tri!(parse_escape(self, validate, scratch));\n                    start = self.index;\n                }\n                _ => {\n                    self.index += 1;\n                    return error(self, ErrorCode::ControlCharacterWhileParsingString);\n                }\n            }\n        }\n    }\n}\n\nimpl<'a> private::Sealed for SliceRead<'a> {}\n\nimpl<'a> Read<'a> for SliceRead<'a> {\n    #[inline]\n    fn next(&mut self) -> Result<Option<u8>> {\n"
+        },
+        {
+          "start_line": 872,
+          "end_line": 920,
+          "text": "/// Parses a JSON escape sequence and appends it into the scratch space. Assumes\n/// the previous byte read was a backslash.\nfn parse_escape<'de, R: Read<'de>>(\n    read: &mut R,\n    validate: bool,\n    scratch: &mut Vec<u8>,\n) -> Result<()> {\n    let ch = tri!(next_or_eof(read));\n\n    match ch {\n        b'\"' => scratch.push(b'\"'),\n        b'\\\\' => scratch.push(b'\\\\'),\n        b'/' => scratch.push(b'/'),\n        b'b' => scratch.push(b'\\x08'),\n        b'f' => scratch.push(b'\\x0c'),\n        b'n' => scratch.push(b'\\n'),\n        b'r' => scratch.push(b'\\r'),\n        b't' => scratch.push(b'\\t'),\n        b'u' => return parse_unicode_escape(read, validate, scratch),\n        _ => return error(read, ErrorCode::InvalidEscape),\n    }\n\n    Ok(())\n}\n\n/// Parses a JSON \\u escape and appends it into the scratch space. Assumes `\\u`\n/// has just been read.\n#[cold]\nfn parse_unicode_escape<'de, R: Read<'de>>(\n    read: &mut R,\n    validate: bool,\n    scratch: &mut Vec<u8>,\n) -> Result<()> {\n    let mut n = tri!(read.decode_hex_escape());\n\n    // Non-BMP characters are encoded as a sequence of two hex escapes,\n    // representing UTF-16 surrogates. If deserializing a utf-8 string the\n    // surrogates are required to be paired, whereas deserializing a byte string\n    // accepts lone surrogates.\n    if validate && n >= 0xDC00 && n <= 0xDFFF {\n        // XXX: This is actually a trailing surrogate.\n        return error(read, ErrorCode::LoneLeadingSurrogateInHexEscape);\n    }\n\n    loop {\n        if n < 0xD800 || n > 0xDBFF {\n            // Every u16 outside of the surrogate ranges is guaranteed to be a\n            // legal char.\n            push_wtf8_codepoint(n as u32, scratch);\n"
+        }
+      ]
+    },
+    "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/de.rs": {
+      "sha256": "4998d7e252eb513be85b298e287048b4fb283882e9ba7df905f572f07200f3f3",
+      "bytes": 86840,
+      "excerpts": [
+        {
+          "start_line": 1524,
+          "end_line": 1566,
+          "text": "    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value>\n    where\n        V: de::Visitor<'de>,\n    {\n        let peek = match tri!(self.parse_whitespace()) {\n            Some(b) => b,\n            None => {\n                return Err(self.peek_error(ErrorCode::EofWhileParsingValue));\n            }\n        };\n\n        let value = match peek {\n            b'\"' => {\n                self.eat_char();\n                self.scratch.clear();\n                match tri!(self.read.parse_str(&mut self.scratch)) {\n                    Reference::Borrowed(s) => visitor.visit_borrowed_str(s),\n                    Reference::Copied(s) => visitor.visit_str(s),\n                }\n            }\n            _ => Err(self.peek_invalid_type(&visitor)),\n        };\n\n        match value {\n            Ok(value) => Ok(value),\n            Err(err) => Err(self.fix_position(err)),\n        }\n    }\n\n    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>\n    where\n        V: de::Visitor<'de>,\n    {\n        self.deserialize_str(visitor)\n    }\n\n    /// Parses a JSON string as bytes. Note that this function does not check\n    /// whether the bytes represent a valid UTF-8 string.\n    ///\n    /// The relevant part of the JSON specification is Section 8.2 of [RFC\n    /// 7159]:\n    ///\n    /// > When all the strings represented in a JSON text are composed entirely\n"
+        }
+      ]
+    },
+    "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_core-1.0.228/src/de/impls.rs": {
+      "sha256": "9fb7a0322af51971fe1fa8f5b56c7ca3716622a6e9127b86bddfc0742c11383c",
+      "bytes": 97135,
+      "excerpts": [
+        {
+          "start_line": 580,
+          "end_line": 615,
+          "text": "struct StringVisitor;\n#[cfg(any(feature = \"std\", feature = \"alloc\"))]\nstruct StringInPlaceVisitor<'a>(&'a mut String);\n\n#[cfg(any(feature = \"std\", feature = \"alloc\"))]\nimpl<'de> Visitor<'de> for StringVisitor {\n    type Value = String;\n\n    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {\n        formatter.write_str(\"a string\")\n    }\n\n    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>\n    where\n        E: Error,\n    {\n        Ok(v.to_owned())\n    }\n\n    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>\n    where\n        E: Error,\n    {\n        Ok(v)\n    }\n\n    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>\n    where\n        E: Error,\n    {\n        match str::from_utf8(v) {\n            Ok(s) => Ok(s.to_owned()),\n            Err(_) => Err(Error::invalid_value(Unexpected::Bytes(v), &self)),\n        }\n    }\n\n"
+        },
+        {
+          "start_line": 682,
+          "end_line": 704,
+          "text": "        }\n    }\n}\n\n#[cfg(any(feature = \"std\", feature = \"alloc\"))]\n#[cfg_attr(docsrs, doc(cfg(any(feature = \"std\", feature = \"alloc\"))))]\nimpl<'de> Deserialize<'de> for String {\n    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>\n    where\n        D: Deserializer<'de>,\n    {\n        deserializer.deserialize_string(StringVisitor)\n    }\n\n    fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>\n    where\n        D: Deserializer<'de>,\n    {\n        deserializer.deserialize_string(StringInPlaceVisitor(place))\n    }\n}\n\n////////////////////////////////////////////////////////////////////////////////\n"
+        }
+      ]
+    }
+  },
+  "claim": "Installed BTree node layout/occupancy; populated-length String/Vec copies and RawVec growth; serde_json borrowed/escaped string scratch and serde String visitor. Concrete speech layouts in final focused output. Saved ledger validation uses borrowed existing records, never candidate construction."
+}

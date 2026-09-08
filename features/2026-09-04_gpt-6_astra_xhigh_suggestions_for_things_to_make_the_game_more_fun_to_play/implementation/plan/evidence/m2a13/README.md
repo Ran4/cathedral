@@ -1,0 +1,20 @@
+Status: M2a13 component implemented, verified and independently accepted (2026-09-09); see [coordinator review](coordinator/review.md). Complete M2 and host adoption remain pending.
+
+# Interrupted speech input handoff
+
+This cut provides strict admitted read-only SpeechRouter and EngineSpeech components. It preserves separate onset/stream rows, exact available unsent text, and every accepted batch/parked recording with its optional CommandId/receipt and root binding. Reused filenames/request strings stay distinct. Candidate preparation does not resume audio, terminalize receipts, clear Floor holds or apply say.
+
+- [Every-field coverage](OWNER_COVERAGE.md) names S/T/R/E policy, terminal receipt reachability and missing original payload/host text responsibilities.
+- [Admission proof](ADMISSION.md) binds fixed layouts, sparse copies, raw lexical charge and 4 MiB borrowed-ledger scratch under unchanged caps.
+- [Command originals and source-at-start manifests](commands.json) retain failures as well as successful runs. Deterministic gzip archives and the final source freeze are complete and verified.
+- New fixtures are `checkpoint_speech_{empty,pending}_v1.json` and `checkpoint_engine_speech_{empty,onset}_v1.json` under cathedral-sim/tests/fixtures. Historical component fixtures remain byte-identical.
+- The six-phase `alibi_speech_cost` probe uses installed content/nav with the authored 520 actors and all 2,000 additions placed (2,520 total). Services are pure and controlled; setup uses ordinary commands with poll steps <=50 ms. Primary STT/Cognition/TTS inputs, committed speech/receipts and draft/root counts are retained with every phase sample.
+
+Current failure history is intentionally retained: `owner_initial` failed to compile a test harness using the wrong Admission variant; `owner_fixed` had 13 passes/one failure because a test attempted production encoding with a LoadCandidate lease. The corrected test compares canonical serialization only inside test code. `public_initial` had 5 passes/one failure because the independent test directly advanced a receipt without draining its update notification before capture. Production correctly refused the incomplete boundary; the coordinator corrected the test notification boundary without relaxing production validation.
+
+Full M2c still owes atomic interruption outcomes/root release and Floor cleanup, old execution retirement, and publication of unsent drafts/status. Already committed readable presentation must bind actual event/message/host text; TTS mapping contains none and say must never be replayed. M3 still owns generation fences and initial publication without poll. Full manifest/content/build/target/toolchain/DefaultHasher, all-consumer horizons, original pending cognition output budget, complete Engine capture/hydration and actual Running/Save/Load/retiring lifetimes remain pending. Earlier naive backbone+Round Save+Load already exceeds 1 GiB before Running; no cap increase or complete-save/host-frame acceptance is claimed.
+
+
+Final frozen verification: 183 focused passes (27 intentional ignores), 6 public passes, and 2113 workspace passes with 0 failures/35 intentional ignores across 45 result-bearing targets. All 16 command originals, source-at-start maps and deterministic mtime 0 gzip archives are verified in [commands.json](commands.json); [verification.json](verification.json) records exact totals and failure history. Source remains 930 paths, SHA256 `d4fa5d5a30d1281111ec54c358a06b0e857a6e008d784c9d175690c039c1d9aa`. Cargo was ceded to the coordinator immediately after workspace exit; no owner Cargo work remains.
+
+Coordinator acceptance verifies 2,113 workspace passes, 183 focused passes, six public boundaries and all 3,600 release phase samples. authored export pooled p99 0.009243 ms, observed maximum 0.010273 ms; populated export pooled p99 0.008516 ms, observed maximum 0.009428 ms. The [performance record](performance/README.md) retains all samples and complete-save/host limitations.

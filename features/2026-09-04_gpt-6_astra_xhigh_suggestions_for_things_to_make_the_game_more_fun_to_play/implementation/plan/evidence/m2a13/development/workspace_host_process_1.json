@@ -1,0 +1,52 @@
+{
+  "sample_epoch_seconds": 1788909123.6667297,
+  "clock_ticks_per_second": 100,
+  "runner_pids": [
+    368392,
+    368398
+  ],
+  "processes": [
+    {
+      "pid": 368392,
+      "comm": "uv",
+      "ppid": 368391,
+      "state": "S",
+      "utime_ticks": 1,
+      "stime_ticks": 0,
+      "start_ticks": 70432868,
+      "rss_bytes": 7700480,
+      "io": "rchar: 617331\nwchar: 388\nsyscr: 170\nsyscw: 4\nread_bytes: 0\nwrite_bytes: 0\ncancelled_write_bytes: 0\n",
+      "wchan": "futex_wait_queue"
+    },
+    {
+      "pid": 368398,
+      "comm": "python3.13",
+      "ppid": 368392,
+      "state": "S",
+      "utime_ticks": 6,
+      "stime_ticks": 0,
+      "start_ticks": 70432870,
+      "rss_bytes": 13463552,
+      "io": "rchar: 16746486\nwchar: 160166\nsyscr: 2019\nsyscw: 13\nread_bytes: 0\nwrite_bytes: 114688\ncancelled_write_bytes: 0\n",
+      "wchan": "do_wait"
+    },
+    {
+      "pid": 368400,
+      "comm": "cargo",
+      "ppid": 368398,
+      "state": "S",
+      "utime_ticks": 31,
+      "stime_ticks": 65,
+      "start_ticks": 70432878,
+      "rss_bytes": 128966656,
+      "io": "rchar: 215424743\nwchar: 4322392982\nsyscr: 18887\nsyscw: 25900\nread_bytes: 14137077760\nwrite_bytes: 22457511936\ncancelled_write_bytes: 36581376\n",
+      "wchan": "futex_wait_queue"
+    }
+  ],
+  "memory_summary": [
+    "MemTotal:       32667680 kB",
+    "MemAvailable:    9235980 kB",
+    "SwapTotal:       2097148 kB",
+    "SwapFree:            244 kB"
+  ]
+}

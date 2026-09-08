@@ -1,4 +1,4 @@
-Status: In progress (2026-09-09). M2a1–M2a12 private components are implemented and reviewed. The complete M2a envelope and remaining owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
+Status: In progress (2026-09-09). M2a1–M2a13 private components are implemented and reviewed. Complete M2a envelope and remaining host owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
 
 # M2 — Complete simulation checkpoints
 
@@ -261,3 +261,102 @@ Full M2 still requires SpeechRouter transformation, exact manifest/content/build
 The [independent review](evidence/m2a12/coordinator/review.md) accepts Floor and Engine continuity against 917 frozen inputs, 2,090 workspace passes, 166 focused passes and six public boundaries. New fixtures leave all historical bytes intact. The ordinary authored/+2,000 setup uses bounded polls with zero discarded physical time. All 3,600 release phase samples pass provenance/counter/admission audits. authored export pooled p99 0.002510 ms, observed maximum 0.003357 ms; populated export pooled p99 0.003217 ms, observed maximum 0.003654 ms. See the [full performance record](evidence/m2a12/performance/README.md).
 
 SpeechRouter interruption and readable presentation, complete manifest/root/owner agreement, full capture/hydration, pending-work execution replacement and actual phase/lifetimes remain pending. Saved Floor holds are not a promise to resume old audio or microphone activity. No cap increase or synchronous host-frame claim is made.
+
+#### M2a13 design cut — 2026-09-09
+
+After accepted M2a12 commit `c035a430da9d23132bcf9f8138e27eedca3401bf`,  implement the SpeechRouter persistence owner for
+load interruption as strict admitted read-only component values. This closes the
+sim-owned recording/draft input to M2c; it is not a whole Engine adoption or a host
+microphone/audio restore. The owner must first propose the exact wire/API and an
+exhaustive field-disposition table for root review before writing production code.
+The choice is a semantic interrupted-input checkpoint, not a promise to continue
+old streaming sessions. Existing authoritative state and ordinary behavior must
+remain unchanged until complete M2c composition owns the interruption transition.
+
+Preserve every accepted recording obligation and its exact optional CommandId,
+original purpose, request correlation and available user text without guessing
+that a repeated basename denotes the same semantic submission. Current router
+input purpose is public player speech; do not invent already-existing proposition
+versions/selections, which belong to future/host owners. Preserve available text
+from completed but unconsumed streams even before PlayerRecording acceptance.
+Preserve exact owner configuration and clearly distinguish it from Engine stored
+config; standalone SpeechRouter constructor/default do not apply Engine clamps.
+
+At the accepted complete outer-command/poll boundary, synchronous resolved staging
+must be empty. Refuse a mid-command snapshot instead of applying or dropping a
+pending result. Bind exact accepted semantic roots/receipts against borrowed live
+World or unadopted backbone+ledger references, with explicit terminal-receipt
+reachability policy. The combined accepted jobs/parked/resolved bound is eight;
+stream/capture bounds are independently eight. Do not impose unsupported basename
+uniqueness, assume execution stream_jobs are bounded by active streams, or require
+queue-time TTS mappings to match still-awaited Floor IDs. Audit actual consumers.
+
+Assign raw audio/sockets/backend handles, stream execution IDs, captured unsent
+attention, timing diagnostics and TTS delivery mappings explicit transient/rebind
+policies. Preserve all previously committed attribution via prior saved owners;
+never recalculate its suffix from restored current attention. An interrupted input
+is an unsent draft/status requiring a new intentional submission. Do not invoke
+normal resolve_transcription (it applies say), ordinary abort (it leaves accepted
+jobs), submit_batch, poll, provider callbacks or service availability while
+capturing/decoding/preparing these values. No public partial Engine install.
+
+M2c must later consume this validated value together with saved Floor/ledger/shared
+roots to terminalize only interrupted accepted obligations, release their owner
+bindings correctly, discard old microphone holds and execution mappings, and
+publish drafts/status without replaying a say. That complete transformation and
+new-generation callback rejection need integration evidence before full M2.
+Committed NPC/player speech already applied to World must retain readable owed
+presentation from the actual pending event/message/host text owner; router TTS
+backend mappings contain no text and do not certify that separate owner complete.
+
+Use mandatory closed V1 records with explicit supported counts/text/number limits,
+strict duplicate/missing/unknown/nullable refusal, raw lexical admission before
+allocation, attached leases and a proved working allowance. Do not raise 128 MiB
+encoded/expanded, depth64 or shared1GiB limits. Preserve historical component
+fixtures. Bound memory for malformed/max/sparse inputs from concrete layouts and
+actual installed allocator/serde/container behavior; any projection copies remain
+charged throughout their lifetime. Independent root public boundaries follow the
+approved API proposal.
+
+Use controlled pure STT/TTS/Cognition services and ordinary Engine commands to
+exercise active microphone, available unsent stream text, parked and batch-pending
+accepted recordings, reused basenames, exact semantic receipts and already
+committed voiced/readable speech. Rare/max and mid-command refusal stay separate
+private tests. The authored520/+2000allplaced2520 six-phase component probe uses
+real installed content/nav and <=50ms ordinary steps with no physical-time discard.
+Preserve primary submitted inputs and committed outputs plus draft/root counts,
+not only Debug fingerprints. Exact originals, final complete v2 source freeze,
+focused/public/serial workspace and independently audited release trials remain
+the commit gate. No audio/device/window activity or external provider calls.
+
+Complete manifest/content/build/target/toolchain equality, full owner/root/horizon
+agreement, Engine capture/hydration, original pending cognition output budgets,
+initial host publication and actual Running/Save/Load/retiring lifetimes remain
+pending. The existing naive backbone+Round sum exceeds1GiB before Running; solve
+phase/lifetimes in full composition rather than increasing caps.
+
+The reviewed M2a13 API proposal uses a semantic interrupted-input projection:
+separate ordered capture basenames, stream text rows and accepted recording rows,
+plus exact router grace bits. Accepted rows preserve their source, optional exact
+CommandId and retained receipt, request correlation, basename, accepted pose,
+backend and parked deadline provenance. They do not merge by basename or operation
+root. Engine composition adds immutable player identity with character-map
+membership, not a present/in-city predicate. Candidates expose borrowed records
+only; they cannot create an active SpeechRouter. Old execution mappings, unsent
+attention and diagnostic timing fields have explicit transient policies.
+
+Live capture checks the exact `World.speech_actions` owner index; saved-context
+validation derives that index from accepted rows and validates every receipt and
+protected root against the unadopted ledger. Terminal receipts remain terminal.
+The public-speech purpose records the owning subsystem's classification; it does
+not independently prove the original ledger payload digest. Current tasks omit
+the submitted spatial sequence and may retain an accepted pose different from
+the original payload. Complete semantic owner/category agreement must address
+that distinction without fabricating original input values. Receipt float equality
+is bitwise, and raw grace/deadline records use explicit `{bits:u64}` values.
+
+#### M2a13 coordinator acceptance — 2026-09-09
+
+The [independent review](evidence/m2a13/coordinator/review.md) accepts interrupted speech projections against 930 frozen inputs, 2,113 workspace passes, 183 focused passes and six public boundaries. New fixtures leave all historical bytes intact. Ordinary authored/+2,000 setup uses 17 bounded polls with zero discarded physical time. All 3,600 release phase samples pass provenance/counter/admission audits. authored export pooled p99 0.009243 ms, observed maximum 0.010273 ms; populated export pooled p99 0.008516 ms, observed maximum 0.009428 ms. See the [full performance record](evidence/m2a13/performance/README.md).
+
+Complete manifest/root/category agreement, original cognition output budgets, full capture/hydration, atomic Floor/ledger interruption and host draft/readable publication remain pending. The candidate cannot restore an active microphone or automatically submit speech. Actual phase/lifetimes must resolve the earlier complete-save peak excess without a cap increase; no synchronous host-frame claim is made.

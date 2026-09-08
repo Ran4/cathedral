@@ -1,0 +1,17 @@
+{
+  "sampled_at_utc": "2026-09-08T23:10:42.632313+00:00",
+  "command": [
+    "/usr/bin/ps",
+    "-eo",
+    "pid,ppid,comm,stat,etime,time,pcpu,pmem,wchan:32"
+  ],
+  "stdout": "    PID    PPID COMMAND         STAT     ELAPSED     TIME %CPU %MEM WCHAN\n      1       0 codex-linux-san Ss         00:00 00:00:00  0.0  0.0 do_wait\n      2       1 uv              Sl         00:00 00:00:00  0.0  0.0 futex_wait_queue\n      6       2 python3.13      S          00:00 00:00:00  0.0  0.0 do_poll.constprop.0\n      7       6 ps              R          00:00 00:00:00  0.0  0.0 -\n",
+  "stderr": "",
+  "exit_code": 0,
+  "workspace_log": {
+    "path": "/tmp/alibi-m2a13-workspace_serial.log",
+    "bytes": 1971,
+    "mtime_utc": "2026-09-08T23:06:08.434887+00:00"
+  },
+  "note": "One finite read-only sample; no Cargo restart or process action. Process visibility is constrained to this execution environment."
+}

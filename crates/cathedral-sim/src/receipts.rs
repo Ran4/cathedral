@@ -15,6 +15,7 @@ mod checkpoint;
 mod travel;
 pub(crate) use checkpoint::CommandIdV1;
 pub use checkpoint::CommandLedgerDtoV1;
+pub(crate) use checkpoint::{CheckpointReceiptRef, validate_speech_receipt};
 pub(crate) use travel::{
     bind_round_edit, commit_actor_action, end_round_edit, end_travel, progress_travel,
     reconcile_travel, release_finished_root,

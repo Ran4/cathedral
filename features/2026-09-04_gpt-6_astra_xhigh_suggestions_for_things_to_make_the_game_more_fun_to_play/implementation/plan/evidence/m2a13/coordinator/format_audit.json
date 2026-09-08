@@ -1,0 +1,201 @@
+{
+  "checked_at_utc": "2026-09-08T22:54:41.707995+00:00",
+  "result": "passed",
+  "checks": [
+    {
+      "path": "crates/cathedral-backends/examples/alibi_speech_cost.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/examples/alibi_speech_cost.rs"
+      ],
+      "source_sha256": "109c3cb6bb530086d9379f23afbb693351cb090f9afd6f8f37d3ae022caacf85",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine.rs"
+      ],
+      "source_sha256": "f8fa7b80ff1bacc902c81690e53a4bfdfdda5a970a272891dcee5ff98bf8c1f7",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/speech_checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/speech_checkpoint.rs"
+      ],
+      "source_sha256": "d6a5c11f1de69b4842a90056b8d767dd9a194bfa9314645e79aa34a2ac9d545a",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/speech_checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/speech_checkpoint/tests.rs"
+      ],
+      "source_sha256": "23d7ecdfba1b611fab24345b1162d68b33d38957feed6174ca4d3c8f1ee296d2",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/receipts.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/receipts.rs"
+      ],
+      "source_sha256": "37b4018514cc30315e9e70136f345c51e92a49d327a0ddfa6180bf4a68f15cd9",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/receipts/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/receipts/checkpoint.rs"
+      ],
+      "source_sha256": "b7187cee4eeb9c5647e01c7ce03060baa79d1beabdb9ab1eff782fa8badb8fd7",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/receipts/checkpoint/speech.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/receipts/checkpoint/speech.rs"
+      ],
+      "source_sha256": "ffe0b6aef96fea3dae57f9e43a92986110865ccf150f365485053af2cdf19693",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/speech_router.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/speech_router.rs"
+      ],
+      "source_sha256": "a777d3b002a66d035ebaf4001ecf2e7f0c88603c1503bf11d093a953212abc8a",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/speech_router/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/speech_router/checkpoint.rs"
+      ],
+      "source_sha256": "447d0fdf688e7a249fda66c0a925f0f242e4b47a0590fcfa5a971b8fc0bc0729",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/speech_router/checkpoint/context.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/speech_router/checkpoint/context.rs"
+      ],
+      "source_sha256": "63866cf5fff97f605899f8b30986d8118765d9097ce4ca067e8a92ec52c2ce70",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/speech_router/checkpoint/records.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/speech_router/checkpoint/records.rs"
+      ],
+      "source_sha256": "9c6d14adc12e7c8294318ddb7e8573842508a40e49fc1ff01bb05b509126e773",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/speech_router/checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/speech_router/checkpoint/tests.rs"
+      ],
+      "source_sha256": "ee08d1a9f6d8ff33b7bbc5a0b28fc37f9880921a3c1d8e57f83cb75274d4b3f0",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/tests/checkpoint_speech_boundary.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/tests/checkpoint_speech_boundary.rs"
+      ],
+      "source_sha256": "76b461e22c9e14f237a1bff4ad58a73e4aed4cbaf62773535cebd1428c9a89f9",
+      "exit_code": 0,
+      "output": ""
+    }
+  ]
+}

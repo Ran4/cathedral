@@ -1,0 +1,55 @@
+{
+  "purpose": "Finite read-only progress diagnostic, not a restart, benchmark, test result or memory-bound measurement.",
+  "source_freeze_manifest_sha256": "d4fa5d5a30d1281111ec54c358a06b0e857a6e008d784c9d175690c039c1d9aa",
+  "provenance": "Existing host tmux server /tmp/tmux-1000/default ran finite helper through run-shell -b without opening a pane/window. Only matching workspace_serial descendants emitted; no unrelated arguments/environment recorded. Ordinary exec has an isolated PID namespace.",
+  "helper_sha256": "9656c338bdbbba8ebda74ba0db9f44a0cfc6375eafd699c218a0dacf544924e8",
+  "environment": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin"
+  },
+  "command": "tmux -S /tmp/tmux-1000/default run-shell -b <uv run --no-project --cache-dir /tmp/alibi-uv python /tmp/alibi-m2a13-inspect_process.py redirected to original sample paths>",
+  "samples": [
+    {
+      "original_path": "/tmp/alibi-m2a13-host-process-1.json",
+      "archive_path": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a13/development/workspace_host_process_1.json",
+      "bytes": 1455,
+      "sha256": "ea65f9d683e9740f998f6f0de9725fdf853b7476f6af4dd481ad25a92da12f3a"
+    },
+    {
+      "original_path": "/tmp/alibi-m2a13-host-process-2.json",
+      "archive_path": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a13/development/workspace_host_process_2.json",
+      "bytes": 1847,
+      "sha256": "86b76ab30525b0df602aaed42812fbe64d1669028f54527b284fe011b292ee75"
+    }
+  ],
+  "elapsed_seconds": 64.77864289283752,
+  "counter_deltas": [
+    {
+      "pid": 368392,
+      "comm": "uv",
+      "cpu_seconds_delta": 0.0,
+      "io_delta": {
+        "read_bytes": 0,
+        "write_bytes": 0
+      }
+    },
+    {
+      "pid": 368398,
+      "comm": "python3.13",
+      "cpu_seconds_delta": 0.0,
+      "io_delta": {
+        "read_bytes": 0,
+        "write_bytes": 0
+      }
+    },
+    {
+      "pid": 368400,
+      "comm": "cargo",
+      "cpu_seconds_delta": 0.07,
+      "io_delta": {
+        "read_bytes": 111497216,
+        "write_bytes": 2269278208
+      }
+    }
+  ],
+  "observation": "Cargo descendant I/O counters advanced and a new rustc child exists in sample 2; workspace log also advanced to completed host-target warnings. This demonstrates progress, without attributing all elapsed time or a cause to any individual wait."
+}

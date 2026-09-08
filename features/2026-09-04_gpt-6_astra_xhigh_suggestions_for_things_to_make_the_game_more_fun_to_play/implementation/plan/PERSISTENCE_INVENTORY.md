@@ -87,7 +87,7 @@ M2 must continue a world while someone lingers, another owns an optional route, 
 | Scheduler in-flight request | Semantic obligation ID, actor/presence epoch, lane/fairness position, drained inbox, presented/pending history, prompt/resolved input receipt | S semantic input/obligation; T external job. Restore one load-specific retry, including an empty-inbox idle turn; generic failure/idle-requeue helpers are insufficient |
 | Scheduler held completion | Finished but unapplied exact success/error completion and its input receipt | S. Hydrate a held result without a provider request; normal current action validation still applies. Do not restore drained inputs to the inbox and then also apply the completion |
 | `floor.rs` | Awaited presentation IDs/deadlines, foreground/background pacing, microphone hold | Preserve owed readable presentation/semantic speech state; T old audio acknowledgements and transient recording holds. Rebase legitimate pacing without blocking the city |
-| `speech_router.rs` | Streams, parked recording, transcript jobs, utterance timing, input purpose/version, captured audience coverage and backend mapping | S committed text/utterance identity and supported observation history; T live capture/socket/job handles. Interrupted recording becomes available unsent draft/status, never an automatic new `say` or public-chat fallback. M5 extends the format for temporal hearing receipts |
+| `speech_router.rs` | M2a13 onset/stream/accepted recording input, exact receipt/root binding and router configuration; T timing/unsent attention/backend execution | S exact available unsent text and current public-player-speech purpose. No proposition version/learned selection exists in this owner; future host/M10 state must supply those. Read-only interruption projection does not resume a microphone or apply say. M2c still owes atomic ledger/root/Floor cleanup and draft publication; M5 extends temporal hearing receipts. |
 | `night.rs` | Duty ID, owed day, subject/incarnation, queued/submitted/completed/dropped status, input, bedtimes, retry/yield anchors, totals and ambient day guard | M2a9 S exact existing owner; queue-time stamps, exact flight/held success/error and historical pacing survive. M2c load-specific retry/adoption remains pending |
 | `Engine` social scheduling | Warm exchanges, last player partner, novelty/context counters | S. Preserve novelty's opaque `Memory.visit` bit salt unchanged and rebase `touched_at` separately. Supersede the old “do not save novelty” comment with this behavior-backed policy |
 | Remaining `Engine` presentation caches | Last snapshot/lamp revisions, ready flag | Pending exact owner contracts; M2a7 saves chalk cache and M2a8 saves dogs_published. Future initial host publication remains separate from all saved simulation caches and must not replay world creation |
@@ -113,7 +113,7 @@ These rows supersede the earlier generic social/knowledge descriptions; they are
 | `Conversation.next_utterance`, `latest_applied_utterance` | S monotonic utterance ordering | Keep latest ≤ next. Restored stale completions cannot overwrite a newer group/name/gaze choice even when actor IDs match. Still fence external jobs with M1 runtime generation. |
 | `CapturedAttention { captured_at,sequence,focus,engagement,invitation }`; `SpeechRouter.captures`, `TranscriptionTask.attention` | Preserve already committed speech attribution; T in-progress microphone/STT execution under checkpoint interrupted-draft policy | At most eight captures with 120-second expiry. Discard interrupted unsent attention/job handles rather than auto-speaking after restore; preserve counters and all earlier committed suffixes through inbox/history. |
 | `SpeechSelection.witnesses` and rendered conversation suffix | S rendered percept in pending/inbox/recent history and saved in-flight prompt input | Attribution is event-time metadata, never rerendered from the newly loaded conversation partner. |
-| `SpeechRouter` remaining `streams`, `parked`, `timings`, `recording_jobs`, `stream_jobs`, `tts_backends`, `next_job`, `stt_stream_grace_seconds` | T external handles/buffers; S readable committed/unsent text, input purpose and interruption status per checkpoint protocol; R provider configuration | Preserve category and user text, not a live socket. No replay of committed `say`, no automatic draft submission, new generation job IDs. Timing probes are diagnostics, not permission to keep speech active. |
+| `SpeechRouter` remaining `streams`, `parked`, `timings`, `recording_jobs`, `stream_jobs`, `tts_backends`, `next_job`, `stt_stream_grace_seconds` | M2a13 S exact independent router grace bits, ordered accepted obligations/receipts/pose/backend and onset/stream available-text projection; T diagnostics/unsent attention; E old execution mappings/allocator | Preserve category and user text as unsent status, not a live socket. Parked deadlines are provenance. Full M2c must terminalize only unfinished obligations and clear old holds; M3 supplies new-generation execution. Owed committed readable text belongs to the actual event/message/host owner, never TTS maps or another say. |
 
 `Engine.npc_exchanges`, novelty/context salts and pending floor/scheduler inputs retain their prior S policy. Backend prompt archives and omniscient transcript are not a substitute for these private semantic records. New archive/root types do not exist yet; M5/M9 extend this same inventory when they introduce them.
 
@@ -200,7 +200,7 @@ These fields are implemented authority. M2 must preserve them at the M1a finite 
 | `World.round_actions`, `RoundEdit.receipt`, `presence_epoch`, `teach_place_on_commit` | S pending actor→step binding, captured incarnation and deferred teaching policy. Preserve the exact pending edit; validate it against the actor and ledger. Never teach or mark Completed just because a save was loaded. |
 | `NpcScheduler::InFlight.semantic`, `retry_work[actor] { semantic, presence_epoch }` | S semantic obligation across provider retries, separate from ephemeral execution RequestId. Preserve drained input, presented history, prompt, lane and exact held completion using the existing request protocol; successful root/step receipts prevent repeated committed history/actions. Failed external attempts are execution lifecycle, not a final semantic failure receipt. |
 | `NightOffice::Due.semantic`, `Due.presence_epoch`, `Flight.semantic`, `owed_day`, `presence_epoch`, `held_result` | S allocated obligation/day/subject/incarnation and exact held success/error. Busy submit cannot recapture a new incarnation. Unallocated queued `None` duties retain subject/day; M2 duty inventory must assign/retry them once under the protocol, without generic failure on load. Terminal dropped obligations release protected roots. RequestId remains an ephemeral execution ID. |
-| `SpeechRouter::TranscriptionTask.semantic`, `resolved` | S pending recording operation and captured attention/pose/task binding. `resolved` stages only synchronous completion until the outer receipt finishes and must be empty at the completed command/poll boundary. Submitted/uncommitted microphone/audio/text restores as the protocol's unsent draft; committed speech restores receipt/presentation without speaking again. STT RequestId/job IDs remain ephemeral execution IDs for M1c fencing. |
+| `SpeechRouter::TranscriptionTask.semantic`, `resolved` | M2a13 S exact optional CommandId/receipt, request correlation, basename, accepted pose/backend and public-player-speech purpose; T unsent CapturedAttention. Nonempty `resolved` refuses this completed-boundary format rather than being dropped or applied. Accepted jobs/parked input becomes an unsent draft/status requiring new intentional submission; parked deadline is exact provenance, never a resumed timer. Full M2c still owes atomic ledger/root/Floor interruption and host draft publication. Earlier committed speech keeps receipt/readable presentation without another say; STT jobs remain E. |
 | `CommandId`, `OperationId`, `Receipt`, `Outcome`, `AffectedRef`, `LedgerEntry`, payload version 1 | S values referenced above. Canonical encoding, command SHA-256 domain tag, provider reply UTF-8 fingerprint/version 1/domain tag, producer IDs, byte/depth/step/entry limits and typed state/reason interpretation are behavior/manifest version inputs. M2 must reject unsupported versions and malformed references before adoption. |
 
 New value types are IO-free. The memory-only hashing writer implements the serializer's sink interface and never opens files or sockets. The shared sim dependency addition is `sha2` with default features disabled and all versions pinned in Cargo.lock. This field delta also covers owners not listed by the selected 26-owner declaration index.
@@ -218,7 +218,7 @@ These fields enforce execution isolation now; checkpoint DTO/adoption is still M
 | Backend mailbox `Shared.generation/active/usage/retirement`, `Queued` charge, `Lease.charge/fallback/failed`, `BackendSender.lease` | E delivery reservations. Never serialize channel/Arc/mutex state. Preserve unfinished semantic duties/results through their sim owners, then create fresh backend executions under the new generation. Reserved old terminal failures cannot become new domain outcomes. Test-only chunk latch is not runtime authority. |
 | `HttpCognition` checked `next_request_id`, lane guards; STT/TTS job-bound delivery sender; realtime `SessionState.deliveries` | E per-runtime execution IDs/lifetimes. Numeric IDs may recur only behind a fresh generation fence. Realtime admitted keys/commit tombstones are old transport state; M2 preserves unsent recording/text or exact committed semantic outcome through the speech router, not a provider socket. |
 | `FakeCognition.next_request_id/staged/prompts`, host `SharedCognition` generation | E bounded backend execution and diagnostic prompt history. Drain only into its fixed generation. M2 stores unfinished scheduler/Night obligations and exact held semantic results, rather than restoring old fake channel delivery. |
-| `SpeechRouter.next_job` | E checked transcription execution allocation; refusal on exhaustion. Its M1b recording semantic roots, exact held results, deadlines and unfinished work retain their existing S policy. M3 binds retry execution to a fresh generation. |
+| `SpeechRouter.next_job` | E checked transcription execution allocator, omitted by M2a13 interruption projection; refusal on exhaustion remains ordinary behavior. M2a13 retains every accepted recording obligation/receipt and unconsumed stream text, drops unsent attention, and refuses synchronous `resolved` staging. Parked deadline is provenance only. M2c/M3 must release old execution/holds and publish unsent drafts with a new-generation fence; loading does not retry STT or auto-submit speech. |
 | `MicrophoneService.generation`, shutdown/stopped ownership; native bounded capture/error/lifecycle queues | E device execution. Old service cannot create current PlayerIntent or SpeechPresented effects. M3 drains/drops lifecycle receivers before awaiting shutdown, and schedules filesystem/worker destruction separately. Existing enabled/backend preferences and unsent drafts follow host protocol. |
 | `SpeechPresentationState.generation`, existing queues/ready WAVs/PCM, microphone suspension/ack fields, `StreamingPcmSource` fixed sample storage | E bounded presentation projections. Synchronize/reset before accepting new-generation messages. Clear old voice entities and captions without acknowledging new speech IDs or resuming a new microphone. Rebuild readable state from M3's restored publication, not an extra poll. |
 
@@ -393,3 +393,46 @@ The exact admitted `FloorDtoV1` and `EngineContinuityDtoV1` cover the existing F
 The component allocates no additional validation index or catalog scratch: bounded pairwise floor-ID checking and borrowed player-map lookup fit the existing aggregate allocation allowance with zero extra working bytes, unchanged 128 MiB E/J, depth 64 and shared 1 GiB limits. All records remain closed/mandatory; raw admitted bytes and attached leases survive candidate conversion. Sparse live capacities are not copied.
 
 `SpeechRouter`, its pending recording obligations/interrupted unsent drafts and owed readable committed speech remain the next owner. `Engine.transcript` is still the omniscient session artifact, not a resolved player-history policy. Runtime capabilities/services/generation/path are separately rebound. Complete owner/root/config/manifest/horizon agreement, full capture/hydration, generation-fenced external continuation and actual Running/Save/Load/retiring lifetimes remain mandatory. The naive backbone+Round Save+Load peak already exceeds 1 GiB before Running; this component does not alter caps or imply complete-save/host-frame acceptance.
+
+
+## M2a13 SpeechRouter interruption component — 2026-09-09
+
+Strict read-only SpeechRouter/EngineSpeech components now preserve the sim-owned
+input to later complete load interruption: independent ordered onset basenames,
+stream basenames and exact available text, and every accepted batch/parked recording
+occurrence. Accepted rows retain optional exact CommandId/Receipt, request string,
+basename, accepted pose/backend and raw parked-deadline provenance. Reused basenames
+or requests do not merge tasks; sibling command steps can share a protected operation.
+Actual router grace bits remain independent from Engine's original stored config.
+Public purpose is `public_player_speech`, status is `interrupted_unsent`; current source
+contains no proposition version or learned selection to invent. Task lacks original
+spatial_seq/pre-accepted pose, so full envelope still owes original payload/category
+binding rather than recomputing a purported digest from this projection.
+
+[Every-field coverage](evidence/m2a13/OWNER_COVERAGE.md) classifies old stream protocol,
+CapturedAttention, timing, jobs, TTS maps and execution allocator as transient/rebound.
+Nonempty synchronous resolved staging refuses the completed-boundary format. Live
+World.speech_actions must exactly match Some accepted IDs; unadopted backbone plus
+ledger validates their reconstructed R index and exact retained/protected receipts,
+including reachable terminal results and affected order. No candidate World/ledger,
+service query, IO, poll, constructor, normal abort/resolve/say or partial Engine
+installation occurs. Prior committed attribution stays in earlier saved owners.
+
+[Admission](evidence/m2a13/ADMISSION.md) retains raw input charges and adds a proved 4 MiB
+saved-ledger validation allowance under unchanged 128 MiB encoded/expanded, depth 64 and
+shared 1 GiB caps. Eight captures/eight streams/eight accepted rows are independent;
+old stream_jobs are not falsely bounded by active streams and duplicate TTS map IDs
+are not made invalid. Available text admits 400,000 UTF-8 bytes without speech validation;
+new intentional submission is still required. Max/sparse cases remain private tests;
+actual authored 520/2,520-actor measurement places all 2,000 additions and uses ordinary <=50 ms polls and pure
+controlled services with primary submitted/committed input-output witnesses.
+
+Full M2c still owes atomic interruption outcomes, root release, Floor hold cleanup,
+old execution retirement and draft/status publication with no repeated say. Owed
+already-committed readable presentation must bind the actual event/message/host text
+owner, not TTS backend maps. M3 owns new-generation callbacks and dedicated initial
+publication without poll. Complete manifest/build/target/toolchain/DefaultHasher,
+all-consumer horizons, original cognition output-token receipt, full capture/hydration
+and actual Running/Save/Load/retiring lifetimes remain pending. Earlier naive
+backbone+Round Save+Load already exceeds 1 GiB before Running; this is no complete-save
+or synchronous-host acceptance claim.

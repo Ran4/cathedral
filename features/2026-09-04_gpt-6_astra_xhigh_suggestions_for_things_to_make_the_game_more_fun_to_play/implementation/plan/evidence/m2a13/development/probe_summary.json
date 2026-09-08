@@ -1,0 +1,68 @@
+{
+  "source_freeze": {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "source_hashes.json",
+    "source_manifest_sha256": "d4fa5d5a30d1281111ec54c358a06b0e857a6e008d784c9d175690c039c1d9aa",
+    "source_files": 930,
+    "frozen_utc": "2026-09-08T22:50:04.247316+00:00",
+    "policy": "No source/input edits during final focused/public/workspace verification or coordinator release checks."
+  },
+  "smokes": {
+    "authored": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a13/development/authored_final_smoke.json",
+      "sha256": "25596979e0ccbf9f902b541b6e8fbf171cc5380a7f28cab27098ed710fa041b8",
+      "samples": 2,
+      "counts": {
+        "accepted_recordings": 3,
+        "available_text_bytes": 85,
+        "available_texts": 1,
+        "basename_bytes": 84,
+        "batch_pending": 2,
+        "captures": 3,
+        "characters": 520,
+        "parked": 1,
+        "request_id_bytes": 50,
+        "semantic_receipts": 3,
+        "streams": 2,
+        "terminal_receipts": 0,
+        "unique_roots": 2
+      },
+      "cost": {
+        "encoded_bytes": 1824,
+        "expanded_upper_bytes": 31756,
+        "peak_bytes": 4330896,
+        "validation_working_bytes": 4194304
+      },
+      "claim": "Functional debug smoke only; coordinator owns independent release measurement"
+    },
+    "populated": {
+      "file": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a13/development/populated_final_smoke.json",
+      "sha256": "0d6c0deac52c91052d7c52315810c000639732cadcb0cd2bb6ef3f835cf6f8d4",
+      "samples": 2,
+      "counts": {
+        "accepted_recordings": 3,
+        "available_text_bytes": 85,
+        "available_texts": 1,
+        "basename_bytes": 84,
+        "batch_pending": 2,
+        "captures": 3,
+        "characters": 2520,
+        "parked": 1,
+        "request_id_bytes": 50,
+        "semantic_receipts": 3,
+        "streams": 2,
+        "terminal_receipts": 0,
+        "unique_roots": 2
+      },
+      "cost": {
+        "encoded_bytes": 1815,
+        "expanded_upper_bytes": 31756,
+        "peak_bytes": 4330869,
+        "validation_working_bytes": 4194304
+      },
+      "claim": "Functional debug smoke only; coordinator owns independent release measurement"
+    }
+  },
+  "provisional_authored_semantic_equality": true
+}

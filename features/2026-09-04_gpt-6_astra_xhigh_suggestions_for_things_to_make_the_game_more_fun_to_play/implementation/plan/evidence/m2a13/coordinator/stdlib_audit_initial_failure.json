@@ -1,0 +1,8 @@
+{
+  "recorded_at_utc": "2026-09-08T22:58:35.092109+00:00",
+  "exit_code": 1,
+  "script_sha256": "014fa110fe00e50f5d5d5ae5ebde05e4f98ab5841b50077f572598563ccaffa7",
+  "failure": "Auditor resolved registry parent, but individual crate directories are symlinks to /home/ran/.cargo/registry. Resolve each two exact Cargo.lock-pinned parser crate roots before checking source paths.",
+  "original_log_archived": false,
+  "log_provenance": "Original traceback returned through exec, not redirected; this is a summary, not exact raw stderr."
+}

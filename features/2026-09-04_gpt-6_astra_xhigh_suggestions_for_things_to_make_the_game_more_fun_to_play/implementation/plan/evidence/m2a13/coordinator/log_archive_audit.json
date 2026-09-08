@@ -1,0 +1,127 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-08T23:20:22.410712+00:00",
+  "command_records": 16,
+  "cargo_records": 11,
+  "checks": [
+    "archive and exact retained original hashes/lengths",
+    "test totals independently parsed from originals",
+    "per-command source manifest hashes and v2 helper provenance",
+    "final verification uses complete frozen v2 source scope"
+  ],
+  "frozen_source_commands": [
+    "public_final",
+    "rustc_version",
+    "rustc_sysroot",
+    "stdlib_audit",
+    "checkpoint_final",
+    "authored_final_smoke",
+    "populated_final_smoke",
+    "workspace_serial"
+  ],
+  "totals": {
+    "check_initial": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "owner_initial": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "owner_fixed": {
+      "passed": 13,
+      "failed": 1,
+      "ignored": 2,
+      "targets": 1
+    },
+    "scoped_format": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "generate_fixtures": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "scoped_format_enums": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "public_initial": {
+      "passed": 5,
+      "failed": 1,
+      "ignored": 0,
+      "targets": 1
+    },
+    "authored_smoke": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "public_final": {
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "rustc_version": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "rustc_sysroot": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "stdlib_audit": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "checkpoint_final": {
+      "passed": 183,
+      "failed": 0,
+      "ignored": 27,
+      "targets": 34
+    },
+    "authored_final_smoke": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "populated_final_smoke": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "workspace_serial": {
+      "passed": 2113,
+      "failed": 0,
+      "ignored": 35,
+      "targets": 45
+    }
+  },
+  "development_failures": [
+    "owner_initial",
+    "owner_fixed",
+    "public_initial"
+  ],
+  "source_scope": "component-inputs-v2",
+  "source_manifest_sha256": "d4fa5d5a30d1281111ec54c358a06b0e857a6e008d784c9d175690c039c1d9aa"
+}
