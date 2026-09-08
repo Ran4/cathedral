@@ -1,0 +1,36 @@
+{
+  "checked_at_utc": "2026-09-08T05:01:21.790339+00:00",
+  "measurement_directory": "/tmp/alibi-m2a4-climate-smoke",
+  "result": "passed",
+  "smoke_only": true,
+  "runs": 2,
+  "raw_phase_samples": 24,
+  "checks": [
+    "archive and original hashes",
+    "phase lengths and nearest-rank percentiles",
+    "repeated metadata",
+    "count and byte admission",
+    "process timing metadata",
+    "all summary medians"
+  ],
+  "current_source_binary_runner_hashes_checked": true,
+  "global_max_us": {
+    "authored": {
+      "preflight_us": 102.696,
+      "export_us": 148.507,
+      "encode_us": 16.458000000000002,
+      "decode_validate_us": 93.093,
+      "candidate_validate_us": 67.44500000000001,
+      "drop_us": 0.262
+    },
+    "populated": {
+      "preflight_us": 103.831,
+      "export_us": 149.00300000000001,
+      "encode_us": 59.117000000000004,
+      "decode_validate_us": 93.751,
+      "candidate_validate_us": 65.461,
+      "drop_us": 0.245
+    }
+  },
+  "auditor_sha256": "2717cb3320a243f065ea60905aaec4ab8dda0a9c243a27cc1fcb3177845cc5c8"
+}

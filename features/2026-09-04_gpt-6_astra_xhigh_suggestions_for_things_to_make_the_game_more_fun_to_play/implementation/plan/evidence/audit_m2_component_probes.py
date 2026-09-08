@@ -88,9 +88,18 @@ def main():
         assert 0 < cost["expanded_upper_bytes"] <= 128 * 1024**2
         definition_working_bytes = cost.get("definition_working_bytes", 0)
         assert isinstance(definition_working_bytes, int) and definition_working_bytes >= 0
+        validation_working_bytes = cost.get("validation_working_bytes", 0)
+        assert isinstance(validation_working_bytes, int) and validation_working_bytes >= 0
+        if "validation_working_bytes" in cost:
+            assert validation_working_bytes == 64 * 1024
+            assert "definition_working_bytes" not in cost
+            assert data["scenario"] == "forced_storm_with_old_rate_bells"
+            assert data["counts"]["bell_strokes"] == 3
+            assert data["counts"]["weather_forced"] is True
+            assert data["counts"]["weather_residue"] is False
         assert cost["peak_bytes"] == (
             4096 + 4 * cost["expanded_upper_bytes"] + 3 * cost["encoded_bytes"]
-            + definition_working_bytes
+            + definition_working_bytes + validation_working_bytes
         )
         assert cost["peak_bytes"] <= data["shared_reserved_peak_excluding_running_bytes"] <= 1024**3
         for phase in PHASES:

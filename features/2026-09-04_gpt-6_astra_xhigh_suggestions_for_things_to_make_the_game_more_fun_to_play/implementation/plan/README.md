@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d and M2a1–M2a3 implemented and reviewed (2026-09-08). M2a4 climate/context is next; remaining M2 owner/envelope work and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending; see EXECUTION_AUTHORITY.md.
+Status: M0 baseline delivered; M1a–M1d and M2a1–M2a4 implemented and reviewed (2026-09-08). M2a5 knowledge/pollen is next; remaining M2 owner/envelope work and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending; see EXECUTION_AUTHORITY.md.
 
 # An Alibi in Stone — systems first, then the full quest
 

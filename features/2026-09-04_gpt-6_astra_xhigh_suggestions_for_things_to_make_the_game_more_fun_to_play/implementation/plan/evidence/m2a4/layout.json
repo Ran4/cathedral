@@ -1,0 +1,27 @@
+{
+  "source_manifest_sha256": "8aec88e3c25b186ce96a6a237f3ac61861f9bac5c807e8980ab9baef237ffd27",
+  "raw_log": "/tmp/alibi-m2a4-focused-frozen.log",
+  "raw_log_sha256": "31aeb4ae7e330125199cf5b70f9d4e7dfa73f717c4ef5e57f864ce36579bb70d",
+  "archive": "focused-frozen.log",
+  "archive_sha256": "e31cdf87e67d6cb8a9ee754300fd034d4509015565d5b5b9ba9ce2dc9831ee05",
+  "method": "Values printed by size_of checks in focused-frozen; extracted from raw output, which may interleave parallel test output. Bounds and buffer arithmetic are also asserted by tests.",
+  "size_of_bytes": {
+    "EngineClimateDtoV1": 760,
+    "EngineWire": 760,
+    "EngineView": 544,
+    "WorldClimateV1": 128,
+    "WeatherTimeline": 192,
+    "ForcedWeather": 64,
+    "WeatherResidue": 24,
+    "WeatherSample": 96,
+    "Episode": 64,
+    "Shower": 24
+  },
+  "validation_working_bytes": 65536,
+  "semantic_boundary_count_bound": 619,
+  "boundary_vec_capacity_bound": 1024,
+  "sampling_scratch_bound_bytes": 22784,
+  "queue_count_cap": 65536,
+  "queue_capacity_bytes_per_row_bound": 16,
+  "owner_tree_indexes": 0
+}

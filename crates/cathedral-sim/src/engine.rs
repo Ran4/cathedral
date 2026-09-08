@@ -18,6 +18,7 @@
 //! rides the hot channel and no longer bumps the revision at all
 //! ([`World::update_positions`]), so it neither needs nor triggers that flush.
 
+pub mod climate_checkpoint;
 mod command_policy;
 pub use command_policy::CommandPolicy;
 

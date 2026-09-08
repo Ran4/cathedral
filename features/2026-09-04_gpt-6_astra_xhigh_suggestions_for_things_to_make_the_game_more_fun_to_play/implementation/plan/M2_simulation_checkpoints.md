@@ -1,4 +1,4 @@
-Status: In progress (2026-09-08). M2a1–M2a3 private components are implemented and reviewed; the complete M2a envelope and remaining owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
+Status: In progress (2026-09-08). M2a1–M2a4 private components are implemented and reviewed; the complete M2a envelope and remaining owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
 
 # M2 — Complete simulation checkpoints
 
@@ -67,6 +67,12 @@ component API is represented as satisfying a frame or complete-save budget.
 `RoundDtoV1` preserves the whole Round/resident/market/production/household/road-party component. Its opaque candidate validates against an unadopted M2a2 backbone and exact installed geometry/catalog definitions, without Round::seed or Engine::new. [Owner coverage](evidence/m2a3/OWNER_COVERAGE.md) records every field family, shared projection sampling/writer contracts and remaining composition. [Admission](evidence/m2a3/ADMISSION.md) includes raw-input admission plus explicit definition scratch and the failed whole-envelope coexistence inference.
 
 Supported fixtures and continuation witnesses cover atomic water service, held/rebound market sessions, paused and manual/stranded production, household once-per-day markers, road departures/trips, signed-calendar pollen and resident fairness/support/weather/claim/projection state. This cut corrects nonpositive-calendar pollen ordering. Complete effective clock-rate/accounting horizon validation, all other private owners and full capture/hydration remain pending. M2a3 passes focused/public and full workspace verification (1,912 tests), plus independently audited release component and ordinary CPU measurements. [Coordinator review](evidence/m2a3/coordinator/review.md) accepts this component cut and records its unchanged allocation/frame limits. M2a4 private clock/weather and sampled World climate/context is next after commit; complete M2a and M2b remain pending.
+
+#### M2a4 review cut — 2026-09-08
+
+`WeatherTimelineDtoV1`, `WorldClimateDtoV1` and `EngineClimateDtoV1` preserve the exact private weather timeline, sampled World climate and clock/bell component. The live and initial clock reuse M2a1's descriptor; initial provenance is validated at its own origin, while the live segment and both processed cursors bind the saved boundary. [Owner coverage](evidence/m2a4/OWNER_COVERAGE.md) distinguishes World time/sound consistency copies from backbone ownership and lists all pending Engine cadence/configuration/scheduling fields. Candidate validation borrows unadopted backbone references and exact nav/shelter/area/sound definitions without seeding or partial production adoption.
+
+Continuation witnesses cover scheduled/custom climate, stable lightning identity, inherited wetness, drying residue, config-forced/disabled/unanchored/wrapped states and old-slope bell obligations after a scale change. [Admission](evidence/m2a4/ADMISSION.md) adds an explicit 64 KiB sampling allowance to raw-input admission; no limits increase. The forced-storm probe is not a universal scheduled-climate or full-save latency bound. Existing office/forced-lightning catch-up allocation and all-consumer effective-rate/accounting horizons remain full-envelope gates. M2a4 passes final focused/public and full workspace verification (1,928 tests); coordinator release review and commit remain pending; no M2a5 or M2b begins before its accepted commit.
 
 ### M2b — Capture boundary and hydrate path
 

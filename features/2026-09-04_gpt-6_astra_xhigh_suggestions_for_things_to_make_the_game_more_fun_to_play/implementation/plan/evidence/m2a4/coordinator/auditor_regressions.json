@@ -1,0 +1,37 @@
+{
+  "checked_at_utc": "2026-09-08T05:03:23.432210+00:00",
+  "auditor_sha256": "2717cb3320a243f065ea60905aaec4ab8dda0a9c243a27cc1fcb3177845cc5c8",
+  "positive_smoke_report": "climate_smoke_audit.json",
+  "positive_full_report": "climate_performance_audit.json",
+  "historical_regression_report": "historical_round_audit.json",
+  "negative_checks": [
+    {
+      "case": "percentile",
+      "expected_refusal": "preflight_us",
+      "exit_code": 1,
+      "tampered_directory": "/tmp/alibi-m2a4-auditor-negative-percentile",
+      "stderr_sha256": "7333a599c5a7ff532835fadf461d724c8f4c214e001442fece35202361c82e80",
+      "result": "rejected as expected",
+      "note": "Reported p99 altered by +1 microsecond; raw samples unchanged."
+    },
+    {
+      "case": "scratch_charge",
+      "expected_refusal": "validation_working_bytes == 64 * 1024",
+      "exit_code": 1,
+      "tampered_directory": "/tmp/alibi-m2a4-auditor-negative-scratch_charge",
+      "stderr_sha256": "8f56f157383da07d2db3a63b7e3a31f1e2b9a48ea445e2f3fdaeef3983831ca7",
+      "result": "rejected as expected",
+      "note": "Cost/scenario mutations update raw archive hashes and matching row/summary metadata so their semantic gates, rather than hash mismatches, cause rejection."
+    },
+    {
+      "case": "scenario_flag",
+      "expected_refusal": "weather_forced",
+      "exit_code": 1,
+      "tampered_directory": "/tmp/alibi-m2a4-auditor-negative-scenario_flag",
+      "stderr_sha256": "58812b8b5b4554ba8be4ac98537b7e2477d1beee1e52be2cda1f795b12896a3d",
+      "result": "rejected as expected",
+      "note": "Cost/scenario mutations update raw archive hashes and matching row/summary metadata so their semantic gates, rather than hash mismatches, cause rejection."
+    }
+  ],
+  "result": "passed"
+}

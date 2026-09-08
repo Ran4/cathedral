@@ -1,0 +1,57 @@
+{
+  "scope": "Single optimized-debug development samples, before module-order formatting and test-only immediate-copy assertion. Production component/example source unchanged by those final edits. Not release latency evidence. Forced sky bypasses scheduled-sample validation work.",
+  "records": [
+    {
+      "mode": "authored",
+      "original_path": "/tmp/alibi-m2a4-authored.json",
+      "archive": "development/authored-diagnostic.json",
+      "bytes": 759,
+      "sha256": "07cee22b66e3a10657508d7d0c992fdc850ea8d1bea0579f3bdb18fef2dd841b",
+      "scenario": "forced_storm_with_old_rate_bells",
+      "counts": {
+        "bell_strokes": 3,
+        "characters": 520,
+        "weather_forced": true,
+        "weather_residue": false
+      },
+      "placement": {
+        "placed": 0,
+        "requested": 0,
+        "unplaced": 0
+      },
+      "cost": {
+        "encoded_bytes": 2316,
+        "expanded_upper_bytes": 31314,
+        "peak_bytes": 201836,
+        "validation_working_bytes": 65536
+      },
+      "shared_reserved_peak_excluding_running_bytes": 403672
+    },
+    {
+      "mode": "populated",
+      "original_path": "/tmp/alibi-m2a4-populated.json",
+      "archive": "development/populated-diagnostic.json",
+      "bytes": 731,
+      "sha256": "7da1299753d1c0008567193c202d33b406a7b203c61d9dd7e272bfc71e1a0da1",
+      "scenario": "forced_storm_with_old_rate_bells",
+      "counts": {
+        "bell_strokes": 3,
+        "characters": 2520,
+        "weather_forced": true,
+        "weather_residue": false
+      },
+      "placement": {
+        "placed": 2000,
+        "requested": 2000,
+        "unplaced": 0
+      },
+      "cost": {
+        "encoded_bytes": 2316,
+        "expanded_upper_bytes": 31314,
+        "peak_bytes": 201836,
+        "validation_working_bytes": 65536
+      },
+      "shared_reserved_peak_excluding_running_bytes": 403672
+    }
+  ]
+}

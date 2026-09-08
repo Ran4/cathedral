@@ -18,6 +18,13 @@ pub struct WorldClockDtoV1 {
     night_brightness: f64,
 }
 impl WorldClock {
+    pub(crate) fn checkpoint_provenance_v1(&self, now: LogicalTime) -> Result<WorldClockDtoV1> {
+        checkpoint::logical("clock", self.elapsed_origin)?;
+        let origin = LogicalTime::new(self.elapsed_origin).expect("validated clock origin");
+        let dto = self.checkpoint_v1(origin)?;
+        dto.validate_provenance(now)?;
+        Ok(dto)
+    }
     pub fn checkpoint_v1(&self, now: LogicalTime) -> Result<WorldClockDtoV1> {
         checkpoint::logical("clock", self.elapsed_origin)?;
         let dto = WorldClockDtoV1 {
@@ -33,6 +40,17 @@ impl WorldClock {
     }
 }
 impl WorldClockDtoV1 {
+    pub(crate) fn validate_provenance(&self, now: LogicalTime) -> Result<()> {
+        checkpoint::logical("clock", now.seconds())?;
+        self.validate(self.elapsed_origin)?;
+        if self.elapsed_origin > now {
+            return Err(CheckpointError::new(
+                "clock",
+                "initial clock origin follows saved boundary",
+            ));
+        }
+        Ok(())
+    }
     pub fn validate(&self, now: LogicalTime) -> Result<()> {
         checkpoint::logical("clock", now.seconds())?;
         checkpoint::logical("clock", self.elapsed_origin.seconds())?;
@@ -55,6 +73,23 @@ impl WorldClockDtoV1 {
         self.validate(now)?;
         Ok(self.clock().game_days(now.seconds()))
     }
+    /// Engine rate changes retain these immutable parameters and advance the
+    /// segment origin. Historical intermediate slopes are not reconstructed.
+    pub(crate) fn validate_successor_of(&self, initial: &Self, now: LogicalTime) -> Result<()> {
+        initial.validate_provenance(now)?;
+        self.validate(now)?;
+        if self.seconds_per_day.to_bits() != initial.seconds_per_day.to_bits()
+            || self.night_brightness.to_bits() != initial.night_brightness.to_bits()
+            || self.elapsed_origin < initial.elapsed_origin
+            || self.epoch_days < initial.epoch_days
+        {
+            return Err(CheckpointError::new(
+                "clock",
+                "live clock contradicts initial clock authority",
+            ));
+        }
+        Ok(())
+    }
     /// Check the explicit envelope position against this exact clock segment.
     pub fn validate_position(&self, now: LogicalTime, days: f64) -> Result<()> {
         checkpoint::calendar("clock", days)?;
@@ -66,7 +101,7 @@ impl WorldClockDtoV1 {
         }
         Ok(())
     }
-    fn clock(&self) -> WorldClock {
+    pub(crate) fn clock(&self) -> WorldClock {
         WorldClock {
             seconds_per_day: self.seconds_per_day,
             epoch_days: self.epoch_days,

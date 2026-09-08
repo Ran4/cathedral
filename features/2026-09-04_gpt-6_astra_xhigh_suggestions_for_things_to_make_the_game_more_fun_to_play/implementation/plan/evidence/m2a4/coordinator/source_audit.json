@@ -1,0 +1,43 @@
+{
+  "checked_at_utc": "2026-09-08T04:55:54.353674+00:00",
+  "source_manifest_sha256": "8aec88e3c25b186ce96a6a237f3ac61861f9bac5c807e8980ab9baef237ffd27",
+  "pre_assertion_manifest_sha256": "11efde9d8ab0e158dcd7369a944e1b9728f361a44c4eae237a4c57358a129b4b",
+  "paths_changed_after_first_workspace": [
+    "crates/cathedral-sim/src/engine/climate_checkpoint/tests.rs"
+  ],
+  "source_files_checked": 95,
+  "changed_implementation_and_fixture_paths": [
+    "crates/cathedral-backends/examples/alibi_climate_cost.rs",
+    "crates/cathedral-sim/src/clock/checkpoint.rs",
+    "crates/cathedral-sim/src/engine.rs",
+    "crates/cathedral-sim/src/engine/climate_checkpoint.rs",
+    "crates/cathedral-sim/src/engine/climate_checkpoint/tests.rs",
+    "crates/cathedral-sim/src/weather.rs",
+    "crates/cathedral-sim/src/weather/checkpoint.rs",
+    "crates/cathedral-sim/src/weather/checkpoint/tests.rs",
+    "crates/cathedral-sim/src/world/checkpoint.rs",
+    "crates/cathedral-sim/tests/checkpoint_climate_boundary.rs",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/climate_active.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/climate_initial.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/weather_forced.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/weather_initial.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/weather_residue.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/world_climate_virgin.json"
+  ],
+  "changed_paths_all_covered": true,
+  "historical_fixtures_unchanged": [
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/README.md",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/backbone.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/backbone_completed.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/backbone_empty.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/clock.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/host_time.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/ledger.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/manifest.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/operations.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/round_active.json",
+    "crates/cathedral-sim/tests/fixtures/checkpoint_v1/round_empty.json"
+  ],
+  "ordinary_engine_and_weather_logic_unchanged": true,
+  "result": "passed"
+}

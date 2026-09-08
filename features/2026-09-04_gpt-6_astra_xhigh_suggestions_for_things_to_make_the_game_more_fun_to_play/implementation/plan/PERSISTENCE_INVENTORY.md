@@ -79,10 +79,10 @@ M2 must continue a world while someone lingers, another owns an optional route, 
 
 | Source | State | Policy |
 |---|---|---|
-| `clock.rs` — `WorldClock` | Seconds/day, epoch mapping, scale, brightness | S as a logical clock descriptor. Rebind to a new host origin without changing saved calendar time |
-| `weather.rs` — `WeatherTimeline` | Timeline seed/config, forced overrides, residue, strike sequence and processed anchors | S for future-affecting values. R derived sample/visual state from the restored timeline |
-| `Engine` | `last_clock_now`, `movement_now`, movement accumulator residual, `next_round_tick_at`, weather anchors, `last_player_sound_at` | S/rebase consistently; no duplicate calendar edges or missing fixed-step progress. Convert semantic `NEG_INFINITY` into DTO `Never`, as for knowledge/marks sweep cursors |
-| `Engine` | Owed bell strokes and sequence | S for owed semantic/audio events, or explicitly mark presentation already committed; do not ring a new civic event twice |
+| `clock.rs` — `WorldClock` | Seconds/day, epoch/origin segment, scale, brightness | M2a1/M2a4 S exact live descriptor plus initial config-clock provenance. Accepted logical time is independent of a replacement process origin; never reinterpret the old segment through the new slope |
+| `weather.rs` — `WeatherTimeline` | Config/climate, forced inherited water/anchor/revision, residue, next override revision | M2a4 S every private field. Strike identities are computed from the saved timeline, not a mutable strike sequence. Exact sampled World/Engine weather and processed cursor are S; pure recomputation validates rather than replaces them |
+| `Engine` | `last_clock_days`, `last_weather_days`, `last_weather_sample`; movement/round cadence and other elapsed owners | M2a4 S exact climate/clock cursors and sampled fields at the supplied boundary. Movement cadence, host residual assembly, player sound and other temporal owners remain explicitly pending with their own sentinel policies |
+| `Engine` | `bell_strokes`, `bell_seq` | M2a4 S exact future logical deadlines in order, including equal/interleaved old-slope obligations, and sequence identity. Old strokes drain even with ring/sound flags disabled; no dropping or reconstruction at decode |
 | `scheduler.rs` | Order, round-robin index, priority handoffs, protected player reactions, delay/backoff/running state | S. Retain obligations and fairness; do not reset the cast to the first actor after every load |
 | Scheduler in-flight request | Semantic obligation ID, actor/presence epoch, lane/fairness position, drained inbox, presented/pending history, prompt/resolved input receipt | S semantic input/obligation; T external job. Restore one load-specific retry, including an empty-inbox idle turn; generic failure/idle-requeue helpers are insufficient |
 | Scheduler held completion | Finished but unapplied exact success/error completion and its input receipt | S. Hydrate a held result without a provider request; normal current action validation still applies. Do not restore drained inputs to the inbox and then also apply the completion |
@@ -168,7 +168,7 @@ The [M0 field index](evidence/m0_baseline/owner_fields.json) records 323 named f
 
 ## M1a accepted-time owner delta — 2026-09-07
 
-These are implemented fields, superseding the older `last_clock_now`/`last_office_now` names above. The original M0 field capture remains historical; [the current M1a field capture](evidence/m1a/owner_fields.json) indexes the new selected-owner declarations. Complete DTO/hydration remains M2.
+These implemented fields supersede the original M0 `last_clock_now`/`last_office_now` names. The original M0 field capture remains historical; [the current M1a field capture](evidence/m1a/owner_fields.json) indexes the new selected-owner declarations. Complete DTO/hydration remains M2.
 
 | Owner / fields | Disposition and continuation |
 |---|---|
@@ -297,3 +297,11 @@ host offload/incremental coordination rather than synchronous frame execution.
 Retained recipes/worksites/stalls/source geometry bind installed definitions; dynamic legs, queues, bindings and historical markers retain their cadence. Manual transform IDs/recipes and non-`legacy_stall:` provenance remain Inventory-owned: a known spec name is not proof of generated job origin. Missing production plans/specs leave stranded jobs for the ordinary watchdog, and old jobs need not have a day counter pruned to today-1. Both pollen map and stale-capable index are saved; initial Never has signed numeric ordering that cannot busy-loop before calendar zero.
 
 Borrowed backbone references allow candidate-to-candidate validation without seeding a World. This does not finish general World/Engine geometry/time/root ownership. The clock-format range is not an effective-rate CPU gate; accounting totals have next-pass headroom but a complete time/rate horizon still needs validation. Full envelope, other owners, capture/adoption and host coordination remain pending.
+
+## M2a4 climate/clock component delta — 2026-09-08
+
+[Complete coverage](evidence/m2a4/OWNER_COVERAGE.md) and [bounded admission](evidence/m2a4/ADMISSION.md) now cover private WeatherTimeline, sampled World climate and the Engine clock/weather/bell component. World.current_time and sounds_enabled are checked copies of M2a2 backbone authority. World.current_weather and Engine.last_weather_sample remain exact saved values, validated against the private timeline rather than silently refreshed. Bare World None values, config-forced/null anchors, disabled overrides, inherited water/residue and revision wrap retain their actual owner meaning.
+
+Full ordered resolved sound/ambient, area and shelter definitions and the exact original navigation inputs are bound as supplied context. This is not complete geography/catalog resolver validation: place/home/patrol/worksite/generated bindings, knowledge area-adjacency, downstream catalogs and all other World/Engine owners remain mandatory. Movement/round cadence, host debt/residual assembly and scheduling/speech duties are not included in an apparently complete envelope. No constructor or seeding runs during component decode/candidate conversion.
+
+The narrower supported WeatherClimate numeric policy is explicit; accepting a finite clock descriptor does not certify an effective rate. Office and forced-lightning catch-up enumerate before truncation in unchanged ordinary source. Full-envelope temporal/accounting horizons and Running/retiring coexistence must be resolved before adoption. M2a2 plus Round already exceed the unchanged 1 GiB ceiling under naive simultaneous standalone reservations; the new small climate component does not resolve that composition problem.

@@ -1,0 +1,131 @@
+{
+  "checked_at_utc": "2026-09-08T05:02:34.933359+00:00",
+  "result": "passed",
+  "checks": [
+    {
+      "name": "public-initial",
+      "archive": "development/public-initial.log.gz",
+      "original_sha256": "b86ddb0d2e04b8099864dd2f36c91277111e8309a93cdebf34a5f2c59e31a097",
+      "archive_sha256": "043b6ac217e7b0f50d8c0a2ef04940a65144e706c37d41fc8495b53a5bcc00e4",
+      "test_results_verified": 1,
+      "result": "passed"
+    },
+    {
+      "name": "private-initial",
+      "archive": "development/private-initial.log.gz",
+      "original_sha256": "b9c83b1ca482beab28194866da2409702d4fdc6b4e73cad61545676cf8af185e",
+      "archive_sha256": "7777ad0bc76cd25f0683e869af961e7735e81d72ccd9cfb672684fe72255cbb6",
+      "test_results_verified": 1,
+      "result": "passed"
+    },
+    {
+      "name": "fixture-write",
+      "archive": "development/fixture-write.log.gz",
+      "original_sha256": "89806759573ab4563ffb530aec85261624ee50ebda95be2dd14057feaf7976a7",
+      "archive_sha256": "f269e88c8a687c71fdf8e9714b6867d5978911b63cf8a5f5bfacd42b16631aa3",
+      "test_results_verified": 1,
+      "result": "passed"
+    },
+    {
+      "name": "private-second",
+      "archive": "development/private-second.log.gz",
+      "original_sha256": "23382f099fd9291c7b40ad6464d43664a97012d9e6c0e80b2bc45c1f1f46f188",
+      "archive_sha256": "e837fb7288492ed1eebb3746167267c532ea7931cb2da3df30fd6cf99bf4f130",
+      "test_results_verified": 1,
+      "result": "passed"
+    },
+    {
+      "name": "weather-fixture-write",
+      "archive": "development/weather-fixture-write.log.gz",
+      "original_sha256": "58779b4a4fae13743a6726ff04a8cb1c7ee8430f99e1cab94009868ea5bdb569",
+      "archive_sha256": "b0e60cbee49daee98de1d7ddb2f6a6b1624f305b1c42e1cd909fd87cc1d65e55",
+      "test_results_verified": 1,
+      "result": "passed"
+    },
+    {
+      "name": "climate-fixture-write-final",
+      "archive": "development/climate-fixture-write-final.log.gz",
+      "original_sha256": "df3de7f2dd921f1da5476b7597d157543ef90f2d8ccd2d9f68317acc25d21f1b",
+      "archive_sha256": "e516746855d9ff3d6e981268b1eaaa1b2ca0436a45e6695932ef4539b1864e07",
+      "test_results_verified": 1,
+      "result": "passed"
+    },
+    {
+      "name": "authored-diagnostic",
+      "archive": "development/authored-diagnostic.log.gz",
+      "original_sha256": "75b9b53c85bdfa030e7757ffd1d9e5cab836c8b544545f2d30de03c6c3ab913f",
+      "archive_sha256": "ce2bad4fa90e0b1ce83c7d81d3a7a9605e30869c8144a38e949b0aaa6ff8dca3",
+      "test_results_verified": 0,
+      "result": "passed"
+    },
+    {
+      "name": "populated-diagnostic",
+      "archive": "development/populated-diagnostic.log.gz",
+      "original_sha256": "10fc3500a70343f55f3084c574d6fb603db18f21a4b24fb25cb9057238d2a1b8",
+      "archive_sha256": "14bb14f1babea84534fa19b0d1b1e5d97c0a087f5f8affaf48b6d14244e71540",
+      "test_results_verified": 0,
+      "result": "passed"
+    },
+    {
+      "name": "focused-final",
+      "archive": "development/focused-final.log.gz",
+      "original_sha256": "98c2d51b49fd606fc3769b7e051e9bf4dd65d3991178c86a4a717b9e18bac35f",
+      "archive_sha256": "a3eb2ec5cb9f6d5677fca26f9ab2ab7bbc6190c1a57a85462eea41d71fa3814c",
+      "test_results_verified": 1,
+      "result": "passed"
+    },
+    {
+      "name": "public-final",
+      "archive": "development/public-final.log.gz",
+      "original_sha256": "7ce746b99f45b51c22ca321f8b165db617ddde1be84b600b12465531bff423c2",
+      "archive_sha256": "996e345854bb521e2b923bc420e226f4154ba94967bf79b79638db391996f7b9",
+      "test_results_verified": 3,
+      "result": "passed"
+    },
+    {
+      "name": "workspace-final",
+      "archive": "development/workspace-final.log.gz",
+      "original_sha256": "fb9647a98c03d8033f0367f6f42204a8b195f3001ff981e3230efdd44a40b3b8",
+      "archive_sha256": "5034f4505f06cf2586ad0339fcfe96bd426bde3e51998aff55a9fd014b1e8c7b",
+      "test_results_verified": 36,
+      "result": "passed"
+    },
+    {
+      "name": "focused-frozen",
+      "archive": "focused-frozen.log",
+      "original_sha256": "31aeb4ae7e330125199cf5b70f9d4e7dfa73f717c4ef5e57f864ce36579bb70d",
+      "archive_sha256": "e31cdf87e67d6cb8a9ee754300fd034d4509015565d5b5b9ba9ce2dc9831ee05",
+      "test_results_verified": 1,
+      "result": "passed"
+    },
+    {
+      "name": "compile-initial",
+      "archive": "development/compile-initial.log.gz",
+      "original_sha256": "cc7c50413739b2289a094f4542d4d2cde56f15419e28c6230c1876c12d5edc97",
+      "archive_sha256": "d27496a90390dc3a63c3439d57e09d3353d80797aa17e98840587e5d7a511147",
+      "test_results_verified": 0,
+      "result": "passed"
+    },
+    {
+      "name": "workspace-frozen",
+      "archive": "workspace-frozen.log",
+      "original_sha256": "076dfc90ce97a04af8c87f4d0213e204865b8fa7101cc239303808329825d3b6",
+      "archive_sha256": "33ca17eb40def43509e77ffe967d25faed3b60dd2c97fdb20f9ddc8a869218a5",
+      "test_results_verified": 36,
+      "result": "passed"
+    }
+  ],
+  "commands_cross_checked": 13,
+  "workspace_totals": {
+    "passed": 1928,
+    "failed": 0,
+    "ignored": 13,
+    "targets": 36
+  },
+  "layout_values_checked": 10,
+  "development_diagnostics_checked": 2,
+  "source_manifests_cross_checked": true,
+  "release_build_artifacts_checked": 2,
+  "release_reference_binary_checked": true,
+  "note": "Original bytes independently compared with archives, command metadata and reported results. Only declared terminal LF removal or exact gzip accepted. Initial --no-run compile has no test results or invented timing."
+}

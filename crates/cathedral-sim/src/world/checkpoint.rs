@@ -411,6 +411,8 @@ mod tests;
 /// validation. No World construction, seeding, replacement or clone is needed.
 #[derive(Clone, Copy)]
 pub(crate) struct BackboneRefs<'a> {
+    pub current_time: Option<WorldTime>,
+    pub sounds_enabled: bool,
     pub characters: &'a BTreeMap<ActorId, Character>,
     pub items: &'a BTreeMap<ItemId, Item>,
     pub places: &'a PlaceRegistry,
@@ -420,6 +422,8 @@ pub(crate) struct BackboneRefs<'a> {
 impl<'a> BackboneRefs<'a> {
     pub(crate) fn from_world(w: &'a World) -> Self {
         Self {
+            current_time: w.current_time,
+            sounds_enabled: w.sounds_enabled,
             characters: &w.characters,
             items: &w.items,
             places: &w.places,
@@ -432,6 +436,8 @@ impl BackboneCandidate {
     pub(crate) fn references(&self) -> BackboneRefs<'_> {
         let d = &self.data;
         BackboneRefs {
+            current_time: d.current_time,
+            sounds_enabled: d.sounds_enabled,
             characters: &d.characters,
             items: &d.inventory.items,
             places: &d.places,

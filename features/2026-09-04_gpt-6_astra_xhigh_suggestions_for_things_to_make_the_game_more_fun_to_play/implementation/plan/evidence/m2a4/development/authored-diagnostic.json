@@ -1,0 +1,41 @@
+{
+  "candidate_validate_us": [
+    91.08200000000001
+  ],
+  "cost": {
+    "encoded_bytes": 2316,
+    "expanded_upper_bytes": 31314,
+    "peak_bytes": 201836,
+    "validation_working_bytes": 65536
+  },
+  "counts": {
+    "bell_strokes": 3,
+    "characters": 520,
+    "weather_forced": true,
+    "weather_residue": false
+  },
+  "decode_validate_us": [
+    125.44699999999999
+  ],
+  "drop_us": [
+    0.26899999999999996
+  ],
+  "encode_us": [
+    22.126
+  ],
+  "export_us": [
+    199.881
+  ],
+  "mode": "authored",
+  "placement": {
+    "placed": 0,
+    "requested": 0,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    127.99799999999999
+  ],
+  "samples": 1,
+  "scenario": "forced_storm_with_old_rate_bells",
+  "shared_reserved_peak_excluding_running_bytes": 403672
+}

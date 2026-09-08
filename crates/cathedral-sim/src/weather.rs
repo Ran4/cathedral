@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Office, math::Vec3};
 
+pub mod checkpoint;
+
 const HOURS_PER_DAY: f64 = 24.0;
 const DAYS_PER_HOUR: f64 = 1.0 / HOURS_PER_DAY;
 const MINUTES_PER_DAY: f64 = HOURS_PER_DAY * 60.0;

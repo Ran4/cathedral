@@ -1,0 +1,99 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 23.14s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-017f852d3c359e76)
+
+running 55 tests
+test checkpoint::tests::accepted_time_preserves_debt_and_both_residuals_without_offline_work ... ok
+test checkpoint::tests::exhausted_command_counters_remain_exhausted_after_component_roundtrip ... ok
+EngineClimateDtoV1=760
+EngineWire=760
+test checkpoint::tests::admission_tracks_all_cohorts_and_attached_values_across_threads ... EngineView=544
+WorldClimateV1=128
+ok
+test checkpoint::tests::only_explicit_negative_infinity_becomes_never_and_negative_calendar_is_valid ... ok
+test checkpoint::tests::manifest_requires_exact_content_geometry_behavior_generator_and_hash_build ... ok
+test checkpoint::tests::regenerate_checkpoint_component_fixtures ... ignored, explicit supported-component fixture regeneration only
+test checkpoint::tests::receipt_principals_preserve_historical_and_rejected_absent_targets ... ok
+test engine::climate_checkpoint::tests::write_checkpoint_climate_fixtures ... ignored, explicit supported M2a4 component fixture writer
+test checkpoint::tests::ledger_rejects_duplicate_ids_ordinals_roots_and_invalid_numeric_or_string_fields ... ok
+test checkpoint::tests::operation_credit_cannot_exceed_elapsed_work_and_keeps_obstruction_gaps ... ok
+test checkpoint::tests::operation_owner_roundtrip_rebuilds_claims_and_preserves_exact_once_completion ... ok
+test checkpoint::tests::supported_component_fixtures_pin_owner_wire_without_claiming_a_complete_save ... ok
+Round=1120
+Townsperson=296
+RoadParty=304
+Counter=184
+ResolvedProductionPlan=56
+ResolvedTransformSpec=152
+ResolvedTrade=96
+RoundLeg=80
+WaterSource=152
+FoodStall=256
+MarketErrand=192
+CounterBindingKey=80
+CounterSession=32
+StockSource=32
+StockPlanSpec=112
+StockTargetSpec=56
+FoodPhase=32
+WeatherShelterIntent=64
+TransformStallWatch=40
+Resident=288
+ResidentWeather=80
+Residents=224
+ProjectionAnchor=120
+test checkpoint::tests::operation_wire_rejects_duplicates_impossible_claims_deadlines_and_manifest_mismatch ... ok
+test engine::climate_checkpoint::tests::checkpoint_initial_clock_provenance_does_not_extrapolate_the_unused_slope ... ok
+test checkpoint::tests::clock_rate_segment_and_calendar_bits_roundtrip_without_reconstruction ... ok
+test engine::climate_checkpoint::tests::checkpoint_climate_layout_and_supported_fixtures_are_exact ... ok
+empty_cost=RoundCost { encoded_bytes: 1550, expanded_upper_bytes: 37434, definition_working_bytes: 4194304, peak_bytes: 4352786 }
+test round::checkpoint::tests::round_declared_scratch_and_closed_record_layouts_fit_the_admission_model ... ok
+test checkpoint::tests::malformed_decode_and_failed_export_release_admission_without_allocating_owner ... ok
+test round::tests::checkpoint_continuation::write_checkpoint_round_fixtures ... ignored, explicit supported fixture writer
+test round::checkpoint::tests::round_preflight_rejects_malicious_shape_before_record_decoding ... ok
+test weather::checkpoint::tests::checkpoint_override_inherits_water_and_clear_keeps_drying_residue ... ok
+test engine::climate_checkpoint::tests::checkpoint_climate_commands_resample_in_poll_order_and_clear_residue ... ok
+WeatherTimeline=192
+ForcedWeather=64
+WeatherResidue=24
+WeatherSample=96
+Episode=64
+Shower=24
+sampling_working_upper_bytes=22784
+test weather::checkpoint::tests::checkpoint_weather_layout_and_sampling_scratch_are_closed_and_bounded ... ok
+test weather::checkpoint::tests::checkpoint_unanchored_and_wrapping_overrides_preserve_their_actual_origin ... ok
+test weather::checkpoint::tests::checkpoint_weather_supported_fixtures_preserve_all_private_shapes ... ok
+test weather::checkpoint::tests::checkpoint_weather_strict_corruption_releases_admission ... ok
+test weather::checkpoint::tests::write_checkpoint_weather_fixtures ... ignored, explicit supported M2a4 weather fixture writer
+test world::checkpoint::tests::duplicate_active_transform_id_refuses_before_mutation ... ok
+test world::checkpoint::tests::component_boundary_requires_flush_and_valid_numeric_export ... ok
+test engine::climate_checkpoint::tests::checkpoint_climate_continues_old_slope_bells_override_and_lightning_once ... ok
+test world::checkpoint::tests::exact_supported_backbone_fixture ... ok
+M2A2_LAYOUTS [["Character",1680],["CharacterSheet",808],["CharacterState",872],["LoreProfile",488],["MovementOption",112],["IntentOption",128],["ResidentOption",112],["GeneratedRoutineOption",56],["Item",80],["TransformJob",144],["StockSpec",56],["RestockShare",56],["PlaceEntry",104],["String",24],["VecHeader",24]]
+M2A2_SPARSE_CHARACTER_NODE record_charge=19396 node_bound=18872
+test world::checkpoint::tests::populated_record_layout_has_admitted_inline_and_nested_headroom ... ok
+test world::checkpoint::tests::ordinary_engine_digest_after_component_restore_mints_the_same_item_once ... ok
+test world::checkpoint::tests::regenerate_backbone_fixture ... ignored, explicit supported component fixture generation
+test world::checkpoint::tests::private_backbone_round_trip_and_transform_replay_continue ... ok
+test world::checkpoint::tests::escaped_real_fields_numeric_and_set_corruption_are_bounded ... ok
+test engine::climate_checkpoint::tests::checkpoint_climate_rejects_time_config_queue_and_numeric_corruption ... ok
+test world::checkpoint::tests::strict_backbone_corruption_never_constructs_a_candidate ... ok
+test world::checkpoint::tests::strict_wire_and_aggregate_preflight_reject_malicious_shapes ... ok
+test checkpoint::tests::maximum_operation_owner_and_empty_owner_fit_and_roundtrip ... ok
+test engine::climate_checkpoint::tests::checkpoint_climate_raw_charge_and_maximum_duplicate_queue_survive_candidate ... ok
+test weather::checkpoint::tests::checkpoint_scheduled_climate_and_lightning_continue_with_stable_crossing_ids ... ok
+test checkpoint::tests::ledger_empty_and_saturated_replay_keep_holes_floors_and_unfinished_roots ... ok
+test checkpoint::tests::wire_rejects_extra_records_huge_escaped_strings_and_deep_json_before_owner_use ... ok
+test world::checkpoint::tests::movement_polyline_patrol_and_gait_continue_from_saved_state ... ok
+test round::tests::checkpoint_continuation::checkpoint_supported_round_fixture_bytes_are_exact ... ok
+test round::tests::checkpoint_continuation::checkpoint_road_departure_notifications_and_next_trip_resume ... ok
+test round::tests::checkpoint_continuation::checkpoint_market_session_hold_rebind_and_purchase_continue ... ok
+test round::tests::checkpoint_continuation::checkpoint_signed_pollen_order_rearm_and_stale_entries_are_bounded ... ok
+test round::tests::checkpoint_continuation::checkpoint_services_production_and_household_guards_continue_exactly ... ok
+test round::tests::checkpoint_continuation::checkpoint_stranded_and_manual_transform_obligations_survive ... ok
+test round::residents::tests::checkpoint_continuation::checkpoint_occupied_destination_alias_and_clearance_resume_without_double_owner ... ok
+test round::residents::tests::checkpoint_continuation::checkpoint_stale_post_speech_sample_resumes_fairness_and_support ... ok
+test round::tests::checkpoint_continuation::checkpoint_round_corruption_rejects_static_and_dynamic_disagreement ... ok
+test round::residents::tests::checkpoint_continuation::checkpoint_weather_transit_and_arrived_claims_continue ... ok
+
+test result: ok. 50 passed; 0 failed; 5 ignored; 0 measured; 605 filtered out; finished in 6.36s

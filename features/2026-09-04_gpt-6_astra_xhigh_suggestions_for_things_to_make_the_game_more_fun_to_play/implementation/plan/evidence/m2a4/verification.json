@@ -1,0 +1,578 @@
+{
+  "status": "Implemented and coordinator-reviewed component cut (2026-09-08); final source, workspace, release measurement and evidence audits pass. Full-envelope/host acceptance remains pending.",
+  "checks": [
+    {
+      "name": "focused-frozen",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint",
+        "--",
+        "--nocapture"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T04:54:08.688394+00:00",
+      "wall_seconds": 29.541669887956232,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a4-focused-frozen.log",
+      "original_bytes": 7477,
+      "original_sha256": "31aeb4ae7e330125199cf5b70f9d4e7dfa73f717c4ef5e57f864ce36579bb70d",
+      "archive": "focused-frozen.log",
+      "archive_sha256": "e31cdf87e67d6cb8a9ee754300fd034d4509015565d5b5b9ba9ce2dc9831ee05",
+      "archive_bytes": 7476,
+      "normalization": "Remove only redundant terminal LF bytes: raw.rstrip(b\"\\n\") + b\"\\n\". No other byte changes.",
+      "original_preservation": "Original raw output remains unchanged at original_path; archive is a separate copy.",
+      "test_results": [
+        {
+          "passed": 50,
+          "failed": 0,
+          "ignored": 5
+        }
+      ],
+      "source_manifest": "source_hashes.json",
+      "source_manifest_sha256": "8aec88e3c25b186ce96a6a237f3ac61861f9bac5c807e8980ab9baef237ffd27"
+    },
+    {
+      "name": "public-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--test",
+        "checkpoint_climate_boundary",
+        "--test",
+        "checkpoint_round_boundary",
+        "--test",
+        "checkpoint_character"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T04:39:45.190200+00:00",
+      "wall_seconds": 21.20399401790928,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a4-public-final.log",
+      "original_bytes": 1778,
+      "original_sha256": "7ce746b99f45b51c22ca321f8b165db617ddde1be84b600b12465531bff423c2",
+      "archive": "development/public-final.log.gz",
+      "archive_sha256": "996e345854bb521e2b923bc420e226f4154ba94967bf79b79638db391996f7b9",
+      "archive_bytes": 769,
+      "normalization": "None. Lossless gzip with mtime=0; decompression yields exact original bytes.",
+      "original_preservation": "Original raw output remains unchanged at original_path; archive is a separate copy.",
+      "test_results": [
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "note": "Pre-assertion public pass; these unchanged public targets also pass inside final workspace-frozen. The only later functional edit is the private test immediate restoration assertion; module declaration ordering also changed for rustfmt before the first workspace."
+    },
+    {
+      "name": "workspace-final",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T04:41:17.661554+00:00",
+      "wall_seconds": 577.3556212859694,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a4-workspace-final.log",
+      "original_bytes": 243850,
+      "original_sha256": "fb9647a98c03d8033f0367f6f42204a8b195f3001ff981e3230efdd44a40b3b8",
+      "archive": "development/workspace-final.log.gz",
+      "archive_sha256": "5034f4505f06cf2586ad0339fcfe96bd426bde3e51998aff55a9fd014b1e8c7b",
+      "archive_bytes": 47556,
+      "normalization": "None. Lossless gzip with mtime=0; decompression yields exact original bytes.",
+      "original_preservation": "Original raw output remains unchanged at original_path; archive is a separate copy.",
+      "test_results": [
+        {
+          "passed": 158,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 2
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 655,
+          "failed": 0,
+          "ignored": 5
+        },
+        {
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 26,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 84,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 103,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 43,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 30,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 41,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 19,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 47,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 542,
+          "failed": 0,
+          "ignored": 3
+        },
+        {
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "source_manifest": "coordinator/pre_assertion_source_hashes.json",
+      "source_manifest_sha256": "11efde9d8ab0e158dcd7369a944e1b9728f361a44c4eae237a4c57358a129b4b",
+      "note": "Successful full intermediate workspace; followed only by the agreed immediate pre-poll restoration assertion in tests. Final acceptance uses workspace-frozen."
+    },
+    {
+      "name": "workspace-frozen",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace"
+      ],
+      "environment": {
+        "PATH": "/usr/bin:/bin:/home/ran/.local/bin",
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "CATHEDRAL_HEADLESS": "1",
+        "CATHEDRAL_FAKE_BACKEND": "1"
+      },
+      "started_utc": "2026-09-08T04:54:43.472151+00:00",
+      "wall_seconds": 89.91568330593873,
+      "exit_code": 0,
+      "original_path": "/tmp/alibi-m2a4-workspace-frozen.log",
+      "original_bytes": 243595,
+      "original_sha256": "076dfc90ce97a04af8c87f4d0213e204865b8fa7101cc239303808329825d3b6",
+      "archive": "workspace-frozen.log",
+      "archive_sha256": "33ca17eb40def43509e77ffe967d25faed3b60dd2c97fdb20f9ddc8a869218a5",
+      "archive_bytes": 243594,
+      "normalization": "Remove only redundant terminal LF bytes: raw.rstrip(b\"\\n\") + b\"\\n\". No other byte changes.",
+      "original_preservation": "Original raw output remains unchanged at original_path; archive is a separate copy.",
+      "test_results": [
+        {
+          "passed": 158,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 2
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 655,
+          "failed": 0,
+          "ignored": 5
+        },
+        {
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 26,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 84,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 103,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 43,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 30,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 41,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 19,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 47,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 542,
+          "failed": 0,
+          "ignored": 3
+        },
+        {
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "source_manifest": "source_hashes.json",
+      "source_manifest_sha256": "8aec88e3c25b186ce96a6a237f3ac61861f9bac5c807e8980ab9baef237ffd27"
+    }
+  ],
+  "source_manifest_files": 95,
+  "source_manifest_sha256": "8aec88e3c25b186ce96a6a237f3ac61861f9bac5c807e8980ab9baef237ffd27",
+  "source_unchanged_after_workspace": true,
+  "workspace_totals": {
+    "targets": 36,
+    "passed": 1928,
+    "failed": 0,
+    "ignored": 13
+  },
+  "focused_checkpoint": {
+    "passed": 50,
+    "failed": 0,
+    "ignored": 5
+  },
+  "public_targets": {
+    "passed": 13,
+    "failed": 0,
+    "ignored": 0,
+    "included_in_final_workspace": true
+  },
+  "source_and_format_audit": "coordinator/source_audit.json and coordinator/format_audit.json: 95 hashes, 16 changed implementation/fixture paths, 10 scoped Rust files, 11 historical fixtures unchanged.",
+  "ordinary_path_policy": "No ordinary Engine/weather logic changed beyond module declarations. Coordinator verified byte identity to base; no repeated ordinary CPU benchmark requested.",
+  "development_failure": "private-initial: four test prefix assertions expected 15.5 rather than the actual clock-derived 15.499999999999998 first pending bell deadline. All four failed before fixture comparison. Expected deadlines now use elapsed_at_day plus stroke_times; no production rounding or runtime change.",
+  "other_intermediate_checks": "commands.json and log_archives.json retain exact commands/environment and original/archive hashes for all captured development and fixture-generation runs; initial compile predates timed wrapper and has no invented start or wall duration.",
+  "debug_probe_scope": "diagnostics.json retains one authored and one populated optimized-debug sample, forced storm with three old-rate bells. Not release percentiles or universal scheduled-climate timing.",
+  "release_measurements": "performance/README.md and coordinator/climate_performance_audit.json: 6 runs, 3600 raw phase samples, all814 source/content hashes and binary/runner hashes unchanged; forced-storm scope only.",
+  "remaining_gates": "Full envelope/capture/adoption, Running/retiring allocation coexistence and clock effective-rate/accounting horizon remain unaccepted. Component Save+Load figures exclude Running.",
+  "git_diff_check": {
+    "command": [
+      "/usr/bin/git",
+      "diff",
+      "--check"
+    ],
+    "exit_code": 0
+  },
+  "evidence_archive_audit": {
+    "logs": 14,
+    "all_original_and_archive_hashes_match": true,
+    "all_gzip_decompressions_exact": true,
+    "final_normalization_exact": true,
+    "untracked_text_whitespace_checked": [
+      "README.md",
+      "ADMISSION.md",
+      "layout.json",
+      "commands.json",
+      "workspace-frozen.log",
+      "diagnostics.json",
+      "log_archives.json",
+      "focused-frozen.log",
+      "OWNER_COVERAGE.md",
+      "source_hashes.json",
+      "verification.json",
+      "development/authored-diagnostic.json",
+      "development/populated-diagnostic.json"
+    ]
+  },
+  "coordinator_review": "coordinator/review.md"
+}

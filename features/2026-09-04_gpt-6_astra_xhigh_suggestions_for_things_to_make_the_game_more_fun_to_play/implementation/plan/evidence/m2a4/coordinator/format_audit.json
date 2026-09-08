@@ -1,0 +1,64 @@
+{
+  "command_template": [
+    "/home/ran/.cargo/bin/rustfmt",
+    "--check",
+    "--edition",
+    "2024",
+    "--config",
+    "skip_children=true",
+    "PATH"
+  ],
+  "checks": [
+    {
+      "path": "crates/cathedral-backends/examples/alibi_climate_cost.rs",
+      "sha256": "65c5029525fd0e687443e6a7ba12c562b959865074144f22ddaaaa0486011ceb",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/clock/checkpoint.rs",
+      "sha256": "6bb731f1224e18b3fdb2de5a163d36941decb3210eb7b5c1c19cb41da9eaa599",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine.rs",
+      "sha256": "ed1338cdc2c36f6d67da96187afd9e8cc6c60b7922e5b38714565ec631930d54",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/climate_checkpoint.rs",
+      "sha256": "0c0663ae7301877f25de56ba7755c0e1c80c5c4f513ce52d73daed831675f787",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/climate_checkpoint/tests.rs",
+      "sha256": "e7d864630dc93240750a82d1521c0180021587c25872baeb4dc36f693096464c",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/weather.rs",
+      "sha256": "76c7306eee44411dd514f6f1abf89a47137038fba688d6b9235b302ebf03622d",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/weather/checkpoint.rs",
+      "sha256": "9f8b35642c748a02ddde8dfd4507304828d99974f717b9bf2fa26718fb12cb8e",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/weather/checkpoint/tests.rs",
+      "sha256": "7b27145cc139acb2104823be22139205cf1ef6c25dc0134d30df1bf5f7f9c858",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/src/world/checkpoint.rs",
+      "sha256": "019db480cdc0a86350d92b706277b07ce279c85f004baf7dd7519fc6bf99d7c0",
+      "exit_code": 0
+    },
+    {
+      "path": "crates/cathedral-sim/tests/checkpoint_climate_boundary.rs",
+      "sha256": "eb51fc3f32d5245d061dbddbd887397766bd979b96a3ae8d612c63424afc8971",
+      "exit_code": 0
+    }
+  ],
+  "note": "Read-only check on final frozen source; no formatting applied."
+}

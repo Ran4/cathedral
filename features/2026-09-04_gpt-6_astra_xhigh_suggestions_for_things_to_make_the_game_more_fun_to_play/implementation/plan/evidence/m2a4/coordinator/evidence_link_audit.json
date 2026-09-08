@@ -1,0 +1,14 @@
+{
+  "checked_at_utc": "2026-09-08T05:09:37.025657+00:00",
+  "result": "passed",
+  "markdown_files": {
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a4/ADMISSION.md": "e7af90d6b4ec8122c4acc606c3c1e17615a1375bd91fe3d42b0e37286af617a2",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a4/OWNER_COVERAGE.md": "c4ba65940e540be33b10858c2a598258b7f71c57447b37b3eab99833b6e7a122",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a4/README.md": "5a4f9c206a8a1f44e5355b3cd46d1a545a723169b72708d4aa247bb795dc67ca",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a4/coordinator/review.md": "ca8f1e5a0bd3fced021063d2b43f12ee2007ce800ac9466db340cdd133f26011",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a4/performance/README.md": "823de4bd58e0eee402776e3cc9a685d7f9bd9cb86e8201be79bc203c1d4293f4"
+  },
+  "local_links_and_anchors_checked": 26,
+  "source_manifest_sha256": "8aec88e3c25b186ce96a6a237f3ac61861f9bac5c807e8980ab9baef237ffd27",
+  "source_files_checked": 95
+}
