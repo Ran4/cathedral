@@ -118,6 +118,7 @@ enum TurnLane {
 /// The one outstanding request.
 #[derive(Debug, Clone, PartialEq)]
 struct InFlight {
+    output_token_budget: crate::traits::AcceptedOutputBudget,
     actor_id: ActorId,
     /// Presence generation at submit. A reply from before departure may never
     /// act on a later visit by the same stable actor id.
@@ -1013,6 +1014,9 @@ impl NpcScheduler {
                 self.submitted = Some(actor_id.clone());
                 self.retry_work.remove(&actor_id);
                 self.in_flight = Some(InFlight {
+                    output_token_budget: crate::traits::AcceptedOutputBudget::Accepted(
+                        output_token_budget,
+                    ),
                     semantic,
                     actor_id: actor_id.clone(),
                     presence_epoch,
@@ -1866,6 +1870,7 @@ mod tests {
             .reserve_operation(TURN_PRODUCER)
             .unwrap();
         let flight = InFlight {
+            output_token_budget: crate::traits::AcceptedOutputBudget::MissingLegacy,
             actor_id: actor.clone(),
             presence_epoch: 0,
             request_id: RequestId(1),

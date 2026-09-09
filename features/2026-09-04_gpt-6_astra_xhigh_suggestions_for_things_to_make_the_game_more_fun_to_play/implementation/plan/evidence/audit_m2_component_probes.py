@@ -38,6 +38,85 @@ def quantiles(samples):
     }
 
 
+# Independently pinned after source review of debug primary evidence.
+COGNITION_PRIMARY_SHA256 = {
+    "scheduler": {
+        "authored": "076a27ca7a902e0056ce3d6d514c1a22a3f0767ea110872296c34a6113d46b1f",
+        "populated": "5497858cdf1b5818801409b9431a4cd52c996b17bf1acc7e435ea9b7bdadb915",
+    },
+    "night": {
+        "authored": "cddd1843aea32b76a8a9c278bb35ea2044e3cf9f5abf4be4ce3b62d7065daf90",
+        "populated": "801bfc2d89ffafb41dfadea3409774c8e0fe80cc31de4b236d48b76a7b1e88e5",
+    },
+}
+
+
+def validate_cognition_inputs(data, extra):
+    scenario = data["scenario"]
+    lane = {"cognition-inputs-scheduler-v1": "scheduler",
+            "cognition-inputs-night-v1": "night"}[scenario]
+    counts = data["counts"]
+    saved = data["saved_inputs"]
+    assert set(saved) == {"scheduler", "night"}
+    assert counts == {
+        "scheduler": lane == "scheduler", "night": lane == "night",
+        "scheduler_prompt_bytes": len(saved["scheduler"]["prompt"].encode()) if saved["scheduler"] else 0,
+        "night_prompt_bytes": len(saved["night"]["prompt"].encode()) if saved["night"] else 0,
+        "scheduler_provider_default": bool(saved["scheduler"] and saved["scheduler"]["output_token_budget"] is None),
+        "night_provider_default": bool(saved["night"] and saved["night"]["output_token_budget"] is None),
+    }
+    assert saved[lane] is not None
+    assert saved["night" if lane == "scheduler" else "scheduler"] is None
+    original = data["submitted_requests"]
+    assert len(original) == (3 if lane == "scheduler" else 2)
+    method = "request_with_budget" if lane == "scheduler" else "request_night"
+    for i, call in enumerate(original, 1):
+        assert set(call) == {"method", "prompt", "output_token_budget", "request_id"}
+        assert call["method"] == method and call["request_id"] == i
+        assert 0 < len(call["prompt"].encode()) <= 65536
+        assert call["output_token_budget"] is None or (
+            type(call["output_token_budget"]) is int and 0 <= call["output_token_budget"] <= 2**32 - 1)
+    row = saved[lane]
+    match = [r for r in original if r["request_id"] == row["request_id"]]
+    assert len(match) == 1
+    assert {k: row[k] for k in match[0]} == match[0]
+    assert row["request_id"] == len(original)
+    common = {"method", "prompt", "output_token_budget", "request_id", "semantic", "presence_epoch"}
+    assert set(row) == common | ({"actor_id", "lane"} if lane == "scheduler" else {"subject", "owed_day"})
+    owner = data["owner_counts"]
+    assert owner["characters"] == 520 + extra
+    assert owner["in_flight"] and owner["held_success"] and not owner["held_error"]
+    assert owner["prompt_bytes"] == len(row["prompt"].encode())
+    witnesses = data["witnesses"]
+    assert witnesses["provider_submissions"] == len(original)
+    assert witnesses["coarse_discard_diagnostics"] == 0
+    assert 0 < witnesses["maximum_poll_step_seconds"] <= 0.05 + 1e-12
+    assert witnesses["poll_count"] > 0
+    assert len(witnesses["held_reply"].encode()) == owner["held_bytes"]
+    if lane == "scheduler":
+        assert row["lane"] == "player_reaction" and row["actor_id"] == witnesses["submitted_actor"]
+        assert owner["retry_work"] == owner["priority_handoffs"] == owner["player_reactions"] == 1
+        assert witnesses["floor_busy_hold"] is True
+        assert witnesses["late_utterance"] not in row["prompt"]
+        assert witnesses["submitted_prompts"] == [[r["prompt"], r["output_token_budget"]] for r in original]
+    else:
+        assert set(row["subject"]) == {"ward"} and row["presence_epoch"] is None
+        assert owner["ward_moods"] == len(witnesses["committed_ward_moods"]) == 1
+        assert owner["ward_mood_bytes"] == sum(len(m.encode()) for m in witnesses["committed_ward_moods"].values())
+        assert owner["queued_wards"] == 6 and owner["reflected"] == 1
+        assert witnesses["busy_admitted_observed"] and witnesses["held_deferred_observed"]
+    primary = {k: data[k] for k in ("scenario", "mode", "placement", "counts", "owner_counts", "witnesses", "submitted_requests", "saved_inputs")}
+    assert sha(json.dumps(primary, sort_keys=True, separators=(",", ":")).encode()) == COGNITION_PRIMARY_SHA256[lane][data["mode"]]
+    assert data["cost"]["validation_working_bytes"] == 4 * 1024**2
+    assert data["shared_reserved_peak_excluding_running_bytes"] == 2 * data["cost"]["peak_bytes"]
+
+
+def population(metadata):
+    key = "owner_counts" if metadata.get("scenario") in (
+        "cognition-inputs-scheduler-v1", "cognition-inputs-night-v1") else "counts"
+    return metadata[key]["characters"]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
@@ -99,7 +178,13 @@ def main():
         if "validation_working_bytes" in cost:
             assert "definition_working_bytes" not in cost
             counts = data["counts"]
-            if data["scenario"] == "forced_storm_with_old_rate_bells":
+            if data["scenario"] in ("cognition-inputs-scheduler-v1", "cognition-inputs-night-v1"):
+                validate_cognition_inputs(data, expected_extra)
+                owner = "scheduler" if data["scenario"] == "cognition-inputs-scheduler-v1" else "night"
+                assert Path(row["command"][0]).name == f"alibi_{owner}_cost"
+                assert row["command"][1:-1] == ["--cognition-inputs", "--mode", mode, "--samples", str(samples), "--output"]
+                assert Path(row["command"][-1]).is_absolute() and Path(row["command"][-1]).name == f"{name}.json"
+            elif data["scenario"] == "forced_storm_with_old_rate_bells":
                 assert validation_working_bytes == 64 * 1024
                 assert counts["bell_strokes"] == 3
                 assert counts["weather_forced"] is True
@@ -366,8 +451,7 @@ def main():
         }
         assert summary[mode] == expected, mode
         global_max_us[mode] = {phase: max(values) for phase, values in all_samples[mode].items()}
-    assert (summary["populated"]["metadata"]["counts"]["characters"]
-            - summary["authored"]["metadata"]["counts"]["characters"]) == 2000
+    assert population(summary["populated"]["metadata"]) - population(summary["authored"]["metadata"]) == 2000
     assert identity["unchanged_source_binary_and_runners_at_end"] is True
     if args.check_current:
         assert sha(args.check_current.read_bytes()) == identity["binary_sha256"]

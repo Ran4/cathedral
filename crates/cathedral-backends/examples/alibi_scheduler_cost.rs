@@ -1,4 +1,6 @@
 //! M2a11 existing-scheduler component diagnostic. No full-save or synchronous-host budget claim.
+#[path = "support/cognition_inputs_cost.rs"]
+mod cognition_inputs_cost;
 use cathedral_backends::world_data::load_world_seed;
 use cathedral_sim::{
     AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineConfig, IdleCognitionMode,
@@ -138,6 +140,8 @@ enum Mode {
 }
 #[derive(Parser)]
 struct Args {
+    #[arg(long)]
+    cognition_inputs: bool,
     #[arg(long, value_enum)]
     mode: Mode,
     #[arg(long, default_value_t = 100)]
@@ -365,6 +369,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let witnesses = json!({"boundary_seconds":boundary.seconds(),"partner":partner,"peer":peer,"player_position_m":at.to_array(),"utterance":utterance,"reply":reply,"followup":followup,"late_utterance":late,"held_reply":held_reply,"submitted_actor":selected,"provider_submissions":service.prompts.len(),"submitted_prompts":service.prompts,"maximum_submitted_prompt_bytes":service.prompts.iter().map(|p|p.0.len()).max().unwrap_or(0),"speech_messages":speeches,"failure_messages":relevant(&failure),"held_messages":relevant(&held_messages),"floor_busy_hold":true,"poll_count":driver.polls,"maximum_poll_step_seconds":driver.maximum_poll_step_seconds,"coarse_discard_diagnostics":driver.coarse_discard_diagnostics,"all_message_count":driver.messages,"all_message_debug_bytes":driver.digest.bytes,"all_message_digest_algorithm":"fnv1a64-debug-stream-v1","all_message_digest":format!("{:016x}",driver.digest.hash)});
     assert_eq!(service.prompts.len(), 3);
+    if args.cognition_inputs {
+        let b = CheckpointBudget::default();
+        let legacy =
+            engine.export_scheduler_checkpoint(boundary, b.reserve(Cohort::SavePayload, 4096)?)?;
+        let counts = serde_json::to_value(legacy.value().counts(context))?;
+        drop(legacy);
+        let submitted_requests=json!(service.prompts.iter().enumerate().map(|(i,(prompt,budget))|json!({"request_id":i+1,"method":"request_with_budget","prompt":prompt,"output_token_budget":budget})).collect::<Vec<_>>());
+        let mut output = cognition_inputs_cost::measure(
+            &engine,
+            boundary,
+            args.samples,
+            "scheduler",
+            counts,
+            witnesses,
+            submitted_requests,
+        )?;
+        output["mode"] = json!(match args.mode {
+            Mode::Authored => "authored",
+            Mode::Populated => "populated",
+        });
+        output["samples"] = json!(args.samples);
+        output["placement"] = placement;
+        fs::write(args.output, serde_json::to_vec_pretty(&output)?)?;
+        return Ok(());
+    }
     let mut phases = Phases::default();
     let mut metadata = None;
     for _ in 0..args.samples {

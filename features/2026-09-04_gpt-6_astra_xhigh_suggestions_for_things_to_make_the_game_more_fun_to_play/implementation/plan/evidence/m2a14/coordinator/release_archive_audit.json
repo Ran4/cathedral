@@ -1,0 +1,42 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-09T00:27:25.415702+00:00",
+  "source_scope": "component-inputs-v2",
+  "source_files": 938,
+  "source_manifest_sha256": "8b96ea02213a334ed66e744aec624738b62b89654be7389c19d5d3c5c2dbe291",
+  "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "binary_sha256": {
+    "scheduler": "b5973156e3e96a117a06a293ab81104958cfd801b0ffbaa1a8487a52ac6b181d",
+    "night": "4017565b79a4106d1800bf6a44c595e9bc34107004ea9b6343db3f348e49f902"
+  },
+  "identity_sha256": {
+    "smoke/scheduler": "dff067ee9ba9572103347ad605acebaeb8d08aa35a40365aa75b8548a8218dce",
+    "smoke/night": "5157e51609e6ef7d6bf802feabae5d3f9d6269d3a5c4aec06266404e5962376a",
+    "performance/scheduler": "91083a674cb47a085c5280c4c0a42f25db45218f3a698003792688480b6b555a",
+    "performance/night": "e0b286da51551bc465b3b041ed3b506eee5680dc4b4a1ab293fecb467132856a"
+  },
+  "exact_build_archives": [
+    "release_build.log",
+    "release_build.time"
+  ],
+  "runner_output_archives": {
+    "smoke/scheduler": {
+      "original_sha256": "4f95e6affb470321b45d136fded43916c657a3cb644f50c3c2b577c016c4b696",
+      "matches_result_rows": true
+    },
+    "smoke/night": {
+      "original_sha256": "f45709c74623263a609b170b2a02ce6719461449188d909a227ad7b5ab5fa26f",
+      "matches_result_rows": true
+    },
+    "performance/scheduler": {
+      "original_sha256": "990c38938b520300b25ac1146344f2fdf0217bef555a58a65f5db37cd34eb843",
+      "matches_result_rows": true
+    },
+    "performance/night": {
+      "original_sha256": "26a70db6d7ea23c53c4071237bd81448fd615f237b631d5c67015540bf2c8472",
+      "matches_result_rows": true
+    }
+  },
+  "debug_and_release_exact_inputs_metadata_and_charges_agree": true,
+  "runtime_default_sha256": "837112f8c183d1b1330f66709c7f7c3e08fe31c39c8f3c117fbb60b3e9f5de1a"
+}

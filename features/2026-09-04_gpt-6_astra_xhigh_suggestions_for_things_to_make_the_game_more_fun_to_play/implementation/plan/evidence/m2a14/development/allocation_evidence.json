@@ -1,0 +1,33 @@
+{
+  "source_manifest_sha256": "8b96ea02213a334ed66e744aec624738b62b89654be7389c19d5d3c5c2dbe291",
+  "current_layout_command": "checkpoint_final",
+  "current_layout_lines": [
+    "cognition_inputs_layout dto=248 candidate=248 scheduler_row=96 night_row=112 context=48 budget=8 working=4194304",
+    "scheduler_layout engine_dto=440 engine_candidate=440 engine_context=104",
+    "cognition_inputs_night_layout flight=104 owner=312 accepted_budget=8",
+    "scheduler_layout owner=384 flight=144 retry=24 completion=64 actor=24 operation=16 command=24 retry_node=640 dto=400 candidate=400 context=96 ledger_scratch=2580480 lane_scratch=400000 root_scratch=4112"
+  ],
+  "reused_proof": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a13/development/stdlib_allocation_audit.json",
+  "reused_proof_sha256": "7c31eadb19af567bef6482e0d3f58165b2ce01e451c875ca6949d1f20fc17d6a",
+  "source_files_current_hashes_match": {
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/map.rs": "85387f4b8283bef443c154979c149dae4c8c61b96ea75432c58a573a13734dae",
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/node.rs": "2200ca0a4fe38592c314dc7f5f40bbb160e06b6f9e4abd1eb5bc40701540ab25",
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/set.rs": "a7be8e5e576fac0975d0af0f24407ddd709751820bbb1f5059d55f08414a4888",
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/string.rs": "f26867da19450cb50a549373c0bc29d1ac4911035e262f0854b2319edb5afd24",
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs": "cd69f6ef4cf398ff6665c5f3ea428b652755d0e0aea004402e076f6af6a56400",
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/slice.rs": "b1f0a5f6e3d104d6176699cf05efdfe1725095cd984fdf4422ddc3093726361c",
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs": "39ae2ccc61fd3bad236978201cda2ad97599403eb103de7eafdf6d7f6dd8b6f3",
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/vec_deque/mod.rs": "1b3cd1f179c3eef1ba3a3c40bcdbc6406c5bf570a5bd1bb0da31afb7622b5c4b",
+    "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/read.rs": "17a2efe49e5a6937c8d7d4a5c0b9eac84453de0f86bf8e7ee421387e82341bb3",
+    "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/de.rs": "4998d7e252eb513be85b298e287048b4fb283882e9ba7df905f572f07200f3f3",
+    "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_core-1.0.228/src/de/impls.rs": "9fb7a0322af51971fe1fa8f5b56c7ca3716622a6e9127b86bddfc0742c11383c"
+  },
+  "rustc_version_command": "rustc_version",
+  "rustc_bytes_match_prior_command": true,
+  "old_owner_growth_bytes": {
+    "scheduler_flight": 8,
+    "night_flight": 8
+  },
+  "working_bytes": 4194304,
+  "proof": "Existing borrowed ledger/lane/Night scratch runs sequentially; only two fixed rows and bounded prompt/identity copies are new. Current old V1 Flight/owner layout assertions pass under unchanged record charges."
+}

@@ -1,0 +1,336 @@
+{
+  "checked_at_utc": "2026-09-08T23:54:03.762006+00:00",
+  "result": "passed",
+  "checks": [
+    {
+      "path": "crates/cathedral-backends/examples/alibi_night_cost.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/examples/alibi_night_cost.rs"
+      ],
+      "source_sha256": "0086a1e0a58d18d022e2943f812c65c2b6a9be11b40ba7adb14615df337ade87",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-backends/examples/alibi_scheduler_cost.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/examples/alibi_scheduler_cost.rs"
+      ],
+      "source_sha256": "c635e650bf0669e930de4eaa9995256cad15de0e92c40d6297ca8a39a3067725",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-backends/examples/support/cognition_inputs_cost.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/examples/support/cognition_inputs_cost.rs"
+      ],
+      "source_sha256": "de5c9a97a7b54f518a8065a50e00394ef40ef726b1080cb4bff065f8b17c1fa6",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine.rs"
+      ],
+      "source_sha256": "75709ac4ba00211f78e1e8ddeb6886fada6e12182c0bc102559a0052b1044ade",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/cognition_inputs_checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/cognition_inputs_checkpoint.rs"
+      ],
+      "source_sha256": "d5246cd2a6e89ff50cdff17aa60d561c138ce244d6476a3b76287b6dac1319b0",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/cognition_inputs_checkpoint/records.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/cognition_inputs_checkpoint/records.rs"
+      ],
+      "source_sha256": "7b95ea0c79e86363eff6767d6f9d2f0a3ae40595426deedfab4c4bad0bfac9d2",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/cognition_inputs_checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/cognition_inputs_checkpoint/tests.rs"
+      ],
+      "source_sha256": "252be8736e24e720c4e8c1a79e72ed9e6a199d174667582d6adc6b03ec4ab870",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/night_checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/night_checkpoint.rs"
+      ],
+      "source_sha256": "14fdf7e752e956479f15b1a5575ab2cb9d2f73fcdaba5bd3f8483e2fcbfd11a1",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/engine/scheduler_checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/engine/scheduler_checkpoint.rs"
+      ],
+      "source_sha256": "abff05eb287768e4e5944f2ec4cff89e2f1d908128442dab7f21a8abde884e0d",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night.rs"
+      ],
+      "source_sha256": "27ae6ac181795d921825900faf1bc8554e193b82d0f250b9a5f6e1864ce3551b",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night/checkpoint.rs"
+      ],
+      "source_sha256": "d47ea978e12e1f77b712205781ca33edc7c4d149d2ee3aea2eb44a47f7b0bc1b",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night/checkpoint/records.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night/checkpoint/records.rs"
+      ],
+      "source_sha256": "6fbd6e4dfddf1a7dd76e670b08b2ec0cf918e0c82d22df25e31ca47512b91d66",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night/checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night/checkpoint/tests.rs"
+      ],
+      "source_sha256": "c293dbba4d2ccb5f533b204f92f2e99027b5c5c96e19564eff1a7f26ba1ac5c1",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night/checkpoint/tests/cognition_inputs.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night/checkpoint/tests/cognition_inputs.rs"
+      ],
+      "source_sha256": "2778b9857ea83f2ae74d4c7fe7cd7be7cafbe5b9e0b5683ff159f6c81da06a5f",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/night/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/night/tests.rs"
+      ],
+      "source_sha256": "5e8bb5152d12a0ce4c26f7fc46281182a1c6020d99a398c50bc8b58c0215d7cc",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/scheduler.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/scheduler.rs"
+      ],
+      "source_sha256": "8d7284d9a7ca9ca7b18869650871fccd9c00d6d9e4ead90685cd97018640c9b7",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/scheduler/checkpoint.rs"
+      ],
+      "source_sha256": "1fe5f1ca6d2edc65174f68f11510c1c08dbbaad2a987636cb371cf502a644d3f",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/scheduler/checkpoint/records.rs"
+      ],
+      "source_sha256": "8c19de0c5c6af119587139bc644ee555b5755b9650cb33c9fc9513cf47e2cb12",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs"
+      ],
+      "source_sha256": "0b30f251723121487b44626782794ad0825b6e9d9c053783adecdebc067ccdc2",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/scheduler/checkpoint/tests/cognition_inputs.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/scheduler/checkpoint/tests/cognition_inputs.rs"
+      ],
+      "source_sha256": "73ce2a2c6f5dcf071138713e29f2cd85416e988843f354aabacafa0fcc813990",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/src/traits.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/src/traits.rs"
+      ],
+      "source_sha256": "098a607ee6dc60f27dce542471b2d0f48636325a9652104ae677ddeb395fc871",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "crates/cathedral-sim/tests/checkpoint_cognition_inputs_boundary.rs",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-sim/tests/checkpoint_cognition_inputs_boundary.rs"
+      ],
+      "source_sha256": "7c8d67289c2f261e1cf1b67d95271fb95689f8974b6506d03c7e3b8fe40d8f3e",
+      "exit_code": 0,
+      "output": ""
+    }
+  ]
+}

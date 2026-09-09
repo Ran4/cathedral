@@ -10,6 +10,27 @@ mod context;
 pub(crate) mod records;
 pub use context::SchedulerCheckpointContext;
 pub(crate) const OWNER: &str = "scheduler";
+pub(crate) fn cognition_input(
+    n: &NpcScheduler,
+) -> Option<crate::engine::cognition_inputs_checkpoint::records::SchedulerInputRef<'_>> {
+    use crate::engine::cognition_inputs_checkpoint::{
+        CognitionRequestMethod, SchedulerInputLane, records::SchedulerInputRef,
+    };
+    n.in_flight.as_ref().map(|f| SchedulerInputRef {
+        method: CognitionRequestMethod::RequestWithBudget,
+        actor_id: &f.actor_id,
+        presence_epoch: f.presence_epoch,
+        request_id: f.request_id,
+        semantic: f.semantic,
+        lane: match f.lane {
+            TurnLane::PlayerReaction => SchedulerInputLane::PlayerReaction,
+            TurnLane::Handoff => SchedulerInputLane::Handoff,
+            TurnLane::Idle => SchedulerInputLane::Idle,
+        },
+        prompt: &f.prompt,
+        output_token_budget: f.output_token_budget,
+    })
+}
 pub const MAX_ORDER_SLOTS: usize = 100_000;
 pub const MAX_LANE_ACTORS: usize = 25_000;
 pub const MAX_RETRY_WORK: usize = 256;
@@ -176,7 +197,10 @@ pub(crate) fn copy(n: &NpcScheduler) -> NpcScheduler {
         round_robin_index: n.round_robin_index,
         priority_handoffs: n.priority_handoffs.clone(),
         player_reactions: n.player_reactions.clone(),
-        in_flight: n.in_flight.clone(),
+        in_flight: n.in_flight.clone().map(|mut f| {
+            f.output_token_budget = crate::traits::AcceptedOutputBudget::MissingLegacy;
+            f
+        }),
         retry_work: n.retry_work.clone(),
         held_result: n.held_result.clone(),
         next_turn_at: n.next_turn_at,

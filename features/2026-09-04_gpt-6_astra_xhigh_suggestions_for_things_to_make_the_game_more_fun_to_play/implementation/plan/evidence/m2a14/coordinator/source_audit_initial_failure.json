@@ -1,0 +1,12 @@
+{
+  "result": "development auditor failure; no production defect",
+  "exit_code": 1,
+  "reason": "Root adapter expected Accepted(None) in an old test-only manually constructed Flight; final owner source correctly marks this historical fixture MissingLegacy. Runtime production comparison unchanged.",
+  "source_script": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/coordinator/audit-source-initial.py",
+  "source_script_sha256": "6b3cd55e929eb24cc5d4f320213fb2d2247ce006bc28ed4ed580eccbfcbe1f6f",
+  "original_path": "/tmp/alibi-m2a14-source-audit-original.log",
+  "original_bytes": 510,
+  "original_sha256": "ebba31418a66c18332cf6a85f1490ad1620db145d246e3b408bea2d547c9a596",
+  "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/coordinator/source_audit_initial_failure.log.gz",
+  "archive_sha256": "f785f73dd42265ccdd0c981590f8f95c941eb7426615c5be4a052951df4fc478"
+}

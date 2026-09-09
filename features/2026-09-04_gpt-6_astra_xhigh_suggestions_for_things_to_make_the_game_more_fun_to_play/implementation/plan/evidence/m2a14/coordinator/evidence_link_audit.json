@@ -1,0 +1,128 @@
+{
+  "checked_at_utc": "2026-09-09T00:29:57.701602+00:00",
+  "result": "passed",
+  "markdown_files": 7,
+  "local_links": 30,
+  "checks": [
+    {
+      "source": "ADMISSION.md",
+      "target": "coordinator/review.md"
+    },
+    {
+      "source": "ADMISSION.md",
+      "target": "development/allocation_evidence.json"
+    },
+    {
+      "source": "OWNER_COVERAGE.md",
+      "target": "coordinator/review.md"
+    },
+    {
+      "source": "OWNER_COVERAGE.md",
+      "target": "verification.json"
+    },
+    {
+      "source": "OWNER_COVERAGE.md",
+      "target": "commands.json"
+    },
+    {
+      "source": "OWNER_COVERAGE.md",
+      "target": "development/probe_summary.json"
+    },
+    {
+      "source": "README.md",
+      "target": "coordinator/review.md"
+    },
+    {
+      "source": "README.md",
+      "target": "OWNER_COVERAGE.md"
+    },
+    {
+      "source": "README.md",
+      "target": "ADMISSION.md"
+    },
+    {
+      "source": "README.md",
+      "target": "verification.json"
+    },
+    {
+      "source": "README.md",
+      "target": "development/probe_summary.json"
+    },
+    {
+      "source": "README.md",
+      "target": "development/allocation_evidence.json"
+    },
+    {
+      "source": "README.md",
+      "target": "commands.json"
+    },
+    {
+      "source": "README.md",
+      "target": "development/setup_failures.md"
+    },
+    {
+      "source": "README.md",
+      "target": "performance/README.md"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../verification.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "source_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "layout_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "log_archive_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "release_archive_audit.json"
+    },
+    {
+      "source": "coordinator/review.md",
+      "target": "../performance/README.md"
+    },
+    {
+      "source": "coordinator/tail_latency_table.md",
+      "target": "tail_latency_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/tail_latency_audit.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "scheduler/IDENTITY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "scheduler/RESULTS.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "scheduler/SUMMARY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "night/IDENTITY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "night/RESULTS.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "night/SUMMARY.json"
+    },
+    {
+      "source": "performance/README.md",
+      "target": "../coordinator/release_archive_audit.json"
+    }
+  ]
+}

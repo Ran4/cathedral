@@ -1,0 +1,38 @@
+{
+  "checked_at_utc": "2026-09-09T00:27:25.566010+00:00",
+  "measurement_directory": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/smoke/night",
+  "result": "passed",
+  "smoke_only": true,
+  "runs": 2,
+  "raw_phase_samples": 24,
+  "checks": [
+    "archive and original hashes",
+    "phase lengths and nearest-rank percentiles",
+    "repeated metadata",
+    "count and byte admission",
+    "process timing metadata",
+    "all summary medians"
+  ],
+  "current_source_binary_runner_hashes_checked": true,
+  "global_max_us": {
+    "authored": {
+      "preflight_us": 19.544,
+      "export_us": 13.205,
+      "encode_us": 15.783000000000001,
+      "decode_validate_us": 21.674,
+      "candidate_validate_us": 3.0220000000000002,
+      "drop_us": 0.283
+    },
+    "populated": {
+      "preflight_us": 44.929,
+      "export_us": 20.693,
+      "encode_us": 16.477,
+      "decode_validate_us": 30.778000000000002,
+      "candidate_validate_us": 10.5,
+      "drop_us": 0.308
+    }
+  },
+  "auditor_sha256": "a3878b054b6c41bdebc0a4beb897080255ead989b9bb74ffb762f2ad04250f6f",
+  "source_scope": "component-inputs-v2",
+  "input_enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340"
+}

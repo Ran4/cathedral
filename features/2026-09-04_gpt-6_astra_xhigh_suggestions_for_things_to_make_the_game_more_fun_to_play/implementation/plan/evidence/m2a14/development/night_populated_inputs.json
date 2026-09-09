@@ -1,0 +1,122 @@
+{
+  "candidate_validate_us": [
+    23.133,
+    22.84
+  ],
+  "cost": {
+    "encoded_bytes": 5395,
+    "expanded_upper_bytes": 14512,
+    "peak_bytes": 4272633,
+    "validation_working_bytes": 4194304
+  },
+  "counts": {
+    "night": true,
+    "night_prompt_bytes": 4987,
+    "night_provider_default": false,
+    "scheduler": false,
+    "scheduler_prompt_bytes": 0,
+    "scheduler_provider_default": false
+  },
+  "decode_validate_us": [
+    45.476000000000006,
+    34.57
+  ],
+  "drop_us": [
+    0.27799999999999997,
+    0.112
+  ],
+  "encode_us": [
+    17.580000000000002,
+    13.455
+  ],
+  "export_us": [
+    33.179,
+    35.864000000000004
+  ],
+  "mode": "populated",
+  "owner_counts": {
+    "bedtimes": 30,
+    "characters": 2520,
+    "dropped": 0,
+    "enabled": true,
+    "held_bytes": 60,
+    "held_error": false,
+    "held_success": true,
+    "in_flight": true,
+    "prompt_bytes": 4987,
+    "queued": 6,
+    "queued_admitted": 0,
+    "queued_people": 0,
+    "queued_wards": 6,
+    "reflected": 1,
+    "seeded": true,
+    "stamps": 8,
+    "ward_mood_bytes": 39,
+    "ward_moods": 1
+  },
+  "placement": {
+    "placed": 2000,
+    "requested": 2000,
+    "unplaced": 0
+  },
+  "preflight_us": [
+    48.171,
+    33.487
+  ],
+  "samples": 2,
+  "saved_inputs": {
+    "night": {
+      "method": "request_night",
+      "output_token_budget": 1400,
+      "owed_day": 0,
+      "presence_epoch": null,
+      "prompt": "You are not a person. You are the voice of one ward of a medieval city — what\nits people are saying to one another tonight, with the curfew bell rung, the\ngates shut and the streets empty. Below are the ward's ordinary householders and\ntrades, what each of them is set on, the word going round, and the places their\nfeet can be pointed at.\n\nNobody hears this. Nothing you write is spoken, and no one in the ward knows a\nreflection happened. What you write only changes what tomorrow looks like.\n\nRead your_people together with the_word and last_night, and return two things:\n\n1. ONE ward_mood: three or four sentences of what this ward feels like\n   tomorrow morning. Write it as a neighbour would say it over a wall, not as a\n   report — what people are uneasy about, pleased by, tired of, watching for.\n   Every person listed below will carry it in their head all day, so keep it to\n   what all of them could plausibly feel: a mood, not a fact only one of them\n   could know, and never a name-by-name account. If last_night is there, this is\n   the ward a day later — let it move rather than repeating it.\n\n2. Optionally, up to THREE set_round edits. A set_round moves ONE leg of ONE\n   named person's standing day to somewhere else, and tomorrow they really walk\n   there. Use it only where the ward's night gives a plain reason — a trade that\n   has moved, a stall worth standing nearer, somewhere people are keeping away\n   from. Name the person by the id in your_people and the place by a place_id\n   from their_places. Most nights need none at all, and none is the ordinary\n   answer.\n\n3. Optionally, ONE chalk_ward_sign. Somebody in the ward chalks a sign at the\n   ward's own place of resort, and tomorrow evening a few more of the ordinary\n   cast drift there instead of to a tavern. Use it when the ward's night gives a\n   reason for people to gather — a wake, a grievance, something worth standing\n   about — and name the place exactly as The Wickmarket spells it. Most\n   nights need none.\n\nUse ONLY the verbs below, spelled exactly as shown. There are no other verbs\nhere: you cannot speak, walk, give, remember or set a goal — a ward has no hands\nand no memory of its own.\n\nPossible actions (format: `VERB ARGS`), examples:\n\n```\nward_mood {\"mood\": \"The rain has not let up and the tenter-frames stand empty. People are short with one another, and there is talk about who was seen at the sluice.\"}\nset_round {\"person\": \"4bfk4\", \"leg\": 2, \"place_id\": \"pl_x2vw\"}  # Move that person's leg 2 to that place\nchalk_ward_sign {\"place\": \"The Wickmarket\"}  # Chalk a sign at this ward's place of resort; a few more people gather there tomorrow evening\nwait {}                                                        # The ward is as it was; change nothing\n```\n\nOutput like this, and only like this (skip the backticks, and everything after # is a comment):\n\n```\nward_mood {\"mood\": \"...\"}\nset_round {\"person\": \"4bfk4\", \"leg\": 2, \"place_id\": \"pl_x2vw\"}\n```\n\nThe ward:\n\n**the_ward** — the Wick Ward\n\n**tonight** — the Snuffing of Bellday; weather: clear summer weather\n\n**your_people** (the ordinary householders and trades of this ward):\n- p007u — Aldith Rill, Ostler — set on: Find fodder for a drover's underfed mare\n- danqn — Ansel Quern, Oven keeper — set on: None\n- davqn — Averil Quern, Bread baker — set on: None\n- dsbhb — Sibbe Hobbe, Ale brewer — set on: None\n- dewvl — Ewart Vell, Chandler — set on: None\n- dpcrk — Petronel Crake, Chandler — set on: None\n- p002s — Ede Fenn, Candle-dipper — set on: Have a bent buckle straightened\n- bn5jk — Jonet Kett, Bencher — set on: None\n- bn6gb — Gile Bram, Bencher — set on: None\n- dgskl — Gile Skell, Cook — set on: None\n- p0068 — Osanne Mott, Tailor — set on: Finish a disputed fitting before dusk\n- drhcr — Rohese Crake, Public lamp-lighter — set on: None\n- dtbvl — Tobin Vell, Lamplighter — set on: None\n- dclsk — Clemence Skep, Honey seller — set on: None\n- p000x — Petronel Clove, Street seller — set on: Find the key to a shared chest\n- p0021 — Havise Bram, Grain miller — set on: Find a quiet corner to sleep\n- p0043 — Ede Kett, Official weigher — set on: Get a splinter from your palm\n\n**the_word** (what the ward is saying; hearsay and descriptions, not proof) — nothing\n\n**their_places** (set_round may name any of these place_ids):\n- pl_t7rf The Wickmarket\n- pl_fj9v Osanne Vell's stall\n- pl_9ecu The Wool Gate\n- pl_x1t7 Slate Cistern\n- pl_n376 The Lanthorn\n- pl_rybz The Gradine\n- pl_t7ec Coswald's Yard\n- pl_35z0 The Tallage\n- pl_w252 Maren's Green\n- pl_u2ka The Bellstand\n- pl_yi61 Fabric Ward\n- pl_hdw1 Wick Ward\n- pl_pt9g Cloth Ward\n- pl_q8ap Wallwright Ward\n- pl_6fwt Cinder Ward\n- pl_p8hu Weigh Ward\n- pl_7paj Reed Ward\n- pl_8sky Bell and Sluice Wards\n\n**last_night** — nothing yet\n\nWrite the mood. Make SURE it is something every person listed could feel, in a\ncity where nobody reads a newspaper and news travels by mouth.\n\n",
+      "request_id": 2,
+      "semantic": {
+        "producer": 3,
+        "sequence": 2
+      },
+      "subject": {
+        "ward": "wick"
+      }
+    },
+    "scheduler": null
+  },
+  "scenario": "cognition-inputs-night-v1",
+  "shared_reserved_peak_excluding_running_bytes": 8545266,
+  "submitted_requests": [
+    {
+      "method": "request_night",
+      "output_token_budget": 1400,
+      "prompt": "You are not a person. You are the voice of one ward of a medieval city — what\nits people are saying to one another tonight, with the curfew bell rung, the\ngates shut and the streets empty. Below are the ward's ordinary householders and\ntrades, what each of them is set on, the word going round, and the places their\nfeet can be pointed at.\n\nNobody hears this. Nothing you write is spoken, and no one in the ward knows a\nreflection happened. What you write only changes what tomorrow looks like.\n\nRead your_people together with the_word and last_night, and return two things:\n\n1. ONE ward_mood: three or four sentences of what this ward feels like\n   tomorrow morning. Write it as a neighbour would say it over a wall, not as a\n   report — what people are uneasy about, pleased by, tired of, watching for.\n   Every person listed below will carry it in their head all day, so keep it to\n   what all of them could plausibly feel: a mood, not a fact only one of them\n   could know, and never a name-by-name account. If last_night is there, this is\n   the ward a day later — let it move rather than repeating it.\n\n2. Optionally, up to THREE set_round edits. A set_round moves ONE leg of ONE\n   named person's standing day to somewhere else, and tomorrow they really walk\n   there. Use it only where the ward's night gives a plain reason — a trade that\n   has moved, a stall worth standing nearer, somewhere people are keeping away\n   from. Name the person by the id in your_people and the place by a place_id\n   from their_places. Most nights need none at all, and none is the ordinary\n   answer.\n\n3. Optionally, ONE chalk_ward_sign. Somebody in the ward chalks a sign at the\n   ward's own place of resort, and tomorrow evening a few more of the ordinary\n   cast drift there instead of to a tavern. Use it when the ward's night gives a\n   reason for people to gather — a wake, a grievance, something worth standing\n   about — and name the place exactly as The Great Rose and eye spells it. Most\n   nights need none.\n\nUse ONLY the verbs below, spelled exactly as shown. There are no other verbs\nhere: you cannot speak, walk, give, remember or set a goal — a ward has no hands\nand no memory of its own.\n\nPossible actions (format: `VERB ARGS`), examples:\n\n```\nward_mood {\"mood\": \"The rain has not let up and the tenter-frames stand empty. People are short with one another, and there is talk about who was seen at the sluice.\"}\nset_round {\"person\": \"4bfk4\", \"leg\": 2, \"place_id\": \"pl_x2vw\"}  # Move that person's leg 2 to that place\nchalk_ward_sign {\"place\": \"The Great Rose and eye\"}  # Chalk a sign at this ward's place of resort; a few more people gather there tomorrow evening\nwait {}                                                        # The ward is as it was; change nothing\n```\n\nOutput like this, and only like this (skip the backticks, and everything after # is a comment):\n\n```\nward_mood {\"mood\": \"...\"}\nset_round {\"person\": \"4bfk4\", \"leg\": 2, \"place_id\": \"pl_x2vw\"}\n```\n\nThe ward:\n\n**the_ward** — the Fabric Ward\n\n**tonight** — the Snuffing of Bellday; weather: clear summer weather\n\n**your_people** (the ordinary householders and trades of this ward):\n- a4anh — Ansel Hobbe, Ringer — set on: None\n- a6avh — Averil Hobbe, Bell-ringer — set on: None\n- a3crk — Hamel Crake, Provost of the Rite — set on: None\n- a5sbp — Sibbe Pike, Taper — set on: None\n- bt4hb — Tobin Hobbe, Scaffold worker — set on: None\n- p002f — Corin Crake, Bridge repairer — set on: Sell the last bruised apple\n- a1clo — Clemence of Ostrelle, Sweeper — set on: None\n- a2gpk — Gile Pike, Badge attendant — set on: None\n- bn3sg — Segwin Hobbe, Bencher — set on: None\n- bn4cp — Clemence Pike, Bencher — set on: None\n- a7pcr — Idonea Crake, Archive clerk — set on: None\n- p007m — Sible Vell, Locksmith — set on: Identify who filed a copied key\n- p0000 — Betriss Fitch, Fabric labourer — set on: Stretch supper to one more bowl\n- ebhid — Tobin Tarn, Hide carrier — set on: None\n- p0012 — Ede Crake, Honey seller — set on: Buy lamp oil before dusk\n- p0014 — Gude Crake, Badge seller — set on: Sell a badge before dusk\n- p0015 — Aubin Crake, Honey seller — set on: Borrow a handcart for an hour\n- brn5o — Renn of Ostrelle, Wall-wright — set on: None\n- p002g — Jonet Pike, Quarry worker — set on: Dry a blanket before curfew\n- p003o — Lise Brant, Pilgrim — set on: Buy a wooden button to replace the one you dropped\n\n**the_word** (what the ward is saying; hearsay and descriptions, not proof) — nothing\n\n**their_places** (set_round may name any of these place_ids):\n- pl_n376 The Lanthorn\n- pl_jgj6 The Great Rose and eye\n- pl_t7rg Skinners' Court\n- pl_hg2m Ford Well\n- pl_q116 Chapter house and Grey Press\n- pl_xrfe Crookneck Lane\n- pl_rybz The Gradine\n- pl_t7rf The Wickmarket\n- pl_t7ec Coswald's Yard\n- pl_35z0 The Tallage\n- pl_w252 Maren's Green\n- pl_u2ka The Bellstand\n- pl_yi61 Fabric Ward\n- pl_hdw1 Wick Ward\n- pl_pt9g Cloth Ward\n- pl_q8ap Wallwright Ward\n- pl_6fwt Cinder Ward\n- pl_p8hu Weigh Ward\n- pl_7paj Reed Ward\n- pl_8sky Bell and Sluice Wards\n\n**last_night** — nothing yet\n\nWrite the mood. Make SURE it is something every person listed could feel, in a\ncity where nobody reads a newspaper and news travels by mouth.\n\n",
+      "request_id": 1
+    },
+    {
+      "method": "request_night",
+      "output_token_budget": 1400,
+      "prompt": "You are not a person. You are the voice of one ward of a medieval city — what\nits people are saying to one another tonight, with the curfew bell rung, the\ngates shut and the streets empty. Below are the ward's ordinary householders and\ntrades, what each of them is set on, the word going round, and the places their\nfeet can be pointed at.\n\nNobody hears this. Nothing you write is spoken, and no one in the ward knows a\nreflection happened. What you write only changes what tomorrow looks like.\n\nRead your_people together with the_word and last_night, and return two things:\n\n1. ONE ward_mood: three or four sentences of what this ward feels like\n   tomorrow morning. Write it as a neighbour would say it over a wall, not as a\n   report — what people are uneasy about, pleased by, tired of, watching for.\n   Every person listed below will carry it in their head all day, so keep it to\n   what all of them could plausibly feel: a mood, not a fact only one of them\n   could know, and never a name-by-name account. If last_night is there, this is\n   the ward a day later — let it move rather than repeating it.\n\n2. Optionally, up to THREE set_round edits. A set_round moves ONE leg of ONE\n   named person's standing day to somewhere else, and tomorrow they really walk\n   there. Use it only where the ward's night gives a plain reason — a trade that\n   has moved, a stall worth standing nearer, somewhere people are keeping away\n   from. Name the person by the id in your_people and the place by a place_id\n   from their_places. Most nights need none at all, and none is the ordinary\n   answer.\n\n3. Optionally, ONE chalk_ward_sign. Somebody in the ward chalks a sign at the\n   ward's own place of resort, and tomorrow evening a few more of the ordinary\n   cast drift there instead of to a tavern. Use it when the ward's night gives a\n   reason for people to gather — a wake, a grievance, something worth standing\n   about — and name the place exactly as The Wickmarket spells it. Most\n   nights need none.\n\nUse ONLY the verbs below, spelled exactly as shown. There are no other verbs\nhere: you cannot speak, walk, give, remember or set a goal — a ward has no hands\nand no memory of its own.\n\nPossible actions (format: `VERB ARGS`), examples:\n\n```\nward_mood {\"mood\": \"The rain has not let up and the tenter-frames stand empty. People are short with one another, and there is talk about who was seen at the sluice.\"}\nset_round {\"person\": \"4bfk4\", \"leg\": 2, \"place_id\": \"pl_x2vw\"}  # Move that person's leg 2 to that place\nchalk_ward_sign {\"place\": \"The Wickmarket\"}  # Chalk a sign at this ward's place of resort; a few more people gather there tomorrow evening\nwait {}                                                        # The ward is as it was; change nothing\n```\n\nOutput like this, and only like this (skip the backticks, and everything after # is a comment):\n\n```\nward_mood {\"mood\": \"...\"}\nset_round {\"person\": \"4bfk4\", \"leg\": 2, \"place_id\": \"pl_x2vw\"}\n```\n\nThe ward:\n\n**the_ward** — the Wick Ward\n\n**tonight** — the Snuffing of Bellday; weather: clear summer weather\n\n**your_people** (the ordinary householders and trades of this ward):\n- p007u — Aldith Rill, Ostler — set on: Find fodder for a drover's underfed mare\n- danqn — Ansel Quern, Oven keeper — set on: None\n- davqn — Averil Quern, Bread baker — set on: None\n- dsbhb — Sibbe Hobbe, Ale brewer — set on: None\n- dewvl — Ewart Vell, Chandler — set on: None\n- dpcrk — Petronel Crake, Chandler — set on: None\n- p002s — Ede Fenn, Candle-dipper — set on: Have a bent buckle straightened\n- bn5jk — Jonet Kett, Bencher — set on: None\n- bn6gb — Gile Bram, Bencher — set on: None\n- dgskl — Gile Skell, Cook — set on: None\n- p0068 — Osanne Mott, Tailor — set on: Finish a disputed fitting before dusk\n- drhcr — Rohese Crake, Public lamp-lighter — set on: None\n- dtbvl — Tobin Vell, Lamplighter — set on: None\n- dclsk — Clemence Skep, Honey seller — set on: None\n- p000x — Petronel Clove, Street seller — set on: Find the key to a shared chest\n- p0021 — Havise Bram, Grain miller — set on: Find a quiet corner to sleep\n- p0043 — Ede Kett, Official weigher — set on: Get a splinter from your palm\n\n**the_word** (what the ward is saying; hearsay and descriptions, not proof) — nothing\n\n**their_places** (set_round may name any of these place_ids):\n- pl_t7rf The Wickmarket\n- pl_fj9v Osanne Vell's stall\n- pl_9ecu The Wool Gate\n- pl_x1t7 Slate Cistern\n- pl_n376 The Lanthorn\n- pl_rybz The Gradine\n- pl_t7ec Coswald's Yard\n- pl_35z0 The Tallage\n- pl_w252 Maren's Green\n- pl_u2ka The Bellstand\n- pl_yi61 Fabric Ward\n- pl_hdw1 Wick Ward\n- pl_pt9g Cloth Ward\n- pl_q8ap Wallwright Ward\n- pl_6fwt Cinder Ward\n- pl_p8hu Weigh Ward\n- pl_7paj Reed Ward\n- pl_8sky Bell and Sluice Wards\n\n**last_night** — nothing yet\n\nWrite the mood. Make SURE it is something every person listed could feel, in a\ncity where nobody reads a newspaper and news travels by mouth.\n\n",
+      "request_id": 2
+    }
+  ],
+  "witnesses": {
+    "ambient_reroll_observed": true,
+    "boundary_seconds": 20.200000000000003,
+    "busy_admitted_observed": true,
+    "coarse_discard_diagnostics": 0,
+    "committed_ward_moods": {
+      "fabric": "The evening accounts await the morning."
+    },
+    "completed_reflections": 1,
+    "held_deferred_observed": true,
+    "held_reply": "ward_mood {\"mood\":\"The evening accounts await the morning.\"}",
+    "maximum_poll_step_seconds": 0.05000000000000071,
+    "maximum_submitted_prompt_bytes": 5301,
+    "poll_count": 405,
+    "provider_attempts": 3,
+    "provider_submissions": 2,
+    "receipt_protected": 19,
+    "receipt_recent": 4096,
+    "receipt_retained": 256,
+    "submitted_observed": true
+  }
+}

@@ -28,6 +28,15 @@ use crate::{
 
 // ------------------------------------------------------------------ cognition
 
+/// Exact accepted argument, distinct from a historical component that never
+/// retained it. This belongs to a flight, never an unaccepted Busy attempt.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum AcceptedOutputBudget {
+    #[default]
+    MissingLegacy,
+    Accepted(Option<u32>),
+}
+
 /// Why a cognition request failed. All failures are treated identically by the
 /// scheduler (backoff, percept restore, `system:` inbox line); the two strings
 /// exist only for the two places Python logged a failure, and they are not the

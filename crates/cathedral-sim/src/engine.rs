@@ -27,6 +27,7 @@ pub mod law_checkpoint;
 pub mod marks_checkpoint;
 pub use command_policy::CommandPolicy;
 
+pub mod cognition_inputs_checkpoint;
 pub mod night_checkpoint;
 pub mod scheduler_checkpoint;
 pub mod social_checkpoint;

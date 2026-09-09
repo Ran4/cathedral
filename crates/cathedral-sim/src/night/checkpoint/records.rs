@@ -34,6 +34,9 @@ struct DueV1 {
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "Flight", deny_unknown_fields)]
 struct FlightV1 {
+    // V1 predates resolved budget authority. Never turn its absence into None.
+    #[serde(skip)]
+    output_token_budget: crate::traits::AcceptedOutputBudget,
     #[serde(with = "OperationIdV1")]
     semantic: OperationId,
     owed_day: i64,

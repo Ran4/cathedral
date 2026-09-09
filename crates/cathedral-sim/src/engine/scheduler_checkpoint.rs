@@ -189,6 +189,15 @@ impl Admitted<EngineSchedulerDtoV1> {
     }
 }
 impl EngineSchedulerCandidate {
+    pub(crate) fn cognition_inputs_boundary(&self) -> LogicalTime {
+        self.data.boundary
+    }
+    pub(crate) fn validate_cognition_inputs(
+        &self,
+        c: EngineSchedulerCheckpointContext<'_>,
+    ) -> Result<()> {
+        self.data.validate(c)
+    }
     pub fn scheduler(&self) -> &NpcScheduler {
         &self.data.scheduler
     }

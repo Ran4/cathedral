@@ -152,6 +152,24 @@ impl Admitted<EngineNightDtoV1> {
     }
 }
 impl EngineNightCandidate {
+    pub(crate) fn cognition_inputs_boundary(&self) -> LogicalTime {
+        self.data.boundary
+    }
+    pub(crate) fn validate_cognition_inputs(&self, c: NightCheckpointContext<'_>) -> Result<()> {
+        owner::check(
+            self.data.boundary.seconds().to_bits() == c.now.seconds().to_bits()
+                && self.data.night.boundary.seconds().to_bits() == c.now.seconds().to_bits()
+                && self
+                    .data
+                    .world
+                    .cognition_inputs_boundary()
+                    .seconds()
+                    .to_bits()
+                    == c.now.seconds().to_bits(),
+            "Night cognition input component boundary disagreement",
+        )?;
+        self.data.validate(c)
+    }
     pub fn night(&self) -> &NightOffice {
         &self.data.night.night
     }

@@ -1,0 +1,50 @@
+{
+  "status": "Accepted M2a14 component after independent review (2026-09-09); full M2/host pending",
+  "source_freeze": {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "source_hashes.json",
+    "source_manifest_sha256": "8b96ea02213a334ed66e744aec624738b62b89654be7389c19d5d3c5c2dbe291",
+    "source_files": 938,
+    "frozen_utc": "2026-09-08T23:52:38.446421+00:00",
+    "policy": "No source/input edits during final focused/public/workspace verification or coordinator release checks."
+  },
+  "commands_verified": 19,
+  "final_focused": {
+    "command_name": "checkpoint_final",
+    "targets_with_test_results": 1,
+    "passed": 193,
+    "failed": 0,
+    "ignored": 28
+  },
+  "final_public": {
+    "command_name": "public_initial",
+    "targets_with_test_results": 1,
+    "passed": 6,
+    "failed": 0,
+    "ignored": 0
+  },
+  "public_final_basis": "The successful public_initial command already used exactly the final source-at-start map. Coordinator explicitly accepted it as final and prohibited a redundant rerun. Its original name and log remain unchanged.",
+  "workspace": {
+    "command_name": "workspace_serial",
+    "targets_with_test_results": 46,
+    "passed": 2129,
+    "failed": 0,
+    "ignored": 36
+  },
+  "smokes": "development/probe_summary.json",
+  "allocation": "development/allocation_evidence.json",
+  "development_failures": [
+    "generate_fixture",
+    "owner_fixture_compile",
+    "owner_initial"
+  ],
+  "complete_save_or_host_acceptance": false,
+  "cargo_handed_to_root_immediately_after_workspace": true,
+  "coordinator_review": "coordinator/review.md",
+  "release_phase_samples": 7200,
+  "release_binary_sha256": {
+    "alibi_scheduler_cost": "b5973156e3e96a117a06a293ab81104958cfd801b0ffbaa1a8487a52ac6b181d",
+    "alibi_night_cost": "4017565b79a4106d1800bf6a44c595e9bc34107004ea9b6343db3f348e49f902"
+  }
+}

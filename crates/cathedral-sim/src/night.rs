@@ -152,6 +152,7 @@ struct Due {
 /// The one outstanding night request.
 #[derive(Debug, Clone, PartialEq)]
 struct Flight {
+    output_token_budget: crate::traits::AcceptedOutputBudget,
     semantic: OperationId,
     owed_day: i64,
     presence_epoch: Option<u64>,
@@ -606,13 +607,17 @@ impl NightOffice {
             },
         };
         let presence_epoch = due.presence_epoch;
-        match cognition.request_night(prompt.clone(), due.subject.output_token_budget(world)) {
+        let output_token_budget = due.subject.output_token_budget(world);
+        match cognition.request_night(prompt.clone(), output_token_budget) {
             Ok(request_id) => {
                 // Trickle rather than burst: the next reflection waits out a
                 // slice of the game day, so a night is a night and not
                 // thirty-eight requests at the same second of it.
                 self.next_attempt_at = now + pace_seconds(clock);
                 self.in_flight = Some(Flight {
+                    output_token_budget: crate::traits::AcceptedOutputBudget::Accepted(
+                        output_token_budget,
+                    ),
                     semantic,
                     owed_day: due.day,
                     presence_epoch,

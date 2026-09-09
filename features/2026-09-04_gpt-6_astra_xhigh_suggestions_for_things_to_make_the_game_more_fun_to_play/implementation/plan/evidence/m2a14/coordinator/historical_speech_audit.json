@@ -1,0 +1,38 @@
+{
+  "checked_at_utc": "2026-09-09T00:02:39.284186+00:00",
+  "measurement_directory": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a13/performance",
+  "result": "passed",
+  "smoke_only": false,
+  "runs": 6,
+  "raw_phase_samples": 3600,
+  "checks": [
+    "archive and original hashes",
+    "phase lengths and nearest-rank percentiles",
+    "repeated metadata",
+    "count and byte admission",
+    "process timing metadata",
+    "all summary medians"
+  ],
+  "current_source_binary_runner_hashes_checked": false,
+  "global_max_us": {
+    "authored": {
+      "preflight_us": 16.112000000000002,
+      "export_us": 10.273,
+      "encode_us": 16.336000000000002,
+      "decode_validate_us": 18.397,
+      "candidate_validate_us": 0.989,
+      "drop_us": 1.008
+    },
+    "populated": {
+      "preflight_us": 18.357,
+      "export_us": 9.428,
+      "encode_us": 15.517000000000001,
+      "decode_validate_us": 19.817,
+      "candidate_validate_us": 0.975,
+      "drop_us": 0.758
+    }
+  },
+  "auditor_sha256": "a3878b054b6c41bdebc0a4beb897080255ead989b9bb74ffb762f2ad04250f6f",
+  "source_scope": "component-inputs-v2",
+  "input_enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340"
+}

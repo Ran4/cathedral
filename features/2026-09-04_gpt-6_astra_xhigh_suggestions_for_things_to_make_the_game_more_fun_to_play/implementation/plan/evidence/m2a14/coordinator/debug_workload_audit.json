@@ -1,0 +1,109 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-09T00:01:28.293703+00:00",
+  "auditor_sha256": "a3878b054b6c41bdebc0a4beb897080255ead989b9bb74ffb762f2ad04250f6f",
+  "source_manifest_sha256": "8b96ea02213a334ed66e744aec624738b62b89654be7389c19d5d3c5c2dbe291",
+  "rows": [
+    {
+      "owner": "scheduler",
+      "mode": "authored",
+      "historical_default_metadata_equal": true,
+      "default_old_cost_and_lease_equal": true,
+      "primary_sha256": "076a27ca7a902e0056ce3d6d514c1a22a3f0767ea110872296c34a6113d46b1f",
+      "raw_inputs_sha256": "1aad555a9006af04a09d40887c4956dbf3944af27862ad97d62300a461ef3314",
+      "cost": {
+        "encoded_bytes": 20874,
+        "expanded_upper_bytes": 44938,
+        "peak_bytes": 4440774,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "night": false,
+        "night_prompt_bytes": 0,
+        "night_provider_default": false,
+        "scheduler": true,
+        "scheduler_prompt_bytes": 20119,
+        "scheduler_provider_default": false
+      },
+      "poll_count": 136,
+      "maximum_poll_step_seconds": 0.040000000000000036,
+      "zero_discard": true
+    },
+    {
+      "owner": "scheduler",
+      "mode": "populated",
+      "historical_default_metadata_equal": true,
+      "default_old_cost_and_lease_equal": true,
+      "primary_sha256": "5497858cdf1b5818801409b9431a4cd52c996b17bf1acc7e435ea9b7bdadb915",
+      "raw_inputs_sha256": "d1ef9e3b1bf840d8521b2cafb52298e2780a084faab0fc114571f285d7041265",
+      "cost": {
+        "encoded_bytes": 20034,
+        "expanded_upper_bytes": 43258,
+        "peak_bytes": 4431534,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "night": false,
+        "night_prompt_bytes": 0,
+        "night_provider_default": false,
+        "scheduler": true,
+        "scheduler_prompt_bytes": 19295,
+        "scheduler_provider_default": false
+      },
+      "poll_count": 136,
+      "maximum_poll_step_seconds": 0.040000000000000036,
+      "zero_discard": true
+    },
+    {
+      "owner": "night",
+      "mode": "authored",
+      "historical_default_metadata_equal": true,
+      "default_old_cost_and_lease_equal": true,
+      "primary_sha256": "cddd1843aea32b76a8a9c278bb35ea2044e3cf9f5abf4be4ce3b62d7065daf90",
+      "raw_inputs_sha256": "51f33f3ac4ee40871c8857970823b1840f92c11f1c03e65293881af1eb698f12",
+      "cost": {
+        "encoded_bytes": 5395,
+        "expanded_upper_bytes": 14512,
+        "peak_bytes": 4272633,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "night": true,
+        "night_prompt_bytes": 4987,
+        "night_provider_default": false,
+        "scheduler": false,
+        "scheduler_prompt_bytes": 0,
+        "scheduler_provider_default": false
+      },
+      "poll_count": 405,
+      "maximum_poll_step_seconds": 0.05000000000000071,
+      "zero_discard": true
+    },
+    {
+      "owner": "night",
+      "mode": "populated",
+      "historical_default_metadata_equal": true,
+      "default_old_cost_and_lease_equal": true,
+      "primary_sha256": "801bfc2d89ffafb41dfadea3409774c8e0fe80cc31de4b236d48b76a7b1e88e5",
+      "raw_inputs_sha256": "8d322bff1cf917b4265bf5a401a819b2377a9e22830059bd253ac0a194d797a3",
+      "cost": {
+        "encoded_bytes": 5395,
+        "expanded_upper_bytes": 14512,
+        "peak_bytes": 4272633,
+        "validation_working_bytes": 4194304
+      },
+      "counts": {
+        "night": true,
+        "night_prompt_bytes": 4987,
+        "night_provider_default": false,
+        "scheduler": false,
+        "scheduler_prompt_bytes": 0,
+        "scheduler_provider_default": false
+      },
+      "poll_count": 405,
+      "maximum_poll_step_seconds": 0.05000000000000071,
+      "zero_discard": true
+    }
+  ],
+  "scope": "Existing debug runs inspected without rerunning; timings excluded from release acceptance."
+}

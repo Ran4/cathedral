@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d and M2a1–M2a13 implemented and reviewed (2026-09-09). Remaining M2 envelope/adoption work and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending; see EXECUTION_AUTHORITY.md.
+Status: M0 baseline delivered; M1a–M1d and M2a1–M2a14 implemented and reviewed (2026-09-09). Remaining M2 envelope/adoption work and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending.
 
 # An Alibi in Stone — systems first, then the full quest
 
@@ -112,3 +112,5 @@ M2a10 [tail review](evidence/m2a10/coordinator/tail_latency_audit.json) retains 
 [M2a12’s reviewed continuity handoff](evidence/m2a12/README.md) adds exact conversation pacing and remaining Engine cadence/publication/stored configuration. The frozen workspace passes 2,090; all 3,600 release phase samples pass independent review. authored export pooled p99 0.002510 ms, observed maximum 0.003357 ms; populated export pooled p99 0.003217 ms, observed maximum 0.003654 ms. SpeechRouter interruption, complete assembly and actual save/load/host acceptance remain pending.
 
 [M2a13’s reviewed speech handoff](evidence/m2a13/README.md) adds exact interrupted input drafts and accepted recording obligations. The frozen workspace passes 2,113; all 3,600 release phase samples pass independent review. authored export pooled p99 0.009243 ms, observed maximum 0.010273 ms; populated export pooled p99 0.008516 ms, observed maximum 0.009428 ms. Complete assembly, interruption adoption and actual save/load/host acceptance remain pending.
+
+[M2a14’s reviewed handoff](evidence/m2a14/README.md) retains exact accepted scheduler/Night request inputs. The frozen workspace passes 2,129 tests; all 7,200 release phase samples pass independent review. Complete assembly, retry/adoption and host restoration remain pending.

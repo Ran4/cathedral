@@ -1,0 +1,151 @@
+{
+  "result": "passed",
+  "checked_at_utc": "2026-09-09T00:25:47.305132+00:00",
+  "command_records": 19,
+  "cargo_records": 9,
+  "checks": [
+    "archive and exact retained original hashes/lengths",
+    "test totals independently parsed from originals",
+    "per-command source manifest hashes and v2 helper provenance",
+    "final verification uses complete frozen v2 source scope"
+  ],
+  "frozen_source_commands": [
+    "public_initial",
+    "checkpoint_final",
+    "probes_build",
+    "scheduler_authored_inputs",
+    "night_authored_inputs",
+    "scheduler_populated_inputs",
+    "night_populated_inputs",
+    "scheduler_authored_default",
+    "scheduler_populated_default",
+    "night_authored_default",
+    "night_populated_default",
+    "verify_smokes",
+    "rustc_version",
+    "workspace_serial"
+  ],
+  "totals": {
+    "check_initial": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "generate_fixture": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "owner_fixture_compile": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "generate_fixture_fixed": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "owner_initial": {
+      "passed": 6,
+      "failed": 4,
+      "ignored": 1,
+      "targets": 1
+    },
+    "public_initial": {
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 1
+    },
+    "checkpoint_final": {
+      "passed": 193,
+      "failed": 0,
+      "ignored": 28,
+      "targets": 1
+    },
+    "probes_build": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "scheduler_authored_inputs": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "night_authored_inputs": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "scheduler_populated_inputs": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "night_populated_inputs": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "scheduler_authored_default": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "scheduler_populated_default": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "night_authored_default": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "night_populated_default": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "verify_smokes": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "rustc_version": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 0
+    },
+    "workspace_serial": {
+      "passed": 2129,
+      "failed": 0,
+      "ignored": 36,
+      "targets": 46
+    }
+  },
+  "development_failures": [
+    "generate_fixture",
+    "owner_fixture_compile",
+    "owner_initial"
+  ],
+  "source_scope": "component-inputs-v2",
+  "source_manifest_sha256": "8b96ea02213a334ed66e744aec624738b62b89654be7389c19d5d3c5c2dbe291"
+}

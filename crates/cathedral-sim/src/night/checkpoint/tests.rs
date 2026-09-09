@@ -9,6 +9,7 @@ use crate::{
 };
 use serde_json::json;
 use std::collections::BTreeSet;
+mod cognition_inputs;
 pub(crate) fn env() -> PromptEnv {
     PromptEnv::new(
         include_str!("../../../../../assets/prompts/turn.j2"),

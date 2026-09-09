@@ -436,3 +436,29 @@ all-consumer horizons, original cognition output-token receipt, full capture/hyd
 and actual Running/Save/Load/retiring lifetimes remain pending. Earlier naive
 backbone+Round Save+Load already exceeds 1 GiB before Running; this is no complete-save
 or synchronous-host acceptance claim.
+
+## M2a14 accepted cognition input delta — 2026-09-09
+
+`NpcScheduler::InFlight.output_token_budget` and `NightOffice::Flight.output_token_budget`
+now retain `AcceptedOutputBudget::Accepted(Option<u32>)` at successful submission only.
+`MissingLegacy` explicitly denotes historical component authority that did not save
+the argument; it is never interpreted as `Accepted(None)`. Busy attempts and ordinary
+retry queues retain no accepted input. Flight-held results, failure/replay cleanup and
+stale-incarnation retirement use the flight's existing lifetime, with no side index.
+
+The separately admitted `EngineCognitionInputsDtoV1` saves mandatory nullable scheduler
+and Night rows with exact original prompt/budget and explicit method. Scheduler binds
+actor/incarnation/request/root/lane; Night binds person/ward/incarnation/request/root/day.
+Live validation compares known budgets; unadopted V1 owners require the explicitly
+supplied sidecar. The same borrowed backbone/ledger/boundary and saved clock validate
+both old owners, including bitwise component boundary equality. Public read-only rows
+do not install owners or retry work. Historical V1 export/copy/decode instead retain
+`MissingLegacy`, preserve their wire bytes, and reject injected new field names.
+
+[Owner coverage](evidence/m2a14/OWNER_COVERAGE.md) and [admission](evidence/m2a14/ADMISSION.md)
+document this component's lifecycle and retained copies. The new live state consists
+only of two inline enums; exported sidecar prompt copies are fully charged under the
+existing aggregate/4 MiB sequential validation allowance and unchanged global caps.
+Complete M2c execution replacement, once-only held application, full manifest/root
+agreement, Engine/host capture/hydration/publication and actual cohort lifetimes remain
+pending. The previous full-composition peak excess is not resolved by this component.

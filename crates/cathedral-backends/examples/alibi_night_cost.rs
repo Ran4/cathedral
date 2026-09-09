@@ -1,4 +1,6 @@
 //! M2a9 existing-Night component diagnostic. No full-save or synchronous-host budget claim.
+#[path = "support/cognition_inputs_cost.rs"]
+mod cognition_inputs_cost;
 use cathedral_backends::world_data::load_world_seed;
 use cathedral_sim::{
     AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineConfig, IdleCognitionMode,
@@ -17,6 +19,7 @@ use std::{fs, path::PathBuf, sync::Arc, time::Instant};
 struct Service {
     attempts: usize,
     prompts: Vec<String>,
+    budgets: Vec<Option<u32>>,
     pending: Option<RequestId>,
 }
 struct Recorded(Arc<std::sync::Mutex<Service>>);
@@ -27,7 +30,7 @@ impl Cognition for Recorded {
     fn request_night(
         &mut self,
         prompt: String,
-        _: Option<u32>,
+        budget: Option<u32>,
     ) -> Result<RequestId, CognitionBusy> {
         let mut s = self.0.lock().unwrap();
         s.attempts += 1;
@@ -35,6 +38,7 @@ impl Cognition for Recorded {
             return Err(CognitionBusy);
         }
         s.prompts.push(prompt);
+        s.budgets.push(budget);
         let id = RequestId(s.prompts.len() as u64);
         s.pending = Some(id);
         Ok(id)
@@ -73,6 +77,8 @@ enum Mode {
 }
 #[derive(Parser)]
 struct Args {
+    #[arg(long)]
+    cognition_inputs: bool,
     #[arg(long, value_enum)]
     mode: Mode,
     #[arg(long, default_value_t = 100)]
@@ -162,6 +168,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut saturated = false;
     let mut held_deferred_observed = false;
     let mut selected = None;
+    let mut poll_count = 0usize;
+    let mut maximum_poll_step_seconds = 0.0f64;
+    let mut coarse_discard_diagnostics = 0usize;
+    let mut last_poll = 0.0;
     for frame in 0..600 {
         let at = f64::from(frame) * 0.05;
         let pending = service.lock().unwrap().pending.take();
@@ -182,6 +192,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ));
         }
         let out = engine.poll(at, commands);
+        poll_count += 1;
+        maximum_poll_step_seconds = maximum_poll_step_seconds.max(at - last_poll);
+        last_poll = at;
+        coarse_discard_diagnostics+=out.iter().filter(|m|matches!(m,cathedral_sim::EngineMessage::Diagnostic(t) if t.contains("coarse poll discarded"))).count();
         ambient_reroll_observed |= out.iter().any(|m|matches!(m,cathedral_sim::EngineMessage::Diagnostic(t) if t.contains("ambient evenings")));
         first_applied |= !engine.world().ward_moods.is_empty();
         let boundary = LogicalTime::new(at).unwrap();
@@ -204,6 +218,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         busy_admitted_observed && submitted_observed && held_deferred_observed && first_applied,
         "{witnesses}"
     );
+    if args.cognition_inputs {
+        assert!(maximum_poll_step_seconds <= 0.05 + 1e-12);
+        assert_eq!(coarse_discard_diagnostics, 0);
+        let b = CheckpointBudget::default();
+        let legacy =
+            engine.export_night_checkpoint(boundary, b.reserve(Cohort::SavePayload, 4096)?)?;
+        let counts = serde_json::to_value(legacy.value().counts(context))?;
+        drop(legacy);
+        let mut witnesses = witnesses;
+        witnesses["poll_count"] = json!(poll_count);
+        witnesses["maximum_poll_step_seconds"] = json!(maximum_poll_step_seconds);
+        witnesses["coarse_discard_diagnostics"] = json!(coarse_discard_diagnostics);
+        witnesses["committed_ward_moods"] = json!(engine.world().ward_moods);
+        witnesses["held_reply"] =
+            json!("ward_mood {\"mood\":\"The evening accounts await the morning.\"}");
+        let submitted_requests=json!(service.prompts.iter().zip(&service.budgets).enumerate().map(|(i,(prompt,budget))|json!({"request_id":i+1,"method":"request_night","prompt":prompt,"output_token_budget":budget})).collect::<Vec<_>>());
+        let mut output = cognition_inputs_cost::measure(
+            &engine,
+            boundary,
+            args.samples,
+            "night",
+            counts,
+            witnesses,
+            submitted_requests,
+        )?;
+        output["mode"] = json!(match args.mode {
+            Mode::Authored => "authored",
+            Mode::Populated => "populated",
+        });
+        output["samples"] = json!(args.samples);
+        output["placement"] = placement;
+        fs::write(args.output, serde_json::to_vec_pretty(&output)?)?;
+        return Ok(());
+    }
     let mut phases = Phases::default();
     let mut metadata = None;
     for _ in 0..args.samples {

@@ -1,4 +1,4 @@
-Status: In progress (2026-09-09). M2a1–M2a13 private components are implemented and reviewed. Complete M2a envelope and remaining host owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
+Status: In progress (2026-09-09). M2a1–M2a14 private components are implemented and reviewed. Complete M2a envelope and remaining host owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
 
 # M2 — Complete simulation checkpoints
 
@@ -360,3 +360,88 @@ is bitwise, and raw grace/deadline records use explicit `{bits:u64}` values.
 The [independent review](evidence/m2a13/coordinator/review.md) accepts interrupted speech projections against 930 frozen inputs, 2,113 workspace passes, 183 focused passes and six public boundaries. New fixtures leave all historical bytes intact. Ordinary authored/+2,000 setup uses 17 bounded polls with zero discarded physical time. All 3,600 release phase samples pass provenance/counter/admission audits. authored export pooled p99 0.009243 ms, observed maximum 0.010273 ms; populated export pooled p99 0.008516 ms, observed maximum 0.009428 ms. See the [full performance record](evidence/m2a13/performance/README.md).
 
 Complete manifest/root/category agreement, original cognition output budgets, full capture/hydration, atomic Floor/ledger interruption and host draft/readable publication remain pending. The candidate cannot restore an active microphone or automatically submit speech. Actual phase/lifetimes must resolve the earlier complete-save peak excess without a cap increase; no synchronous host-frame claim is made.
+
+#### M2a14 design cut — 2026-09-09
+
+After accepted M2a13 commit `3aed5c264462e6e8c84c0d0e880e82057f47741d`, close the missing resolved cognition
+input authority for both NpcScheduler and NightOffice before complete hydration.
+Each currently retains its submitted prompt and semantic work identity, but both
+derive an output-token budget from the then-current subject at submission and do
+not retain that resolved argument. Exact retries cannot reconstruct this input
+from a later mutable actor, a current default or a reformatted prompt.
+
+Retain the exact accepted request method/lane and Option<u32> budget alongside
+the original prompt and its existing actor/subject/incarnation/semantic identity.
+None is an intentional provider-default argument, distinct from missing legacy
+authority. Capture only successful submission: a Busy attempt is not an accepted
+execution receipt, and subsequent ordinary retries resolve their own new inputs
+under existing behavior. Held success/error still belongs to its matching flight
+and never needs another provider call.
+
+The owner must propose the precise runtime field, versioned wire/API and legacy
+component policy before production edits. Preserve all historical V1 fixture
+bytes and honest prior component scope. Do not silently fill a missing budget,
+rewrite old V1 meaning, or claim an old component alone supplies complete input.
+Prefer a narrow explicit version or separately bound resolved-input owner over
+duplicating the entire scheduler/Night codec. Any added state must have complete
+creation/removal/failure/held/invalidated lifecycle ownership and admission proof.
+The complete envelope must refuse unsupported missing exact submitted input
+before adoption, while allowing explicit valid absence for a nonflying lane.
+
+Use closed mandatory records, exact borrowed live/unadopted component/root
+bindings and existing raw admission/retained leases. Fixed scalar options must
+not justify raising E/J, depth or shared byte caps. Do not add external IO,
+clocks, threads, ordinary polls, prompt rerendering, generic provider failures or
+partial production hydration to decode/validate. Existing ordinary provider
+requests, budgets, fairness, Busy handling and held application must remain
+behaviorally unchanged apart from retaining the resolved input authority.
+
+Private and independent public evidence must observe original submitted prompt
+and budget, then change actor significance/lore/config or remove/change the
+subject after acceptance, proving the saved argument remains exact. Cover both
+scheduler and person/ward Night lanes, None versus Some, Busy, flight cleanup,
+held success/error, strict missing/unknown/duplicate/ref-binding refusals and the
+legacy policy. Use meaningful ordinary commands and controlled pure services.
+Add new fixtures only, freeze complete inputs, retain failures and verify focused
+and workspace behavior before review and commit. Measurement must exercise the
+new authority through real accepted requests; reuse existing measurement
+infrastructure where it truthfully measures this change rather than inventing
+another large population simulation.
+
+This cut supplies exact input for later M2c execution replacement. Complete
+Engine/World/host assembly, once-only load retry/adoption, host readable draft
+publication, all-consumer horizons, compatibility manifest and actual cohort
+lifetimes remain required work. No complete save or host-frame claim follows
+from retaining this missing argument alone.
+
+The reviewed design adds an inline `AcceptedOutputBudget` to each existing
+scheduler/Night flight: explicit `MissingLegacy` or `Accepted(Option<u32>)`.
+Successful submission installs it; moving or retiring the flight carries or
+discards it. Existing V1 export/copy and decode intentionally omit this newly
+introduced authority and produce `MissingLegacy`, preserving their historical
+wire scope. A new mandatory field cannot be smuggled into that closed old wire.
+
+`EngineCognitionInputsDtoV1` is a separate admitted read-only component with
+mandatory version, boundary, player and nullable scheduler/Night rows. Each
+present row preserves the exact request method, optional budget, prompt and
+existing flight identity/lane or Night subject/day/incarnation. The two prompts
+are each bounded by 65,536 bytes and duplicated only in the admitted projection;
+Running retains its existing single prompt. A live context compares the known
+accepted argument exactly. An unadopted context derives both old owner contexts
+from one backbone, ledger, boundary and exact supplied saved clock, then binds
+every row to its legacy flight. Presence must match; absent budget authority is
+never interpreted as an intentional null argument. Both boundary values are
+compared bitwise, including where the older Night wrapper used numeric equality.
+
+Context construction only borrows. The proposed 4 MiB working charge must cover
+sequential old-owner validation before projection checks, with proof of the new
+inline flight layout and prompt/container allocations. New public records expose
+Serialize and borrowed getters only; private decoders enforce mandatory nullable
+fields and strict string tags. Opt-in cognition-input modes in existing probes
+may reuse their ordinary setup, while preserving default historical workloads
+and retaining full actual submitted method/prompt/budget witnesses in the new
+mode. Full execution replacement and complete adoption remain later work.
+
+#### M2a14 coordinator acceptance — 2026-09-09
+
+The [independent review](evidence/m2a14/coordinator/review.md) accepts exact cognition input authority against 938 frozen inputs, 2,129 workspace passes, 193 focused passes and six public boundaries. All 7,200 release phase samples pass; historical defaults and fixture bytes remain unchanged. scheduler authored export pooled p99 0.041565 ms; scheduler populated export pooled p99 0.054141 ms; night authored export pooled p99 0.023191 ms; night populated export pooled p99 0.023130 ms. Complete envelope/root agreement, full capture/hydration, once-only pending-work adoption, host owner restoration and actual phase/lifetime admission remain pending. See the [performance record](evidence/m2a14/performance/README.md).

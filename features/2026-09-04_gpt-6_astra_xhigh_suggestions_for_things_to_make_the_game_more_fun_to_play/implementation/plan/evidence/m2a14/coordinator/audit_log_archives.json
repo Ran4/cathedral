@@ -1,0 +1,101 @@
+[
+  {
+    "original_path": "/tmp/alibi-m2a14-source-audit-corrected-original.log",
+    "original_bytes": 123,
+    "original_sha256": "28b798557741a180a2ba36a5ea64c43463a3f056d4aa22a9727ec0d9524020d5",
+    "archive": "source-audit-corrected.log.gz",
+    "archive_bytes": 119,
+    "archive_sha256": "fc82bc56d8fc87b1d63d55d6fc8bab6fa5e5bf57c3ad07efb18c933710bb21f9",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-layout-audit-original.log",
+    "original_bytes": 253,
+    "original_sha256": "435dce05e5e4c225e6e085387e4fa27ca08155447468e4ebca7ebb0db4b8a30d",
+    "archive": "layout-audit.log.gz",
+    "archive_bytes": 185,
+    "archive_sha256": "87d5705310df9f371d4bec78ea4a3eb49187e16d12be1bedbf141df5e4bd4f59",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-debug-audit-original.log",
+    "original_bytes": 110,
+    "original_sha256": "695bc8ccb9ff46595e1a6141bd52ab1a3ca41d23cd4c7eea4da4ea7a2064e78e",
+    "archive": "debug-audit.log.gz",
+    "archive_bytes": 110,
+    "archive_sha256": "d45d49251fd696c5996ef408c4796d72892411f0a2513ca6350f31290ecd559b",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-historical-audit-original.log",
+    "original_bytes": 966,
+    "original_sha256": "c5069e18b7c5baaf5944acd7913765660c804c950f9b8454c6be284144c93bba",
+    "archive": "historical-audit.log.gz",
+    "archive_bytes": 150,
+    "archive_sha256": "cc78f4e0432d10e90c6d5c840de50c09bc1d07f7255cc980c7ca9546cabdc57f",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-log-audit-original.log",
+    "original_bytes": 3227,
+    "original_sha256": "3fc284417ff52e3f6463df33d341acbed233d0c5fb17c1a297a9ba2eac28696b",
+    "archive": "log-audit.log.gz",
+    "archive_bytes": 686,
+    "archive_sha256": "eff0fdc0e63e866ed130fd0e08c524a2a77086f547892f25cfc25ec371de027b",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-performance-audit-original.log",
+    "original_bytes": 336,
+    "original_sha256": "5ec7838dbbbcdb56f4d4b50ba5ec8acf0b526f1d77530609428816975c2a6698",
+    "archive": "performance-audit.log.gz",
+    "archive_bytes": 127,
+    "archive_sha256": "ff985ddac78cf850551f68c348deaaabf664037805041c05cd7e1d29bcb463f9",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-regressions-audit-original.log",
+    "original_bytes": 42,
+    "original_sha256": "caf6896d358a0194872619ddf7394f83ddae707e9e6a71336dc943dbd79ae485",
+    "archive": "regressions-audit.log.gz",
+    "archive_bytes": 61,
+    "archive_sha256": "9ec08bb460397f609cbeab5680edfbb5b77d41bbefc64ffc4d35029218cd65d1",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-release-audit-original.log",
+    "original_bytes": 237,
+    "original_sha256": "80813855da19a25d2decbab93f34c110ee77ce8bec3492ff3257e7728a8c4a39",
+    "archive": "release-audit.log.gz",
+    "archive_bytes": 191,
+    "archive_sha256": "3057ce9e403e9797f7c8b31bf896032569e95eaf01b6f70eebcbed7dce48696a",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-tails-audit-original.log",
+    "original_bytes": 3843,
+    "original_sha256": "83b926f2da5feca3f21d4641735f9b4fa715edbfc9147eb9cdec32993d873744",
+    "archive": "tails-audit.log.gz",
+    "archive_bytes": 743,
+    "archive_sha256": "6f024e46c29fa4e210ee1d392401555189788ec878cbbe75c5285d3d96b2ad89",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-finalize-docs-original.log",
+    "original_bytes": 126,
+    "original_sha256": "183b7ba869663c0151e6ac1b4e779413c17f300f52591cb3b187fe158ec2f3c9",
+    "archive": "finalize-docs.log.gz",
+    "archive_bytes": 120,
+    "archive_sha256": "31a07847c36776950f32d0eaacbe7453f4a87a97eb0c39c4bca3023fd061976a",
+    "normalization": "none; exact original bytes"
+  },
+  {
+    "original_path": "/tmp/alibi-m2a14-docs-audit-original.log",
+    "original_bytes": 2205,
+    "original_sha256": "28da49f44b9bac16c2e18f80882f41e3d5df6120429a60c6cc682204bfdcc02d",
+    "archive": "docs-audit.log.gz",
+    "archive_bytes": 929,
+    "archive_sha256": "3dde507b7475e4741ec720aab2e1a01740e44512fbfc9f9841c2ce4120c2050d",
+    "normalization": "none; exact original bytes"
+  }
+]

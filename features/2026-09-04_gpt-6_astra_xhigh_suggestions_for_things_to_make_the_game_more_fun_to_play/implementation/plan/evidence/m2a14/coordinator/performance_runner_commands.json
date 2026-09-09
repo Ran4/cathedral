@@ -1,0 +1,94 @@
+[
+  {
+    "owner": "scheduler",
+    "kind": "performance",
+    "command": [
+      "/home/ran/.local/bin/uv",
+      "run",
+      "--no-project",
+      "--cache-dir",
+      "/tmp/alibi-uv",
+      "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/run_m2_cognition_inputs_probes.py",
+      "--owner",
+      "scheduler",
+      "--output-dir",
+      "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/performance/scheduler"
+    ],
+    "environment_overrides": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-09T00:26:50.061080+00:00",
+    "source_scope": "component-inputs-v2",
+    "source_manifest_sha256": "8b96ea02213a334ed66e744aec624738b62b89654be7389c19d5d3c5c2dbe291",
+    "binary_sha256": "b5973156e3e96a117a06a293ab81104958cfd801b0ffbaa1a8487a52ac6b181d",
+    "runner_sha256": {
+      "run_m2_cognition_inputs_probes.py": "7399d30198fd4c99c7f99ce09c0e6237f0a308b76dfdb714f9f1a2979efc3789",
+      "run_m1_comparison.py": "77618e19fd56afe618c527e79cc90a7247fbdbf511496be5bc590b1aa5345810",
+      "run_m2_checkpoint_probes.py": "78336cb8e5e500a96a1e53b16d8573c2747da0db421845753ae6ff2a3b1afbe6",
+      "component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340"
+    },
+    "wrapper_sha256": "662e1f4c1c246b9d8d8ee9c854519f67477cc025eaa4ccfd1cc3dce42f849b3e",
+    "status": "completed",
+    "exit_code": 0,
+    "elapsed_seconds": 6.835873084026389,
+    "original_path": "/tmp/alibi-m2a14-scheduler-performance-runner-original.log",
+    "original_bytes": 3495,
+    "original_sha256": "990c38938b520300b25ac1146344f2fdf0217bef555a58a65f5db37cd34eb843",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/coordinator/scheduler_performance_runner.log.gz",
+    "archive_bytes": 866,
+    "archive_sha256": "28d0f1930c1f83ceec9f9e9a07cbb03ef158d3f7b89401c30b4b65da7f536c72",
+    "normalization": "none; exact original bytes",
+    "unchanged_source_binary_helpers": true
+  },
+  {
+    "owner": "night",
+    "kind": "performance",
+    "command": [
+      "/home/ran/.local/bin/uv",
+      "run",
+      "--no-project",
+      "--cache-dir",
+      "/tmp/alibi-uv",
+      "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/run_m2_cognition_inputs_probes.py",
+      "--owner",
+      "night",
+      "--output-dir",
+      "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/performance/night"
+    ],
+    "environment_overrides": {
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+      "CATHEDRAL_HEADLESS": "1",
+      "CATHEDRAL_FAKE_BACKEND": "1"
+    },
+    "started_utc": "2026-09-09T00:26:57.042664+00:00",
+    "source_scope": "component-inputs-v2",
+    "source_manifest_sha256": "8b96ea02213a334ed66e744aec624738b62b89654be7389c19d5d3c5c2dbe291",
+    "binary_sha256": "4017565b79a4106d1800bf6a44c595e9bc34107004ea9b6343db3f348e49f902",
+    "runner_sha256": {
+      "run_m2_cognition_inputs_probes.py": "7399d30198fd4c99c7f99ce09c0e6237f0a308b76dfdb714f9f1a2979efc3789",
+      "run_m1_comparison.py": "77618e19fd56afe618c527e79cc90a7247fbdbf511496be5bc590b1aa5345810",
+      "run_m2_checkpoint_probes.py": "78336cb8e5e500a96a1e53b16d8573c2747da0db421845753ae6ff2a3b1afbe6",
+      "component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340"
+    },
+    "wrapper_sha256": "662e1f4c1c246b9d8d8ee9c854519f67477cc025eaa4ccfd1cc3dce42f849b3e",
+    "status": "completed",
+    "exit_code": 0,
+    "elapsed_seconds": 15.385445010033436,
+    "original_path": "/tmp/alibi-m2a14-night-performance-runner-original.log",
+    "original_bytes": 3391,
+    "original_sha256": "26a70db6d7ea23c53c4071237bd81448fd615f237b631d5c67015540bf2c8472",
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/coordinator/night_performance_runner.log.gz",
+    "archive_bytes": 820,
+    "archive_sha256": "48b19b32fdbc76900e10dd90a0dc78790661383361a3efc774a1d5856a760636",
+    "normalization": "none; exact original bytes",
+    "unchanged_source_binary_helpers": true
+  }
+]

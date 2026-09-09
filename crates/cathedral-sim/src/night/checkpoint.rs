@@ -9,6 +9,34 @@ mod context;
 pub(crate) mod records;
 pub use context::NightCheckpointContext;
 const OWNER: &str = "night";
+pub(crate) fn cognition_input(
+    n: &NightOffice,
+) -> Option<crate::engine::cognition_inputs_checkpoint::records::NightInputRef<'_>> {
+    use crate::engine::cognition_inputs_checkpoint::{
+        CognitionRequestMethod,
+        records::{NightInputRef, NightSubjectRef},
+    };
+    n.in_flight.as_ref().map(|f| NightInputRef {
+        method: CognitionRequestMethod::RequestNight,
+        subject: match &f.subject {
+            Subject::Person(a) => NightSubjectRef::Person(a),
+            Subject::Ward(w) => NightSubjectRef::Ward(*w),
+        },
+        presence_epoch: f.presence_epoch,
+        request_id: f.request_id,
+        semantic: f.semantic,
+        owed_day: f.owed_day,
+        prompt: &f.prompt,
+        output_token_budget: f.output_token_budget,
+    })
+}
+pub(crate) fn validate_cognition_inputs(
+    n: &NightOffice,
+    c: NightCheckpointContext<'_>,
+) -> Result<()> {
+    context::BindingV1::new(c)?;
+    validate(n, c)
+}
 pub const MAX_PERSONS: usize = 25_000;
 pub const MAX_SUBJECTS: usize = MAX_PERSONS + 8;
 pub const VALIDATION_WORKING_BYTES: usize = 4 * 1024 * 1024;
@@ -193,7 +221,10 @@ pub(crate) fn copy(n: &NightOffice) -> NightOffice {
     NightOffice {
         config: n.config,
         queue: n.queue.clone(),
-        in_flight: n.in_flight.clone(),
+        in_flight: n.in_flight.clone().map(|mut f| {
+            f.output_token_budget = crate::traits::AcceptedOutputBudget::MissingLegacy;
+            f
+        }),
         held_result: n.held_result.clone(),
         last_reflected: n.last_reflected.clone(),
         bedtimes: n.bedtimes.clone(),
@@ -406,6 +437,9 @@ impl World {
     }
 }
 impl WorldNightDtoV1 {
+    pub(crate) fn cognition_inputs_boundary(&self) -> LogicalTime {
+        self.boundary
+    }
     pub(crate) fn from_world_for_engine(w: &World, now: LogicalTime) -> Self {
         Self {
             version: 1,

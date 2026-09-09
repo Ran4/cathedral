@@ -1,0 +1,76 @@
+{
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "build",
+    "--offline",
+    "--release",
+    "-p",
+    "cathedral-backends",
+    "--example",
+    "alibi_scheduler_cost",
+    "--example",
+    "alibi_night_cost",
+    "-j",
+    "1"
+  ],
+  "environment_overrides": {
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "build_variable_whitelist": {
+    "LDFLAGS": "-L/opt/homebrew/opt/openssl/lib",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "CATHEDRAL_HEADLESS": "1",
+    "CATHEDRAL_FAKE_BACKEND": "1"
+  },
+  "started_utc": "2026-09-09T00:22:04.997384+00:00",
+  "elapsed_seconds": 136.63447023706976,
+  "exit_code": 0,
+  "artifacts": {
+    "release_build.log": {
+      "original_path": "/tmp/alibi-m2a14-release-build-original.log",
+      "original_bytes": 253,
+      "original_sha256": "ce976f50625d32f4f2d272fc4772d8e6c202958ab4fd524380c2e64edc9f469e",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/coordinator/release_build.log.gz",
+      "archive_bytes": 156,
+      "archive_sha256": "77a6f508d3b7d6f4cfe59b4c757a52777bebeb69bb540d562f150c79320ce8e8",
+      "normalization": "none; exact original bytes"
+    },
+    "release_build.time": {
+      "original_path": "/tmp/alibi-m2a14-release-build-original.time",
+      "original_bytes": 879,
+      "original_sha256": "e9a9f72ca4fca15f8b9830e40e447a5c7b9a255abc25574289cef551e4ace1a7",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/coordinator/release_build.time.gz",
+      "archive_bytes": 481,
+      "archive_sha256": "d4c34775a2be7c5eaf1863203523b57a7b3d8ba860bbff624c878bb5d1fb28db",
+      "normalization": "none; exact original bytes"
+    }
+  },
+  "source_scope": "component-inputs-v2",
+  "source_manifest_sha256": "8b96ea02213a334ed66e744aec624738b62b89654be7389c19d5d3c5c2dbe291",
+  "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "build_wrapper_sha256": "3a250bce8ef7beb40592952789780f4a7433645710c9a050b6fa3e9c83a2239a",
+  "exact_source_scope_unchanged_after_build": true,
+  "source_helper_unchanged_after_build": true,
+  "binary_sha256": {
+    "alibi_scheduler_cost": "b5973156e3e96a117a06a293ab81104958cfd801b0ffbaa1a8487a52ac6b181d",
+    "alibi_night_cost": "4017565b79a4106d1800bf6a44c595e9bc34107004ea9b6343db3f348e49f902"
+  },
+  "preserved_references": {
+    "alibi_scheduler_cost": {
+      "path": "/tmp/alibi-m2a14-scheduler-reference-binary",
+      "sha256": "b5973156e3e96a117a06a293ab81104958cfd801b0ffbaa1a8487a52ac6b181d"
+    },
+    "alibi_night_cost": {
+      "path": "/tmp/alibi-m2a14-night-reference-binary",
+      "sha256": "4017565b79a4106d1800bf6a44c595e9bc34107004ea9b6343db3f348e49f902"
+    }
+  }
+}

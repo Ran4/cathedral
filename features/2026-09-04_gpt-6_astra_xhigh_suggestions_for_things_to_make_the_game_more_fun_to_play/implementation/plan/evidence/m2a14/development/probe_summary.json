@@ -1,0 +1,198 @@
+{
+  "status": "Four opt-in and four unchanged default debug smokes passed; timings are not release acceptance.",
+  "source_freeze": {
+    "source_scope": "component-inputs-v2",
+    "source_helper_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "source_manifest": "source_hashes.json",
+    "source_manifest_sha256": "8b96ea02213a334ed66e744aec624738b62b89654be7389c19d5d3c5c2dbe291",
+    "source_files": 938,
+    "frozen_utc": "2026-09-08T23:52:38.446421+00:00",
+    "policy": "No source/input edits during final focused/public/workspace verification or coordinator release checks."
+  },
+  "rows": [
+    {
+      "lane": "scheduler",
+      "mode": "authored",
+      "historical_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a11/development/authored_bounded_smoke.json",
+      "historical_sha256": "3ca8cabc44a6bc58ea96e11883b138272bd3e92cdc105c06cbdbf5e3138369a3",
+      "default_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/development/scheduler_authored_default.json",
+      "default_sha256": "4af0d87d201257fd29066136f8c46cfaea2d8b8549dbf7f2c898cfaef4a2828f",
+      "historical_scenario_counts_witnesses_mode_placement_equal": true,
+      "inputs_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/development/scheduler_authored_inputs.json",
+      "inputs_sha256": "1aad555a9006af04a09d40887c4956dbf3944af27862ad97d62300a461ef3314",
+      "counts": {
+        "night": false,
+        "night_prompt_bytes": 0,
+        "night_provider_default": false,
+        "scheduler": true,
+        "scheduler_prompt_bytes": 20119,
+        "scheduler_provider_default": false
+      },
+      "cost": {
+        "encoded_bytes": 20874,
+        "expanded_upper_bytes": 44938,
+        "peak_bytes": 4440774,
+        "validation_working_bytes": 4194304
+      },
+      "actual_requests": [
+        {
+          "request_id": 1,
+          "method": "request_with_budget",
+          "output_token_budget": 1400,
+          "prompt_bytes": 19849
+        },
+        {
+          "request_id": 2,
+          "method": "request_with_budget",
+          "output_token_budget": 1400,
+          "prompt_bytes": 19656
+        },
+        {
+          "request_id": 3,
+          "method": "request_with_budget",
+          "output_token_budget": 1400,
+          "prompt_bytes": 20119
+        }
+      ],
+      "poll_count": 136,
+      "maximum_poll_step_seconds": 0.040000000000000036,
+      "coarse_discard_diagnostics": 0
+    },
+    {
+      "lane": "scheduler",
+      "mode": "populated",
+      "historical_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a11/development/populated_bounded_smoke.json",
+      "historical_sha256": "57a5797ce2ef1f56da01862f30b9c25ecbc44bcbd7754445c8a6fe52e25b5b77",
+      "default_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/development/scheduler_populated_default.json",
+      "default_sha256": "b130a170e3a7ac7b276052b1b726a6a100220e05be9e37470fee00547ef3465a",
+      "historical_scenario_counts_witnesses_mode_placement_equal": true,
+      "inputs_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/development/scheduler_populated_inputs.json",
+      "inputs_sha256": "d1ef9e3b1bf840d8521b2cafb52298e2780a084faab0fc114571f285d7041265",
+      "counts": {
+        "night": false,
+        "night_prompt_bytes": 0,
+        "night_provider_default": false,
+        "scheduler": true,
+        "scheduler_prompt_bytes": 19295,
+        "scheduler_provider_default": false
+      },
+      "cost": {
+        "encoded_bytes": 20034,
+        "expanded_upper_bytes": 43258,
+        "peak_bytes": 4431534,
+        "validation_working_bytes": 4194304
+      },
+      "actual_requests": [
+        {
+          "request_id": 1,
+          "method": "request_with_budget",
+          "output_token_budget": 2400,
+          "prompt_bytes": 19029
+        },
+        {
+          "request_id": 2,
+          "method": "request_with_budget",
+          "output_token_budget": 700,
+          "prompt_bytes": 17878
+        },
+        {
+          "request_id": 3,
+          "method": "request_with_budget",
+          "output_token_budget": 2400,
+          "prompt_bytes": 19295
+        }
+      ],
+      "poll_count": 136,
+      "maximum_poll_step_seconds": 0.040000000000000036,
+      "coarse_discard_diagnostics": 0
+    },
+    {
+      "lane": "night",
+      "mode": "authored",
+      "historical_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a9/development/authored_smoke.json",
+      "historical_sha256": "2d42194aa994d76283f57d3675aa738109bdb97c229b2b071342a92c493573c2",
+      "default_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/development/night_authored_default.json",
+      "default_sha256": "681b95a89c22bafef9b679e1ea7055251cae06e84d9247f49942a893d9250caa",
+      "historical_scenario_counts_witnesses_mode_placement_equal": true,
+      "inputs_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/development/night_authored_inputs.json",
+      "inputs_sha256": "51f33f3ac4ee40871c8857970823b1840f92c11f1c03e65293881af1eb698f12",
+      "counts": {
+        "night": true,
+        "night_prompt_bytes": 4987,
+        "night_provider_default": false,
+        "scheduler": false,
+        "scheduler_prompt_bytes": 0,
+        "scheduler_provider_default": false
+      },
+      "cost": {
+        "encoded_bytes": 5395,
+        "expanded_upper_bytes": 14512,
+        "peak_bytes": 4272633,
+        "validation_working_bytes": 4194304
+      },
+      "actual_requests": [
+        {
+          "request_id": 1,
+          "method": "request_night",
+          "output_token_budget": 1400,
+          "prompt_bytes": 5301
+        },
+        {
+          "request_id": 2,
+          "method": "request_night",
+          "output_token_budget": 1400,
+          "prompt_bytes": 4987
+        }
+      ],
+      "poll_count": 405,
+      "maximum_poll_step_seconds": 0.05000000000000071,
+      "coarse_discard_diagnostics": 0
+    },
+    {
+      "lane": "night",
+      "mode": "populated",
+      "historical_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a9/development/populated_smoke.json",
+      "historical_sha256": "9601ebec1f2b9e6f9c6110961df3dd89bcd669d76033bc5b2cd6ca35283cccde",
+      "default_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/development/night_populated_default.json",
+      "default_sha256": "bd5e7bdc6deef0aae314682cbca3bf2b2d924106e409ad7e4c062ef612f9de4e",
+      "historical_scenario_counts_witnesses_mode_placement_equal": true,
+      "inputs_path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a14/development/night_populated_inputs.json",
+      "inputs_sha256": "8d322bff1cf917b4265bf5a401a819b2377a9e22830059bd253ac0a194d797a3",
+      "counts": {
+        "night": true,
+        "night_prompt_bytes": 4987,
+        "night_provider_default": false,
+        "scheduler": false,
+        "scheduler_prompt_bytes": 0,
+        "scheduler_provider_default": false
+      },
+      "cost": {
+        "encoded_bytes": 5395,
+        "expanded_upper_bytes": 14512,
+        "peak_bytes": 4272633,
+        "validation_working_bytes": 4194304
+      },
+      "actual_requests": [
+        {
+          "request_id": 1,
+          "method": "request_night",
+          "output_token_budget": 1400,
+          "prompt_bytes": 5301
+        },
+        {
+          "request_id": 2,
+          "method": "request_night",
+          "output_token_budget": 1400,
+          "prompt_bytes": 4987
+        }
+      ],
+      "poll_count": 405,
+      "maximum_poll_step_seconds": 0.05000000000000071,
+      "coarse_discard_diagnostics": 0
+    }
+  ],
+  "debug_binary_sha256": {
+    "scheduler": "711275492ed66f42859ea8093efad6d5a4795d35c7b815741b18403777599099",
+    "night": "d69f463c336ad4d5eefe418707fd0c33467d4d1dd6a8887e7b220b562920e9aa"
+  }
+}

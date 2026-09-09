@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d and M2a1–M2a13 implemented and reviewed (2026-09-09). Remaining M2 envelope/adoption work and M3–M19 remain. Sequential implementation continues at the developer's request. Reference-renderer/full-stress acceptance is pending.
+Status: M0 baseline delivered; M1a–M1d and M2a1–M2a14 implemented and reviewed (2026-09-09). Remaining M2 envelope/adoption work and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending.
 
 # An Alibi in Stone
 

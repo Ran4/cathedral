@@ -1215,6 +1215,7 @@ impl NightOffice {
             Subject::Ward(_) => None,
         };
         self.in_flight = Some(Flight {
+            output_token_budget: crate::traits::AcceptedOutputBudget::MissingLegacy,
             semantic,
             owed_day: 0,
             presence_epoch,
@@ -1265,6 +1266,7 @@ fn ward_semantic_replay_keeps_newer_mood_and_reflection_bookkeeping() {
         .insert(PlanningWard::Weigh, "Newer mood".into());
     let original = world.clone();
     night.in_flight = Some(Flight {
+        output_token_budget: crate::traits::AcceptedOutputBudget::MissingLegacy,
         semantic: OperationId {
             producer: NIGHT_PRODUCER,
             sequence: 1,
@@ -1301,6 +1303,7 @@ fn ward_semantic_replay_keeps_newer_mood_and_reflection_bookkeeping() {
     .enumerate()
     {
         night.in_flight = Some(Flight {
+            output_token_budget: crate::traits::AcceptedOutputBudget::MissingLegacy,
             semantic: OperationId {
                 producer: NIGHT_PRODUCER,
                 sequence: 1,
