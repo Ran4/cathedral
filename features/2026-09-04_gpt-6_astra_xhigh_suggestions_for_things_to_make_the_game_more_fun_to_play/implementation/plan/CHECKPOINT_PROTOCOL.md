@@ -111,3 +111,53 @@ In addition to ordinary populated-world round trips, M2/M3 must cover:
 14. Nonzero ordinary wall debt survives capture/adoption separately from accepted physical residuals; delayed preparation and offline time add none.
 
 M0 establishes numeric capture/adoption/frame-time and retained-memory budgets on available reference hardware, with default cast, 2,000 citizens and separately labeled 20,000 stress measurements. “No visible hitch” is an additional human check, not the only performance gate.
+
+## M2a15 implemented host component boundary — 2026-09-09
+
+`HostCaptureSet` is ordered after the complete ordinary `DrainBridge` and before
+`ReconcileMirror`/`CollectInput`. `HostObservation` borrows actual owners at this
+point. It requires the completed accepted physical boundary, matching single
+controller/body owner, ready current-generation runtime and empty BridgeInbox.
+It never polls, drains input, waits for a worker/provider or mutates the live
+world to make capture eligible. Post-H nonconsequential worker arrivals may stay
+queued. The independent host command allocator is captured from successful
+enqueue authority; it need not equal H or the sim ledger high-water, because
+valid refused-history gaps exist.
+
+Current-generation unread PlayerIntent at its actual forwarding cursor is saved
+as intentional but unsubmitted work, including its frozen choice/pose. Ordinary
+forwarding supplies a fresh monotonic spatial identity before enqueue; it does
+not restamp accepted commands. This handles real PreUpdate chat submissions
+whose earlier spatial identity is passed by the pump's final physical sample.
+Recording intentions carry explicit interrupted metadata, never raw microphone
+bytes or an instruction to restart recording.
+
+Unread committed PresentSpeech and semantic CivicBell are captured at their
+distinct actual consumer cursors. Existing subtitle, independent ECS bubble and
+timed HUD owners retain exact original words/attribution and readable progress.
+The body reflex reader is separate and cosmetic. No capture acknowledgement,
+audio stop, provider retry or old sound replay occurs. Exact M2c interruption and
+M3 new-generation consumer publication remain separate implementation gates.
+
+The pure `checkpoint::host` API admits a closed V1 scalar/typed-row component.
+Decode validates against borrowed actual Engine authority or already-admitted
+backbone/law/knowledge/marks/climate/animals/ledger candidates sharing the same
+boundary/player. It needs no live replacement Engine/World. Actual collision,
+CutMargin, gate kind/geometry, vermin definitions/configuration and installed mark
+catalog/algorithm identities bind the continuation; nullable owner presence
+cannot be removed under unchanged definitions. Historical item/actor choices
+can outlive present world entities and are never silently retargeted.
+
+[Owner coverage](evidence/m2a15/OWNER_COVERAGE.md) distinguishes exact saved owners,
+rebuilds, interrupted device/service work and private prepared-owner evidence.
+This component adds no production hydration/adoption path and does not establish
+complete root/category agreement, full-cohort lifetime or frame-budget acceptance.
+
+Supported host V1 fixture bytes were added on 2026-09-14 under
+`crates/cathedral-sim/tests/fixtures/checkpoint_host`: initial actual host and
+active readable/pending work. Their ordinary test decodes against the compatible
+actual boundary and checks exact canonical roundtrip/candidate bytes there,
+before later input forwarding changes issued. Only a detached fresh-export
+generation fence is aligned for comparison; stored/candidate/live identities
+remain untouched. Independent fresh writers agree exactly, with originals and
+hashes in [fixture evidence](evidence/m2a15/owner_fixtures/fixture-equality-1.json).

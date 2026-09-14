@@ -58,17 +58,17 @@ const FLEEING_SPEED_MPS: f32 = 2.5;
 #[derive(Resource, Debug, Clone, Default)]
 pub struct PlayerCustodyState {
     /// `None` while the law has no hands on the player, which is nearly always.
-    pub custody: Option<CustodyView>,
+    pub(crate) custody: Option<CustodyView>,
     /// `0..=1`. Filled by pulling away from the grip, drained by not.
-    pub strain: f32,
+    pub(crate) strain: f32,
     /// The words against the player, kept here beside the custody they are
     /// drawn with. Both halves of the standing line have to live in one place
     /// for [`law_standing_hud`] to be its one writer — see there for why it
     /// must be.
-    notices: Vec<cathedral_sim::engine::PlayerNotice>,
+    pub(crate) notices: Vec<cathedral_sim::engine::PlayerNotice>,
     /// Whether the sim has already been told this pull started, so it is told
     /// once and not at 120 Hz.
-    struggling_reported: bool,
+    pub(crate) struggling_reported: bool,
 }
 
 /// The law's hands, as the host needs them.
@@ -461,6 +461,82 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn host_restored_strain_keeps_failed_attempt_latch_and_break_threshold() {
+        let mut app = custody_app(
+            PlayerCustodyState::held_at(Vec3::ZERO, 1, 1.0),
+            PlayerController::moving_at(Vec3::X * 2.0),
+            Vec3::X,
+            Vec3::ZERO,
+        );
+        for _ in 0..64 {
+            app.app
+                .world()
+                .resource::<BridgeHandle>()
+                .try_send(BridgeCommand::PlayerSound {
+                    sound_id: "fart".into(),
+                })
+                .unwrap();
+        }
+        app.pump(TICK_SECONDS, true);
+        let saved = {
+            let s = app.app.world().resource::<PlayerCustodyState>();
+            assert!(
+                s.struggling_reported,
+                "attempt is stamped before the refused enqueue"
+            );
+            (s.strain, s.struggling_reported)
+        };
+        while app.commands.try_recv().is_ok() {}
+        {
+            let mut s = app.app.world_mut().resource_mut::<PlayerCustodyState>();
+            s.strain = 0.7;
+            s.struggling_reported = false;
+            s.strain = saved.0;
+            s.struggling_reported = saved.1;
+            assert_eq!(s.strain.to_bits(), saved.0.to_bits());
+            assert_eq!(s.struggling_reported, saved.1);
+        }
+        app.pump(TICK_SECONDS, true);
+        assert!(
+            app.commands.is_empty(),
+            "a refused saved struggle is not repeated"
+        );
+        app.app
+            .world_mut()
+            .resource_mut::<PlayerCustodyState>()
+            .strain = 1.0 - TICK_SECONDS * 0.5;
+        let saved = {
+            let s = app.app.world().resource::<PlayerCustodyState>();
+            (s.strain, s.struggling_reported)
+        };
+        app.pump(TICK_SECONDS, true);
+        let first = app.commands.try_recv().unwrap();
+        assert!(matches!(
+            crate::smart_actors::bridge::expect_host_command(first, 65),
+            BridgeCommand::PlayerBrokeFree
+        ));
+        assert_eq!(app.strain(), 0.0);
+        {
+            let mut s = app.app.world_mut().resource_mut::<PlayerCustodyState>();
+            s.strain = saved.0;
+            s.struggling_reported = saved.1;
+        }
+        app.pump(TICK_SECONDS, true);
+        assert_eq!(app.strain(), 0.0);
+        assert!(
+            app.app
+                .world()
+                .resource::<PlayerCustodyState>()
+                .struggling_reported
+        );
+        assert_eq!(
+            app.commands.len(),
+            1,
+            "the restored next threshold enqueues exactly one break-free command"
+        );
+    }
 
     /// The fixed step the meter is pumped at in these tests. The real one is the
     /// frame rate; the meter is rate-independent because it integrates `dt`.

@@ -6,6 +6,72 @@ use std::{
     time::Duration,
 };
 
+/// Extra original receipts live independently in subtitles, ECS bubbles and
+/// the player caption. Reserve before any clone and return only when their
+/// final shared owner drops; queue length alone cannot bound these lifetimes.
+const MAX_RETAINED_RECEIPT_BYTES: usize = 8 * 1024 * 1024;
+const MAX_RECEIPT_TEXT_BYTES: usize = 16 * 1024;
+#[derive(Debug)]
+pub(crate) struct RetainedSpeech {
+    message: PresentSpeech,
+    // Rust drops fields in declaration order: message storage is gone before
+    // the last owner's capacity is returned.
+    _lease: ReceiptLease,
+}
+#[derive(Debug)]
+struct ReceiptLease {
+    budget: Arc<std::sync::atomic::AtomicUsize>,
+    charged: usize,
+}
+impl std::ops::Deref for RetainedSpeech {
+    type Target = PresentSpeech;
+    fn deref(&self) -> &Self::Target {
+        &self.message
+    }
+}
+impl Drop for ReceiptLease {
+    fn drop(&mut self) {
+        self.budget
+            .fetch_sub(self.charged, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+impl RetainedSpeech {
+    fn retain(
+        message: &PresentSpeech,
+        budget: &Arc<std::sync::atomic::AtomicUsize>,
+    ) -> Option<Arc<Self>> {
+        let text = message
+            .event_id
+            .len()
+            .checked_add(message.speaker_id.0.len())?
+            .checked_add(message.speaker_label.len())?
+            .checked_add(message.text.len())?
+            .checked_add(message.target_id.as_ref().map_or(0, |id| id.0.len()))?;
+        if text > MAX_RECEIPT_TEXT_BYTES {
+            return None;
+        }
+        let charged =
+            text.checked_add(std::mem::size_of::<Self>() + 2 * std::mem::size_of::<usize>())?;
+        budget
+            .fetch_update(
+                std::sync::atomic::Ordering::Relaxed,
+                std::sync::atomic::Ordering::Relaxed,
+                |used| {
+                    used.checked_add(charged)
+                        .filter(|next| *next <= MAX_RETAINED_RECEIPT_BYTES)
+                },
+            )
+            .ok()?;
+        Some(Arc::new(Self {
+            message: message.clone(),
+            _lease: ReceiptLease {
+                budget: Arc::clone(budget),
+                charged,
+            },
+        }))
+    }
+}
+
 use bevy::{
     audio::{
         AudioPlayer, AudioSinkPlayback, AudioSource, ChannelCount, Decodable, PlaybackSettings,
@@ -115,19 +181,20 @@ pub struct ClearSpeechPresentation {
 }
 
 #[derive(Debug)]
-struct SubtitleLine {
-    event_id: String,
-    text: String,
-    minimum_seconds: f64,
-    visible_since: Option<f64>,
-    audio_playing: bool,
+pub(crate) struct SubtitleLine {
+    pub(crate) receipt: Option<Arc<RetainedSpeech>>,
+    pub(crate) event_id: String,
+    pub(crate) text: String,
+    pub(crate) minimum_seconds: f64,
+    pub(crate) visible_since: Option<f64>,
+    pub(crate) audio_playing: bool,
 }
 
 #[derive(Debug)]
-struct AudioExpectation {
-    event_id: String,
-    position: Vec3,
-    queued_at: f64,
+pub(crate) struct AudioExpectation {
+    pub(crate) event_id: String,
+    pub(crate) position: Vec3,
+    pub(crate) queued_at: f64,
 }
 
 #[derive(Debug)]
@@ -297,30 +364,53 @@ struct PendingPcmStream {
 }
 
 #[derive(Debug)]
-struct ActiveVoice {
-    entity: Entity,
-    event_id: String,
-    started_at: f64,
+pub(crate) struct ActiveVoice {
+    pub(crate) entity: Entity,
+    pub(crate) event_id: String,
+    pub(crate) started_at: f64,
 }
 
 /// Ordered presentation queues. They are transient and cleared on disconnect.
 #[derive(Resource, Debug, Default)]
 pub struct SpeechPresentationState {
-    generation: cathedral_sim::RuntimeGeneration,
-    last_event_seq: Option<u64>,
-    subtitles: VecDeque<SubtitleLine>,
-    audio_order: VecDeque<AudioExpectation>,
+    receipt_budget: Arc<std::sync::atomic::AtomicUsize>,
+    pub(crate) speech_read: usize,
+    pub(crate) generation: cathedral_sim::RuntimeGeneration,
+    pub(crate) last_event_seq: Option<u64>,
+    pub(crate) subtitles: VecDeque<SubtitleLine>,
+    pub(crate) audio_order: VecDeque<AudioExpectation>,
     ready_audio: HashMap<String, ReadyClip>,
     pcm_streams: HashMap<String, PendingPcmStream>,
     /// One auto-layout root per NPC; its children retain accepted event order.
-    bubble_stacks: HashMap<ActorId, Entity>,
-    active_voice: Option<ActiveVoice>,
-    microphone_suspended_for_voice: bool,
-    microphone_suspend_ack: Option<Receiver<()>>,
-    microphone_suspend_started_at: Option<f64>,
+    pub(crate) bubble_stacks: HashMap<ActorId, Entity>,
+    pub(crate) active_voice: Option<ActiveVoice>,
+    pub(crate) microphone_suspended_for_voice: bool,
+    pub(crate) microphone_suspend_ack: Option<Receiver<()>>,
+    pub(crate) microphone_suspend_started_at: Option<f64>,
 }
 
 impl SpeechPresentationState {
+    #[cfg(test)]
+    pub(crate) fn checkpoint_test_fill_receipt_allowance(&self) -> Vec<Arc<RetainedSpeech>> {
+        let message = PresentSpeech {
+            generation: self.generation,
+            event_seq: 0,
+            event_id: String::new(),
+            speaker_id: ActorId("player".into()),
+            speaker_label: String::new(),
+            target_id: None,
+            text: String::new(),
+            speaker_position: Vec3::ZERO,
+            recipient_count: 0,
+            expect_audio: false,
+        };
+        let mut retained = Vec::new();
+        while let Some(receipt) = RetainedSpeech::retain(&message, &self.receipt_budget) {
+            retained.push(receipt);
+        }
+        retained
+    }
+
     pub fn clear(&mut self) {
         self.last_event_seq = None;
         self.subtitles.clear();
@@ -347,18 +437,19 @@ impl SpeechPresentationState {
 }
 
 #[derive(Component, Debug)]
-pub(super) struct SpeechBubbleStack {
-    speaker_id: ActorId,
+pub(crate) struct SpeechBubbleStack {
+    pub(crate) speaker_id: ActorId,
     /// Last known anchor position; refreshed each frame from the speaker's
     /// live [`SpeechAnchor`] so the bubble follows a moving NPC, and kept as
     /// a fallback for the frames where the actor view is missing.
-    world_position: Vec3,
+    pub(crate) world_position: Vec3,
 }
 
 #[derive(Component, Debug)]
-pub(super) struct SpeechBubble {
-    expires_at: f64,
-    event_id: String,
+pub(crate) struct SpeechBubble {
+    pub(crate) receipt: Option<Arc<RetainedSpeech>>,
+    pub(crate) expires_at: f64,
+    pub(crate) event_id: String,
 }
 
 #[derive(Component)]
@@ -366,7 +457,7 @@ pub(super) struct NpcVoice;
 
 /// Called before presentation consumers. M3 invokes the same owner reset at
 /// its adoption barrier; old queued messages remain tagged and are ignored.
-pub fn synchronize_generation(
+pub(super) fn synchronize_generation(
     mut commands: Commands,
     handle: Option<Res<bridge::BridgeHandle>>,
     mut state: ResMut<SpeechPresentationState>,
@@ -389,6 +480,9 @@ pub fn synchronize_generation(
     state.clear();
     state.generation = generation;
     hud.subtitle.clear();
+    hud.player_receipt = None;
+    hud.player_receipt_unavailable = false;
+    hud.player_transcript = None;
 }
 
 pub fn receive_speech_events(
@@ -405,7 +499,8 @@ pub fn receive_speech_events(
         .as_deref()
         .map(CathedralFonts::body)
         .unwrap_or_default();
-    for message in messages.read() {
+    for (message, message_id) in messages.read_with_id() {
+        state.speech_read = message_id.id + 1;
         if message.generation != state.generation {
             continue;
         }
@@ -420,17 +515,25 @@ pub fn receive_speech_events(
         if text.is_empty() || text.chars().count() > super::PLAYER_SPEECH_MAX_CHARS {
             continue;
         }
+        // Retaining a checkpoint original must not alter ordinary display,
+        // audio expectation or acknowledgement. Missing original authority
+        // makes the read-only component unavailable until this readable owner
+        // expires/replaces; it never manufactures an early SpeechPresented.
+        let receipt = RetainedSpeech::retain(message, &state.receipt_budget);
         if message.speaker_id.0 == "player" {
             // Player STT has its own tiny, immediate bottom caption. Keeping
             // it out of the NPC subtitle/TTS queue prevents an earlier voiced
             // line from hiding confirmation that the microphone worked.
             hud.show_player_transcript_delivery(text, message.recipient_count);
+            hud.player_receipt_unavailable = receipt.is_none();
+            hud.player_receipt = receipt;
             continue;
         }
         let duration = speech_text_seconds(text);
         let label = message.speaker_label.as_str();
         let first_subtitle = state.subtitles.is_empty();
         state.subtitles.push_back(SubtitleLine {
+            receipt: receipt.clone(),
             event_id: message.event_id.clone(),
             text: format!("{label}: {text}"),
             minimum_seconds: f64::from(duration),
@@ -447,6 +550,7 @@ pub fn receive_speech_events(
             &message.event_id,
             now + f64::from(duration),
             speech_font.clone(),
+            receipt,
         );
         if message.expect_audio {
             state.audio_order.push_back(AudioExpectation {
@@ -468,6 +572,7 @@ fn spawn_speech_bubble(
     event_id: &str,
     expires_at: f64,
     font: FontSource,
+    receipt: Option<Arc<RetainedSpeech>>,
 ) {
     let world_position = speaker + Vec3::Y * SPEECH_ANCHOR_Y;
     // `Commands::spawn` reserves the entity immediately, so even several
@@ -501,6 +606,7 @@ fn spawn_speech_bubble(
     commands.entity(stack_entity).with_child((
         Name::new("NPC speech bubble"),
         SpeechBubble {
+            receipt,
             expires_at,
             event_id: event_id.to_owned(),
         },
@@ -829,7 +935,7 @@ pub fn receive_tts_stream_ends(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn start_ready_audio(
+pub(super) fn start_ready_audio(
     mut commands: Commands,
     time: Res<Time>,
     mut audio_sources: ResMut<Assets<AudioSource>>,
@@ -1188,7 +1294,7 @@ fn advance_subtitle_queue(state: &mut SpeechPresentationState, now: f64) {
     }
 }
 
-pub fn stop_npc_speech_for_capture(
+pub(super) fn stop_npc_speech_for_capture(
     mut commands: Commands,
     mut messages: MessageReader<StopNpcSpeech>,
     mut state: ResMut<SpeechPresentationState>,
@@ -1234,7 +1340,7 @@ pub fn stop_npc_speech_for_capture(
 }
 
 #[allow(clippy::type_complexity)]
-pub fn clear_speech_presentation(
+pub(super) fn clear_speech_presentation(
     mut commands: Commands,
     mut messages: MessageReader<ClearSpeechPresentation>,
     mut state: ResMut<SpeechPresentationState>,
@@ -1282,7 +1388,7 @@ fn notify_speech_presented(
 /// How long a line's bubble stands — also the body's "still talking" deadline
 /// (`body.rs` L4 keys the talk gesticulation on the same clock, npc_bodies M3).
 pub(super) fn speech_text_seconds(text: &str) -> f32 {
-    (2.0 + text.chars().count() as f32 / 15.0).clamp(3.0, 10.0)
+    cathedral_sim::checkpoint::host::speech_reading_seconds(text)
 }
 
 fn speech_gain(distance_m: f32) -> Option<f32> {
@@ -1342,6 +1448,297 @@ mod tests {
             recipient_count: 1,
             expect_audio: false,
         }
+    }
+
+    #[test]
+    fn host_receipt_lease_follows_last_bubble_owner_and_precedes_clone() {
+        use std::sync::atomic::Ordering;
+        let mut app = speech_test_app();
+        app.world_mut().write_message(npc_speech(
+            1,
+            "historical-actor",
+            "  A complete original receipt.  ",
+        ));
+        app.update();
+        let budget = Arc::clone(
+            &app.world()
+                .resource::<SpeechPresentationState>()
+                .receipt_budget,
+        );
+        let used = budget.load(Ordering::Relaxed);
+        assert!(used > 0);
+        app.world_mut()
+            .resource_mut::<SpeechPresentationState>()
+            .subtitles
+            .clear();
+        assert_eq!(
+            budget.load(Ordering::Relaxed),
+            used,
+            "the bubble still owns its original receipt"
+        );
+        let entities: Vec<_> = app
+            .world()
+            .iter_entities()
+            .filter(|e| e.contains::<SpeechBubble>())
+            .map(|e| e.id())
+            .collect();
+        for entity in entities {
+            app.world_mut().despawn(entity);
+        }
+        assert_eq!(budget.load(Ordering::Relaxed), 0);
+        let message = npc_speech(2, "actor", "x".repeat(500));
+        let mut retained = Vec::new();
+        while let Some(receipt) = RetainedSpeech::retain(&message, &budget) {
+            retained.push(receipt);
+        }
+        assert!(budget.load(Ordering::Relaxed) <= MAX_RETAINED_RECEIPT_BYTES);
+        assert!(RetainedSpeech::retain(&message, &budget).is_none());
+        drop(retained);
+        assert_eq!(budget.load(Ordering::Relaxed), 0);
+        let mut oversized = message;
+        oversized.event_id = "x".repeat(MAX_RECEIPT_TEXT_BYTES + 1);
+        assert!(RetainedSpeech::retain(&oversized, &budget).is_none());
+        assert_eq!(budget.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn host_receipt_limit_preserves_display_audio_and_normal_acknowledgement() {
+        let mut app = speech_test_app();
+        super::super::hud::add_host_receipt_expiry_test_system(&mut app);
+        let (sender, received) = crossbeam_channel::bounded(32);
+        app.insert_resource(bridge::BridgeHandle::new(sender, "/tmp".into()));
+        let retained = app
+            .world()
+            .resource::<SpeechPresentationState>()
+            .checkpoint_test_fill_receipt_allowance();
+        let mut npc = npc_speech(1, "speaker", "These committed words must remain visible.");
+        npc.expect_audio = true;
+        app.world_mut().write_message(npc);
+        app.world_mut().write_message(npc_speech(
+            2,
+            "player",
+            "My committed words remain visible.",
+        ));
+        app.update();
+        let state = app.world().resource::<SpeechPresentationState>();
+        assert_eq!(state.subtitles.len(), 1);
+        assert_eq!(
+            state.subtitles[0].text,
+            "speaker: These committed words must remain visible."
+        );
+        assert!(state.subtitles[0].receipt.is_none());
+        assert_eq!(state.audio_order.len(), 1);
+        assert_eq!(state.audio_order[0].event_id, "speech-1");
+        let bubble = app
+            .world()
+            .iter_entities()
+            .find_map(|e| e.get::<SpeechBubble>())
+            .unwrap();
+        assert!(bubble.receipt.is_none());
+        let hud = app.world().resource::<SmartActorHudState>();
+        assert!(hud.player_receipt_unavailable);
+        assert!(hud.player_receipt.is_none());
+        assert!(
+            hud.player_transcript_text()
+                .unwrap()
+                .contains("My committed words remain visible.")
+        );
+        assert!(
+            received.is_empty(),
+            "retention failure must not acknowledge speech early"
+        );
+
+        app.world_mut()
+            .resource_mut::<SmartActorHudState>()
+            .show_player_transcript("Provisional replacement");
+        assert!(
+            !app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt_unavailable
+        );
+        app.world_mut()
+            .write_message(npc_speech(3, "player", "Expire this committed caption."));
+        app.update();
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt_unavailable
+        );
+        app.world_mut()
+            .resource_mut::<SmartActorHudState>()
+            .player_transcript
+            .as_mut()
+            .unwrap()
+            .remaining = Duration::ZERO;
+        app.update();
+        assert!(
+            !app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt_unavailable
+        );
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_transcript
+                .is_none()
+        );
+        app.world_mut().write_message(npc_speech(
+            4,
+            "player",
+            "Disconnect this committed caption.",
+        ));
+        app.update();
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt_unavailable
+        );
+        app.world_mut()
+            .resource_mut::<SmartActorHudState>()
+            .clear_transients_on_disconnect("test");
+        assert!(
+            !app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt_unavailable
+        );
+        app.world_mut()
+            .write_message(npc_speech(5, "player", "Retire this committed caption."));
+        app.update();
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt_unavailable
+        );
+        let (sender, _) = crossbeam_channel::bounded(32);
+        app.insert_resource(bridge::BridgeHandle::new_for_generation(
+            sender,
+            "/tmp".into(),
+            cathedral_sim::RuntimeGeneration(2),
+        ));
+        app.add_systems(Update, synchronize_generation.after(receive_speech_events));
+        app.update();
+        assert!(
+            !app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt_unavailable
+        );
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_transcript
+                .is_none()
+        );
+        drop(retained);
+    }
+
+    #[test]
+    fn host_player_receipt_does_not_attach_to_provisional_replacement_or_expiry() {
+        let mut app = speech_test_app();
+        super::super::hud::add_host_receipt_expiry_test_system(&mut app);
+        app.world_mut()
+            .write_message(npc_speech(1, "player", "Committed A"));
+        app.update();
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt
+                .is_some()
+        );
+        app.world_mut()
+            .resource_mut::<SmartActorHudState>()
+            .show_player_transcript("Provisional B");
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt
+                .is_none()
+        );
+        app.world_mut()
+            .write_message(npc_speech(2, "player", "Committed C"));
+        app.update();
+        app.world_mut()
+            .resource_mut::<SmartActorHudState>()
+            .player_transcript
+            .as_mut()
+            .unwrap()
+            .remaining = Duration::ZERO;
+        app.update();
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt
+                .is_none()
+        );
+        app.world_mut()
+            .write_message(npc_speech(3, "player", "Committed D"));
+        app.update();
+        app.world_mut()
+            .resource_mut::<SmartActorHudState>()
+            .clear_transients_on_disconnect("test disconnect");
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_receipt
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn host_restored_readable_receipts_keep_partial_and_not_yet_started_minima() {
+        let mut app = speech_test_app();
+        app.world_mut()
+            .write_message(npc_speech(1, "actor-a", "A".repeat(150)));
+        app.world_mut()
+            .write_message(npc_speech(2, "actor-b", "second line"));
+        app.update();
+        let original = app.world().resource::<SpeechPresentationState>();
+        let mut restored = SpeechPresentationState::default();
+        restored.last_event_seq = original.last_event_seq;
+        for line in &original.subtitles {
+            restored.subtitles.push_back(SubtitleLine {
+                receipt: line.receipt.clone(),
+                event_id: line.event_id.clone(),
+                text: line.text.clone(),
+                minimum_seconds: line.minimum_seconds,
+                visible_since: line.visible_since,
+                audio_playing: line.audio_playing,
+            });
+        }
+        let signature = |s: &SpeechPresentationState| {
+            s.subtitles
+                .iter()
+                .map(|l| {
+                    (
+                        l.event_id.clone(),
+                        l.text.clone(),
+                        l.minimum_seconds.to_bits(),
+                        l.visible_since.map(f64::to_bits),
+                        l.audio_playing,
+                        l.receipt.as_ref().unwrap().text.clone(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            signature(original),
+            signature(&restored),
+            "exact original text and all readable clocks before continuation"
+        );
+        let mut original = app.world_mut().resource_mut::<SpeechPresentationState>();
+        for now in [4.0, 9.999, 10.0, 12.999, 13.0] {
+            advance_subtitle_queue(&mut original, now);
+            advance_subtitle_queue(&mut restored, now);
+            assert_eq!(signature(&original), signature(&restored));
+            if now == 4.0 {
+                assert_eq!(restored.subtitles.len(), 2);
+                assert_eq!(restored.subtitles[1].visible_since, None);
+            }
+            if now == 10.0 {
+                assert_eq!(restored.subtitles.len(), 1);
+                assert_eq!(restored.subtitles[0].visible_since, Some(10.0));
+            }
+        }
+        assert!(restored.subtitles.is_empty());
     }
 
     fn bubble_count(app: &mut App) -> usize {
@@ -1462,14 +1859,30 @@ mod tests {
             let before = format!("{:?}", app.world().resource::<SpeechPresentationState>());
             publish(app.world_mut(), RuntimeGeneration(41));
             app.update();
+            let consumed = usize::from(kind == 0);
+            assert_eq!(
+                app.world()
+                    .resource::<SpeechPresentationState>()
+                    .speech_read,
+                consumed,
+                "the real reader must pass even rejected old-generation speech"
+            );
+            let expected = before.replace("speech_read: 0,", &format!("speech_read: {consumed},"));
             assert_eq!(
                 format!("{:?}", app.world().resource::<SpeechPresentationState>()),
-                before,
+                expected,
                 "old presentation kind {kind} touched its colliding event"
             );
             assert!(received.is_empty());
             publish(app.world_mut(), current);
             app.update();
+            if kind == 0 {
+                let state = app.world().resource::<SpeechPresentationState>();
+                assert_eq!(state.speech_read, 2);
+                assert_eq!(state.last_event_seq, Some(2));
+                assert_eq!(state.subtitles.len(), 1);
+                assert_eq!(state.subtitles[0].text, "same-actor: current words");
+            }
             assert_ne!(
                 format!("{:?}", app.world().resource::<SpeechPresentationState>()),
                 before,
@@ -1597,6 +2010,7 @@ mod tests {
                 "test-event",
                 10.0,
                 FontSource::default(),
+                None,
             );
         }
 
@@ -2120,6 +2534,7 @@ mod tests {
     fn queued_subtitles_receive_their_full_visible_duration() {
         let mut state = SpeechPresentationState::default();
         state.subtitles.push_back(SubtitleLine {
+            receipt: None,
             event_id: "speech-1".into(),
             text: "Ilse: first".into(),
             minimum_seconds: 3.0,
@@ -2127,6 +2542,7 @@ mod tests {
             audio_playing: false,
         });
         state.subtitles.push_back(SubtitleLine {
+            receipt: None,
             event_id: "speech-2".into(),
             text: "Conny: second".into(),
             minimum_seconds: 3.0,
@@ -2147,6 +2563,7 @@ mod tests {
     fn expected_audio_holds_the_current_subtitle_until_timeout() {
         let mut state = SpeechPresentationState::default();
         state.subtitles.push_back(SubtitleLine {
+            receipt: None,
             event_id: "speech-1".into(),
             text: "Ilse: hello".into(),
             minimum_seconds: 3.0,

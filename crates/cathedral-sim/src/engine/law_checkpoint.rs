@@ -235,6 +235,9 @@ impl Admitted<EngineLawDtoV1> {
     }
 }
 impl EngineLawCandidate {
+    pub(crate) fn host_boundary(&self) -> (LogicalTime, &str) {
+        (self.data.boundary, self.data.player_id.as_str())
+    }
     pub fn notices(&self) -> &notices::Notices {
         &self.data.world.notices
     }

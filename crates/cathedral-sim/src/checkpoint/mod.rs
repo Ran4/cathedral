@@ -8,6 +8,7 @@
 
 pub(crate) mod aggregate;
 mod budget;
+pub mod host;
 mod manifest;
 pub(crate) mod records;
 pub(crate) mod serde_support;

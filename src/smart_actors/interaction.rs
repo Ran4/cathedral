@@ -148,7 +148,7 @@ impl PlayerIntentWriter<'_> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) enum PendingKind {
+pub(crate) enum PendingKind {
     Recording,
     Offer {
         item_id: ItemId,
@@ -194,10 +194,10 @@ impl PendingKind {
 }
 
 #[derive(Debug, Clone)]
-struct PendingCommand {
-    kind: PendingKind,
-    sent_revision: u64,
-    succeeded: bool,
+pub(crate) struct PendingCommand {
+    pub(crate) kind: PendingKind,
+    pub(crate) sent_revision: u64,
+    pub(crate) succeeded: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -212,17 +212,18 @@ pub struct ActiveOfferCard {
 
 #[derive(Resource, Debug, Default)]
 pub struct InteractionState {
+    pub(crate) intent_read: usize,
     pub selected_item: Option<ItemId>,
-    selected_index: usize,
+    pub(crate) selected_index: usize,
     pub active_offer: Option<ActiveOfferCard>,
     /// How many coins the purse's offer picker hands over
     /// (`features/food_and_items/05_the_llm_seam.md` §7). Meaningful only while
     /// the coin stack is selected; clamped to the live stack, and a raw 0 reads
     /// as 1 so a fresh state offers a single coin, never the whole purse.
-    coin_offer_count: u32,
-    dismissed_broadcasts: HashMap<ItemId, u64>,
-    pending: HashMap<String, PendingCommand>,
-    next_request: u64,
+    pub(crate) coin_offer_count: u32,
+    pub(crate) dismissed_broadcasts: HashMap<ItemId, u64>,
+    pub(crate) pending: HashMap<String, PendingCommand>,
+    pub(crate) next_request: u64,
 }
 
 impl InteractionState {
@@ -318,9 +319,9 @@ impl InteractionState {
 #[derive(Resource, Debug)]
 pub struct PlayerSpatialState {
     pub sequence: u64,
-    last_position: Option<Vec3>,
-    last_yaw: Option<f32>,
-    last_background_send: f64,
+    pub(crate) last_position: Option<Vec3>,
+    pub(crate) last_yaw: Option<f32>,
+    pub(crate) last_background_send: f64,
 }
 
 impl Default for PlayerSpatialState {

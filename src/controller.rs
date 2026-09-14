@@ -17,7 +17,10 @@
 //!          │   │   │ C │   │ B │   │ M │             Z=STT  X=TTS  V=mic  N=decline
 //!          └───┴───┴───┴───┴───┴───┴───┘
 
-use std::f32::consts::{FRAC_PI_2, PI};
+use cathedral_sim::checkpoint::host::controller_limits::{
+    COYOTE_SECONDS, GRAVITY, JUMP_BUFFER_SECONDS, MAX_FLY_SPEED, PITCH_LIMIT, RUN_SPEED,
+};
+use std::f32::consts::PI;
 
 use bevy::{
     anti_alias::smaa::Smaa,
@@ -65,23 +68,17 @@ pub const WALK_BAND_LO: f32 = 0.01; // PLAYER_SPAWN.y - PLAYER_HALF_SIZE.y
 pub const WALK_BAND_HI: f32 = 1.81; // PLAYER_SPAWN.y + PLAYER_HALF_SIZE.y
 
 const WALK_SPEED: f32 = 8.0;
-const RUN_SPEED: f32 = 12.0;
 const MAX_HORIZONTAL_SPEED: f32 = RUN_SPEED;
 const GROUND_ACCELERATION: f32 = 12.0;
 const AIR_ACCELERATION: f32 = 2.0;
 const GROUND_FRICTION: f32 = 8.0;
-const GRAVITY: f32 = 22.0;
 const JUMP_SPEED: f32 = 7.0;
-const JUMP_BUFFER_SECONDS: f32 = 0.12;
-const COYOTE_SECONDS: f32 = 0.10;
 
 const FLY_SPEED: f32 = 8.0;
 const FLY_ACCELERATION: f32 = 12.0;
 const FLY_FRICTION: f32 = 6.0;
-const MAX_FLY_SPEED: f32 = 11.0;
 
 const MOUSE_SENSITIVITY: f32 = 0.0018;
-const PITCH_LIMIT: f32 = FRAC_PI_2 - 0.01;
 
 // The player is swept against boxes expanded by its half-size.  Keeping a tiny
 // gap between the player and geometry prevents floating-point noise from
@@ -127,12 +124,12 @@ impl Plugin for ControllerPlugin {
 pub struct PlayerController {
     /// Whether gravity-free flight is active.
     pub flying: bool,
-    velocity: Vec3,
-    yaw: f32,
-    pitch: f32,
-    grounded: bool,
-    coyote_remaining: f32,
-    jump_buffer_remaining: f32,
+    pub(crate) velocity: Vec3,
+    pub(crate) yaw: f32,
+    pub(crate) pitch: f32,
+    pub(crate) grounded: bool,
+    pub(crate) coyote_remaining: f32,
+    pub(crate) jump_buffer_remaining: f32,
 }
 
 impl PlayerController {
@@ -211,8 +208,8 @@ pub(crate) struct DynamicBarrier {
 /// floors, walls, and stairs, or convex vertical prisms for rotated footprints.
 #[derive(Resource, Debug, Default)]
 pub struct CollisionWorld {
-    boxes: Vec<SolidBox>,
-    convex_prisms: Vec<SolidConvexPrism>,
+    pub(crate) boxes: Vec<SolidBox>,
+    pub(crate) convex_prisms: Vec<SolidConvexPrism>,
 }
 
 impl CollisionWorld {
@@ -448,26 +445,26 @@ impl CollisionWorld {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct SolidBox {
-    min: Vec3,
-    max: Vec3,
+pub(crate) struct SolidBox {
+    pub(crate) min: Vec3,
+    pub(crate) max: Vec3,
 }
 
 #[derive(Debug)]
-struct SolidConvexPrism {
-    min_y: f32,
-    max_y: f32,
-    planes: Box<[PrismPlane]>,
+pub(crate) struct SolidConvexPrism {
+    pub(crate) min_y: f32,
+    pub(crate) max_y: f32,
+    pub(crate) planes: Box<[PrismPlane]>,
     /// The XZ footprint the prism was built from — kept so the navigation bake
     /// can subtract the exact solid, not its axis-aligned bound.
     #[allow(dead_code)] // read via solid_footprints_in_band in tests
-    footprint: Box<[Vec2]>,
+    pub(crate) footprint: Box<[Vec2]>,
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PrismPlane {
-    normal: Vec2,
-    offset: f32,
+pub(crate) struct PrismPlane {
+    pub(crate) normal: Vec2,
+    pub(crate) offset: f32,
 }
 
 /// The fixed-step authoritative player position, interpolated for rendering.
@@ -485,8 +482,8 @@ pub struct PlayerCamera;
 #[derive(Resource, Debug, Default)]
 pub struct ControllerInput {
     pub movement: Vec2,
-    running: bool,
-    fly_vertical: f32,
+    pub(crate) running: bool,
+    pub(crate) fly_vertical: f32,
 }
 
 fn spawn_player(mut commands: Commands) {
@@ -719,6 +716,12 @@ fn mouse_look(
 
     player_transform.rotation = Quat::from_rotation_y(controller.yaw);
     camera.rotation = Quat::from_rotation_x(controller.pitch);
+}
+
+#[cfg(test)]
+pub(crate) fn host_checkpoint_test_fixed_step(world: &mut World) {
+    use bevy::ecs::system::RunSystemOnce;
+    world.run_system_once(fixed_player_movement).unwrap();
 }
 
 fn fixed_player_movement(

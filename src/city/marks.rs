@@ -221,8 +221,8 @@ impl ChalkStanding {
 /// every new door the nearest anchor's first sign rather than whatever was
 /// picked two streets ago.
 #[derive(Resource, Debug, Default)]
-pub struct ChalkChoice {
-    step: usize,
+pub(crate) struct ChalkChoice {
+    pub(crate) step: usize,
 }
 
 impl ChalkChoice {

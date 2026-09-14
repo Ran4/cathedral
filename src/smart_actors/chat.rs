@@ -59,14 +59,14 @@ const SPACE_ADVANCE_EM: f32 = 0.26;
 #[derive(Resource, Debug, Default)]
 pub struct ChatInputState {
     pub open: bool,
-    buffer: String,
-    cursor: usize,
+    pub(crate) buffer: String,
+    pub(crate) cursor: usize,
     /// Tracked from the raw key stream because the box resets `ButtonInput`
     /// every frame it is open; seeded from it on open.
-    ctrl_down: bool,
+    pub(crate) ctrl_down: bool,
     /// Seconds since the last edit, driving the cursor blink; reset on every
     /// edit so the caret is solid while typing.
-    blink: f32,
+    pub(crate) blink: f32,
 }
 
 impl ChatInputState {

@@ -555,6 +555,12 @@ impl Admitted<EngineClimateDtoV1> {
     }
 }
 impl EngineClimateCandidate {
+    pub(crate) fn host_boundary(&self) -> (LogicalTime, &str) {
+        (self.data.boundary, &self.data.player_id)
+    }
+    pub(crate) fn host_clock(&self) -> crate::WorldClock {
+        self.data.clock.clock()
+    }
     pub fn counts(&self, c: ClimateCheckpointContext<'_>) -> ClimateCounts {
         self.data.counts(c)
     }

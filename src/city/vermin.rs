@@ -109,14 +109,14 @@ const SWARM_PERCEPT_INTERVAL_MINUTES: f64 = 30.0;
 /// no migration, no procedural placement — the same spirit as the fixed
 /// hand-authored cast. The three all-office colonies are exactly the three
 /// authored `FliesAtWaste` piles: the flies and the rats mark the same filth.
-struct ColonySpec {
-    name: &'static str,
-    anchor: Vec2,
-    rats: usize,
-    radius_m: f32,
+pub(crate) struct ColonySpec {
+    pub(crate) name: &'static str,
+    pub(crate) anchor: Vec2,
+    pub(crate) rats: usize,
+    pub(crate) radius_m: f32,
     /// `true` runs all offices; `false` is the `WarmDayWaste` inverse —
     /// visible only while the city is dark, the Snuffing to the Kindling.
-    all_offices: bool,
+    pub(crate) all_offices: bool,
 }
 
 const COLONIES: [ColonySpec; 8] = [
@@ -188,38 +188,38 @@ const COLONIES: [ColonySpec; 8] = [
 
 /// One dogleg of a rat's loop: sitting at `from` until `depart`, then a
 /// straight sprint landing at `to` on `arrive` (the next leg's start).
-struct Leg {
-    depart: f32,
-    arrive: f32,
-    from: Vec2,
-    to: Vec2,
-    heading: Vec2,
+pub(crate) struct Leg {
+    pub(crate) depart: f32,
+    pub(crate) arrive: f32,
+    pub(crate) from: Vec2,
+    pub(crate) to: Vec2,
+    pub(crate) heading: Vec2,
 }
 
-struct Rat {
-    seed: u64,
-    legs: Vec<Leg>,
-    period: f32,
+pub(crate) struct Rat {
+    pub(crate) seed: u64,
+    pub(crate) legs: Vec<Leg>,
+    pub(crate) period: f32,
     /// Offset into the loop, so a colony never darts in unison.
-    phase: f32,
-    length_m: f32,
+    pub(crate) phase: f32,
+    pub(crate) length_m: f32,
     /// Coat brightness jitter around the shared dark brown.
-    tint: f32,
+    pub(crate) tint: f32,
     motion: RatMotion,
 }
 
-struct Colony {
-    name: &'static str,
-    anchor: Vec2,
-    radius_m: f32,
-    all_offices: bool,
-    rats: Vec<Rat>,
+pub(crate) struct Colony {
+    pub(crate) name: &'static str,
+    pub(crate) anchor: Vec2,
+    pub(crate) radius_m: f32,
+    pub(crate) all_offices: bool,
+    pub(crate) rats: Vec<Rat>,
     /// The boil complement, baked beside the ordinary rats at startup over the
     /// doubled radius and kept apart from them so an ordinary frame — every
     /// frame but one colony's, one night in eight — skips it for free.
-    boil_rats: Vec<Rat>,
+    pub(crate) boil_rats: Vec<Rat>,
     /// The colony-wide footfall impulse; cosmetic pose state lives on each rat.
-    scatter: Option<(Vec2, f32)>,
+    pub(crate) scatter: Option<(Vec2, f32)>,
 }
 
 impl Colony {
@@ -245,24 +245,39 @@ impl Colony {
 
 /// The whole city's rats: one entity, one mesh rebuilt per frame.
 #[derive(Component)]
-pub(super) struct Vermin {
-    colonies: Vec<Colony>,
+pub(crate) struct Vermin {
+    /// Installed density belongs to this bake, not a later edited preference.
+    pub(crate) density: f32,
+    pub(crate) colonies: Vec<Colony>,
     /// The committed navigation bake, read (like the puddles read it) to keep
     /// every waypoint and every scatter dart on ground the player can walk.
-    nav: NavData,
+    pub(crate) nav: NavData,
     /// `vermin.seed`, baked in rather than read back off the config resource,
     /// so every system that asks which colony boils asks the same number.
-    seed: u64,
+    pub(crate) seed: u64,
     /// `vermin.swarm_percepts`. With it false the boil is a sight and nothing
     /// more: no bridge command is ever sent, and the sim never learns of rats.
-    swarm_percepts: bool,
+    pub(crate) swarm_percepts: bool,
     /// The last game night whose boil was announced, so the log line the
     /// feature is verified by lands once a night however many frames it spans.
-    announced_boil_night: Option<i64>,
+    pub(crate) announced_boil_night: Option<i64>,
     /// Game-minutes (since day zero) at the last swarm percept, which is what
     /// paces the repeats. Sim time, never wall time: the `T` key's 60× must
     /// reach the repeat the same way it reaches the boil.
-    last_percept_minutes: Option<f64>,
+    pub(crate) last_percept_minutes: Option<f64>,
+}
+
+impl Vermin {
+    pub(crate) fn checkpoint_scalar(&self) -> cathedral_sim::checkpoint::host::VerminV1 {
+        use cathedral_sim::checkpoint::host::{Nullable, VerminV1};
+        VerminV1 {
+            seed: self.seed,
+            swarm_percepts: self.swarm_percepts,
+            density: self.density,
+            announced_boil_night: Nullable(self.announced_boil_night),
+            last_percept_minutes: Nullable(self.last_percept_minutes),
+        }
+    }
 }
 
 /// splitmix64's finalizer: the per-rat determinism everything draws from.
@@ -667,6 +682,7 @@ pub(super) fn spawn_vermin(
         NoFrustumCulling,
         NotShadowCaster,
         Vermin {
+            density: settings.density,
             colonies,
             nav,
             seed: settings.seed,
@@ -1924,6 +1940,90 @@ mod tests {
 
     fn built_app() -> App {
         built_app_with(None)
+    }
+
+    #[test]
+    fn host_vermin_gates_preserve_refused_send_and_repeat_boundary() {
+        let mut app = built_app();
+        let (sender, received) = crossbeam_channel::bounded(1);
+        let handle = BridgeHandle::new(sender, "/tmp".into());
+        handle
+            .try_send(BridgeCommand::PlayerSound {
+                sound_id: "fart".into(),
+            })
+            .unwrap();
+        app.insert_resource(handle)
+            .insert_resource(night_clock(3, 22.0));
+        app.update();
+        let saved = {
+            let world = app.world_mut();
+            world
+                .query::<&Vermin>()
+                .single(world)
+                .unwrap()
+                .checkpoint_scalar()
+        };
+        assert_eq!(saved.announced_boil_night.0, Some(3));
+        assert!(saved.last_percept_minutes.0.is_some());
+        assert_eq!(
+            received.len(),
+            1,
+            "full queue retained its previous command"
+        );
+        received.try_recv().unwrap();
+        {
+            let world = app.world_mut();
+            let mut q = world.query::<&mut Vermin>();
+            let mut v = q.single_mut(world).unwrap();
+            v.announced_boil_night = None;
+            v.last_percept_minutes = None;
+            assert_ne!(v.checkpoint_scalar(), saved);
+            v.announced_boil_night = saved.announced_boil_night.0;
+            v.last_percept_minutes = saved.last_percept_minutes.0;
+            assert_eq!(v.checkpoint_scalar(), saved);
+        }
+        app.update();
+        assert!(
+            received.is_empty(),
+            "restoring a refused attempt cannot retry it every frame"
+        );
+        app.insert_resource(night_clock(3, 22.5));
+        app.update();
+        assert_eq!(
+            received.len(),
+            1,
+            "the inclusive thirty-minute boundary emits once"
+        );
+        received.try_recv().unwrap();
+        app.update();
+        assert!(received.is_empty());
+        {
+            let world = app.world_mut();
+            let mut q = world.query::<&mut Vermin>();
+            let mut v = q.single_mut(world).unwrap();
+            for colony in &mut v.colonies {
+                colony.rats.clear();
+                colony.boil_rats.clear();
+            }
+            v.announced_boil_night = None;
+            v.last_percept_minutes = None;
+        }
+        app.insert_resource(night_clock(4, 22.0));
+        app.update();
+        let empty = {
+            let world = app.world_mut();
+            world
+                .query::<&Vermin>()
+                .single(world)
+                .unwrap()
+                .checkpoint_scalar()
+        };
+        assert_eq!(empty.announced_boil_night.0, None);
+        assert_eq!(empty.last_percept_minutes.0, None);
+        assert!(
+            received.is_empty(),
+            "an empty selected colony invents no percept"
+        );
     }
 
     /// The city, and the whole vermin chain in the order `CityPlugin` runs it —

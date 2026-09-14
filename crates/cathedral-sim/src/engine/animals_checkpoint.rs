@@ -179,6 +179,9 @@ impl Admitted<EngineAnimalsDtoV1> {
     }
 }
 impl EngineAnimalsCandidate {
+    pub(crate) fn host_boundary(&self) -> (LogicalTime, &str) {
+        (self.data.boundary, self.data.player_id.as_str())
+    }
     pub fn dogs(&self) -> &[crate::dogs::Dog] {
         &self.data.world.dogs
     }

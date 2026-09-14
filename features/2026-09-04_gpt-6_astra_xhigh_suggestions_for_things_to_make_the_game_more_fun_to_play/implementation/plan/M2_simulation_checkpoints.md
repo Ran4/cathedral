@@ -1,4 +1,4 @@
-Status: In progress (2026-09-09). M2a1–M2a14 private components are implemented and reviewed. Complete M2a envelope and remaining host owners, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
+Status: In progress (2026-09-14). M2a1–M2a15 private and host components are implemented and reviewed. M2a16 complete-envelope composition, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
 
 # M2 — Complete simulation checkpoints
 
@@ -445,3 +445,224 @@ mode. Full execution replacement and complete adoption remain later work.
 #### M2a14 coordinator acceptance — 2026-09-09
 
 The [independent review](evidence/m2a14/coordinator/review.md) accepts exact cognition input authority against 938 frozen inputs, 2,129 workspace passes, 193 focused passes and six public boundaries. All 7,200 release phase samples pass; historical defaults and fixture bytes remain unchanged. scheduler authored export pooled p99 0.041565 ms; scheduler populated export pooled p99 0.054141 ms; night authored export pooled p99 0.023191 ms; night populated export pooled p99 0.023130 ms. Complete envelope/root agreement, full capture/hydration, once-only pending-work adoption, host owner restoration and actual phase/lifetime admission remain pending. See the [performance record](evidence/m2a14/performance/README.md).
+
+#### M2a15 design cut — 2026-09-09
+
+This leg owns the existing application's continuation authority and readable
+presentation contract. M2a14 is accepted at `e4653ed`; this is the next sequential
+ESPFEIT owner. Implement a strict admitted read-only host component with actual
+owner extraction, exact field policies, new supported component fixtures and
+renderer-free behavioral evidence. Complete-envelope assembly and final host
+adoption remain M2b/M3; a host component cannot claim complete city restoration.
+
+Before changing production source, reconcile all host command-producing resources
+and player-readable owners from current code, propose the concrete schema/API and
+identify any additional authoritative fields. The coordinator reviews that bounded
+handoff while independently reading consumers. The owner's inventory is the basis
+for implementation; old comments calling all host state a projection are not proof.
+Do not invent future notebook/proposition/document fields that are absent today.
+
+Capture authority includes the exact PlayerController dynamics/view, both
+PhysicalPosition samples, actual LiveTime accepted/debt owner and fixed residual,
+and LocalEngine accepted physical sequence/input watermark/boundary. Bind host
+and sim accepted pose/yaw/elapsed/sequence bitwise where their types permit exact
+agreement. Render-interpolated Transform is not body authority. Classify currently
+held device inputs separately with an explicit release/re-sample policy; never
+replay an old mouse delta or manufacture an intentional submission. Preserve
+physical previous/current values in the read-only format and reserve interpolation
+reset for the final publication policy.
+
+PlayerCustodyState strain and struggling_reported generate future semantic commands.
+Preserve them with the queued/accepted command boundary. Its sampled custody view
+and notices need an explicit source-backed binding to the saved sim law/publication
+state, accounting for host consumer lag. No independent second law authority or
+silent progress reset is permitted. Prove next ordinary tether/strain behavior and
+once-only threshold delivery against control state.
+
+The physical definition binding also includes the actual optional CutMarginProfile:
+its ordered rectangles/feather flags, ramps and stairs, plus the ground-height
+algorithm/constants. The fixed controller applies this virtual floor after the
+collision sweep, changing height, vertical velocity and grounded/coyote state;
+CollisionWorld or navigation identity alone does not cover it. A prepared host
+with a different profile must reject the candidate before continuation.
+
+The prepared definition context also binds gate/vermin owner presence and the
+installed vermin seed, percept flag and density bits. Keeping an opaque geometry
+hash while replacing required continuation with null is not a valid checkpoint;
+an absent owner cannot acquire spurious continuation either. Controller motion
+limits use the actual solver/setter constants, with an accepted-lifetime bound
+for the falling velocity axis. Quickbar selection must retain room for its next
+ordinary wheel increment. These checks reject unsupported finite values before
+their consumers run, without changing ordinary motion constants.
+
+Vermin seed/config/colony/nav definition identity, swarm_percepts,
+announced_boil_night and last_percept_minutes affect WorldSound commands. Preserve
+exact meaningful gates, including last-percept stamps retained when try_send fails.
+Cosmetic rat poses may rebuild under a stated policy, without new swarm percepts.
+Reconcile every soundscape resource: accepted bell scheduling sends semantic Knell
+or CivicPeal once, so CueCooldowns and civic/clock gates cannot all be discarded as
+sound effects. Preserve semantic gate authority and explicitly classify scheduled
+strokes/PCM/handles and purely cosmetic timers as discarded or rebuilt at the saved
+accepted calendar. Initial restored clock publication must not create a new peal
+or replay an already delivered flour/curfew/well cue.
+
+Chat open/buffer/character cursor and visible journal open/scroll position are
+player state. Preserve exact unsent Unicode text; submission validation happens
+only on new intentional input. Distinguish editor modifiers/blink/device state.
+Journal resolved rows are sampled readable data, with exact source/publishing
+semantics; an open journal does not lose its position during re-publication.
+
+Owed committed speech must come from actual PresentSpeech/event/host consumers,
+not Engine transcript or TTS request maps. Capture already-consumed pending
+subtitle/bubble/player-transcript receipts and readable messages still queued at
+the host boundary. Reconcile actual ECS bubble text/anchor lifetime and sequence
+tracking. If current retained data loses original fields, add a bounded actual
+receipt at ordinary presentation acceptance; do not reconstruct names/plain text
+by splitting a formatted label. Preserve exact event identity, words, attribution,
+anchor and readable progress. Bound supported rows by the existing presentation
+limits without silently dropping saved work. Define remaining minimum readable
+time when old audio is interrupted, keep generation identity distinct from durable
+event identity, and never execute a say or revive old audio/STT/TTS on decode.
+If the additional original-receipt byte budget is exhausted, keep ordinary
+dialogue display and audio behavior unchanged. Decline capture while a surviving
+readable owner lacks that receipt; do not acknowledge and skip new dialogue
+because checkpoint bookkeeping could not retain it. Distinguish an unavailable
+committed player receipt from an ordinary provisional transcript, and clear that
+unavailability only when the owning caption is replaced, expires or is discarded.
+Inventory HUD/player-transcript/timed-readable outcomes and separate preferences
+and rebuildable service/mirror state. Existing queue overflow policy is not a
+license for a checkpoint decoder to discard admitted rows.
+
+The sim crate stays pure: no Bevy, filesystem, device, clock reads, threads or
+network. If its existing admitted codec is reused, define closed pure host data
+and a supported borrowed input/context API there; do not expose unchecked
+Admitted constructors or blanket Deserialize escape hatches. Host adapters own
+actual resource/ECS observation. Preflight/lease admission must precede cloning
+strings, collecting rows or constructing validation indexes. Retain raw input
+and candidate charges, strict unknown/duplicate/missing fields and explicit
+nullable values. Exact installed definitions/config/ordered catalogs must bind
+without seeding or warming side-effectful caches. Use source-supported limits
+under unchanged 128 MiB encoded/expanded, depth 64 and shared 1 GiB ceilings.
+
+This cut exports and validates completed host boundaries and exposes read-only
+candidates; no live partial resource adoption, save-only poll, provider wait,
+input acceptance freeze lasting across frames, user-facing save controls or disk
+publication. Tests may install covered fields privately into scrambled prepared
+owners to prove their next ordinary behavior, with immediate canonical equality
+before stepping. The capture contract must honestly reject an incoherent boundary
+without draining or advancing the live host to make the test pass. All emitted
+readable obligations through watermark H need explicit conservation whether
+already consumed by presentation or still waiting in the bridge.
+
+The actual chat continuation test exposed an ordinary input-order regression:
+PreUpdate creates a pose-bearing intent, the completed physical sample advances
+its sequence, and later forwarding leaves that intent stale at the next poll.
+Repair sequence assignment at the ordinary forwarding boundary for unaccepted
+pose-bearing intents, preserving their captured position, words and targets.
+Apply the policy to every affected intent family. Keep sim stale-sequence checks
+and already-accepted command identities intact. The checkpoint retains unread
+intent state without forwarding it; a normal subsequent update must still commit
+a valid typed line exactly once.
+
+Verification must cover virgin/active owners, jumps with nonzero residual and
+saved ordinary debt, custody threshold on either side of queue acceptance, vermin
+repeat before/after deadline including full-queue stamp behavior, semantic peal
+once-only gates, open/Unicode drafts and journal scroll, multiple queued readable
+lines/bubbles and partially elapsed visible minimum, old audio interrupted without
+repeated domain effects, and corrupted boundary/reference/limit/numeric inputs.
+Use real owner systems with MinimalPlugins/no renderer/device/provider; do not
+reprobe the known unavailable GPU. Timed probes should exercise meaningful actual
+host state through ordinary paths, retain primary boundary/event/input witnesses,
+and measure preflight/export/encode/decode/validation/drop separately. Rare/max
+supported shapes belong in separate tests. Coordinator owns release runs; owner
+owns serial Cargo checks, exact original logs and final source-at-start freeze.
+
+Complete assembly still owes manifest/build/target/toolchain/DefaultHasher,
+category/shared-root equality, all-consumer numeric/time horizons, full hydration,
+M2c exact once-only retry/interruption and dedicated M3 publication without a poll.
+The naive backbone+Round Save+Load bound of 1,256,093,444 bytes already exceeds
+1 GiB before Running. This leg must neither raise the cap nor claim it solves
+actual full-cohort lifetimes or host frame scheduling.
+
+#### M2a15 coordinator review — 2026-09-14
+
+The admitted read-only host component and actual capture adapter are accepted.
+They preserve body/time/debt/residual authority, installed physical and semantic
+definitions, command/consumer fences, pending intentional input, UI state and
+exact surviving readable obligations at the completed ordinary boundary. Capture
+does not poll, drain input or wait for later worker arrivals. Ordinary unaccepted
+chat forwarding now stamps a current spatial identity while preserving captured
+words/pose/target. Original-receipt saturation preserves normal dialogue/audio
+and refuses capture until missing readable authority expires or is replaced.
+
+Two new supported host component fixtures preserve initial and active states;
+three writer processes agree exactly and the ordinary loader checks canonical
+decoded/candidate bytes at actual compatible CityPlugin boundaries. They remain
+component fixtures, not saved cities. [Coordinator acceptance](evidence/m2a15/coordinator/review.md)
+records the final 950-input source, **2,157 workspace passes, zero failures,
+38 ignored**, eleven independent public cases and exact source/admission/archive
+audits, including all historical failed commands.
+
+Both actual-city release smokes passed. [Measurements](evidence/m2a15/performance/README.md)
+retain 3,600 phase samples across six processes, with all 2,000 requested additions
+placed in the populated workload. Both modes encode 6,275 bytes and retain
+10,162,498 bytes of simultaneous component Save plus Load admission, excluding
+Running. Export p99 is 5.634495/10.245549 ms authored/populated; every preflight
+and export sample exceeds 2 ms. The unchanged frame target therefore still needs
+bounded offload or incremental host coordination. Complete-envelope ownership,
+hydration, retry/interruption adoption, full generation lifetimes and publication
+remain mandatory work. M2 is not complete.
+
+#### M2a16 next design cut — 2026-09-14
+
+Begin only after M2a15 is accepted and committed. Compose the existing owners
+into one closed versioned envelope and admitted read-only complete candidate.
+This is the remaining M2a composition cut; dedicated production hydration is
+M2b, external-work adoption M2c, full continuation M2d and application publication
+M3. The sequential fresh-context owner first reconciles the actual field inventory,
+wire/admission design and independent public test seam with the coordinator.
+
+Capture one ordinary completed boundary with ledger, operation kernel, World
+backbone, Round, climate/clock, knowledge, law, marks, animals, social/floor,
+Engine continuity, scheduler, Night, interrupted speech, exact cognition inputs
+and host authority together. Explicitly reconcile World.events and any remaining
+fields against current consumers. The existing backbone exporter rejects
+unflushed events; prove what the actual ordinary boundary guarantees rather
+than draining or polling solely to make capture eligible. Validate category and
+root agreement, saved versus later inbox work, player/config/calendar/physical
+identity and every consumer's numeric and temporal headroom. Independently valid
+components from different boundaries are not a valid complete save.
+
+World/lineage identity is stable across replacement runtime generations and is
+distinct from content identity. Its initial creation belongs to the host; the
+simulation remains free of filesystem, OS randomness, clock reads, devices and threads.
+Compatibility binds actual installed parsed objects and effective overrides in
+their distinct roles, ordered generator/geometry/behavior inputs and exact
+implementation/toolchain/target/build configuration. Git HEAD alone cannot
+identify a dirty build, and today's files cannot attest to earlier loaded
+objects. Legitimately distinct World and Engine definition copies remain distinct.
+Specify supported-fixture compatibility honestly: fixture bytes must not hash
+themselves through a build manifest, and saved build identities must not be
+silently replaced with current identities to pass a loader test.
+
+Use one shared admission budget with real retained and temporary lifetimes.
+Independent budgets for component exporters are not aggregate admission. The
+four cohort count limits, 1 GiB shared ceiling, authored 64 MiB/populated 128 MiB
+encoded limits and 128 MiB expansion ceiling remain unchanged. The historical
+naive backbone plus Round simultaneous Save/Load charge exceeds 1 GiB before
+Running; their combined generic expansion estimate also exceeds 128 MiB. A
+different closed full-envelope layout may use a new proved allocation model,
+but cannot merely reduce charges or omit raw buffers, indexes, cloned definitions
+or surviving owners. Internal subordinate leases retain their cohort slot until
+the last owner drops, and reserve growth before allocating. Public unchecked
+extraction or constructors are not an acceptable composition API.
+
+Measure an actual complete authored/+2,000 placed workload at one boundary,
+including preflight, extraction, encoding, raw decode, validation/index building,
+candidate ownership and disposal. Distinguish Running/Save/Load coexistence from
+process RSS, and preserve all cold and tail samples. Support small complete
+versioned fixture payloads plus corruption, incompatible-mixture, raw-admission
+and cancellation/lifetime cases. Do not seed an Engine/World or install partial
+live state to validate a candidate. This cut must not imply that synchronous
+capture meets the M3 frame budget or that component timings establish complete
+save/load performance.

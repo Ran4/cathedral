@@ -16,20 +16,20 @@ pub mod road_carts;
 
 mod actor_sheet;
 mod area_debug;
-mod chat;
+pub(crate) mod chat;
 mod clock;
 mod config_menu;
-pub mod custody;
+pub(crate) mod custody;
 mod hands;
-mod hud;
-mod interaction;
-mod inventory_ui;
-mod journal_ui;
+pub(crate) mod hud;
+pub(crate) mod interaction;
+pub(crate) mod inventory_ui;
+pub(crate) mod journal_ui;
 mod lamps;
 mod microphone;
 mod publication_bytes;
 mod sound;
-mod speech;
+pub(crate) mod speech;
 mod targeting;
 
 use bevy::audio::AddAudioSource;
@@ -436,6 +436,8 @@ pub(crate) struct AudioActivity {
 /// Connection/capability state shared by input and presentation systems.
 #[derive(Resource, Debug, Clone)]
 pub struct SmartActorRuntime {
+    /// Ordinary drain consumer identity, including coalesced snapshots.
+    pub(crate) message_sequence: u64,
     pub connected: bool,
     pub ready: bool,
     pub stt_available: bool,
@@ -458,6 +460,7 @@ pub struct SmartActorRuntime {
 impl SmartActorRuntime {
     fn starting(fake_backend: bool) -> Self {
         Self {
+            message_sequence: 0,
             connected: false,
             ready: false,
             stt_available: false,
@@ -663,6 +666,12 @@ impl Plugin for SmartActorsPlugin {
                 journal_ui::journal_standing_hud
                     .after(SmartActorSet::DrainBridge)
                     .before(SmartActorSet::Present),
+            )
+            .configure_sets(
+                PostUpdate,
+                crate::host_checkpoint::HostCaptureSet
+                    .after(SmartActorSet::DrainBridge)
+                    .before(SmartActorSet::ReconcileMirror),
             )
             .configure_sets(
                 PostUpdate,
@@ -1076,7 +1085,6 @@ fn drain_bridge_messages(
     // Speech presentation dedupes and orders by this (speech.rs), and the
     // engine's messages no longer carry a sequence of their own. Counting them
     // here gives the same monotonic, gap-free stream the envelope did.
-    mut message_seq: Local<u64>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::BridgeDrain);
     let drain_started = std::time::Instant::now();
@@ -1137,14 +1145,15 @@ fn drain_bridge_messages(
                 if !runtime.connected {
                     continue;
                 }
-                *message_seq += 1;
+                runtime.message_sequence = runtime.message_sequence.saturating_add(1);
+                let message_seq = runtime.message_sequence;
                 if is_snapshot[event_index] && is_snapshot.get(event_index + 1) == Some(&true) {
                     continue;
                 }
                 process_engine_message(
                     handle.generation(),
                     *message,
-                    *message_seq,
+                    message_seq,
                     &mut mirror,
                     &mut runtime,
                     &mut hud,
@@ -2396,7 +2405,8 @@ fn forward_player_intents(
     mut spatial: ResMut<interaction::PlayerSpatialState>,
     mut hud: ResMut<hud::SmartActorHudState>,
 ) {
-    for intent in intents.read() {
+    for (intent, message_id) in intents.read_with_id() {
+        interaction.intent_read = message_id.id + 1;
         let intent = match intent {
             interaction::PlayerIntent::InGeneration { generation, intent }
                 if *generation == handle.generation() =>
@@ -2431,7 +2441,14 @@ fn forward_player_intents(
             }
             continue;
         }
-        let delivery = intent_to_command(intent).and_then(|command| handle.try_send(command));
+        let delivery = intent_to_command(intent).and_then(|mut command| {
+            // PreUpdate editors can submit before the ordinary pump publishes
+            // its newer final body sample. The intent is still unaccepted:
+            // allocate its transport pose identity now, retaining the frozen
+            // action position. Never rewrite an already accepted command.
+            stamp_unsubmitted_command_position(&mut command, &mut spatial)?;
+            handle.try_send(command)
+        });
         if let Err(error) = delivery {
             if is_spatial {
                 spatial.retry_latest_position();
@@ -2452,6 +2469,69 @@ fn forward_player_intents(
             }
         }
     }
+}
+
+fn stamp_unsubmitted_command_position(
+    command: &mut bridge::BridgeCommand,
+    spatial: &mut interaction::PlayerSpatialState,
+) -> Result<(), String> {
+    use bridge::BridgeCommand::*;
+    let (sequence, position, yaw) = match command {
+        SpatialUpdate {
+            spatial_seq,
+            position_m,
+            facing_yaw,
+        } => (spatial_seq, position_m, Some(*facing_yaw)),
+        PlayerRecording {
+            spatial_seq,
+            position_m,
+            ..
+        }
+        | PlayerOffer {
+            spatial_seq,
+            position_m,
+            ..
+        }
+        | PlayerAccept {
+            spatial_seq,
+            position_m,
+            ..
+        }
+        | PlayerDecline {
+            spatial_seq,
+            position_m,
+            ..
+        }
+        | PlayerSpit {
+            spatial_seq,
+            position_m,
+            ..
+        }
+        | DebugPlayerSay {
+            spatial_seq,
+            position_m,
+            ..
+        }
+        | PlayerSay {
+            spatial_seq,
+            position_m,
+            ..
+        } => (spatial_seq, position_m, None),
+        _ => return Ok(()),
+    };
+    let next = spatial
+        .sequence
+        .max(*sequence)
+        .checked_add(1)
+        .filter(|v| *v <= i64::MAX as u64)
+        .ok_or_else(|| "physical sequence exhausted".to_string())?;
+    *sequence = next;
+    spatial.sequence = next;
+    spatial.last_position = Some(Vec3::from(&*position));
+    if let Some(yaw) = yaw {
+        spatial.last_yaw = Some(yaw);
+    }
+    Ok(())
 }
 
 fn intent_to_command(intent: &interaction::PlayerIntent) -> Result<bridge::BridgeCommand, String> {

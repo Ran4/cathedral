@@ -1,0 +1,452 @@
+[
+  {
+    "binary": "/tmp/alibi-m2a15-host-reference-binary-2",
+    "binary_sha256": "e6be43620573a23046479444fc80ca7c3f735e90fd991d491d24ee049506fd3a",
+    "command": [
+      "/tmp/alibi-m2a15-host-reference-binary-2",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests::m2a15_cost_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T20:15:03.470765+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 1.5946374628692865,
+    "environment_overrides": {
+      "ALIBI_HOST_MODE": "authored",
+      "ALIBI_HOST_OUTPUT": "/tmp/alibi-m2a15-performance-authored-1.metrics.json",
+      "ALIBI_HOST_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/release_common.py": "6fe4e3f63cd5eb2eee17cd8a7f1e61aa2486e020de3143422bd1b2fb9db37953",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/run-release-probes.py": "c873cf0eeb5108059a3d15d6fd9d41b3a232f72697bb309886a43838029d0912"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-authored-1.log.gz",
+      "archive_sha256": "82018c89b84411099e66fca4240ace1e3f14400d161b2e4dd0c46da0b6061606",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-authored-1.stdout-stderr.log",
+      "original_bytes": 3569,
+      "original_sha256": "60578ccb5c396c7165f1217e911fe66617aa09b4d7a06e592c23d8efae9f8742"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/authored-1.json.gz",
+      "archive_sha256": "2e4ac53be4f5ddee9fc376e9229c71fdff7d54265ece5f18e9ed4524323282b4",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-authored-1.metrics.json",
+      "original_bytes": 10747,
+      "original_sha256": "875d5b82e0b72b0f842080de89aa6b459089a6510eea682b6e6eaa8761b8966d"
+    },
+    "mode": "authored",
+    "repetition": 1,
+    "samples": 100,
+    "source_count": 950,
+    "source_manifest_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T20:15:01.802691+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-authored-1.time.gz",
+      "archive_sha256": "382dc076140c2c347d9e7edc961ce79a5c0845be759c242bade879eebab80dbb",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-authored-1.time",
+      "original_bytes": 851,
+      "original_sha256": "2cb819cb02f0c6e92438a6e1ac671c06d97f392d5d18fd87392dd82f3f0c3325"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a15-host-reference-binary-2",
+    "binary_sha256": "e6be43620573a23046479444fc80ca7c3f735e90fd991d491d24ee049506fd3a",
+    "command": [
+      "/tmp/alibi-m2a15-host-reference-binary-2",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests::m2a15_cost_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T20:15:05.341797+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 1.5898298840038478,
+    "environment_overrides": {
+      "ALIBI_HOST_MODE": "authored",
+      "ALIBI_HOST_OUTPUT": "/tmp/alibi-m2a15-performance-authored-2.metrics.json",
+      "ALIBI_HOST_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/release_common.py": "6fe4e3f63cd5eb2eee17cd8a7f1e61aa2486e020de3143422bd1b2fb9db37953",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/run-release-probes.py": "c873cf0eeb5108059a3d15d6fd9d41b3a232f72697bb309886a43838029d0912"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-authored-2.log.gz",
+      "archive_sha256": "facc7b7e83ae8718864c548b27c9965e9c82aca0ad55cc545c9dc3c0f8bd6d75",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-authored-2.stdout-stderr.log",
+      "original_bytes": 3569,
+      "original_sha256": "5d5891a9bb11c522fe7dc7297f1ed57fef7f087b89726f687ed77e49ca5d1e7f"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/authored-2.json.gz",
+      "archive_sha256": "414175ac47abf6983aa7cfcad63670ff3be96ac75f63bb08d4f65f2605d2399f",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-authored-2.metrics.json",
+      "original_bytes": 11169,
+      "original_sha256": "c5c0ff75f38fd3fda5cdd6e6ba1e55a8cf0d2bfea4247aa3681fb966895260c3"
+    },
+    "mode": "authored",
+    "repetition": 2,
+    "samples": 100,
+    "source_count": 950,
+    "source_manifest_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T20:15:03.678199+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-authored-2.time.gz",
+      "archive_sha256": "09896de35090717037f661f4f3ba1af7fddefec588a0bf37ecdb6c751c35f4d2",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-authored-2.time",
+      "original_bytes": 851,
+      "original_sha256": "6ea6da9dedb78ced8982b369e9c0b0e3638eae0109c651b158640fda350d8993"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a15-host-reference-binary-2",
+    "binary_sha256": "e6be43620573a23046479444fc80ca7c3f735e90fd991d491d24ee049506fd3a",
+    "command": [
+      "/tmp/alibi-m2a15-host-reference-binary-2",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests::m2a15_cost_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T20:15:07.214587+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 1.5938686619047076,
+    "environment_overrides": {
+      "ALIBI_HOST_MODE": "authored",
+      "ALIBI_HOST_OUTPUT": "/tmp/alibi-m2a15-performance-authored-3.metrics.json",
+      "ALIBI_HOST_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/release_common.py": "6fe4e3f63cd5eb2eee17cd8a7f1e61aa2486e020de3143422bd1b2fb9db37953",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/run-release-probes.py": "c873cf0eeb5108059a3d15d6fd9d41b3a232f72697bb309886a43838029d0912"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-authored-3.log.gz",
+      "archive_sha256": "82018c89b84411099e66fca4240ace1e3f14400d161b2e4dd0c46da0b6061606",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-authored-3.stdout-stderr.log",
+      "original_bytes": 3569,
+      "original_sha256": "60578ccb5c396c7165f1217e911fe66617aa09b4d7a06e592c23d8efae9f8742"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/authored-3.json.gz",
+      "archive_sha256": "56ad97cecacfc11124bb43748437502a5cef49ed1b442c451330bd2a82fe070c",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-authored-3.metrics.json",
+      "original_bytes": 10923,
+      "original_sha256": "dce8e81abcc303b5e7d4e08c78a0c09ecd07821a6392752b2405047013e7625b"
+    },
+    "mode": "authored",
+    "repetition": 3,
+    "samples": 100,
+    "source_count": 950,
+    "source_manifest_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T20:15:05.546829+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-authored-3.time.gz",
+      "archive_sha256": "18c08c79cb6272b847946aa6676dc0bb62c07925cb0395434e4041ad2c6c88c2",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-authored-3.time",
+      "original_bytes": 851,
+      "original_sha256": "19efdc5a98cdb19522d633aaeeaae1a55462ef456500bc5ea7ebfc28582da9ca"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a15-host-reference-binary-2",
+    "binary_sha256": "e6be43620573a23046479444fc80ca7c3f735e90fd991d491d24ee049506fd3a",
+    "command": [
+      "/tmp/alibi-m2a15-host-reference-binary-2",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests::m2a15_cost_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T20:15:10.507957+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 3.023173932917416,
+    "environment_overrides": {
+      "ALIBI_HOST_MODE": "populated",
+      "ALIBI_HOST_OUTPUT": "/tmp/alibi-m2a15-performance-populated-1.metrics.json",
+      "ALIBI_HOST_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/release_common.py": "6fe4e3f63cd5eb2eee17cd8a7f1e61aa2486e020de3143422bd1b2fb9db37953",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/run-release-probes.py": "c873cf0eeb5108059a3d15d6fd9d41b3a232f72697bb309886a43838029d0912"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-populated-1.log.gz",
+      "archive_sha256": "be12bbf3198686363e219587b94f4318569ca5ac1d0c5d7fcf03507c808a447e",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-populated-1.stdout-stderr.log",
+      "original_bytes": 3573,
+      "original_sha256": "1b1fc932d5050472fc4c6ba8f9ece250f60f6f0bd174d98ce574ccd2de88dcd0"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/populated-1.json.gz",
+      "archive_sha256": "75c38fac24b84e0edc79c29efd8643e093a28decbfebd66551bd68e6395ffceb",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-populated-1.metrics.json",
+      "original_bytes": 11078,
+      "original_sha256": "ff6a6e56657d91b80e9cf654860ec5f229c2e5924a4bf9a20b23a8da424e7997"
+    },
+    "mode": "populated",
+    "repetition": 1,
+    "samples": 100,
+    "source_count": 950,
+    "source_manifest_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T20:15:07.411050+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-populated-1.time.gz",
+      "archive_sha256": "c4ed72b33af9762e61e9387f5097556cadf06a37e28c601a2f482923d801ba5b",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-populated-1.time",
+      "original_bytes": 851,
+      "original_sha256": "feac5b2abf550afd29e53656e46c2c413ea2138e5e0e66a0a95d551158824605"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a15-host-reference-binary-2",
+    "binary_sha256": "e6be43620573a23046479444fc80ca7c3f735e90fd991d491d24ee049506fd3a",
+    "command": [
+      "/tmp/alibi-m2a15-host-reference-binary-2",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests::m2a15_cost_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T20:15:13.808095+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 3.0141525119543076,
+    "environment_overrides": {
+      "ALIBI_HOST_MODE": "populated",
+      "ALIBI_HOST_OUTPUT": "/tmp/alibi-m2a15-performance-populated-2.metrics.json",
+      "ALIBI_HOST_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/release_common.py": "6fe4e3f63cd5eb2eee17cd8a7f1e61aa2486e020de3143422bd1b2fb9db37953",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/run-release-probes.py": "c873cf0eeb5108059a3d15d6fd9d41b3a232f72697bb309886a43838029d0912"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-populated-2.log.gz",
+      "archive_sha256": "be12bbf3198686363e219587b94f4318569ca5ac1d0c5d7fcf03507c808a447e",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-populated-2.stdout-stderr.log",
+      "original_bytes": 3573,
+      "original_sha256": "1b1fc932d5050472fc4c6ba8f9ece250f60f6f0bd174d98ce574ccd2de88dcd0"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/populated-2.json.gz",
+      "archive_sha256": "6a7d5681e6c5e3d239d33c4e9f8677d280a677d01a7a4b1a5ecec1a83784d906",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-populated-2.metrics.json",
+      "original_bytes": 11219,
+      "original_sha256": "51198578fff6d3cf57d30f32fa55642b7bc3f130bfdc789dd8e866024e9fa66c"
+    },
+    "mode": "populated",
+    "repetition": 2,
+    "samples": 100,
+    "source_count": 950,
+    "source_manifest_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T20:15:10.720190+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-populated-2.time.gz",
+      "archive_sha256": "a73a178440f734736129e9e1b758dc1b0e3cba90109fd08ef7f5455546c5775d",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-populated-2.time",
+      "original_bytes": 852,
+      "original_sha256": "46d435f8bcd83fb426f51199c11b49284de6edf26ffbd6ad356cff75a916635d"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a15-host-reference-binary-2",
+    "binary_sha256": "e6be43620573a23046479444fc80ca7c3f735e90fd991d491d24ee049506fd3a",
+    "command": [
+      "/tmp/alibi-m2a15-host-reference-binary-2",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests::m2a15_cost_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T20:15:17.103957+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 3.020107065094635,
+    "environment_overrides": {
+      "ALIBI_HOST_MODE": "populated",
+      "ALIBI_HOST_OUTPUT": "/tmp/alibi-m2a15-performance-populated-3.metrics.json",
+      "ALIBI_HOST_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/release_common.py": "6fe4e3f63cd5eb2eee17cd8a7f1e61aa2486e020de3143422bd1b2fb9db37953",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/coordinator/run-release-probes.py": "c873cf0eeb5108059a3d15d6fd9d41b3a232f72697bb309886a43838029d0912"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-populated-3.log.gz",
+      "archive_sha256": "be12bbf3198686363e219587b94f4318569ca5ac1d0c5d7fcf03507c808a447e",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-populated-3.stdout-stderr.log",
+      "original_bytes": 3573,
+      "original_sha256": "1b1fc932d5050472fc4c6ba8f9ece250f60f6f0bd174d98ce574ccd2de88dcd0"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/populated-3.json.gz",
+      "archive_sha256": "d086867809e40aec1587e3dfba5ccedf50ecd7c0080637b212c9f318d1235375",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-populated-3.metrics.json",
+      "original_bytes": 11013,
+      "original_sha256": "69a60d6b2a3328228e7731a0dea858518436ed329abba7781e8a4440543584c0"
+    },
+    "mode": "populated",
+    "repetition": 3,
+    "samples": 100,
+    "source_count": 950,
+    "source_manifest_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T20:15:14.010200+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/performance/performance-populated-3.time.gz",
+      "archive_sha256": "5e4e175db69194ccdf9a1ac35421f8ad52792268f8f7991d009edba38e5316ff",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a15-performance-populated-3.time",
+      "original_bytes": 852,
+      "original_sha256": "2f93d6d4b9ec10746706ea7bb2b30d62e65d7378f957b9290a348963303a837e"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  }
+]

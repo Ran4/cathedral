@@ -1,0 +1,60 @@
+{
+  "result": "passed",
+  "checked_utc": "2026-09-14T19:36:58.257092+00:00",
+  "scope": "Installed compiler and allocation sources unchanged since the existing M2a15 proof. No workload rerun.",
+  "prior_proof_sha256": "e5400dcc8bb20a0bc2be10841882d38310dfc46f6db696f4773e33b801155633",
+  "verified_files": [
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/map.rs",
+      "sha256": "85387f4b8283bef443c154979c149dae4c8c61b96ea75432c58a573a13734dae"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/node.rs",
+      "sha256": "2200ca0a4fe38592c314dc7f5f40bbb160e06b6f9e4abd1eb5bc40701540ab25"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/set.rs",
+      "sha256": "a7be8e5e576fac0975d0af0f24407ddd709751820bbb1f5059d55f08414a4888"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/string.rs",
+      "sha256": "f26867da19450cb50a549373c0bc29d1ac4911035e262f0854b2319edb5afd24"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs",
+      "sha256": "cd69f6ef4cf398ff6665c5f3ea428b652755d0e0aea004402e076f6af6a56400"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/slice.rs",
+      "sha256": "b1f0a5f6e3d104d6176699cf05efdfe1725095cd984fdf4422ddc3093726361c"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs",
+      "sha256": "39ae2ccc61fd3bad236978201cda2ad97599403eb103de7eafdf6d7f6dd8b6f3"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/vec_deque/mod.rs",
+      "sha256": "1b3cd1f179c3eef1ba3a3c40bcdbc6406c5bf570a5bd1bb0da31afb7622b5c4b"
+    },
+    {
+      "path": "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/read.rs",
+      "sha256": "17a2efe49e5a6937c8d7d4a5c0b9eac84453de0f86bf8e7ee421387e82341bb3"
+    },
+    {
+      "path": "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/de.rs",
+      "sha256": "4998d7e252eb513be85b298e287048b4fb283882e9ba7df905f572f07200f3f3"
+    },
+    {
+      "path": "/tmp/alibi-m1b-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_core-1.0.228/src/de/impls.rs",
+      "sha256": "9fb7a0322af51971fe1fa8f5b56c7ca3716622a6e9127b86bddfc0742c11383c"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/sync.rs",
+      "sha256": "8035de0ea0896a3ead06fb7fd01f36b03ce58d5b6b4385652ba3b64aa23d063d"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/slice/sort/stable/mod.rs",
+      "sha256": "3f2b2d8543a1cb91c9352e041bed49949a31cbd4b1030ec1a82cca1304cb22d3"
+    }
+  ]
+}

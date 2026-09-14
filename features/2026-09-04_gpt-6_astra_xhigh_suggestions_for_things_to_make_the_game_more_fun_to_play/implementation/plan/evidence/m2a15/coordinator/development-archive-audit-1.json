@@ -1,0 +1,79 @@
+{
+  "audited_utc": "2026-09-09T02:54:39.071402+00:00",
+  "scope": "Completed development commands only; no final-source acceptance.",
+  "result": "passed",
+  "commands": [
+    {
+      "label": "host-check-1",
+      "exit_code": 101,
+      "original_bytes": 16374,
+      "original_sha256": "75e21e69df371a23336b156632bfed02bb70253b4b0b26dcf7bfee76b82ea091",
+      "archive_sha256": "47581b55f0950c5ca8437785beaaf0d124da842d5776feabd1b0ff126345adf3",
+      "start_sha256": "ca73f26a1401326451fbb06b28dad394f679717ef0ea0a76cb6255d60364507a",
+      "result_sha256": "72157abb20b7fc0925c9f837ab6a39a75785a7421f96f491d67472ceeee58610",
+      "source_count": 945,
+      "test_results": []
+    },
+    {
+      "label": "host-check-4",
+      "exit_code": 0,
+      "original_bytes": 919,
+      "original_sha256": "c09b32ac37b444784b70625414cd4ea481b9cdc13b29cc4fe7433ab78134c6b4",
+      "archive_sha256": "0c4e8b309e2c6840772860d34fc7a33a0bf4dc6e736283be35675d43a78e54ad",
+      "start_sha256": "12b48df222a24c2257481a4d40f01a9cafe49b8df2dcdb84651dc86c40d1d1a8",
+      "result_sha256": "821405accb11cd5545beefcc51f5d50d35633b9d9f13ef7d75bdbfc640b58bd5",
+      "source_count": 947,
+      "test_results": []
+    },
+    {
+      "label": "host-tests-3",
+      "exit_code": 101,
+      "original_bytes": 34173,
+      "original_sha256": "f9ab076cb41f8721e1510858849a5543b11a53c5de50436f60cf7173e36dec38",
+      "archive_sha256": "e6a8d4500bf45b72fd8546275693205cc3215f261ebcf6682237d07f4bb49366",
+      "start_sha256": "bc3bef8be693c56a0d714df098845d7cee2c1925456ff9bef94d6827cadb8b74",
+      "result_sha256": "d2e7a27bbf14e28096d60964ee0234d34eb6c470545f55f55ce00a2e0bc77013",
+      "source_count": 947,
+      "test_results": [
+        "test result: FAILED. 12 passed; 2 failed; 1 ignored; 0 measured; 543 filtered out; finished in 7.26s"
+      ]
+    },
+    {
+      "label": "public-tests-1",
+      "exit_code": 101,
+      "original_bytes": 51962,
+      "original_sha256": "dab56e8be5f7a68a521644315adabefaeb8a32d39925ef30164b2a5dc090969b",
+      "archive_sha256": "24840ceed2a7e0de70f072cb971349b94bce358b090de5f013453cb3a856a4d6",
+      "start_sha256": "8dff9a694ecab08d5e80891f28daaad972e9bf730672d8d37cd85091a8d2e13f",
+      "result_sha256": "c750f88f654af2025af86d8aeb048577e0628dc81e179e004210248615d47883",
+      "source_count": 945,
+      "test_results": [
+        "test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 545 filtered out; finished in 5.73s"
+      ]
+    },
+    {
+      "label": "public-unread-2",
+      "exit_code": 101,
+      "original_bytes": 6110,
+      "original_sha256": "2541d9415247e28963304b92982476310918499357ecd594c0f79b17c0675712",
+      "archive_sha256": "25fd013d2af37b240bbc26e87093e622bc40529eb11bb605c51ec90b71676130",
+      "start_sha256": "2b745494e0bf3f57ee102b83dd81b82ca5548367bf0246825a517847b73ea475",
+      "result_sha256": "aa2438b1d2eae044e83299c28b941ad23786505ea4e4b856d099e121a06eb2b1",
+      "source_count": 945,
+      "test_results": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 552 filtered out; finished in 0.67s"
+      ]
+    },
+    {
+      "label": "sim-check-1",
+      "exit_code": 101,
+      "original_bytes": 8178,
+      "original_sha256": "d664e7d3cc5ff46413e468bab7d6b879cbc7f13e74034eb3aeadc13ef17075d2",
+      "archive_sha256": "f5364374bf91f2f2f02dcecd19d56cc8e4ce93e2a216ea6340297406bca20238",
+      "start_sha256": "6902e1801a20db697b79aad984fec98cdb4bcc00900fb8e2574a327b19aeea98",
+      "result_sha256": "009752286b7c6e1b69c5588b1c44d0cf15a547e3a16be5759d7d200ed882a179",
+      "source_count": 945,
+      "test_results": []
+    }
+  ]
+}

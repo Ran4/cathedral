@@ -24,14 +24,14 @@ const BUTTON_HOVER: Color = Color::srgba(0.19, 0.21, 0.26, 1.0);
 /// `standing` text must be a question or a clock naming its own door, never an
 /// instruction. This panel renders only what the player heard or caused.
 #[derive(Resource, Debug, Default, Clone, PartialEq)]
-pub(super) struct PlayerJournal {
+pub(crate) struct PlayerJournal {
     pub entries: Vec<JournalRow>,
     pub standing: Vec<String>,
 }
 
 /// Owned, already-resolved prose; the UI never reaches back into the sim.
 #[derive(Debug, Default, Clone, PartialEq)]
-pub(super) struct JournalRow {
+pub(crate) struct JournalRow {
     pub attribution: String,
     pub word: String,
 }
@@ -44,59 +44,15 @@ pub struct JournalUiState {
 #[derive(Component)]
 pub(super) struct JournalUiRoot;
 #[derive(Component)]
-pub(super) struct JournalEntriesRoot;
+pub(crate) struct JournalEntriesRoot;
 #[derive(Component)]
 pub(super) struct JournalCloseButton;
 
 /// The sim has already resolved every name through the player. The host only
 /// joins those parts and expresses distance as a register the player can read.
 pub(super) fn row_from_entry(entry: cathedral_sim::JournalEntry) -> JournalRow {
-    let mut parts = Vec::new();
-    if let Some(from) = entry.from {
-        parts.push(from);
-    }
-    if let Some(place) = entry.place {
-        let lower = place.to_lowercase();
-        if [
-            "in ", "inside ", "at ", "next to ", "near ", "on ", "beside ", "outside ",
-        ]
-        .iter()
-        .any(|prefix| lower.starts_with(prefix))
-        {
-            let mut letters = place.chars();
-            parts.push(letters.next().map_or_else(String::new, |first| {
-                first.to_lowercase().collect::<String>() + letters.as_str()
-            }));
-        } else {
-            parts.push(format!("at {place}"));
-        }
-    }
-    parts.push(entry.when);
-    let register = match entry.hops {
-        0 => "you saw it yourself",
-        1 => "at one remove",
-        2 => "at second hand",
-        _ => "at third hand or worse",
-    };
-    let mut attribution = format!("{} — {register}", parts.join(", "));
-    if entry.tellings > 1 {
-        attribution.push_str(&format!(
-            " — and {} {} since, in {} {}",
-            entry.tellings - 1,
-            if entry.tellings == 2 {
-                "other"
-            } else {
-                "others"
-            },
-            entry.wards,
-            if entry.wards == 1 { "ward" } else { "wards" },
-        ));
-    }
-    attribution.push(':');
-    JournalRow {
-        attribution,
-        word: format!("“{}”", entry.word),
-    }
+    let (attribution, word) = cathedral_sim::checkpoint::host::resolved_journal_row(&entry);
+    JournalRow { attribution, word }
 }
 
 fn build_rows(journal: &PlayerJournal) -> Vec<JournalRow> {

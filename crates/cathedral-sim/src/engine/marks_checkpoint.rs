@@ -189,6 +189,9 @@ impl Admitted<EngineMarksDtoV1> {
     }
 }
 impl EngineMarksCandidate {
+    pub(crate) fn host_boundary(&self) -> (LogicalTime, &str) {
+        (self.data.boundary, self.data.player_id.as_str())
+    }
     pub fn marks(&self) -> &crate::marks::Marks {
         &self.data.world.marks
     }

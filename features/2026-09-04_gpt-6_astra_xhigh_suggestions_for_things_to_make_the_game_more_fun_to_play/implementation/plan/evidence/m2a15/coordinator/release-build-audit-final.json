@@ -1,0 +1,9 @@
+{
+  "audited_utc": "2026-09-14T20:16:18.449673+00:00",
+  "binary_sha256": "e6be43620573a23046479444fc80ca7c3f735e90fd991d491d24ee049506fd3a",
+  "build_record_sha256": "6dd2aeb1ed7eef2abaa4a51c591c21f4bcfdc01109363075c96a4061bbf7ad3a",
+  "exact_build_originals_and_archives": true,
+  "reference_binary_unchanged": true,
+  "result": "passed",
+  "source_manifest_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a"
+}

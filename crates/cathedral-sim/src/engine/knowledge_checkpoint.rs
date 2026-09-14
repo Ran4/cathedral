@@ -361,6 +361,12 @@ impl Admitted<EngineKnowledgeDtoV1> {
     }
 }
 impl EngineKnowledgeCandidate {
+    pub(crate) fn host_boundary(&self) -> (LogicalTime, &str) {
+        (self.data.boundary, self.data.player_id.as_str())
+    }
+    pub(crate) fn host_last_journal(&self) -> Option<&EngineMessage> {
+        self.data.last_journal.as_ref()
+    }
     pub fn counts(&self, c: KnowledgeCheckpointContext<'_>) -> EngineKnowledgeCounts {
         self.data.counts(c)
     }

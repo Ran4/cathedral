@@ -462,3 +462,65 @@ existing aggregate/4 MiB sequential validation allowance and unchanged global ca
 Complete M2c execution replacement, once-only held application, full manifest/root
 agreement, Engine/host capture/hydration/publication and actual cohort lifetimes remain
 pending. The previous full-composition peak excess is not resolved by this component.
+
+
+## M2a15 actual host continuation component — 2026-09-09
+
+The closed read-only host owner now covers actual physical/controller/time and
+custody continuation, host command allocator and consumer cursors, gate motion
+and collision, vermin semantic gates, sampled clock and soundscape edge/cooldown
+state, interaction choices/pending correlation, Unicode chat, open journal scroll,
+chalk intent/standing and exact surviving readable HUD/subtitle/bubble/unread
+speech obligations. [Owner coverage](evidence/m2a15/OWNER_COVERAGE.md) links each
+family to its actual next consumer and explicit release/rebuild policy.
+
+Capture observes the full ordinary DrainBridge boundary before later gameplay
+producers. It includes unread current-generation PlayerIntent, PresentSpeech and
+semantic CivicBell at their separate actual reader cursors without consuming
+them. Post-H worker input may remain queued. The successful-enqueue allocator
+is independent from H and accepted ledger high-water; refusal gaps survive.
+Historical pending item/actor references remain exact choices after consumption
+or departure. Runtime generations, device-held edges, microphone/audio execution,
+cosmetic cues and render/layout caches have explicit later rebind/interruption
+policies, without capture-time mutation.
+
+Prepared definition identity binds actual CollisionWorld and CutMargin geometry,
+gate kind/half-size/translation and pure active derivation, ordered vermin colony/
+rat definitions with installed seed/density/swarm configuration, and actual mark
+catalog/source algorithms. Required installed gate/vermin presence is validated
+independently of opaque hashes. Sampled law/journal/chalk/calendar projections
+bind borrowed Engine authority or already-admitted saved components and ledger
+at a coherent boundary, with no replacement World/Engine construction.
+
+Original speech receipt copies are bounded before ordinary cloning and shared
+through separate bubble/subtitle/caption lifetimes. The player receipt clears on
+provisional caption replacement, expiry and disconnect. Codec validation retains
+exact original attribution/position bits and the ordinary caption/reading minimum;
+it never reconstructs committed speech from omniscient Engine.transcript or TTS
+maps. Full SpeechRouter interruption/retry adoption is still M2c.
+
+[Admission](evidence/m2a15/ADMISSION.md) covers typed row stride, bounded export,
+raw padding, saved-context scratch and exact lease lifetime under unchanged caps.
+Private prepared-owner continuation tests do not install a partial live world.
+Complete envelope/root/config agreement, M2b hydration, M2c once-only external
+continuation, M3 publication and actual Running/Save/Load/retiring lifetimes remain
+pending. Neither this component nor its city probe establishes full-save or
+synchronous host-frame acceptance.
+
+Receipt-storage saturation preserves ordinary speech display/audio and its
+normal acknowledgement timing. The live player-caption unavailable flag
+distinguishes a committed caption with no retained original from provisional
+text; NPC subtitle/bubble owners use an explicit missing original. Observation
+refuses while missing readable authority survives. Replacement/expiry/disconnect/
+generation reset clear the player flag. Capture neither waits nor drains to
+remove this component eligibility limitation; full M3 save-anywhere remains a
+later gate.
+
+The M2a15 supported fixture pair is persisted as
+`crates/cathedral-sim/tests/fixtures/checkpoint_host/{initial,active}-v1.json`
+(2026-09-14). Initial captures the eligible 34 ms startup continuation; active
+captures 68 ms with separate subtitle/bubble/player receipt, four unread
+committed speech messages, unread intentional chat/pending command and semantic
+sound gates. Exact decode/candidate and compatible-context byte comparisons run
+inside HostCaptureSet. Their fixture-only storage admission makes no claim about
+the live World's Running cohort or full-save availability.

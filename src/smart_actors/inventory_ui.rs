@@ -51,7 +51,7 @@ const MENU_HEIGHT_PX: f32 = 190.0;
 
 /// Which shelf a tile's unit sits on: in the open, or in one of the cavities.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum ItemSource {
+pub(crate) enum ItemSource {
     Carried,
     Pocketed(BodySlot),
 }
@@ -93,17 +93,17 @@ impl InventoryAction {
 /// target `spit` was aimed at when it opened (resolved once, so the menu does
 /// not change under the player's hand while he reads it).
 #[derive(Debug, Clone, PartialEq)]
-pub(super) struct ContextMenu {
-    pub(super) item_id: ItemId,
-    pub(super) source: ItemSource,
-    pub(super) screen_pos: Vec2,
-    pub(super) spit_target: Option<(ActorId, String)>,
+pub(crate) struct ContextMenu {
+    pub(crate) item_id: ItemId,
+    pub(crate) source: ItemSource,
+    pub(crate) screen_pos: Vec2,
+    pub(crate) spit_target: Option<(ActorId, String)>,
 }
 
 #[derive(Resource, Debug, Default)]
 pub struct InventoryUiState {
     pub open: bool,
-    pub(super) context_menu: Option<ContextMenu>,
+    pub(crate) context_menu: Option<ContextMenu>,
 }
 
 // ----------------------------------------------------------- the components
@@ -924,6 +924,90 @@ fn spawn_menu_entry(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn host_restored_menu_keeps_its_original_spit_target_after_focus_changes() {
+        use bevy::ecs::message::Messages;
+        use cathedral_sim::checkpoint::host::{BodySlotV1, ItemSourceV1, Nullable, RecordV1};
+        let original = ContextMenu {
+            item_id: ItemId("historical-water".into()),
+            source: ItemSource::Pocketed(BodySlot::Mouth),
+            screen_pos: Vec2::new(12.5, 93.0),
+            spit_target: Some((ActorId("original-target".into()), "Original name".into())),
+        };
+        let row = RecordV1::InventoryContext {
+            item: original.item_id.0.as_str(),
+            source: ItemSourceV1::Pocketed(BodySlotV1::Mouth),
+            screen_position: original.screen_pos.to_array(),
+            spit_target: Nullable(
+                original
+                    .spit_target
+                    .as_ref()
+                    .map(|(id, label)| (id.0.as_str(), label.as_str())),
+            ),
+        };
+        let saved: RecordV1<String> =
+            serde_json::from_slice(&serde_json::to_vec(&row).unwrap()).unwrap();
+        let mut restored = ContextMenu {
+            item_id: ItemId("wrong-item".into()),
+            source: ItemSource::Carried,
+            screen_pos: Vec2::ZERO,
+            spit_target: Some((ActorId("new-focus".into()), "Different person".into())),
+        };
+        assert_ne!(restored, original);
+        let RecordV1::InventoryContext {
+            item,
+            source,
+            screen_position,
+            spit_target,
+        } = saved
+        else {
+            unreachable!()
+        };
+        restored.item_id = ItemId(item);
+        restored.source = match source {
+            ItemSourceV1::Carried => ItemSource::Carried,
+            ItemSourceV1::Pocketed(slot) => ItemSource::Pocketed(slot.into()),
+        };
+        restored.screen_pos = Vec2::from_array(screen_position);
+        restored.spit_target = spit_target.0.map(|(id, label)| (ActorId(id), label));
+        assert_eq!(restored, original);
+        let mut runtime = SmartActorRuntime::starting(false);
+        runtime.ready = true;
+        runtime.connected = true;
+        let mut app = App::new();
+        app.insert_resource(runtime)
+            .insert_resource(InventoryUiState {
+                open: true,
+                context_menu: Some(restored),
+            })
+            .init_resource::<PlayerSpatialState>()
+            .init_resource::<InteractionState>()
+            .init_resource::<SmartActorHudState>()
+            .add_message::<PlayerIntent>()
+            .add_systems(Update, handle_inventory_actions);
+        app.world_mut().spawn((
+            crate::controller::PlayerController::default(),
+            GlobalTransform::from_translation(Vec3::new(3.0, 1.0, 5.0)),
+        ));
+        app.world_mut().spawn((
+            Interaction::Pressed,
+            InventoryActionButton {
+                action: InventoryAction::Spit,
+                item_id: original.item_id.clone(),
+            },
+        ));
+        app.update();
+        let messages = app.world().resource::<Messages<PlayerIntent>>();
+        let mut cursor = messages.get_cursor();
+        let intent = cursor.read(messages).next().unwrap();
+        let intent = match intent {
+            PlayerIntent::InGeneration { intent, .. } => &**intent,
+            intent => intent,
+        };
+        assert!(
+            matches!(intent,PlayerIntent::Spit{item_id,target_id,..} if item_id.0=="historical-water" && target_id.0=="original-target")
+        );
+    }
     use super::*;
     use crate::smart_actors::model::{
         ActorControl, ActorSnapshot, ItemSnapshot, Position, WorldSnapshot,

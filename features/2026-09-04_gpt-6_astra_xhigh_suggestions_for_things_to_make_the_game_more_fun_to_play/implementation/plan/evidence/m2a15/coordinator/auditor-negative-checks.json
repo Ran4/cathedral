@@ -1,0 +1,22 @@
+{
+  "auditor_sha256": "bc8e90cd01974dbbe8b70d499723b3373134c7ec83844bb1b7d461461972c2cd",
+  "checker_sha256": "54591b235cb034f0cfa6bf8b796469bb3956ce42d1e67eb48274c227bb0117f3",
+  "refused_corruptions": [
+    "missing sample",
+    "NaN sample",
+    "boolean sample",
+    "negative sample",
+    "simulation advanced",
+    "wrong placement",
+    "missing speech",
+    "missing collision world",
+    "row count mismatch",
+    "shared budget exceeded",
+    "unsupported record stride",
+    "duplicate JSON",
+    "JSON NaN"
+  ],
+  "result": "passed",
+  "scope": "synthetic auditor checks only; no host execution",
+  "tail_threshold_and_nearest_rank_check": "passed"
+}

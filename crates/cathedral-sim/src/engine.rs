@@ -1179,6 +1179,21 @@ pub struct Engine {
 }
 
 impl Engine {
+    pub(crate) fn host_checkpoint_refs(&self) -> crate::checkpoint::host::context::SimRefs<'_> {
+        crate::checkpoint::host::context::SimRefs {
+            characters: &self.world.characters,
+            calendar: self.world.current_time,
+            spatial_sequence: self.world.spatial_sequence,
+            clock: self.clock,
+            movement_now: self.movement_now,
+            law: self.last_law_standing.as_ref(),
+            journal: self.last_journal.as_ref(),
+            chalk: self.last_chalk_standing.as_ref(),
+            host_high_water: self.world.command_ledger.producers
+                [crate::receipts::HOST_PRODUCER as usize]
+                .high_water,
+        }
+    }
     /// Build the world from `seed`, put the player at `player_spawn`, and start
     /// the turn stream if there is any cognition to run it with.
     ///

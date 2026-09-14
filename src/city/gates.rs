@@ -36,7 +36,7 @@ const CLOSED_BARRIER_THRESHOLD: f32 = 0.015;
 const CLOCK_BOUNDARY_EPSILON: f64 = 1.0e-9;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GateKind {
+pub(crate) enum GateKind {
     Stone,
     River,
 }
@@ -51,10 +51,10 @@ pub(super) struct GateLeaf {
 pub(super) struct RiverGateBar;
 
 #[derive(Component, Debug, Clone, Copy)]
-pub(super) struct GateBarrier(GateKind);
+pub(crate) struct GateBarrier(pub(crate) GateKind);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GatePosition {
+pub(crate) enum GatePosition {
     Open,
     Closed,
 }
@@ -102,8 +102,8 @@ enum ScheduleAction {
 }
 
 #[derive(Debug, Default)]
-struct GateSchedule {
-    previous: Option<(f64, GatePosition)>,
+pub(crate) struct GateSchedule {
+    pub(crate) previous: Option<(f64, GatePosition)>,
 }
 
 impl GateSchedule {
@@ -157,12 +157,12 @@ fn latest_gate_boundary(previous: f64, now: f64) -> Option<GatePosition> {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Motion {
-    value: f32,
-    start: f32,
-    target: f32,
-    elapsed: f32,
-    duration: f32,
+pub(crate) struct Motion {
+    pub(crate) value: f32,
+    pub(crate) start: f32,
+    pub(crate) target: f32,
+    pub(crate) elapsed: f32,
+    pub(crate) duration: f32,
 }
 
 impl Motion {
@@ -225,13 +225,13 @@ enum GateCue {
 }
 
 #[derive(Resource, Debug)]
-pub(super) struct GateRuntime {
-    schedule: GateSchedule,
-    initialized: bool,
-    position: GatePosition,
-    stone_leaves: Motion,
-    river_leaves: Motion,
-    river_bar: Motion,
+pub(crate) struct GateRuntime {
+    pub(crate) schedule: GateSchedule,
+    pub(crate) initialized: bool,
+    pub(crate) position: GatePosition,
+    pub(crate) stone_leaves: Motion,
+    pub(crate) river_leaves: Motion,
+    pub(crate) river_bar: Motion,
 }
 
 impl Default for GateRuntime {
@@ -250,6 +250,38 @@ impl Default for GateRuntime {
 }
 
 impl GateRuntime {
+    pub(crate) fn checkpoint_scalar(&self) -> cathedral_sim::checkpoint::host::GatesV1 {
+        use cathedral_sim::checkpoint::host::{GatesV1, MotionV1, Nullable};
+        let motion = |m: Motion| MotionV1 {
+            value: m.value,
+            start: m.start,
+            target: m.target,
+            elapsed: m.elapsed,
+            duration: m.duration,
+        };
+        GatesV1 {
+            initialized: self.initialized,
+            closed: self.position == GatePosition::Closed,
+            previous: Nullable(
+                self.schedule
+                    .previous
+                    .map(|(t, p)| (t, p == GatePosition::Closed)),
+            ),
+            stone_leaves: motion(self.stone_leaves),
+            river_leaves: motion(self.river_leaves),
+            river_bar: motion(self.river_bar),
+        }
+    }
+    /// Side-effect-free physical publication; also used by checkpoint checks.
+    pub(crate) fn blocks(&self, gate: GateKind) -> bool {
+        let openness = match gate {
+            GateKind::Stone => self.stone_leaves.value,
+            GateKind::River => self.river_leaves.value,
+        };
+        self.initialized
+            && self.position == GatePosition::Closed
+            && openness <= CLOSED_BARRIER_THRESHOLD
+    }
     fn apply(&mut self, action: ScheduleAction) -> Option<GateCue> {
         match action {
             ScheduleAction::Initialize(position) | ScheduleAction::Reconcile(position) => {
@@ -359,13 +391,7 @@ pub(super) fn animate_gate_mechanisms(
         }
     }
     for (marker, mut barrier) in &mut barriers {
-        let openness = match marker.0 {
-            GateKind::Stone => runtime.stone_leaves.value,
-            GateKind::River => runtime.river_leaves.value,
-        };
-        let should_block = runtime.initialized
-            && runtime.position == GatePosition::Closed
-            && openness <= CLOSED_BARRIER_THRESHOLD;
+        let should_block = runtime.blocks(marker.0);
         if barrier.active != should_block {
             barrier.active = should_block;
         }
@@ -603,6 +629,82 @@ fn spawn_box(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn host_gate_fields_restore_mid_motion_and_the_next_schedule_edge() {
+        let mut original = GateRuntime::default();
+        let action = original
+            .schedule
+            .observe(sample(4, 18.0, Office::Lamplight))
+            .unwrap();
+        original.apply(action);
+        let action = original
+            .schedule
+            .observe(sample(4, 22.0, Office::Snuffing))
+            .unwrap();
+        assert_eq!(original.apply(action), Some(GateCue::StoneClosing));
+        original.advance(1.234);
+        let saved = original.checkpoint_scalar();
+        let wire = serde_json::to_vec(&saved).unwrap();
+        let saved: cathedral_sim::checkpoint::host::GatesV1 =
+            serde_json::from_slice(&wire).unwrap();
+        let mut restored = GateRuntime::default();
+        assert_ne!(restored.checkpoint_scalar(), saved);
+        let motion = |m: cathedral_sim::checkpoint::host::MotionV1| Motion {
+            value: m.value,
+            start: m.start,
+            target: m.target,
+            elapsed: m.elapsed,
+            duration: m.duration,
+        };
+        restored.initialized = saved.initialized;
+        restored.position = if saved.closed {
+            GatePosition::Closed
+        } else {
+            GatePosition::Open
+        };
+        restored.schedule.previous = saved.previous.0.map(|(t, c)| {
+            (
+                t,
+                if c {
+                    GatePosition::Closed
+                } else {
+                    GatePosition::Open
+                },
+            )
+        });
+        restored.stone_leaves = motion(saved.stone_leaves);
+        restored.river_leaves = motion(saved.river_leaves);
+        restored.river_bar = motion(saved.river_bar);
+        for dt in [0.01, 0.5, 5.0, 1.0] {
+            original.advance(dt);
+            restored.advance(dt);
+            assert_eq!(
+                serde_json::to_vec(&original.checkpoint_scalar()).unwrap(),
+                serde_json::to_vec(&restored.checkpoint_scalar()).unwrap()
+            );
+            for kind in [GateKind::Stone, GateKind::River] {
+                assert_eq!(original.blocks(kind), restored.blocks(kind));
+            }
+        }
+        assert!(restored.blocks(GateKind::Stone));
+        assert!(restored.blocks(GateKind::River));
+        for sample in [
+            sample(4, 22.1, Office::Snuffing),
+            sample(5, 6.0, Office::Dayspring),
+        ] {
+            let a = original.schedule.observe(sample);
+            let b = restored.schedule.observe(sample);
+            assert_eq!(a, b);
+            if let Some(action) = a {
+                assert_eq!(original.apply(action), restored.apply(action));
+            }
+            original.advance(0.37);
+            restored.advance(0.37);
+            assert_eq!(original.checkpoint_scalar(), restored.checkpoint_scalar());
+        }
+        assert!(!restored.blocks(GateKind::Stone));
+    }
 
     #[test]
     fn a_stalled_frame_moves_physical_gates_only_by_accepted_time() {

@@ -636,6 +636,17 @@ impl BridgeHandle {
     pub fn generation(&self) -> RuntimeGeneration {
         self.generation
     }
+    pub(crate) fn checkpoint_issued(&self) -> cathedral_sim::checkpoint::Result<u64> {
+        if !self.active.load(Ordering::Acquire) {
+            return Err(cathedral_sim::checkpoint::host::error(
+                "retired command endpoint",
+            ));
+        }
+        self.issued
+            .lock()
+            .map(|issued| *issued)
+            .map_err(|_| cathedral_sim::checkpoint::host::error("poisoned command allocator"))
+    }
     pub fn retire(&self) {
         self.active.store(false, Ordering::Release);
     }

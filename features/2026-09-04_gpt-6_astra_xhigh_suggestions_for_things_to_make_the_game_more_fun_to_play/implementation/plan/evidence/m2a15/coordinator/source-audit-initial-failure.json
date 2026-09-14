@@ -1,0 +1,8 @@
+{
+  "result": "failed as expected",
+  "scope": "Reproduction of the initial source-auditor line-format assumption; no production failure. The first execution is retained in the tool transcript.",
+  "original": "/tmp/alibi-m2a15-source-audit-initial-reproduction.log",
+  "original_sha256": "51125f734c3818a7305d6c05cb4cf494d12fc83cf16dc67e9fe560cc8191cca4",
+  "helper_sha256": "dabbcedb0a6a1c62007c7cddd21e2a0d30aa2eb24e24011ebb55565f9ced3e44",
+  "reason": "Ordinary diagnostics occur between the libtest test name and final ok; requiring both on one line miscounted eleven passing tests."
+}

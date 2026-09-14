@@ -1,0 +1,6 @@
+{
+  "raw": "/tmp/alibi-m2a15-owner-authored-smoke-1.json",
+  "sha256": "9b175f560f85be99ddd4c25d80f7f2fa13431244eb1559505e61c35ff94d9f0c",
+  "command": "../commands/owner-authored-smoke-1.start.json",
+  "scope": "development smoke, not frozen-source release acceptance"
+}

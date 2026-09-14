@@ -5,8 +5,8 @@
 //! sites, fixtures, storey counts, materials, and stable IDs instead of
 //! inventing a second procedural grid here.
 
-mod gates;
-mod marks;
+pub(crate) mod gates;
+pub(crate) mod marks;
 pub use marks::{ChalkPrompt, ChalkStanding, ChalkableAnchor, MarkFocus};
 mod monuments;
 mod plan;
@@ -14,7 +14,7 @@ mod route_boards;
 mod smoke;
 mod surfaces;
 mod trade_props;
-mod vermin;
+pub(crate) mod vermin;
 pub mod water;
 
 pub(crate) use surfaces::CobbleRoadNetwork;
@@ -2333,7 +2333,9 @@ fn add_window_module(
     shutters_allowed: bool,
 ) {
     let normal = Vec3::new(normal2.x, 0.0, normal2.y);
-    add_window_room(rooms, wall_point, center_y, direction, normal2, width, height, hash);
+    add_window_room(
+        rooms, wall_point, center_y, direction, normal2, width, height, hash,
+    );
     // The glass slightly overlaps the hole so no slit into the hollow shell
     // survives at the reveal borders.
     let glass_center = wall_point - normal2 * OPENING_DEPTH;
@@ -2456,9 +2458,14 @@ fn add_window_room(
         for (point, uv) in points.into_iter().zip(uvs) {
             rooms.vertex_shaded(point, normal, uv, surface_shade);
         }
-        rooms
-            .indices
-            .extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
+        rooms.indices.extend_from_slice(&[
+            first,
+            first + 1,
+            first + 2,
+            first,
+            first + 2,
+            first + 3,
+        ]);
     };
     // Back wall, facing the pane.
     shaded_quad(
@@ -3067,11 +3074,7 @@ fn build_stone_house(
         commands,
         meshes,
         &materials.paving,
-        Vec3::new(
-            (x0 + x1) * 0.5,
-            0.02,
-            (z0 + z1) * 0.5,
-        ),
+        Vec3::new((x0 + x1) * 0.5, 0.02, (z0 + z1) * 0.5),
         Vec3::new(x1 - x0 - thickness * 2.0, 0.08, z1 - z0 - thickness * 2.0),
         "Stone House floor",
     );
@@ -5015,15 +5018,35 @@ struct CutSounding {
 const CUT_SOUNDINGS: [CutSounding; 4] = [
     // The chain reach: the harbour head, and the deepest water the Serle
     // carried inside the walls.
-    CutSounding { z: 286.0, half_length_m: 26.0, west_m: 0.18, east_m: 0.19 },
+    CutSounding {
+        z: 286.0,
+        half_length_m: 26.0,
+        west_m: 0.18,
+        east_m: 0.19,
+    },
     // The wool quarter, opening at the one blocked stair on this reach.
-    CutSounding { z: 190.0, half_length_m: 30.0, west_m: 0.16, east_m: 0.21 },
+    CutSounding {
+        z: 190.0,
+        half_length_m: 30.0,
+        west_m: 0.16,
+        east_m: 0.21,
+    },
     // Below the Tallage, bracketed by the middle reach's two stairs. The
     // longest of the four, because this is the stretch a player walks and
     // sights down.
-    CutSounding { z: -134.0, half_length_m: 36.0, west_m: 0.17, east_m: 0.22 },
+    CutSounding {
+        z: -134.0,
+        half_length_m: 36.0,
+        west_m: 0.17,
+        east_m: 0.22,
+    },
     // The pool above the sluice gate.
-    CutSounding { z: -362.0, half_length_m: 34.0, west_m: 0.24, east_m: 0.20 },
+    CutSounding {
+        z: -362.0,
+        half_length_m: 34.0,
+        west_m: 0.24,
+        east_m: 0.20,
+    },
 ];
 
 /// Half the width of one stair's head tread, jittered off that stair's seed so
@@ -5113,9 +5136,10 @@ impl CutProp {
     /// kerb.
     fn kerb_gap(self) -> Option<(f32, f32)> {
         match self {
-            CutProp::WaterStair => {
-                Some((-CUT_STAIR_WIDTH_M * 0.5 - 1.4, CUT_STAIR_WIDTH_M * 0.5 + 1.4))
-            }
+            CutProp::WaterStair => Some((
+                -CUT_STAIR_WIDTH_M * 0.5 - 1.4,
+                CUT_STAIR_WIDTH_M * 0.5 + 1.4,
+            )),
             CutProp::Bollard => Some((-0.35, 0.35)),
             CutProp::KerbBreak => Some((-CUT_KERB_BREAK_M * 0.5, CUT_KERB_BREAK_M * 0.5)),
             CutProp::CellarHatch | CutProp::CellarVent => None,
@@ -5472,13 +5496,20 @@ fn cut_kerb_plan(plan: &CityPlan) -> Vec<CutKerbRun> {
         // metres) is not a junction and must not open one.
         let mut gaps = cut_side_gaps(plan, x, x);
         gaps.extend(cut_furniture_kerb_gaps(bank));
-        for (reaches, laid) in [(&CUT_LAID_REACHES[..], true), (&CUT_MARKED_REACHES[..], false)] {
+        for (reaches, laid) in [
+            (&CUT_LAID_REACHES[..], true),
+            (&CUT_MARKED_REACHES[..], false),
+        ] {
             for &(z0, z1) in reaches {
-                runs.extend(
-                    subtract_gaps((z0, z1), &gaps)
-                        .into_iter()
-                        .map(|(z0, z1)| CutKerbRun { x, bank, z0, z1, laid }),
-                );
+                runs.extend(subtract_gaps((z0, z1), &gaps).into_iter().map(|(z0, z1)| {
+                    CutKerbRun {
+                        x,
+                        bank,
+                        z0,
+                        z1,
+                        laid,
+                    }
+                }));
             }
         }
     }
@@ -5742,6 +5773,39 @@ struct CutMarginRect {
 }
 
 impl CutMarginProfile {
+    #[cfg(test)]
+    pub(crate) fn checkpoint_test_flip_feather(&mut self) {
+        let r = self
+            .rects
+            .first_mut()
+            .expect("actual city cut margin rectangles");
+        r.feather_lo = !r.feather_lo;
+    }
+    pub(crate) fn checkpoint_definition(
+        &self,
+        h: &mut cathedral_sim::checkpoint::host::DefinitionHasher,
+    ) {
+        h.bytes(&(self.rects.len() as u64).to_le_bytes());
+        for r in &self.rects {
+            for f in [r.x0, r.z0, r.x1, r.z1] {
+                h.bytes(&f.to_bits().to_le_bytes());
+            }
+            h.bytes(&[
+                r.feather_lo as u8,
+                r.feather_hi as u8,
+                r.feather_x_lo as u8,
+                r.feather_x_hi as u8,
+            ]);
+        }
+        for rows in [&self.ramps, &self.stairs] {
+            h.bytes(&(rows.len() as u64).to_le_bytes());
+            for &(a, b, c, d) in rows {
+                for f in [a, b, c, d] {
+                    h.bytes(&f.to_bits().to_le_bytes());
+                }
+            }
+        }
+    }
     pub fn ground_lift(&self, x: f32, z: f32) -> f32 {
         if !(CUT_FACADE_WEST_X..=CUT_FACADE_EAST_X).contains(&x)
             || !(CUT_LAID_REACHES[2].0..=CUT_LAID_REACHES[0].1).contains(&z)
@@ -5766,10 +5830,26 @@ impl CutMarginProfile {
         let mut lift = 0.0_f32;
         for rect in &self.rects {
             if (rect.x0..=rect.x1).contains(&x) && (rect.z0..=rect.z1).contains(&z) {
-                let lo = if rect.feather_lo { z - rect.z0 } else { f32::MAX };
-                let hi = if rect.feather_hi { rect.z1 - z } else { f32::MAX };
-                let x_lo = if rect.feather_x_lo { x - rect.x0 } else { f32::MAX };
-                let x_hi = if rect.feather_x_hi { rect.x1 - x } else { f32::MAX };
+                let lo = if rect.feather_lo {
+                    z - rect.z0
+                } else {
+                    f32::MAX
+                };
+                let hi = if rect.feather_hi {
+                    rect.z1 - z
+                } else {
+                    f32::MAX
+                };
+                let x_lo = if rect.feather_x_lo {
+                    x - rect.x0
+                } else {
+                    f32::MAX
+                };
+                let x_hi = if rect.feather_x_hi {
+                    rect.x1 - x
+                } else {
+                    f32::MAX
+                };
                 let inside = lo.min(hi).min(x_lo).min(x_hi);
                 lift = lift.max(CUT_STEP_M * (inside / CUT_STEP_FEATHER_M).clamp(0.0, 1.0));
             }
@@ -6099,9 +6179,7 @@ fn add_dressed_stone(mesh: &mut MeshData, center: Vec3, half: Vec3) {
         mesh.quad(
             points,
             normal,
-            points.map(|point| {
-                Vec2::new(point.dot(right) / UV_SPAN, point.dot(up) / UV_SPAN)
-            }),
+            points.map(|point| Vec2::new(point.dot(right) / UV_SPAN, point.dot(up) / UV_SPAN)),
         );
     }
 }
@@ -6152,11 +6230,7 @@ fn add_water_stair(stone: &mut MeshData, iron: &mut MeshData, bank: CutBank, z: 
     stone.set_brush([0.78 + (seed % 9) as f32 * 0.008; 3]);
     add_dressed_stone(
         stone,
-        Vec3::new(
-            (landing_near + landing_far) * 0.5,
-            CUT_BANK_TOP_Y * 0.5,
-            z,
-        ),
+        Vec3::new((landing_near + landing_far) * 0.5, CUT_BANK_TOP_Y * 0.5, z),
         Vec3::new(
             (landing_far - landing_near).abs() * 0.5,
             CUT_BANK_TOP_Y * 0.5,
@@ -6171,8 +6245,7 @@ fn add_water_stair(stone: &mut MeshData, iron: &mut MeshData, bank: CutBank, z: 
     for index in 0..CUT_STAIR_TREADS {
         let far = near;
         near = kerb_x + out * (1.15 - CUT_STAIR_TREAD_M * (index + 1) as f32);
-        let top = CUT_BANK_TOP_Y
-            * (1.0 - (index + 1) as f32 / (CUT_STAIR_TREADS + 1) as f32);
+        let top = CUT_BANK_TOP_Y * (1.0 - (index + 1) as f32 / (CUT_STAIR_TREADS + 1) as f32);
         let half_z = half_head - CUT_STAIR_BATTER_M * (index + 1) as f32;
         stone.set_brush([0.74 + ((seed >> index) % 11) as f32 * 0.009; 3]);
         add_dressed_stone(
@@ -6288,12 +6361,7 @@ fn add_iron_ring(iron: &mut MeshData, center: Vec3, axis: Vec3, radius: f32, bar
 /// (the eroded bollard merely seals its own 0.7 m slot in the riser line,
 /// which was never a crossing). `the_cut_margin_stays_connected_to_its_cartway`
 /// proves the street survives them.
-fn add_bollard(
-    stone: &mut MeshData,
-    collision_world: &mut CollisionWorld,
-    bank: CutBank,
-    z: f32,
-) {
+fn add_bollard(stone: &mut MeshData, collision_world: &mut CollisionWorld, bank: CutBank, z: f32) {
     let x = bank.kerb_x();
     let seed = stable_hash(&format!("cut-bollard-{x:.1}-{z:.1}"));
     stone.set_brush([0.70 + (seed % 12) as f32 * 0.009; 3]);
@@ -6361,8 +6429,9 @@ fn add_kerb_break(markings: &mut MeshData, iron: &mut MeshData, bank: CutBank, z
     for course in 0..4 {
         let near = CUT_KERB_WIDTH_M * 0.5 + run * course as f32;
         let centre_u = near + run * 0.5;
-        let top = CUT_STEP_M * ((centre_u + CUT_KERB_WIDTH_M * 0.5)
-            / (CUT_BREAK_RAMP_RUN_M + CUT_KERB_WIDTH_M * 0.5))
+        let top = CUT_STEP_M
+            * ((centre_u + CUT_KERB_WIDTH_M * 0.5)
+                / (CUT_BREAK_RAMP_RUN_M + CUT_KERB_WIDTH_M * 0.5))
             + CUT_MARGIN_Y;
         markings.set_brush([0.76 + course as f32 * 0.012; 3]);
         add_dressed_stone(
@@ -6424,7 +6493,11 @@ fn add_cellar_hatch(
         );
         add_iron_ring(
             iron,
-            Vec3::new(x - bank.outward() * 0.42, CUT_STEP_M + 0.056, z + side * 0.20),
+            Vec3::new(
+                x - bank.outward() * 0.42,
+                CUT_STEP_M + 0.056,
+                z + side * 0.20,
+            ),
             Vec3::Y,
             0.075,
             0.018,
@@ -9902,9 +9975,8 @@ mod tests {
         let committed: serde_json::Value =
             serde_json::from_str(include_str!("../../assets/world/collision_footprints.json"))
                 .expect("the committed collision export parses");
-        let committed: Vec<Vec<[f32; 2]>> =
-            serde_json::from_value(committed["footprints"].clone())
-                .expect("the committed collision export has footprints");
+        let committed: Vec<Vec<[f32; 2]>> = serde_json::from_value(committed["footprints"].clone())
+            .expect("the committed collision export has footprints");
         assert_eq!(
             built.len(),
             committed.len(),
@@ -9936,7 +10008,12 @@ mod tests {
                 .iter()
                 .filter(|(prop, _, _)| *prop == CutProp::Bollard)
                 .map(|(_, bank, z)| {
-                    [bank.kerb_x() - 0.21, z - 0.21, bank.kerb_x() + 0.21, z + 0.21]
+                    [
+                        bank.kerb_x() - 0.21,
+                        z - 0.21,
+                        bank.kerb_x() + 0.21,
+                        z + 0.21,
+                    ]
                 }),
         );
 
@@ -9955,9 +10032,9 @@ mod tests {
             .iter()
             .map(bbox)
             .filter(|[x0, _, x1, _]| {
-                [CutBank::West, CutBank::East].iter().any(|bank| {
-                    *x0 >= bank.kerb_x() - 0.5 && *x1 <= bank.kerb_x() + 0.5
-                })
+                [CutBank::West, CutBank::East]
+                    .iter()
+                    .any(|bank| *x0 >= bank.kerb_x() - 0.5 && *x1 <= bank.kerb_x() + 0.5)
             })
             .collect();
         for want in &expected {
@@ -10005,8 +10082,10 @@ mod tests {
         let walkable_near = |x: f32, z: f32| {
             (-1..=1).any(|dx| {
                 (-1..=1).any(|dz| {
-                    nav.is_walkable(f64::from(x) + f64::from(dx) * 0.25, f64::from(z)
-                        + f64::from(dz) * 0.25)
+                    nav.is_walkable(
+                        f64::from(x) + f64::from(dx) * 0.25,
+                        f64::from(z) + f64::from(dz) * 0.25,
+                    )
                 })
             })
         };
@@ -10023,12 +10102,9 @@ mod tests {
                     // Only where the margin actually has flags — junction
                     // mouths, stair trenches and ramp lanes answer for
                     // themselves.
-                    if !strips
-                        .iter()
-                        .any(|[sx0, sz0, sx1, sz1]| {
-                            *sx0 <= x && x <= *sx1 && *sz0 + 0.5 <= z && z <= *sz1 - 0.5
-                        })
-                    {
+                    if !strips.iter().any(|[sx0, sz0, sx1, sz1]| {
+                        *sx0 <= x && x <= *sx1 && *sz0 + 0.5 <= z && z <= *sz1 - 0.5
+                    }) {
                         continue;
                     }
                     sampled += 1;
@@ -10301,7 +10377,10 @@ mod tests {
             .copied()
             .collect();
         authored.sort_by(|a, b| a.0.total_cmp(&b.0));
-        assert_eq!(authored[0].0, ribbon_lo, "the reaches start where the Cut does");
+        assert_eq!(
+            authored[0].0, ribbon_lo,
+            "the reaches start where the Cut does"
+        );
         assert_eq!(
             authored[authored.len() - 1].1,
             ribbon_hi,
@@ -10356,7 +10435,9 @@ mod tests {
             for (z0, z1) in CUT_LAID_REACHES {
                 let covered: f32 = runs
                     .iter()
-                    .filter(|run| run.x == x && run.laid && run.z0 >= z0 - 0.1 && run.z1 <= z1 + 0.1)
+                    .filter(|run| {
+                        run.x == x && run.laid && run.z0 >= z0 - 0.1 && run.z1 <= z1 + 0.1
+                    })
                     .map(|run| run.z1 - run.z0)
                     .sum();
                 let opened: f32 = gaps
@@ -10424,7 +10505,10 @@ mod tests {
                     sounding.z
                 );
             }
-            let span = (sounding.z - sounding.half_length_m, sounding.z + sounding.half_length_m);
+            let span = (
+                sounding.z - sounding.half_length_m,
+                sounding.z + sounding.half_length_m,
+            );
             assert!(
                 CUT_LAID_REACHES
                     .iter()
@@ -10907,8 +10991,11 @@ mod tests {
         let mean = |stones: &[(f32, f32, f32)], pick: fn(&(f32, f32, f32)) -> f32| {
             stones.iter().map(pick).sum::<f32>() / stones.len() as f32
         };
-        let (true_top, west_top, east_top) =
-            (mean(&true_line, |s| s.0), mean(&west, |s| s.0), mean(&east, |s| s.0));
+        let (true_top, west_top, east_top) = (
+            mean(&true_line, |s| s.0),
+            mean(&west, |s| s.0),
+            mean(&east, |s| s.0),
+        );
         assert!(
             true_top - west_top > 0.02,
             "the drawn line over the middle sounding stands at y {west_top} against \
@@ -11000,9 +11087,9 @@ mod tests {
             let steps = ((hi - lo) / 1.0).ceil().max(1.0) as usize;
             for step in 0..=steps {
                 let z = lo + (hi - lo) * step as f32 / steps as f32;
-                let flagged = strips.iter().any(|[x0, z0, x1, z1]| {
-                    *x0 <= behind && behind <= *x1 && *z0 <= z && z <= *z1
-                });
+                let flagged = strips
+                    .iter()
+                    .any(|[x0, z0, x1, z1]| *x0 <= behind && behind <= *x1 && *z0 <= z && z <= *z1);
                 if !flagged {
                     bare.push((behind, z));
                 }
@@ -11263,8 +11350,7 @@ mod tests {
             stairs += 1;
             let x = bank.kerb_x();
             for step in 0..=8 {
-                let at = z - CUT_STAIR_WIDTH_M * 0.5
-                    + CUT_STAIR_WIDTH_M * step as f32 / 8.0;
+                let at = z - CUT_STAIR_WIDTH_M * 0.5 + CUT_STAIR_WIDTH_M * step as f32 / 8.0;
                 assert!(
                     !runs
                         .iter()
@@ -11911,7 +11997,9 @@ mod tests {
         const LOG_DIAMETER: f32 = 0.23;
 
         let logs: Vec<Vec3> = (0..3)
-            .flat_map(|row| (0..2).map(move |column| firewood_log_center(base, normal, row, column)))
+            .flat_map(|row| {
+                (0..2).map(move |column| firewood_log_center(base, normal, row, column))
+            })
             .collect();
 
         let heights: BTreeSet<String> = logs.iter().map(|log| format!("{:.3}", log.y)).collect();

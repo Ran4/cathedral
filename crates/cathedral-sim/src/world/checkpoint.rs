@@ -349,6 +349,9 @@ pub struct BackboneCandidate {
     data: WorldBackboneDtoV1,
 }
 impl BackboneCandidate {
+    pub(crate) fn host_spatial_sequence(&self) -> i64 {
+        self.data.spatial_sequence
+    }
     pub fn counts(&self) -> BackboneCounts {
         self.data.counts()
     }

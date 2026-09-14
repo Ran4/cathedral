@@ -68,7 +68,7 @@ use crate::controller::{PhysicalPosition, PlayerController};
 /// Complete ordinary pump boundary, suitable for capture without an extra poll.
 /// M2 persists the watermark and matching physical identity with host dynamics.
 #[derive(Clone, Copy, Debug)]
-pub(super) struct AcceptedHostBoundary {
+pub(crate) struct AcceptedHostBoundary {
     pub generation: cathedral_sim::RuntimeGeneration,
     pub input_watermark: u64,
     pub physical_sequence: u64,
@@ -159,6 +159,7 @@ struct EngineSeed {
 /// friends, which are deliberately not `Send` (the sim is single-threaded by
 /// construction — D22).
 pub struct LocalEngine {
+    pub(crate) issued_at_boundary: Option<u64>,
     generation: cathedral_sim::RuntimeGeneration,
     publication_bytes: Arc<AtomicUsize>,
     command_endpoint: Option<super::bridge::BridgeCommandSender>,
@@ -178,7 +179,7 @@ pub struct LocalEngine {
     /// but never polls again.
     dead: bool,
     input_watermark: u64,
-    pub(super) accepted_boundary: Option<AcceptedHostBoundary>,
+    pub(crate) accepted_boundary: Option<AcceptedHostBoundary>,
 }
 
 impl LocalEngine {
@@ -200,6 +201,15 @@ impl LocalEngine {
     /// nothing before the cast comes online.
     pub(crate) fn world(&self) -> Option<&cathedral_sim::World> {
         self.engine.as_ref().map(|engine| engine.world())
+    }
+
+    pub(crate) fn checkpoint_engine(&self) -> cathedral_sim::checkpoint::Result<&Engine> {
+        if self.dead {
+            return Err(cathedral_sim::checkpoint::host::error("dead engine"));
+        }
+        self.engine
+            .as_ref()
+            .ok_or_else(|| cathedral_sim::checkpoint::host::error("engine not started"))
     }
 
     /// The daily round, borrowed exactly like [`Self::world`]: the character
@@ -265,6 +275,7 @@ pub fn spawn(
         events: events_tx.clone(),
         dead: false,
         input_watermark: 0,
+        issued_at_boundary: None,
         accepted_boundary: None,
     };
     let mut guard = EngineGuard { _backends: None };
@@ -567,6 +578,7 @@ pub fn pump_local_engine(
     players: Query<(&PlayerController, Option<&PhysicalPosition>, &Transform)>,
     mut spatial: ResMut<PlayerSpatialState>,
     live: Option<Res<crate::live_time::LiveTime>>,
+    handle: Option<Res<super::bridge::BridgeHandle>>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::EnginePump);
     let started = std::time::Instant::now();
@@ -579,7 +591,9 @@ pub fn pump_local_engine(
             controller.yaw(),
         )
     });
+    let issued = handle.as_deref().and_then(|h| h.checkpoint_issued().ok());
     engine.pump_with_sample(time.elapsed_secs_f64(), physical);
+    engine.issued_at_boundary = engine.accepted_boundary.and(issued);
     // The whole sim runs inside this call on the main thread; the same rolling
     // report the pose system keeps, so a slow poll is attributable from
     // `logs.jsonl` instead of a profiler.

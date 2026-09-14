@@ -298,6 +298,9 @@ impl CommandLedger {
     }
 }
 impl CommandLedgerDtoV1 {
+    pub(crate) fn host_high_water(&self) -> u64 {
+        self.producers[crate::receipts::HOST_PRODUCER as usize].high_water
+    }
     pub const MAX_ENCODED_BYTES: usize = MAX_ENCODED_BYTES;
     pub const WORKING_BYTES: usize = WORKING_BYTES;
     pub fn decode_json(

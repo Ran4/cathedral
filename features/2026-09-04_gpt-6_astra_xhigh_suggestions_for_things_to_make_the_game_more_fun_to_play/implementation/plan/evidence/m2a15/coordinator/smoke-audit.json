@@ -1,0 +1,427 @@
+{
+  "all_samples_over_2ms": [
+    {
+      "index": 0,
+      "milliseconds": 2.3721279999999996,
+      "mode": "authored",
+      "phase": "preflight_us",
+      "repetition": 1
+    },
+    {
+      "index": 1,
+      "milliseconds": 2.244515,
+      "mode": "authored",
+      "phase": "preflight_us",
+      "repetition": 1
+    },
+    {
+      "index": 0,
+      "milliseconds": 5.637986,
+      "mode": "authored",
+      "phase": "export_us",
+      "repetition": 1
+    },
+    {
+      "index": 1,
+      "milliseconds": 5.545294,
+      "mode": "authored",
+      "phase": "export_us",
+      "repetition": 1
+    },
+    {
+      "index": 0,
+      "milliseconds": 4.193734999999999,
+      "mode": "populated",
+      "phase": "preflight_us",
+      "repetition": 1
+    },
+    {
+      "index": 1,
+      "milliseconds": 4.136759,
+      "mode": "populated",
+      "phase": "preflight_us",
+      "repetition": 1
+    },
+    {
+      "index": 0,
+      "milliseconds": 9.962991,
+      "mode": "populated",
+      "phase": "export_us",
+      "repetition": 1
+    },
+    {
+      "index": 1,
+      "milliseconds": 10.023943000000001,
+      "mode": "populated",
+      "phase": "export_us",
+      "repetition": 1
+    }
+  ],
+  "auditor_sha256": "4ce4071ef010ac2ad94f1e42d14d5542ce6c17a91da2cf0105c3aa59fde6bf89",
+  "binary_sha256": "e6be43620573a23046479444fc80ca7c3f735e90fd991d491d24ee049506fd3a",
+  "dataset": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/smoke",
+  "pooled": {
+    "authored": {
+      "candidate_validate_us": {
+        "max_ms": 0.9882280000000001,
+        "min_ms": 0.971718,
+        "over_2ms": 0,
+        "over_30ms": 0,
+        "p50_ms": 0.971718,
+        "p95_ms": 0.9882280000000001,
+        "p99_ms": 0.9882280000000001,
+        "samples": 2
+      },
+      "decode_validate_us": {
+        "max_ms": 1.079624,
+        "min_ms": 1.050152,
+        "over_2ms": 0,
+        "over_30ms": 0,
+        "p50_ms": 1.050152,
+        "p95_ms": 1.079624,
+        "p99_ms": 1.079624,
+        "samples": 2
+      },
+      "drop_us": {
+        "max_ms": 0.004927,
+        "min_ms": 0.001178,
+        "over_2ms": 0,
+        "over_30ms": 0,
+        "p50_ms": 0.001178,
+        "p95_ms": 0.004927,
+        "p99_ms": 0.004927,
+        "samples": 2
+      },
+      "encode_us": {
+        "max_ms": 0.054878,
+        "min_ms": 0.043391,
+        "over_2ms": 0,
+        "over_30ms": 0,
+        "p50_ms": 0.043391,
+        "p95_ms": 0.054878,
+        "p99_ms": 0.054878,
+        "samples": 2
+      },
+      "export_us": {
+        "max_ms": 5.637986,
+        "min_ms": 5.545294,
+        "over_2ms": 2,
+        "over_30ms": 0,
+        "p50_ms": 5.545294,
+        "p95_ms": 5.637986,
+        "p99_ms": 5.637986,
+        "samples": 2
+      },
+      "preflight_us": {
+        "max_ms": 2.3721279999999996,
+        "min_ms": 2.244515,
+        "over_2ms": 2,
+        "over_30ms": 0,
+        "p50_ms": 2.244515,
+        "p95_ms": 2.3721279999999996,
+        "p99_ms": 2.3721279999999996,
+        "samples": 2
+      }
+    },
+    "populated": {
+      "candidate_validate_us": {
+        "max_ms": 1.482218,
+        "min_ms": 1.4615360000000002,
+        "over_2ms": 0,
+        "over_30ms": 0,
+        "p50_ms": 1.4615360000000002,
+        "p95_ms": 1.482218,
+        "p99_ms": 1.482218,
+        "samples": 2
+      },
+      "decode_validate_us": {
+        "max_ms": 1.5727759999999997,
+        "min_ms": 1.5577220000000003,
+        "over_2ms": 0,
+        "over_30ms": 0,
+        "p50_ms": 1.5577220000000003,
+        "p95_ms": 1.5727759999999997,
+        "p99_ms": 1.5727759999999997,
+        "samples": 2
+      },
+      "drop_us": {
+        "max_ms": 0.005132,
+        "min_ms": 0.0016300000000000002,
+        "over_2ms": 0,
+        "over_30ms": 0,
+        "p50_ms": 0.0016300000000000002,
+        "p95_ms": 0.005132,
+        "p99_ms": 0.005132,
+        "samples": 2
+      },
+      "encode_us": {
+        "max_ms": 0.053842999999999995,
+        "min_ms": 0.053174,
+        "over_2ms": 0,
+        "over_30ms": 0,
+        "p50_ms": 0.053174,
+        "p95_ms": 0.053842999999999995,
+        "p99_ms": 0.053842999999999995,
+        "samples": 2
+      },
+      "export_us": {
+        "max_ms": 10.023943000000001,
+        "min_ms": 9.962991,
+        "over_2ms": 2,
+        "over_30ms": 0,
+        "p50_ms": 9.962991,
+        "p95_ms": 10.023943000000001,
+        "p99_ms": 10.023943000000001,
+        "samples": 2
+      },
+      "preflight_us": {
+        "max_ms": 4.193734999999999,
+        "min_ms": 4.136759,
+        "over_2ms": 2,
+        "over_30ms": 0,
+        "p50_ms": 4.136759,
+        "p95_ms": 4.193734999999999,
+        "p99_ms": 4.193734999999999,
+        "samples": 2
+      }
+    }
+  },
+  "raw_phase_samples": 24,
+  "result": "integrity passed",
+  "runs": [
+    {
+      "elapsed_seconds": 0.6418926930055022,
+      "mode": "authored",
+      "phases": {
+        "candidate_validate_us": {
+          "max_ms": 0.9882280000000001,
+          "min_ms": 0.971718,
+          "over_2ms": 0,
+          "over_30ms": 0,
+          "p50_ms": 0.971718,
+          "p95_ms": 0.9882280000000001,
+          "p99_ms": 0.9882280000000001,
+          "samples": 2
+        },
+        "decode_validate_us": {
+          "max_ms": 1.079624,
+          "min_ms": 1.050152,
+          "over_2ms": 0,
+          "over_30ms": 0,
+          "p50_ms": 1.050152,
+          "p95_ms": 1.079624,
+          "p99_ms": 1.079624,
+          "samples": 2
+        },
+        "drop_us": {
+          "max_ms": 0.004927,
+          "min_ms": 0.001178,
+          "over_2ms": 0,
+          "over_30ms": 0,
+          "p50_ms": 0.001178,
+          "p95_ms": 0.004927,
+          "p99_ms": 0.004927,
+          "samples": 2
+        },
+        "encode_us": {
+          "max_ms": 0.054878,
+          "min_ms": 0.043391,
+          "over_2ms": 0,
+          "over_30ms": 0,
+          "p50_ms": 0.043391,
+          "p95_ms": 0.054878,
+          "p99_ms": 0.054878,
+          "samples": 2
+        },
+        "export_us": {
+          "max_ms": 5.637986,
+          "min_ms": 5.545294,
+          "over_2ms": 2,
+          "over_30ms": 0,
+          "p50_ms": 5.545294,
+          "p95_ms": 5.637986,
+          "p99_ms": 5.637986,
+          "samples": 2
+        },
+        "preflight_us": {
+          "max_ms": 2.3721279999999996,
+          "min_ms": 2.244515,
+          "over_2ms": 2,
+          "over_30ms": 0,
+          "p50_ms": 2.244515,
+          "p95_ms": 2.3721279999999996,
+          "p99_ms": 2.3721279999999996,
+          "samples": 2
+        }
+      },
+      "process_max_rss_kib": 379168,
+      "readonly": {
+        "event_sequence_after": 7,
+        "event_sequence_before": 7,
+        "input_watermark_after": 10,
+        "input_watermark_before": 10,
+        "world_revision_after": 1103,
+        "world_revision_before": 1103
+      },
+      "repetition": 1,
+      "shape": {
+        "cost": {
+          "container_stride_bytes": 4096,
+          "encoded_bytes": 6275,
+          "expanded_upper_bytes": 107462,
+          "peak_bytes": 5081249,
+          "validation_working_bytes": 4194304
+        },
+        "counts": {
+          "characters": 520,
+          "collision_boxes": 751,
+          "collision_prisms": 1153,
+          "cut_margin": true,
+          "dynamic_barriers": 2,
+          "entities": 18496,
+          "rats": 150,
+          "rows": 22,
+          "vermin_colonies": 8
+        },
+        "placement": {
+          "placed": 0,
+          "requested": 0,
+          "unplaced": 0
+        },
+        "readable_counts": {
+          "bubble": 1,
+          "chalk_hold": 1,
+          "chalk_pen": 1,
+          "cooldown": 1,
+          "draft": 1,
+          "hud": 7,
+          "pending_command": 1,
+          "player_receipt": 1,
+          "selected_item": 1,
+          "subtitle": 1,
+          "unread_intent": 1,
+          "unread_speech": 4,
+          "well_draw": 1
+        }
+      }
+    },
+    {
+      "elapsed_seconds": 1.3618906228803098,
+      "mode": "populated",
+      "phases": {
+        "candidate_validate_us": {
+          "max_ms": 1.482218,
+          "min_ms": 1.4615360000000002,
+          "over_2ms": 0,
+          "over_30ms": 0,
+          "p50_ms": 1.4615360000000002,
+          "p95_ms": 1.482218,
+          "p99_ms": 1.482218,
+          "samples": 2
+        },
+        "decode_validate_us": {
+          "max_ms": 1.5727759999999997,
+          "min_ms": 1.5577220000000003,
+          "over_2ms": 0,
+          "over_30ms": 0,
+          "p50_ms": 1.5577220000000003,
+          "p95_ms": 1.5727759999999997,
+          "p99_ms": 1.5727759999999997,
+          "samples": 2
+        },
+        "drop_us": {
+          "max_ms": 0.005132,
+          "min_ms": 0.0016300000000000002,
+          "over_2ms": 0,
+          "over_30ms": 0,
+          "p50_ms": 0.0016300000000000002,
+          "p95_ms": 0.005132,
+          "p99_ms": 0.005132,
+          "samples": 2
+        },
+        "encode_us": {
+          "max_ms": 0.053842999999999995,
+          "min_ms": 0.053174,
+          "over_2ms": 0,
+          "over_30ms": 0,
+          "p50_ms": 0.053174,
+          "p95_ms": 0.053842999999999995,
+          "p99_ms": 0.053842999999999995,
+          "samples": 2
+        },
+        "export_us": {
+          "max_ms": 10.023943000000001,
+          "min_ms": 9.962991,
+          "over_2ms": 2,
+          "over_30ms": 0,
+          "p50_ms": 9.962991,
+          "p95_ms": 10.023943000000001,
+          "p99_ms": 10.023943000000001,
+          "samples": 2
+        },
+        "preflight_us": {
+          "max_ms": 4.193734999999999,
+          "min_ms": 4.136759,
+          "over_2ms": 2,
+          "over_30ms": 0,
+          "p50_ms": 4.136759,
+          "p95_ms": 4.193734999999999,
+          "p99_ms": 4.193734999999999,
+          "samples": 2
+        }
+      },
+      "process_max_rss_kib": 411836,
+      "readonly": {
+        "event_sequence_after": 7,
+        "event_sequence_before": 7,
+        "input_watermark_after": 10,
+        "input_watermark_before": 10,
+        "world_revision_after": 5103,
+        "world_revision_before": 5103
+      },
+      "repetition": 1,
+      "shape": {
+        "cost": {
+          "container_stride_bytes": 4096,
+          "encoded_bytes": 6275,
+          "expanded_upper_bytes": 107462,
+          "peak_bytes": 5081249,
+          "validation_working_bytes": 4194304
+        },
+        "counts": {
+          "characters": 2520,
+          "collision_boxes": 751,
+          "collision_prisms": 1153,
+          "cut_margin": true,
+          "dynamic_barriers": 2,
+          "entities": 73984,
+          "rats": 150,
+          "rows": 22,
+          "vermin_colonies": 8
+        },
+        "placement": {
+          "placed": 2000,
+          "requested": 2000,
+          "unplaced": 0
+        },
+        "readable_counts": {
+          "bubble": 1,
+          "chalk_hold": 1,
+          "chalk_pen": 1,
+          "cooldown": 1,
+          "draft": 1,
+          "hud": 7,
+          "pending_command": 1,
+          "player_receipt": 1,
+          "selected_item": 1,
+          "subtitle": 1,
+          "unread_intent": 1,
+          "unread_speech": 4,
+          "well_draw": 1
+        }
+      }
+    }
+  ],
+  "scope": "Host component only; no complete capture/frame/Running budget claim.",
+  "source_manifest_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a"
+}

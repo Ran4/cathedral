@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "comparison": "exact bytes, no normalization",
+  "writers": [
+    "fixture-writer-1",
+    "fixture-writer-2",
+    "fixture-writer-3"
+  ],
+  "writer_2_path_note": "Recorded /bin/home typo; /usr/bin and explicit tool paths remained valid. Writer 3 repeats final test source with required PATH.",
+  "fixtures": {
+    "initial-v1.json": {
+      "bytes": 3549,
+      "raw_sha256": "09d2d2bc5b45df80603b6a44daff7851ead3241945617918acefd258b8a86060",
+      "originals": [
+        "/tmp/alibi-m2a15-fixture-writer-1/initial-v1.json",
+        "/tmp/alibi-m2a15-fixture-writer-2/initial-v1.json",
+        "/tmp/alibi-m2a15-fixture-writer-3/initial-v1.json"
+      ],
+      "persisted": "crates/cathedral-sim/tests/fixtures/checkpoint_host/initial-v1.json",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/owner_fixtures/initial-v1.json.gz",
+      "archive_sha256": "21647dfc373915534a8eb75ec5adef5d9601a411ee6292cca37dec9b04c7d625",
+      "generation": 1,
+      "elapsed": {
+        "seconds": 0,
+        "nanos": 34000000
+      },
+      "families": {
+        "draft": 1,
+        "selected_item": 1,
+        "hud": 6,
+        "chalk_hold": 1,
+        "chalk_pen": 1
+      }
+    },
+    "active-v1.json": {
+      "bytes": 6275,
+      "raw_sha256": "c0b20da7dfbf0e7b0e1085b95987193f0a3197c5588b43b6cde6929d85b9f761",
+      "originals": [
+        "/tmp/alibi-m2a15-fixture-writer-1/active-v1.json",
+        "/tmp/alibi-m2a15-fixture-writer-2/active-v1.json",
+        "/tmp/alibi-m2a15-fixture-writer-3/active-v1.json"
+      ],
+      "persisted": "crates/cathedral-sim/tests/fixtures/checkpoint_host/active-v1.json",
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a15/owner_fixtures/active-v1.json.gz",
+      "archive_sha256": "ffd6afd783c138593c5b5d5fe745034c85b99585c66519d5db2385d0f8cceb51",
+      "generation": 2,
+      "elapsed": {
+        "seconds": 0,
+        "nanos": 68000000
+      },
+      "families": {
+        "draft": 1,
+        "selected_item": 1,
+        "hud": 7,
+        "pending_command": 1,
+        "chalk_hold": 1,
+        "chalk_pen": 1,
+        "cooldown": 1,
+        "well_draw": 1,
+        "unread_intent": 1,
+        "unread_speech": 4,
+        "subtitle": 1,
+        "bubble": 1,
+        "player_receipt": 1
+      }
+    }
+  }
+}

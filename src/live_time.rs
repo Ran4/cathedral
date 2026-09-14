@@ -12,7 +12,7 @@ pub(crate) struct LiveTime {
     pub continuation: AcceptedTime,
     /// This clock, not TimePlugin's clamped wall projection, owns the logical
     /// origin. M3 must restore it with continuation at final adoption.
-    accepted_virtual: Time<Virtual>,
+    pub(crate) accepted_virtual: Time<Virtual>,
     pub last_frame: Option<AcceptedFrame>,
 }
 

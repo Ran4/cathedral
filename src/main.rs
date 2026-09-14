@@ -3,6 +3,7 @@ mod config;
 mod controller;
 mod drive;
 mod fonts;
+mod host_checkpoint;
 mod live_time;
 mod map;
 mod materials;

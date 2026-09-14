@@ -1449,12 +1449,13 @@ impl ScheduledSounds {
 }
 
 #[derive(Resource, Default)]
-struct CueCooldowns {
+pub(crate) struct CueCooldowns {
+    pub(crate) cue_read: usize,
     /// When each key is free again, rather than when it last fired: a peal is
     /// queued whole, well before its first stroke, so occupancy has to be
     /// expressible as a window that has not started yet.
-    free_at: HashMap<u64, f64>,
-    last_pruned_at: f64,
+    pub(crate) free_at: HashMap<u64, f64>,
+    pub(crate) last_pruned_at: f64,
 }
 
 impl CueCooldowns {
@@ -1486,14 +1487,14 @@ impl CueCooldowns {
 }
 
 #[derive(Resource, Default)]
-struct WellSoundState {
-    ford_until: f64,
-    chain_until: f64,
-    three_curb_until: f64,
-    three_curb_paused_from: f64,
-    three_curb_paused_until: f64,
-    last_draw_at: HashMap<SpecialWell, f64>,
-    crossed_bucket_day: Option<i64>,
+pub(crate) struct WellSoundState {
+    pub(crate) ford_until: f64,
+    pub(crate) chain_until: f64,
+    pub(crate) three_curb_until: f64,
+    pub(crate) three_curb_paused_from: f64,
+    pub(crate) three_curb_paused_until: f64,
+    pub(crate) last_draw_at: HashMap<SpecialWell, f64>,
+    pub(crate) crossed_bucket_day: Option<i64>,
 }
 
 /// A read-only view of the authored well mechanisms for city animation.
@@ -1555,13 +1556,13 @@ fn project_well_mechanism_activity(
 }
 
 #[derive(Debug, Clone, Copy)]
-struct WorkState {
-    position: Vec3,
-    active: bool,
+pub(crate) struct WorkState {
+    pub(crate) position: Vec3,
+    pub(crate) active: bool,
 }
 
 #[derive(Resource, Default)]
-struct WorkSoundState(HashMap<WorkActivityKind, WorkState>);
+pub(crate) struct WorkSoundState(pub(crate) HashMap<WorkActivityKind, WorkState>);
 
 #[allow(clippy::too_many_arguments)]
 fn ingest_soundscape_cues(
@@ -1576,7 +1577,9 @@ fn ingest_soundscape_cues(
 ) {
     let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let now = time.elapsed_secs_f64();
-    for cue in cues.read().copied() {
+    for (cue, message_id) in cues.read_with_id() {
+        cooldowns.cue_read = message_id.id + 1;
+        let cue = *cue;
         match cue {
             SoundscapeCue::MarketCry { position } => {
                 let key = positional_cooldown_key(SoundscapeSound::WaresCall, position, 8.0);
@@ -1788,8 +1791,8 @@ fn begin_well_draw(
 }
 
 #[derive(Resource, Default)]
-struct ClockSoundState {
-    flour_day: Option<i64>,
+pub(crate) struct ClockSoundState {
+    pub(crate) flour_day: Option<i64>,
 }
 
 /// Which day's curfew has already been rung, and the office the edge detector
@@ -1799,9 +1802,9 @@ struct ClockSoundState {
 /// so the day number changes *inside* it, and a day-keyed edge would ring the
 /// city's curfew a second time at midnight.
 #[derive(Resource, Default)]
-struct CivicBellState {
-    observed_office: Option<Office>,
-    curfew_day: Option<i64>,
+pub(crate) struct CivicBellState {
+    pub(crate) observed_office: Option<Office>,
+    pub(crate) curfew_day: Option<i64>,
 }
 
 fn schedule_clock_sounds(
@@ -4091,6 +4094,69 @@ fn signed_unit(hash: u64) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn host_restored_curfew_stamp_and_rope_do_not_repeat_a_refused_semantic_bell() {
+        use std::time::Duration;
+        let (sender, received) = crossbeam_channel::bounded(1);
+        let handle = BridgeHandle::new(sender, "/tmp".into());
+        handle
+            .try_send(BridgeCommand::PlayerSound {
+                sound_id: "fart".into(),
+            })
+            .unwrap();
+        let mut app = App::new();
+        app.init_resource::<Time>()
+            .init_resource::<ScheduledSounds>()
+            .init_resource::<CueCooldowns>()
+            .init_resource::<CivicBellState>()
+            .insert_resource(handle)
+            .insert_resource(clock(Office::Waning, Weekday::Second))
+            .add_message::<SoundscapeCue>()
+            .init_resource::<WellSoundState>()
+            .init_resource::<WorkSoundState>()
+            .add_systems(
+                Update,
+                (ingest_soundscape_cues, schedule_curfew_bell).chain(),
+            );
+        app.update();
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_secs(1));
+        app.insert_resource(clock(Office::Snuffing, Weekday::Second));
+        app.update();
+        let saved = {
+            let c = app.world().resource::<CivicBellState>();
+            (c.observed_office, c.curfew_day)
+        };
+        let rope = app.world().resource::<CueCooldowns>().free_at.clone();
+        assert!(saved.1.is_some());
+        assert!(!rope.is_empty());
+        assert_eq!(received.len(), 1);
+        received.try_recv().unwrap();
+        app.world_mut().resource_mut::<ScheduledSounds>().0.clear(); // cosmetic playback is intentionally interrupted
+        *app.world_mut().resource_mut::<CivicBellState>() = CivicBellState::default();
+        app.world_mut()
+            .resource_mut::<CueCooldowns>()
+            .free_at
+            .clear();
+        {
+            let mut c = app.world_mut().resource_mut::<CivicBellState>();
+            c.observed_office = saved.0;
+            c.curfew_day = saved.1;
+        }
+        app.world_mut().resource_mut::<CueCooldowns>().free_at = rope.clone();
+        assert_eq!(app.world().resource::<CueCooldowns>().free_at, rope);
+        app.world_mut()
+            .write_message(SoundscapeCue::CivicBell(BellPattern::ScoldSummons));
+        app.update();
+        assert!(
+            received.is_empty(),
+            "the restored peal keeps the rope and refused curfew does not retry"
+        );
+        assert!(app.world().resource::<ScheduledSounds>().0.is_empty());
+        assert_eq!(app.world().resource::<CueCooldowns>().cue_read, 1);
+    }
 
     #[test]
     fn every_route_has_a_unique_asset_and_the_right_container() {

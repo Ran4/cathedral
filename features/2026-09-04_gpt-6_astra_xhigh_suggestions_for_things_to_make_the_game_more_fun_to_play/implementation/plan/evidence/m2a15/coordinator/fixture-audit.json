@@ -1,0 +1,144 @@
+{
+  "audited_utc": "2026-09-14T19:49:26.016858+00:00",
+  "commands": [
+    {
+      "archive_sha256": "7123fe9cd8a53bd84cd913b3c3b4b23e0a88ed0a40c62e7cfa0d409607204d9b",
+      "environment": {
+        "ALIBI_HOST_MODE": null,
+        "ALIBI_HOST_OUTPUT": "/tmp/alibi-m2a15-fixture-writer-1",
+        "ALIBI_HOST_SAMPLES": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "CARGO_TARGET_DIR": null,
+        "CATHEDRAL_FAKE_BACKEND": "1",
+        "CATHEDRAL_HEADLESS": "1",
+        "LDFLAGS": null,
+        "PATH": "/tmp/alibi-uv/archive-v0/NmyOoLUvWvUqxemRQg89s/bin:/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "RUSTFLAGS": null
+      },
+      "label": "fixture-writer-1",
+      "raw_sha256": "8642782822012f120e6d8eff24d40703f17ac9b10f88603e710d205b98e21a97",
+      "result_sha256": "8b2603435b2b5760b01fe48f9cd553d445464059e0e0ce0ba855a274b8d876fa",
+      "start_sha256": "313f252b78aab875e9389ff6ce4e0c6b3e40302b351d4110aa65cb4bae8e8012"
+    },
+    {
+      "archive_sha256": "35705d45bcf8290b5be9beeefb2207c14f7fed1341f9858c611c675b9c2da216",
+      "environment": {
+        "ALIBI_HOST_MODE": null,
+        "ALIBI_HOST_OUTPUT": "/tmp/alibi-m2a15-fixture-writer-2",
+        "ALIBI_HOST_SAMPLES": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "CARGO_TARGET_DIR": null,
+        "CATHEDRAL_FAKE_BACKEND": "1",
+        "CATHEDRAL_HEADLESS": "1",
+        "LDFLAGS": null,
+        "PATH": "/tmp/alibi-uv/archive-v0/NmyOoLUvWvUqxemRQg89s/bin:/usr/bin:/bin/home:/home/ran/.local/bin:/home/ran/.cargo/bin",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "RUSTFLAGS": null
+      },
+      "label": "fixture-writer-2",
+      "raw_sha256": "1fde53d7e4aa6b0ae67ffcd6a42eb3f553a10570e02f8860fd1e45f24ade8aeb",
+      "result_sha256": "662253e0cda5172a65a53980ade81bce939e79a0fba8d613bd8eeea8f52b1114",
+      "start_sha256": "f9adb91c6f3e086af3c6a8e77d38611603ebad4c34c340df326ff33cd98941f2"
+    },
+    {
+      "archive_sha256": "3e53a5476e01f3c87a11c3fe28f4afbdc4577b379d3f993e866faf7428d8dd0f",
+      "environment": {
+        "ALIBI_HOST_MODE": null,
+        "ALIBI_HOST_OUTPUT": "/tmp/alibi-m2a15-fixture-writer-3",
+        "ALIBI_HOST_SAMPLES": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "CARGO_TARGET_DIR": null,
+        "CATHEDRAL_FAKE_BACKEND": "1",
+        "CATHEDRAL_HEADLESS": "1",
+        "LDFLAGS": null,
+        "PATH": "/tmp/alibi-uv/archive-v0/NmyOoLUvWvUqxemRQg89s/bin:/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "RUSTFLAGS": null
+      },
+      "label": "fixture-writer-3",
+      "raw_sha256": "d090f33b526654d47ef8eaa774fb7fdc8569c4182af808805479ea5d4af2e109",
+      "result_sha256": "3c2185fa401b3cd24f96724041acea574bdb1cfb5d0c20cde7e8e8a499098b5b",
+      "start_sha256": "2f6d313777f0770583a0a642682180c9a52c6b17d9b0810946f3cc6f83a67791"
+    },
+    {
+      "archive_sha256": "c08779f486a924b4f0bd7ba54e91edc1c9c0ee9a868481d1c70660db9e540f5e",
+      "environment": {
+        "ALIBI_HOST_MODE": null,
+        "ALIBI_HOST_OUTPUT": null,
+        "ALIBI_HOST_SAMPLES": null,
+        "CARGO_ENCODED_RUSTFLAGS": null,
+        "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+        "CARGO_TARGET_DIR": null,
+        "CATHEDRAL_FAKE_BACKEND": "1",
+        "CATHEDRAL_HEADLESS": "1",
+        "LDFLAGS": null,
+        "PATH": "/tmp/alibi-uv/archive-v0/NmyOoLUvWvUqxemRQg89s/bin:/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+        "RUSTC": "/home/ran/.cargo/bin/rustc",
+        "RUSTC_WORKSPACE_WRAPPER": null,
+        "RUSTC_WRAPPER": null,
+        "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+        "RUSTFLAGS": null
+      },
+      "label": "fixture-loader-1",
+      "raw_sha256": "e8dee28d2cbee13e6dbd96767262e381c063d10f0f977f2c344af1a8feaeaaee",
+      "result_sha256": "bf203dd22bb367eb73c6338ec50e9ef65b1177ae5ac5c6ed7e3ee67ca9cf9ccf",
+      "start_sha256": "5883b41bb5b03a9e0024541e9cb2da880ea5a19ad892b71a3673f4ee3a0f427f"
+    }
+  ],
+  "fixtures": {
+    "active-v1.json": {
+      "bytes": 6275,
+      "families": {
+        "bubble": 1,
+        "chalk_hold": 1,
+        "chalk_pen": 1,
+        "cooldown": 1,
+        "draft": 1,
+        "hud": 7,
+        "pending_command": 1,
+        "player_receipt": 1,
+        "selected_item": 1,
+        "subtitle": 1,
+        "unread_intent": 1,
+        "unread_speech": 4,
+        "well_draw": 1
+      },
+      "persisted_and_archive_exact": true,
+      "rows": 22,
+      "sha256": "c0b20da7dfbf0e7b0e1085b95987193f0a3197c5588b43b6cde6929d85b9f761",
+      "three_processes_exact": true
+    },
+    "initial-v1.json": {
+      "bytes": 3549,
+      "families": {
+        "chalk_hold": 1,
+        "chalk_pen": 1,
+        "draft": 1,
+        "hud": 6,
+        "selected_item": 1
+      },
+      "persisted_and_archive_exact": true,
+      "rows": 10,
+      "sha256": "09d2d2bc5b45df80603b6a44daff7851ead3241945617918acefd258b8a86060",
+      "three_processes_exact": true
+    }
+  },
+  "helper_sha256": "b94807dfe74567a68c94d42d2c93f58d4b54641987bda124728dfd980c9122f4",
+  "metadata_sha256": "c25e378e3e8b4b8667ad91320ac243f3630b3de297e1cacad340d2529563fb18",
+  "result": "passed",
+  "scope": "Component fixture bytes and successful actual-boundary load/candidate test; not whole-world restoration or admission.",
+  "source_manifest_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a"
+}

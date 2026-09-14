@@ -25,6 +25,14 @@ const CONNECTION_DETAIL_FONT_SIZE: f32 = 15.75;
 const VOICE_PANEL_FONT_SIZE: f32 = 15.6;
 const VOICE_PANEL_CONTROLS_FONT_SIZE: f32 = 11.7;
 
+#[cfg(test)]
+pub(super) fn add_host_receipt_expiry_test_system(app: &mut App) {
+    app.add_systems(
+        Update,
+        update_smart_actor_hud.after(super::speech::receive_speech_events),
+    );
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum VoiceModelUiState {
     Checking,
@@ -105,14 +113,18 @@ impl ConnectionUiState {
 }
 
 #[derive(Debug, Clone)]
-struct TimedMessage {
-    text: String,
-    remaining: Duration,
+pub(crate) struct TimedMessage {
+    pub(crate) text: String,
+    pub(crate) remaining: Duration,
 }
 
 /// Presentation-only state. Authoritative inventory and offers never live here.
 #[derive(Resource, Debug)]
 pub struct SmartActorHudState {
+    pub(crate) player_receipt: Option<std::sync::Arc<super::speech::RetainedSpeech>>,
+    /// Ordinary presentation survives receipt retention refusal. Such a
+    /// committed caption is distinct from an uncommitted provisional caption.
+    pub(crate) player_receipt_unavailable: bool,
     pub connection: ConnectionUiState,
     pub connection_detail: String,
     pub inventory: String,
@@ -120,11 +132,11 @@ pub struct SmartActorHudState {
     /// The offer card's counterpart: why an offer the player was part of ended
     /// with nothing changing hands. Its own slot, on its own clock, so a toast
     /// cannot swallow it.
-    offer_outcome: Option<TimedMessage>,
+    pub(crate) offer_outcome: Option<TimedMessage>,
     /// The law's standing line — no clock on it at all, because it is true
     /// until the sim says otherwise (`law_and_order.md` M4).
-    law_standing: String,
-    journal_standing: String,
+    pub(crate) law_standing: String,
+    pub(crate) journal_standing: String,
     pub focus_hint: String,
     pub subtitle: String,
     pub microphone_available: bool,
@@ -137,14 +149,16 @@ pub struct SmartActorHudState {
     pub npc_voice_backend: String,
     cloud_voice: VoiceBackendUi,
     local_voice: VoiceBackendUi,
-    voice_loader_phase: f32,
-    transient: Option<TimedMessage>,
-    player_transcript: Option<TimedMessage>,
+    pub(crate) voice_loader_phase: f32,
+    pub(crate) transient: Option<TimedMessage>,
+    pub(crate) player_transcript: Option<TimedMessage>,
 }
 
 impl Default for SmartActorHudState {
     fn default() -> Self {
         Self {
+            player_receipt: None,
+            player_receipt_unavailable: false,
             connection: ConnectionUiState::Starting,
             connection_detail: "Launching the local character service…".into(),
             inventory: String::new(),
@@ -244,15 +258,14 @@ impl SmartActorHudState {
         if transcript.is_empty() {
             return;
         }
-        let delivery = match recipients {
-            0 => "nobody nearby".to_string(),
-            1 => "heard by 1 nearby person".to_string(),
-            count => format!("heard by {count} nearby people"),
-        };
-        self.set_player_transcript(format!("You: {transcript}  ·  {delivery}"));
+        self.set_player_transcript(cathedral_sim::checkpoint::host::player_delivery_caption(
+            transcript, recipients,
+        ));
     }
 
     fn set_player_transcript(&mut self, text: String) {
+        self.player_receipt = None;
+        self.player_receipt_unavailable = false;
         self.player_transcript = Some(TimedMessage {
             text,
             remaining: PLAYER_TRANSCRIPT_LIFETIME,
@@ -274,6 +287,8 @@ impl SmartActorHudState {
         self.focus_hint.clear();
         self.subtitle.clear();
         self.player_transcript = None;
+        self.player_receipt = None;
+        self.player_receipt_unavailable = false;
         self.microphone_available = false;
         self.microphone_unavailable = false;
         self.listening = false;
@@ -735,7 +750,7 @@ fn spawn_centered_text<M: Component>(
 
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
-pub fn update_smart_actor_hud(
+pub(super) fn update_smart_actor_hud(
     time: Res<Time>,
     mut state: ResMut<SmartActorHudState>,
     mut loader: Query<(&mut Node, &mut BackgroundColor), (With<VoiceLoaderFill>, Without<Text>)>,
@@ -781,6 +796,8 @@ pub fn update_smart_actor_hud(
         message.remaining = message.remaining.saturating_sub(time.delta());
         if message.remaining.is_zero() {
             state.player_transcript = None;
+            state.player_receipt = None;
+            state.player_receipt_unavailable = false;
         }
     }
     if let Some(message) = state.offer_outcome.as_mut() {

@@ -1,0 +1,50 @@
+{
+  "result": "passed",
+  "scope": "Native development smoke metrics only; no final-source/release acceptance.",
+  "primary": "/tmp/alibi-m2a15-owner-authored-smoke-1.json",
+  "primary_sha256": "9b175f560f85be99ddd4c25d80f7f2fa13431244eb1559505e61c35ff94d9f0c",
+  "auditor_sha256": "4ce4071ef010ac2ad94f1e42d14d5542ce6c17a91da2cf0105c3aa59fde6bf89",
+  "command_start_sha256": "ab54589f9030295c0ea39cafce1c73cc7e5d972954b00a29ab06e09a34e68327",
+  "phase_samples": 12,
+  "counts": {
+    "characters": 520,
+    "collision_boxes": 751,
+    "collision_prisms": 1153,
+    "cut_margin": true,
+    "dynamic_barriers": 2,
+    "entities": 18496,
+    "rats": 150,
+    "rows": 22,
+    "vermin_colonies": 8
+  },
+  "readable_counts": {
+    "bubble": 1,
+    "chalk_hold": 1,
+    "chalk_pen": 1,
+    "cooldown": 1,
+    "draft": 1,
+    "hud": 7,
+    "pending_command": 1,
+    "player_receipt": 1,
+    "selected_item": 1,
+    "subtitle": 1,
+    "unread_intent": 1,
+    "unread_speech": 4,
+    "well_draw": 1
+  },
+  "cost": {
+    "container_stride_bytes": 4096,
+    "encoded_bytes": 6287,
+    "expanded_upper_bytes": 107462,
+    "peak_bytes": 5081285,
+    "validation_working_bytes": 4194304
+  },
+  "readonly": {
+    "event_sequence_after": 7,
+    "event_sequence_before": 7,
+    "input_watermark_after": 10,
+    "input_watermark_before": 10,
+    "world_revision_after": 1103,
+    "world_revision_before": 1103
+  }
+}

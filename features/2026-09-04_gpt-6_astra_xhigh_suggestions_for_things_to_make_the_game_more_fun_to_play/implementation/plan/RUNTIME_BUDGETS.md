@@ -138,3 +138,51 @@ Keep private evidence out of `PublicSnapshot`. Expose bounded pages/deltas of pl
 Each Vxx result names the executable fixture/input, source/content/geometry/behavior versions, time policy, expected result, actual result and evidence path. Maintain small supported-version save fixtures from M2 and load them through M3's real file/adoption path in fresh processes; test explicitly incompatible variants the same way.
 
 Mechanical runs use production commands/services with explicit controls, unavailable cognition or recorded completions. Asynchronous fault fixtures deliberately delay/reorder/fail cognition and speech. Live-language records archive inputs, model/configuration and observed semantic boundaries. Human sessions record route/input variation and concrete comprehension failures. The current minimal fake responses and short silent fake audio cannot substitute for these latter kinds of evidence.
+
+
+## M2a15 host component accounting — 2026-09-09
+
+The host component keeps the existing 128 MiB encoded/expanded, depth 64 and
+shared 1 GiB limits. Streaming preflight adds a conservative 4,096-byte allowance
+per JSON container for largest inline typed-row storage and a 4 MiB sequential
+validation allowance. Exact-capacity export and a second raw byte/row-cost check
+prevent mutable borrowed sources from escaping their earlier reservation.
+Saved-context journal and ledger validation scratch is bounded before cloning
+or indexing. Read-only observations create no lazy Bevy query state or geometry
+copies; actual entity scans and definition hashing are included in measurements.
+
+Extra ordinary original-speech receipt storage has its own 8 MiB allowance per
+speech state and 16 KiB combined original-string limit. Capacity is reserved
+before cloning and follows all shared subtitle, bubble and caption owners until
+the last message storage drops. Existing 512 pending-presentation capacity is
+unchanged. [Admission](evidence/m2a15/ADMISSION.md) documents saturation and the
+distinction from whole Running/retiring ownership.
+
+The executable component probe uses actual renderer-free CityPlugin geometry,
+authored or 2,000 additional placed citizens, ordinary speech/pending chat and
+soundscape gates. It reports six fractional-microsecond phase arrays and exact
+unchanged-byte/revision/event/H witnesses. The Save plus Load charge excludes
+Running, service assets and renderer state; coordinator RSS is reported
+separately. Development probes establish fixture integrity, while independent
+release repetitions determine timing results. The earlier naive backbone plus
+Round Save+Load peak of 1,256,093,444 bytes already exceeds the shared cap before
+Running; this host component does not solve that later assembly/lifetime gate.
+
+### M2a15 final release measurements — 2026-09-14
+
+[The audited record](evidence/m2a15/performance/README.md) retains six independent
+processes and 3,600 raw phase samples on actual 520/2,520-actor CityPlugin hosts.
+All requested additions are placed. Both workloads encode 6,275 bytes, with
+107,462 bytes conservative expansion and 10,162,498 bytes simultaneous component
+Save plus Load admission, excluding Running. Process peak RSS is 379,372/409,272
+KiB and includes ECS/assets/fixture overhead; it is not a cohort allocation proof.
+
+Pooled nearest-rank preflight/export p99 is **2.366/5.634 ms authored** and
+**4.368/10.246 ms populated**; maximum export is **7.036/10.546 ms**. Every
+preflight/export sample exceeds 2 ms, as do four populated decode/candidate
+samples. All 1,204 such samples and all cold samples remain in the primary audit;
+none exceed 30 ms. Current extraction cannot be placed synchronously within the
+planned host-frame target. M3 still owes bounded offload or incremental source
+observation/definition hashing, validation and disposal without freezing ordinary
+accepted input across frames. Full-envelope lifetime, renderer and complete
+save/load acceptance remain pending; no numerical ceiling changed.

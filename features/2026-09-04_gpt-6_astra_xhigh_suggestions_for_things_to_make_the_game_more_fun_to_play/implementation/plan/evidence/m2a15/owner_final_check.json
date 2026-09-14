@@ -1,0 +1,15 @@
+{
+  "checked_utc": "2026-09-14T19:48:56.676095+00:00",
+  "source_scope": "component-inputs-v2",
+  "source_files": 950,
+  "source_map_sha256": "5251ea6af940cce508c66111573bcdf1d53343207e7dea1ee2e5dbc048f62b6a",
+  "command_start": "commands/workspace-final-3.start.json",
+  "source_unchanged": true,
+  "groups": 46,
+  "passed": 2157,
+  "failed": 0,
+  "ignored": 38,
+  "commands": 19,
+  "fixture_equality": "owner_fixtures/fixture-equality-1.json",
+  "cargo": "ceded to coordinator after this verification"
+}
