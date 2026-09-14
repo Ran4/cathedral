@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d and M2a1–M2a15 implemented and reviewed (2026-09-14). M2a16 complete-envelope composition is next; complete M2 and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending.
+Status: M0 baseline delivered; M1a–M1d and M2a1–M2a16 implemented and reviewed (2026-09-15). M2b–M2d and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending.
 
 # An Alibi in Stone — systems first, then the full quest
 

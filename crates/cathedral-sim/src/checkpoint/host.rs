@@ -515,6 +515,16 @@ pub trait HostCheckpointSource {
     fn scalars(&self) -> Result<ScalarsV1>;
     /// Visit without collecting, cloning strings or building indexes.
     fn records(&self, visitor: &mut dyn FnMut(RecordRef<'_>) -> Result<()>) -> Result<()>;
+    /// Immutable borrowed rows for complete canonical encoding. The default
+    /// leaves existing streaming-only component sources unchanged.
+    fn complete_records<'a>(
+        &'a self,
+        _visitor: &mut dyn FnMut(RecordRef<'a>) -> Result<()>,
+    ) -> Result<()> {
+        Err(error(
+            "complete capture requires immutable borrowed host records",
+        ))
+    }
     /// Actual host/Engine publication agreement. Called after admission.
     fn validate_boundary(&self) -> Result<()>;
 }
@@ -1173,4 +1183,76 @@ fn validate_speech(v: &SpeechV1<String>, s: &ScalarsV1) -> Result<()> {
             && v.sequence <= s.boundary.message_sequence,
         "speech identity/text/boundary range",
     )
+}
+
+pub(crate) fn complete_write<W: std::io::Write>(
+    source: &impl HostCheckpointSource,
+    writer: &mut W,
+) -> Result<()> {
+    source.validate_boundary()?;
+    // The complete caller has already reserved 64 MiB scratch. Allocate this
+    // fixed bounded index before visiting, so even an interior-mutating source
+    // cannot cause unadmitted growth. Stable sorting retains consumer order.
+    const INDEX_BYTES: usize = 8 * 1024 * 1024;
+    let limit = INDEX_BYTES / std::mem::size_of::<RecordRef<'_>>();
+    let mut records = Vec::with_capacity(limit);
+    source.complete_records(&mut |row| {
+        check(records.len() < limit, "complete host record index limit")?;
+        records.push(row);
+        Ok(())
+    })?;
+    records.sort_by(ordering::compare);
+    #[derive(Serialize)]
+    struct Canonical<'a> {
+        version: u16,
+        scalars: ScalarsV1,
+        records: Vec<RecordRef<'a>>,
+    }
+    super::complete::write_json(
+        writer,
+        &Canonical {
+            version: 1,
+            scalars: source.scalars()?,
+            records,
+        },
+    )
+}
+
+impl HostDtoV1 {
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn complete_decode_with_components(
+        bytes: &[u8],
+        meter: &super::complete::meter::DecodeMeter<'_>,
+        backbone: &crate::world::checkpoint::BackboneCandidate,
+        law: &crate::engine::law_checkpoint::EngineLawCandidate,
+        knowledge: &crate::engine::knowledge_checkpoint::EngineKnowledgeCandidate,
+        marks: &crate::engine::marks_checkpoint::EngineMarksCandidate,
+        climate: &crate::engine::climate_checkpoint::EngineClimateCandidate,
+        animals: &crate::engine::animals_checkpoint::EngineAnimalsCandidate,
+        ledger: &crate::receipts::CommandLedgerDtoV1,
+        definitions: DefinitionsV1,
+        now: crate::timeline::LogicalTime,
+    ) -> Result<HostCandidate> {
+        let dto: Self = meter.decode::<HostWire>(bytes)?.into();
+        let elapsed = dto.scalars.time.virtual_elapsed;
+        check(
+            elapsed.as_secs_f64().to_bits() == now.seconds().to_bits(),
+            "complete host elapsed disagreement",
+        )?;
+        let context = HostCheckpointContext::from_components(
+            backbone,
+            law,
+            knowledge,
+            marks,
+            climate,
+            animals,
+            ledger,
+            elapsed,
+            definitions,
+            dto.scalars.boundary.input_watermark,
+            dto.scalars.boundary.issued,
+        );
+        dto.validate(context)?;
+        Ok(HostCandidate { dto })
+    }
 }

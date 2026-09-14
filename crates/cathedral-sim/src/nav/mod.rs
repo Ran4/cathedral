@@ -30,7 +30,9 @@ use serde::Deserialize;
 
 use crate::math::Vec3;
 
+mod checkpoint_storage;
 mod local;
+pub use checkpoint_storage::NavStorageInventory;
 #[cfg(test)]
 pub(crate) mod local_tests;
 pub mod residents;

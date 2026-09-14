@@ -614,3 +614,75 @@ fn same_sample(a: WeatherSample, b: WeatherSample) -> bool {
         ])
         .all(|(a, b)| a.to_bits() == b.to_bits())
 }
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineClimateDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: ClimateCheckpointContext<'_>,
+    ) -> Result<EngineClimateCandidate> {
+        let w: EngineWire = meter.decode(bytes)?;
+        let dto = Self {
+            version: w.version,
+            boundary: w.boundary,
+            context: w.context,
+            world: w.world,
+            initial_clock: w.initial_clock,
+            initial_weather: w.initial_weather,
+            ring_the_offices: w.ring_the_offices,
+            player_id: w.player_id,
+            clock: w.clock,
+            weather: w.weather,
+            last_weather_days: w.last_weather_days,
+            last_weather_sample: w.last_weather_sample,
+            last_clock_days: w.last_clock_days,
+            bell_strokes: w.bell_strokes,
+            bell_seq: w.bell_seq,
+        };
+        dto.validate(c)?;
+        Ok(EngineClimateCandidate { data: dto })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_climate<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let view = EngineView::new(self, ClimateCheckpointContext::from_world(&self.world, now))?;
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_climate_definition_identity(
+        &self,
+        now: LogicalTime,
+    ) -> Result<[u8; 32]> {
+        digest(&ContextV1::new(ClimateCheckpointContext::from_world(
+            &self.world,
+            now,
+        ))?)
+    }
+}
+
+impl EngineClimateCandidate {
+    pub(crate) fn complete_config(&self, config: &EngineConfig, now: LogicalTime) -> Result<()> {
+        check(
+            self.data
+                .initial_clock
+                .checkpoint_bits_eq(&config.clock.checkpoint_provenance_v1(now)?)
+                && self.data.initial_weather == config.weather
+                && self.data.ring_the_offices == config.ring_the_offices,
+            "complete climate configuration disagreement",
+        )
+    }
+}

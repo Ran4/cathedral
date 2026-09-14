@@ -128,7 +128,7 @@ impl ExpectedFixture {
     }
 }
 
-fn fixture(city: bool, extra: u32) -> App {
+pub(super) fn fixture(city: bool, extra: u32) -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
         .init_asset::<Mesh>()
@@ -985,7 +985,7 @@ fn send_player_line(app: &mut App, request: &str, text: &str, scripted: bool) {
         .try_send(command)
         .unwrap();
 }
-fn prepare_readable_workload(app: &mut App) {
+pub(super) fn prepare_readable_workload(app: &mut App) {
     send_player_line(app, "owner-warmup", "What's your name?", true);
     for _ in 0..24 {
         app.update();

@@ -437,3 +437,34 @@ pub struct ContinuityCounts {
 }
 #[cfg(test)]
 mod tests;
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineContinuityDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: EngineContinuityCheckpointContext<'_>,
+    ) -> Result<EngineContinuityCandidate> {
+        let Decoded(d) = meter.decode(bytes)?;
+        d.validate(c)?;
+        Ok(EngineContinuityCandidate { data: d })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_continuity<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let view = View::new(self, now);
+        view.validate(self.continuity_checkpoint_context(now))?;
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}

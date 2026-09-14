@@ -381,3 +381,18 @@ impl std::fmt::Debug for NpcSchedulerCandidate {
             .finish_non_exhaustive()
     }
 }
+
+impl NpcScheduler {
+    pub(crate) fn complete_roots(&self) -> impl Iterator<Item = crate::receipts::OperationId> + '_ {
+        self.retry_work
+            .values()
+            .map(|w| w.semantic)
+            .chain(self.in_flight.iter().map(|f| f.semantic))
+    }
+}
+
+impl NpcScheduler {
+    pub(crate) fn complete_submission_consumed(&self) -> bool {
+        self.submitted.is_none()
+    }
+}

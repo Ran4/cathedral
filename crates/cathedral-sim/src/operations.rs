@@ -234,6 +234,15 @@ impl OperationKernel {
         world: &World,
         now: LogicalTime,
     ) -> Result<(), String> {
+        self.validate_checkpoint_refs(config, &world.characters, &world.command_ledger, now)
+    }
+    pub(crate) fn validate_checkpoint_refs(
+        &self,
+        config: &OperationConfig,
+        characters: &BTreeMap<ActorId, crate::Character>,
+        ledger: &crate::receipts::CommandLedger,
+        now: LogicalTime,
+    ) -> Result<(), String> {
         let declared = Self::from_config(config)?;
         if self.active.len() > MAX_INSTANCES
             || self.actor_claims.len() != self.active.len()
@@ -268,8 +277,10 @@ impl OperationKernel {
                 || self.fixtures.get(&op.resource).is_none_or(|f| {
                     f.declaration.adapter != op.adapter || f.completed_units == u64::MAX
                 })
-                || !world.is_present(&op.actor)
-                || world.characters.get(&op.actor).is_none_or(|c| {
+                || !characters
+                    .get(&op.actor)
+                    .is_some_and(|c| c.state.presence == crate::character::Presence::InCity)
+                || characters.get(&op.actor).is_none_or(|c| {
                     c.state.presence_epoch != op.presence_epoch || c.control() == Control::Player
                 })
             {
@@ -293,10 +304,7 @@ impl OperationKernel {
             {
                 return Err("invalid operation continuation budget".into());
             }
-            let receipt = world
-                .command_ledger
-                .get(id.0)
-                .ok_or("operation receipt missing")?;
+            let receipt = ledger.get(id.0).ok_or("operation receipt missing")?;
             if receipt.outcome.state
                 != if op.running {
                     ReceiptState::InProgress
@@ -305,7 +313,7 @@ impl OperationKernel {
                 }
                 || !(op.accepted_at.seconds() <= receipt.at
                     && receipt.at <= op.last_observed_at.seconds())
-                || !world.command_ledger.is_protected(id.0.operation)
+                || !ledger.is_protected(id.0.operation)
             {
                 return Err("operation receipt/root is not live".into());
             }
@@ -741,3 +749,9 @@ pub(crate) fn poll(world: &mut World, round: &Round, clock: &WorldClock, now: Lo
 
 #[cfg(test)]
 mod tests;
+
+impl OperationKernel {
+    pub(crate) fn complete_roots(&self) -> impl Iterator<Item = OperationId> + '_ {
+        self.active.keys().map(|id| id.0.operation)
+    }
+}

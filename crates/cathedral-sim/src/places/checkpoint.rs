@@ -138,3 +138,81 @@ fn check(ok: bool, reason: &'static str) -> Result<()> {
         Err(crate::checkpoint::CheckpointError::new("places", reason))
     }
 }
+#[cfg(test)]
+mod complete_layout_tests {
+    use super::*;
+    use crate::checkpoint::{CheckpointBudget, Cohort, complete::meter::DecodeMeter};
+    use std::mem::size_of;
+    fn table<K, V>(map: &HashMap<K, V>) -> usize {
+        if map.capacity() == 0 {
+            return 0;
+        }
+        (map.capacity() + 1).next_power_of_two() * (size_of::<(K, V)>() + 1) + 64
+    }
+    #[derive(Serialize, Deserialize)]
+    struct Wrapped(#[serde(with = "PlaceRegistryV1")] PlaceRegistry);
+    #[test]
+    fn complete_place_registry_rebuilt_indexes_fit_precharged_layout() {
+        for n in [1, 6, 12, 64, 1000] {
+            let mut places = PlaceRegistry::default();
+            for i in 0..n {
+                let id = ActorId::from_raw(format!("resident-{i}"));
+                places.add_home(&id, &format!("resident number {i}"), Vec3::ZERO);
+                places
+                    .insert(PlaceEntry {
+                        id: PlaceId::from_raw(format!("public-{i}")),
+                        name: format!("public place {i}"),
+                        point: Vec3::ZERO,
+                        ward: Some("ward".into()),
+                        coarse: false,
+                    })
+                    .unwrap();
+            }
+            let bytes = serde_json::to_vec(&Wrapped(places)).unwrap();
+            let budget = CheckpointBudget::default();
+            let mut reservation = budget.reserve(Cohort::LoadCandidate, 4096).unwrap();
+            let meter = DecodeMeter::new(&mut reservation, bytes.len()).unwrap();
+            let Wrapped(p) = meter.decode(&bytes).unwrap();
+            let mut retained = size_of::<PlaceRegistry>()
+                + p.entries.capacity() * size_of::<PlaceEntry>()
+                + 32
+                + table(&p.by_id)
+                + table(&p.by_name)
+                + table(&p.home_by_owner)
+                + table(&p.owner_by_home);
+            retained += p
+                .entries
+                .iter()
+                .map(|e| {
+                    e.id.allocated_bytes()
+                        + e.name.capacity()
+                        + e.ward.as_ref().map_or(0, String::capacity)
+                        + 96
+                })
+                .sum::<usize>();
+            retained += p
+                .by_id
+                .keys()
+                .map(|id| id.allocated_bytes() + 32)
+                .sum::<usize>();
+            retained += p.by_name.keys().map(|s| s.capacity() + 32).sum::<usize>();
+            retained += p
+                .home_by_owner
+                .keys()
+                .map(|id| id.allocated_bytes() + 32)
+                .sum::<usize>();
+            retained += p
+                .owner_by_home
+                .iter()
+                .map(|(place, owner)| place.allocated_bytes() + owner.allocated_bytes() + 64)
+                .sum::<usize>();
+            assert!(
+                meter.expanded() >= retained,
+                "n={n}, meter={}, actual capacity upper={retained}",
+                meter.expanded()
+            );
+            assert_eq!(p.entries.len(), 2 * n);
+            assert_eq!(p.home_by_owner.len(), n);
+        }
+    }
+}

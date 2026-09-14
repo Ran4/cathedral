@@ -372,3 +372,42 @@ pub struct CognitionInputsCounts {
 }
 #[cfg(test)]
 mod tests;
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineCognitionInputsDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: CognitionInputsCheckpointContext<'_>,
+    ) -> Result<EngineCognitionInputsCandidate> {
+        let w: Wire = meter.decode(bytes)?;
+        let d = Self {
+            version: w.version,
+            boundary: w.boundary,
+            player_id: w.player_id,
+            scheduler: w.scheduler,
+            night: w.night,
+        };
+        d.validate(c)?;
+        Ok(EngineCognitionInputsCandidate { data: d })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_cognition_inputs<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let c = self.cognition_inputs_checkpoint_context(now);
+        c.validate()?;
+        let view = View::new(c);
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}

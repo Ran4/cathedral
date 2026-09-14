@@ -17,9 +17,9 @@ pub(super) fn speech(v: &PresentSpeech) -> SpeechV1<&str> {
         expect_audio: v.expect_audio,
     }
 }
-pub(super) fn visit(
-    o: &HostObservation<'_>,
-    v: &mut dyn FnMut(RecordRef<'_>) -> Result<()>,
+pub(super) fn visit<'a>(
+    o: &HostObservation<'a>,
+    v: &mut dyn FnMut(RecordRef<'a>) -> Result<()>,
 ) -> Result<()> {
     use RecordV1 as R;
     let chat = o.resource::<smart_actors::ChatInputState>()?;
@@ -293,10 +293,10 @@ pub(super) fn visit(
     )?;
     Ok(())
 }
-fn unread<M: Message>(
-    messages: &Messages<M>,
+fn unread<'a, M: Message>(
+    messages: &'a Messages<M>,
     start: usize,
-    mut f: impl FnMut(usize, &M) -> Result<()>,
+    mut f: impl FnMut(usize, &'a M) -> Result<()>,
 ) -> Result<()> {
     if start < messages.oldest_message_count() {
         return Err(error("host consumer missed messages"));

@@ -239,3 +239,57 @@ impl EngineMarksDtoV1 {
 }
 #[cfg(test)]
 mod tests;
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineMarksDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: MarksCheckpointContext<'_>,
+    ) -> Result<EngineMarksCandidate> {
+        let w: Wire = meter.decode(bytes)?;
+        let d = Self {
+            version: w.version,
+            boundary: w.boundary,
+            world: w.world,
+            player_id: w.player_id,
+            config_marks_enabled: w.config_marks_enabled,
+            config_mark_kinds: w.config_mark_kinds,
+            config_marks_decay_scale: w.config_marks_decay_scale,
+            last_chalk_standing: w.last_chalk_standing,
+        };
+        d.validate(c)?;
+        Ok(EngineMarksCandidate { data: d })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_marks<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let c = MarksCheckpointContext::from_world(&self.world, now);
+        let binding = owner::context_for_export(c, r)?;
+        let view = View::new(self, now, owner::WorldView::new(&self.world, now, &binding));
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}
+
+impl EngineMarksCandidate {
+    pub(crate) fn complete_config(&self, c: &EngineConfig) -> Result<()> {
+        crate::checkpoint::complete::check(
+            self.data.player_id == c.player_id
+                && self.data.config_marks_enabled == c.marks_enabled
+                && self.data.config_mark_kinds == c.mark_kinds
+                && self.data.config_marks_decay_scale.to_bits() == c.marks_decay_scale.to_bits(),
+            "complete marks configuration disagreement",
+        )
+    }
+}

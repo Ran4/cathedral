@@ -1,0 +1,23 @@
+{
+  "fixture_delta": [
+    {
+      "fixture": "crates/cathedral-sim/tests/fixtures/checkpoint_host/initial-v1.json",
+      "new_sha256": "dca6128035a23ba7a88427f1b005e991cd3397bad609a26f9cb78470478595ce",
+      "old_sha256": "09d2d2bc5b45df80603b6a44daff7851ead3241945617918acefd258b8a86060",
+      "only_changed_json_path": "/scalars/definitions/installed_catalogs"
+    },
+    {
+      "fixture": "crates/cathedral-sim/tests/fixtures/checkpoint_host/active-v1.json",
+      "new_sha256": "e01b1aeb7f775b5023cd8c76006ea67eaee814b9bc13d040f15120124bdef32a",
+      "old_sha256": "c0b20da7dfbf0e7b0e1085b95987193f0a3197c5588b43b6cde6929d85b9f761",
+      "only_changed_json_path": "/scalars/definitions/installed_catalogs"
+    }
+  ],
+  "helper_sha256": "1f2ff18eb81f9ae1e20a76e5d8f115d3a7b0a63a8bcebdc80f960e9678887495",
+  "prior_source_manifest_sha256": "7c7e896f1afeb606b39e50615fdf9479231619637eff3d07a863d3e658f8afd7",
+  "result": "passed",
+  "rust_source_unchanged": true,
+  "scope": "Exact prior commit bytes and three current writers; original formatting remains valid because every Rust input is unchanged. Writer command provenance is independently covered by owner command audit.",
+  "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+  "unchanged_formatted_files": 48
+}

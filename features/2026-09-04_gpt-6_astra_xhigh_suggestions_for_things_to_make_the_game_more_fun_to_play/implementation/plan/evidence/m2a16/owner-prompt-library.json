@@ -1,0 +1,45 @@
+{
+  "crate": "minijinja",
+  "version": "2.21.0",
+  "lock_checksum": "cb3d648e68cea56d9858d535ee28f9538404e2dd8cb08ed0bd05dca379477f39",
+  "purpose": "Source basis for scoped parsed PromptEnv Running allowance, not a global allocator measurement",
+  "findings": [
+    "Instruction variants hold borrowed str/scalars or Value; library target64-bit layout test asserts Value24 bytes.",
+    "Instructions additionally retain Vec LineInfo and optional SpanInfo; initial capacities256/128/128 and geometric growth are covered by128-byte combined per-source-byte allowance and vector doubling.",
+    "This fixed application parses two templates and one string catalog (40,111 source bytes total); construction-time AST scratch has been dropped before the complete boundary."
+  ],
+  "files": [
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/compiler/instructions.rs",
+      "sha256": "14be3e9612bc56cfa3d500bbcf582608814f88f6bbef70f590041a92b35fee4f",
+      "excerpts": [
+        {
+          "first_line": 40,
+          "last_line": 80,
+          "text": "#[cfg_attr(feature = \"internal_debug\", derive(Debug))]\n#[cfg_attr(\n    feature = \"unstable_machinery_serde\",\n    derive(serde::Serialize),\n    serde(tag = \"op\", content = \"arg\")\n)]\n#[derive(Clone)]\npub enum Instruction<'source> {\n    /// Emits raw source\n    EmitRaw(&'source str),\n\n    /// Stores a variable (only possible in for loops)\n    StoreLocal(&'source str),\n\n    /// Load a variable,\n    Lookup(&'source str),\n\n    /// Looks up an attribute.\n    GetAttr(&'source str),\n\n    /// Sets an attribute.\n    SetAttr(&'source str),\n\n    /// Looks up an item.\n    GetItem,\n\n    /// Performs a slice operation.\n    Slice,\n\n    /// Loads a constant value.\n    LoadConst(Value),\n\n    /// Builds a map of the last n pairs on the stack.\n    BuildMap(usize),\n\n    /// Builds a kwargs map of the last n pairs on the stack.\n    BuildKwargs(usize),\n\n    /// Merges N kwargs maps on the list into one.\n    MergeKwargs(usize),\n"
+        },
+        {
+          "first_line": 267,
+          "last_line": 323,
+          "text": "    first_instruction: u32,\n    line: u16,\n}\n\n#[cfg(feature = \"debug\")]\n#[derive(Copy, Clone)]\nstruct SpanInfo {\n    first_instruction: u32,\n    span: Span,\n}\n\n/// Wrapper around instructions to help with location management.\npub struct Instructions<'source> {\n    pub(crate) instructions: Vec<Instruction<'source>>,\n    line_infos: Vec<LineInfo>,\n    #[cfg(feature = \"debug\")]\n    span_infos: Vec<SpanInfo>,\n    name: &'source str,\n    source: &'source str,\n    #[cfg(feature = \"multi_template\")]\n    required_block: bool,\n}\n\npub(crate) static EMPTY_INSTRUCTIONS: Instructions<'static> = Instructions {\n    instructions: Vec::new(),\n    line_infos: Vec::new(),\n    #[cfg(feature = \"debug\")]\n    span_infos: Vec::new(),\n    name: \"<unknown>\",\n    source: \"\",\n    #[cfg(feature = \"multi_template\")]\n    required_block: false,\n};\n\nimpl<'source> Instructions<'source> {\n    /// Creates a new instructions object.\n    pub fn new(name: &'source str, source: &'source str) -> Instructions<'source> {\n        Instructions {\n            instructions: Vec::with_capacity(256),\n            line_infos: Vec::with_capacity(128),\n            #[cfg(feature = \"debug\")]\n            span_infos: Vec::with_capacity(128),\n            name,\n            source,\n            #[cfg(feature = \"multi_template\")]\n            required_block: false,\n        }\n    }\n\n    /// Returns the name of the template.\n    pub fn name(&self) -> &'source str {\n        self.name\n    }\n\n    /// Returns the source reference.\n    pub fn source(&self) -> &'source str {\n        self.source"
+        }
+      ]
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/value/mod.rs",
+      "sha256": "f61f39c2b7622ac889fddabd1141769abb1fe8144201f01bdf501ce2b9fa67dc",
+      "excerpts": [
+        {
+          "first_line": 457,
+          "last_line": 496,
+          "text": "pub(crate) enum ValueRepr {\n    None,\n    Undefined(UndefinedType),\n    Bool(bool),\n    U64(u64),\n    I64(i64),\n    F64(f64),\n    Invalid(Arc<Error>),\n    U128(Packed<u128>),\n    I128(Packed<i128>),\n    String(Arc<str>, StringType),\n    SmallStr(SmallStr),\n    Bytes(Arc<Vec<u8>>),\n    Object(DynObject),\n}\n\nimpl fmt::Debug for ValueRepr {\n    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {\n        match *self {\n            ValueRepr::Undefined(_) => f.write_str(\"undefined\"),\n            ValueRepr::Bool(ref val) => fmt::Debug::fmt(val, f),\n            ValueRepr::U64(ref val) => fmt::Debug::fmt(val, f),\n            ValueRepr::I64(ref val) => fmt::Debug::fmt(val, f),\n            ValueRepr::F64(ref val) => fmt::Debug::fmt(val, f),\n            ValueRepr::None => f.write_str(\"none\"),\n            ValueRepr::Invalid(ref val) => write!(f, \"<invalid value: {val}>\"),\n            ValueRepr::U128(val) => fmt::Debug::fmt(&{ val.0 }, f),\n            ValueRepr::I128(val) => fmt::Debug::fmt(&{ val.0 }, f),\n            ValueRepr::String(ref val, _) => fmt::Debug::fmt(val, f),\n            ValueRepr::SmallStr(ref val) => fmt::Debug::fmt(val.as_str(), f),\n            ValueRepr::Bytes(ref val) => {\n                write!(f, \"b'\")?;\n                for &b in val.iter() {\n                    if b == b'\"' {\n                        write!(f, \"\\\"\")?\n                    } else {\n                        write!(f, \"{}\", b.escape_ascii())?;\n                    }\n                }\n                write!(f, \"'\")"
+        },
+        {
+          "first_line": 1995,
+          "last_line": 2008,
+          "text": "        let val = Value::from(\"a\");\n        assert_eq!(char::try_from(val).unwrap(), 'a');\n        let val = Value::from(\"wat\");\n        assert!(char::try_from(val).is_err());\n    }\n\n    #[test]\n    #[cfg(target_pointer_width = \"64\")]\n    fn test_sizes() {\n        assert_eq!(std::mem::size_of::<Value>(), 24);\n    }\n\n    #[test]\n    fn test_cmp_number_no_exact_coercion() {"
+        }
+      ]
+    }
+  ]
+}

@@ -148,3 +148,23 @@ No ordinary hot-path implementation changes are required by this component. The 
 ## M2a5 knowledge owner handoff — 2026-09-08
 
 M2a5 supplies strict private Knowledge, World knowledge/geography context and Engine pollen/publication-cache components. [Coverage](evidence/m2a5/OWNER_COVERAGE.md) distinguishes live fact references from historical receipt/seated/source names, and [admission](evidence/m2a5/ADMISSION.md) covers aggregate records plus bounded geography and uncached centroid derivation. Milestone owner supplies source, fixtures, focused/full verification and exact raw provenance. Coordinator owns independent public tests, source review, release measurements, staging and commit. Source/cargo cession is explicit after final verification. [Coordinator review](evidence/m2a5/coordinator/review.md) accepts this cut; M2a6 starts after its commit. Complete World/Engine/host composition is still pending.
+
+## M2a16 accepted complete-envelope handoff — 2026-09-15
+
+[M2a16](evidence/m2a16/README.md) supplies all sixteen saved categories in one
+strict admitted raw candidate, exact role/build/image compatibility, an ordinary
+host capture boundary and full saved-reference/root/numeric agreement. Current
+complete fixtures and actual authored/populated release measurements are
+independently accepted. Their preserved executable identity is mandatory;
+different builds may explicitly reject those fixtures. No identity rewriting is
+an acceptable compatibility test.
+
+M2b starts only after this leg is committed, with a fresh sequential owner.
+It must construct complete production owners through dedicated hydration,
+rebind exact installed definitions and admit all new typed/index allocations
+while retaining existing candidates/Running owners. It may not call ordinary
+creation seeding or discard pending authority to simplify construction. M2c
+owns external retry/interruption/adoption; M2d owns full continuation and M3
+owns files/services/ECS publication and actual generation/renderer lifetimes.
+The narrow populated expansion margin and synchronous capture/load frame
+overages remain explicit in the predecessor evidence.

@@ -1,0 +1,33 @@
+{
+  "added_paths": [
+    "src/host_checkpoint/fixtures/complete-v1/active.json",
+    "src/host_checkpoint/fixtures/complete-v1/initial.json"
+  ],
+  "after_source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/source_hashes_with_fixtures.json",
+  "after_source_manifest_sha256": "f45afa08360b088dc960044f222e7eff0a41fcf61cb0331af3f6c91cff64a687",
+  "before_source_manifest": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/source_hashes.json",
+  "before_source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+  "fixtures": [
+    {
+      "bytes": 3255759,
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.json",
+      "repository": "src/host_checkpoint/fixtures/complete-v1/initial.json",
+      "sha256": "58eb9dd14b3955a63ab2cae142a468231fe827cffded79fef4b0ffb45deb6da3"
+    },
+    {
+      "bytes": 3309065,
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.json",
+      "repository": "src/host_checkpoint/fixtures/complete-v1/active.json",
+      "sha256": "04204bb7cb9f04d903128bae8bf066643a4bcf6fa57a4c2a4bd933a465e1bc63"
+    }
+  ],
+  "helper_sha256": "ff9b8fba12026fe46ca03711b8f668df08713304e4fb98091357eee87f6ac5a7",
+  "modified_paths": [
+    "crates/cathedral-sim/tests/fixtures/checkpoint_host/README.md"
+  ],
+  "readme_after_sha256": "db9d03751c4e4402df89281770b47a192864f3b98c585642640af15a1f896011",
+  "readme_before_sha256": "ca7604c9254a195542a2a5b8d5c3ddb9d01922964b4ed9f0f87aa76030448648",
+  "removed_paths": [],
+  "result": "passed",
+  "scope": "Two exact previously verified outputs and one documentation update only. Executable, Rust sources and existing fixture bytes remain unchanged. Pre-publication build/test records retain their original map."
+}

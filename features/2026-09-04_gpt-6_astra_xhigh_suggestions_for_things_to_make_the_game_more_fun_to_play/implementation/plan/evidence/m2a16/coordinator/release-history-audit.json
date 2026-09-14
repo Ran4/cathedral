@@ -1,0 +1,44 @@
+{
+  "commands": [
+    {
+      "exit": 0,
+      "label": "release-build-1",
+      "log_sha256": "598780103e1092d960e0aabad653b2e332507e08bab5c34955852347e98de3fc",
+      "result_sha256": "63393b57b574d9965c795f1750e79043a30ed1afdcf5ee2eec27d1a9c5ec79e9"
+    },
+    {
+      "exit": 101,
+      "label": "smoke-authored-1",
+      "log_sha256": "2c1174e3403205ce0d19309647bddd4c0acf0273aec232c35b6aa0e1a4d4f9f8",
+      "result_sha256": "54c81e3b24bd7b41c3c1223b02e6d0dbd8daa9db9f3fd4796928b5f4d1ed1cad"
+    }
+  ],
+  "helper_sha256": "281998d7938b129a0d08107b27dfab2fdbd80bade26806684feb030efdbb63cb",
+  "identity_input_correction": {
+    "cause": "Coordinator supplied17-byte initial identity; production correctly refuses any non16-byte lineage. First smoke attempt failed before a checkpoint/metrics result; no production source changed.",
+    "failed_attempt": "smoke/smoke-authored-1.result.json",
+    "helpers": [
+      {
+        "helper": "run-release-probes.py",
+        "new_input_bytes": 16,
+        "new_input_hex": "4d326131362d72656c656173652d3031",
+        "new_sha256": "fc1be3ee5f66aa6d9413a1938ce4a3b639b2262c33865329b74586571e2915ab",
+        "old_input_bytes": 17,
+        "old_sha256": "cfa8bea3c6597a4bfe811754900da053ea6bb6abfc3cc45da1fe2e6c35c997a9"
+      },
+      {
+        "helper": "run-release-fixtures.py",
+        "new_input_bytes": 16,
+        "new_input_hex": "4d326131362d666978747572652d3031",
+        "new_sha256": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8",
+        "old_input_bytes": 17,
+        "old_sha256": "00ebae366ccb11730199234ca3f1e60161727e7f3796fb306afef2ea93f12959"
+      }
+    ]
+  },
+  "prior_auditor_attempt": "An inline import failed before auditing because its module directory was not on sys.path. This saved standalone helper uses the ordinary script import path.",
+  "release_binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+  "result": "passed",
+  "scope": "Exact successful build and failed coordinator smoke input. No production change; successful retry and performance datasets have separate audits.",
+  "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b"
+}

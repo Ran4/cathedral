@@ -1,0 +1,9 @@
+{
+  "result": "passed",
+  "source_scope": "component-inputs-v2",
+  "source_count": 963,
+  "final_source_manifest_sha256": "f45afa08360b088dc960044f222e7eff0a41fcf61cb0331af3f6c91cff64a687",
+  "source_unchanged_since_fixture_publication": true,
+  "production_and_test_rust_unchanged_since_final_workspace": true,
+  "scope": "Final map includes the explicitly recorded2fixture additions and1fixture README update. Build/test/probe inputs retain their original961map. Exact staging excludes unrelated work and generated caches."
+}

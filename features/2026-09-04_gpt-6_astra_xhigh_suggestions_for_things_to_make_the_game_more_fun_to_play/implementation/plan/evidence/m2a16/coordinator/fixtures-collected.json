@@ -1,0 +1,13 @@
+{
+  "chosen_originals": {
+    "active": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.json",
+    "initial": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.json"
+  },
+  "dataset": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation",
+  "debug_sha256": "350a576ec6cf59ffc1596ce60f7a5a5f062f3a38f7e10e19d791eb6e4a61be07",
+  "identity_sha256": "a571bbdfeba46f07b53d0d0298d54ad6fbc358fb789ac24591e85e136fad971e",
+  "release_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+  "repository_copy_pending": true,
+  "results_sha256": "6bc4abd3bef116ed2e11dbf211c3bc242446523a6ec38661391d9e5f8222168d",
+  "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b"
+}

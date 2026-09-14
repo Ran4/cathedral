@@ -380,3 +380,48 @@ impl EngineKnowledgeCandidate {
 
 #[cfg(test)]
 mod tests;
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineKnowledgeDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: KnowledgeCheckpointContext<'_>,
+    ) -> Result<EngineKnowledgeCandidate> {
+        let w: Wire = meter.decode(bytes)?;
+        let d = Self {
+            version: w.version,
+            boundary: w.boundary,
+            world: w.world,
+            player_id: w.player_id,
+            next_stage_hop_at: w.next_stage_hop_at,
+            next_player_pollen_game_days: w.next_player_pollen_game_days,
+            door_shut_until: w.door_shut_until,
+            last_journal: w.last_journal,
+            last_journal_receipts: w.last_journal_receipts,
+            last_journal_at: w.last_journal_at,
+            last_ward_heat: w.last_ward_heat,
+        };
+        d.validate(c)?;
+        Ok(EngineKnowledgeCandidate { data: d })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_knowledge<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let c = KnowledgeCheckpointContext::from_world(&self.world, now);
+        let binding = owner::context_for_export(c, r)?;
+        let view = View::new(self, now, owner::WorldView::new(&self.world, now, &binding))?;
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}

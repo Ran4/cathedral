@@ -1,0 +1,22 @@
+{
+  "cause": "Coordinator supplied17-byte initial identity; production correctly refuses any non16-byte lineage. First smoke attempt failed before a checkpoint/metrics result; no production source changed.",
+  "failed_attempt": "smoke/smoke-authored-1.result.json",
+  "helpers": [
+    {
+      "helper": "run-release-probes.py",
+      "old_sha256": "cfa8bea3c6597a4bfe811754900da053ea6bb6abfc3cc45da1fe2e6c35c997a9",
+      "new_sha256": "fc1be3ee5f66aa6d9413a1938ce4a3b639b2262c33865329b74586571e2915ab",
+      "old_input_bytes": 17,
+      "new_input_bytes": 16,
+      "new_input_hex": "4d326131362d72656c656173652d3031"
+    },
+    {
+      "helper": "run-release-fixtures.py",
+      "old_sha256": "00ebae366ccb11730199234ca3f1e60161727e7f3796fb306afef2ea93f12959",
+      "new_sha256": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8",
+      "old_input_bytes": 17,
+      "new_input_bytes": 16,
+      "new_input_hex": "4d326131362d666978747572652d3031"
+    }
+  ]
+}

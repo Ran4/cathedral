@@ -208,3 +208,46 @@ impl EngineSpeechCandidate {
 }
 #[cfg(test)]
 mod tests;
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineSpeechDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: EngineSpeechCheckpointContext<'_>,
+    ) -> Result<EngineSpeechCandidate> {
+        let w: Wire = meter.decode(bytes)?;
+        let d = Self {
+            version: w.version,
+            boundary: w.boundary,
+            player_id: w.player_id,
+            state: w.state,
+        };
+        d.validate(c)?;
+        Ok(EngineSpeechCandidate { data: d })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_speech<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let c = self.speech_checkpoint_context(now);
+        let view = View {
+            version: 1,
+            boundary: now,
+            player_id: &self.config.player_id,
+            state: StateView::new(&self.speech_router, c.speech),
+        };
+        view.state.validate()?;
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}

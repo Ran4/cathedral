@@ -16,6 +16,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use cathedral_sim::checkpoint::{Result, host::*};
+pub(crate) mod identity;
 mod records;
 
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -414,6 +415,12 @@ impl HostCheckpointSource for HostObservation<'_> {
     fn records(&self, visitor: &mut dyn FnMut(RecordRef<'_>) -> Result<()>) -> Result<()> {
         records::visit(self, visitor)
     }
+    fn complete_records<'b>(
+        &'b self,
+        visitor: &mut dyn FnMut(RecordRef<'b>) -> Result<()>,
+    ) -> Result<()> {
+        records::visit(self, visitor)
+    }
     fn validate_boundary(&self) -> Result<()> {
         let local = self.local()?;
         let b = local
@@ -456,3 +463,91 @@ impl HostCheckpointSource for HostObservation<'_> {
 mod tests;
 #[cfg(test)]
 mod tests_public;
+
+/// Complete pure read-only capture at the already accepted ordinary boundary.
+/// Running authority must be retained in this same shared admission budget.
+/// Trusted caller retains its actual Running authority reservation in the same
+/// budget. The named complete minimum is not an arbitrary ECS/asset heap bound.
+pub(crate) fn capture_complete(
+    world: &World,
+    profile: cathedral_sim::checkpoint::complete::CheckpointProfile,
+    reservation: cathedral_sim::checkpoint::Reservation,
+) -> Result<
+    cathedral_sim::checkpoint::Admitted<
+        cathedral_sim::checkpoint::complete::CompleteCheckpointCandidate,
+    >,
+> {
+    capture_complete_observed(world, profile, reservation, &mut |_| {})
+}
+pub(crate) fn capture_complete_observed(
+    world: &World,
+    profile: cathedral_sim::checkpoint::complete::CheckpointProfile,
+    reservation: cathedral_sim::checkpoint::Reservation,
+    observer: &mut impl FnMut(cathedral_sim::checkpoint::complete::CompleteCheckpointStage),
+) -> Result<
+    cathedral_sim::checkpoint::Admitted<
+        cathedral_sim::checkpoint::complete::CompleteCheckpointCandidate,
+    >,
+> {
+    let source = HostObservation::new(world)?;
+    let local = source.local()?;
+    cathedral_sim::checkpoint::complete::capture_observed(
+        local.checkpoint_engine()?,
+        &source,
+        profile,
+        reservation,
+        observer,
+    )
+}
+/// Trusted caller keeps Running, including actual spare capacities, charged;
+/// M3 must additionally admit ECS/assets/backend/retiring ownership.
+pub(crate) fn validate_complete(
+    world: &World,
+    input: cathedral_sim::checkpoint::complete::CompleteCheckpointInput,
+) -> Result<
+    cathedral_sim::checkpoint::Admitted<
+        cathedral_sim::checkpoint::complete::CompleteCheckpointCandidate,
+    >,
+> {
+    validate_complete_observed(world, input, &mut |_| {})
+}
+pub(crate) fn validate_complete_observed(
+    world: &World,
+    mut input: cathedral_sim::checkpoint::complete::CompleteCheckpointInput,
+    observer: &mut impl FnMut(cathedral_sim::checkpoint::complete::CompleteCheckpointStage),
+) -> Result<
+    cathedral_sim::checkpoint::Admitted<
+        cathedral_sim::checkpoint::complete::CompleteCheckpointCandidate,
+    >,
+> {
+    input.prepare_definition_resolution()?;
+    let source = HostObservation::new(world)?;
+    let local = source.local()?;
+    let now = cathedral_sim::timeline::LogicalTime::new(
+        source
+            .resource::<LiveTime>()?
+            .continuation
+            .elapsed
+            .as_secs_f64(),
+    )
+    .ok_or_else(|| error("invalid installed host boundary"))?;
+    let definitions =
+        cathedral_sim::checkpoint::complete::InstalledCheckpointDefinitions::from_engine(
+            local.checkpoint_engine()?,
+            source.definitions()?,
+            now,
+        )?;
+    observer(cathedral_sim::checkpoint::complete::CompleteCheckpointStage::Definitions);
+    cathedral_sim::checkpoint::complete::validate_owned_definitions_observed(
+        input,
+        definitions,
+        observer,
+    )
+}
+#[cfg(test)]
+#[path = "host_checkpoint/tests_complete_public.rs"]
+mod tests_complete_public;
+
+#[cfg(test)]
+#[path = "host_checkpoint/tests_complete_owner.rs"]
+mod tests_complete_owner;

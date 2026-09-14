@@ -204,3 +204,45 @@ pub struct EngineAnimalsCounts {
 }
 #[cfg(test)]
 mod tests;
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineAnimalsDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: AnimalsCheckpointContext<'_>,
+    ) -> Result<EngineAnimalsCandidate> {
+        let w: Wire = meter.decode(bytes)?;
+        let d = Self {
+            version: w.version,
+            boundary: w.boundary,
+            world: w.world,
+            player_id: w.player_id,
+            config_nav: w.config_nav,
+            movement_now: w.movement_now,
+            dogs_published: w.dogs_published,
+        };
+        d.validate(c)?;
+        Ok(EngineAnimalsCandidate { data: d })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_animals<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let c = AnimalsCheckpointContext::from_world(&self.world, now)
+            .with_engine_nav(self.config.nav.as_deref());
+        let binding = owner::context_for_export(c, r)?;
+        let view = View::new(self, now, owner::WorldView::new(&self.world, now, &binding))?;
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}

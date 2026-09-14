@@ -1,4 +1,4 @@
-Status: In progress (2026-09-14). M2a1–M2a15 private and host components are implemented and reviewed. M2a16 complete-envelope composition, M2b capture/hydration, M2c pending-work restoration and M2d continuation remain pending.
+Status: In progress (2026-09-15). M2a1–M2a16 complete read-only composition is implemented and reviewed. M2b hydration, M2c pending-work restoration and M2d continuation remain.
 
 # M2 — Complete simulation checkpoints
 
@@ -666,3 +666,21 @@ and cancellation/lifetime cases. Do not seed an Engine/World or install partial
 live state to validate a candidate. This cut must not imply that synchronous
 capture meets the M3 frame budget or that component timings establish complete
 save/load performance.
+
+#### M2a16 coordinator acceptance — 2026-09-15
+
+The complete closed envelope, ordinary-boundary capture and admitted immutable
+candidate are accepted. All sixteen saved owners are validated together against
+actual installed definition/build/image roles; root, publication, physical/time,
+configuration and next-consumer agreements are checked without seeding or a
+save-only poll. [Coordinator review](evidence/m2a16/coordinator/review.md) records
+2,178 workspace passes, twelve independent public cases and all preserved failed
+attempts. Three fresh writers reproduce each complete supported fixture; the
+creating executable accepts exact bytes and an incompatible image refuses.
+
+[Release evidence](evidence/m2a16/performance/README.md) retains2,400 end-to-end
+and 7,800 stage samples from actual 520/2520-character hosts. Shared peaks including
+Running remain669,365,203/793,082,795 bytes; populated expansion has only 866,545
+bytes headroom. Capture p99 is 76.099/225.320 ms, so synchronous host placement
+remains unaccepted. M2b dedicated hydration is next; M2c external obligations,
+M2d continuation and M3 file/ECS/service publication remain mandatory.

@@ -218,6 +218,15 @@ impl OperationKernelDtoV1 {
         world: &World,
         now: LogicalTime,
     ) -> Result<OperationKernel> {
+        self.candidate_refs(config, &world.characters, &world.command_ledger, now)
+    }
+    pub(crate) fn candidate_refs(
+        &self,
+        config: &OperationConfig,
+        characters: &BTreeMap<ActorId, crate::Character>,
+        ledger: &crate::receipts::CommandLedger,
+        now: LogicalTime,
+    ) -> Result<OperationKernel> {
         checkpoint::logical(OWNER, now.seconds())?;
         if self.version != 1
             || self.active.0.len() > MAX_INSTANCES
@@ -269,7 +278,7 @@ impl OperationKernelDtoV1 {
             }
         }
         kernel
-            .validate_continuation(config, world, now)
+            .validate_checkpoint_refs(config, characters, ledger, now)
             .map_err(err)?;
         Ok(kernel)
     }

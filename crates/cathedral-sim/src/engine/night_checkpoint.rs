@@ -192,3 +192,48 @@ pub struct EngineNightCounts {
 }
 #[cfg(test)]
 mod tests;
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineNightDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: NightCheckpointContext<'_>,
+    ) -> Result<EngineNightCandidate> {
+        let w: Wire = meter.decode(bytes)?;
+        let d = Self {
+            version: w.version,
+            boundary: w.boundary,
+            world: w.world,
+            night: w.night,
+            config_night_office: w.config_night_office,
+        };
+        d.validate(c)?;
+        Ok(EngineNightCandidate { data: d })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_night<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let c = self.night_checkpoint_context(now);
+        let binding = owner::binding(c, r)?;
+        let view = View {
+            version: 1,
+            boundary: now,
+            world: owner::WorldView::new(&self.world, now),
+            night: owner::View::new(&self.night, now, &binding),
+            config_night_office: &self.config.night_office,
+        };
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}

@@ -1,0 +1,45 @@
+{
+  "binary": null,
+  "binary_sha256": null,
+  "command": [
+    "/usr/bin/git",
+    "diff",
+    "--check"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "environment_overrides": {
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+  },
+  "helper_sha256": {
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/audit-format-source.py": "8c94fbaa704e7b82908235fa5388f3005a350a4c57db7d53ee95f3b2506d980f",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58"
+  },
+  "inherited_build_environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_TARGET_DIR": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "removed_build_environment": [
+    "LDFLAGS",
+    "RUSTFLAGS",
+    "CARGO_ENCODED_RUSTFLAGS",
+    "CARGO_BUILD_RUSTFLAGS",
+    "RUSTC_WRAPPER",
+    "RUSTC_WORKSPACE_WRAPPER"
+  ],
+  "source_count": 961,
+  "source_manifest_sha256": "7c7e896f1afeb606b39e50615fdf9479231619637eff3d07a863d3e658f8afd7",
+  "source_scope": "component-inputs-v2",
+  "started_utc": "2026-09-14T22:00:31.650803+00:00"
+}

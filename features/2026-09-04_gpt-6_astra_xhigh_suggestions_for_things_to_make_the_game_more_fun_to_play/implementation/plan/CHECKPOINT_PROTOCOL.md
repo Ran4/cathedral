@@ -161,3 +161,35 @@ before later input forwarding changes issued. Only a detached fresh-export
 generation fence is aligned for comparison; stored/candidate/live identities
 remain untouched. Independent fresh writers agree exactly, with originals and
 hashes in [fixture evidence](evidence/m2a15/owner_fixtures/fixture-equality-1.json).
+
+## M2a16 complete read-only envelope — accepted 2026-09-15
+
+The mandatory V1 outer fields are version, profile, world_identity, boundary,
+manifest and ledger/operations/backbone/round/climate/knowledge/law/marks/animals/
+social/continuity/scheduler/night/speech/cognition_inputs/host. Categories preserve
+their existing V1 canonical byte contracts. Missing, duplicate, unknown, null
+and unsupported outer values refuse; profile accepts only its string spelling.
+Original input whitespace remains part of the admitted raw envelope.
+
+Compatibility binds actual installed parsed definition roles separately from
+saved mutable authority, ordered accepted seed/prompt inputs, exact compiled
+source/toolchain/target/features and the running host image. The host hashes
+`/proc/self/exe` once at startup using bounded streaming scratch; failure disables
+capture only. The pure simulation does no IO. Git HEAD is supplemental evidence.
+Exact-image compatibility intentionally permits debug/release/separately linked
+executables to reject each other's envelopes. Runtime generation and a fresh
+host's initial lineage do not participate in installed-definition equality.
+
+Complete validation checks the semantic-root union, initial configuration and
+saved publication relationships, full ordinary boundary, and next-consumer time
+horizons. A100 ms next frame may advance at most one game day; seeded Round must
+agree with navigation presence and retain its office cursor, and all three Round
+clock consumers must be within three days of the next position. Existing Never,
+negative calendar/history, checked-refusal and wrapping-counter semantics remain;
+unchecked World counters receive complete-poll headroom.
+
+The admitted candidate owns immutable raw bytes, category offsets and its exact
+proof context. Later hydration must rebind that manifest. No production Engine
+hydration, retry, interruption transformation, external adoption, file replacement
+or new-generation publication occurs in this leg. Runtime-read fixtures are made
+after final image freeze; an incompatible image must explicitly refuse them.

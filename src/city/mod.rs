@@ -12043,3 +12043,14 @@ mod tests {
         inside
     }
 }
+
+#[cfg(test)]
+impl CutMarginProfile {
+    pub(crate) fn checkpoint_storage_bytes(&self) -> usize {
+        std::mem::size_of::<Self>()
+            + self.rects.capacity() * std::mem::size_of::<CutMarginRect>()
+            + (self.ramps.capacity() + self.stairs.capacity())
+                * std::mem::size_of::<(f32, f32, f32, f32)>()
+            + 96
+    }
+}

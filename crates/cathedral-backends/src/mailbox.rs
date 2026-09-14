@@ -295,6 +295,10 @@ pub struct BackendReceiver {
 }
 
 impl BackendReceiver {
+    /// Read-only admission inventory; does not drain callbacks or wait for work.
+    pub fn usage(&self) -> MailboxUsage {
+        *self.shared.usage.lock().unwrap_or_else(|e| e.into_inner())
+    }
     pub fn generation(&self) -> RuntimeGeneration {
         self.shared.generation
     }

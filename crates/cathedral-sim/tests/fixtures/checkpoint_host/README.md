@@ -8,8 +8,8 @@ They are components, not complete saves or whole-world admission evidence.
 
 | Payload | Boundary | Bytes | SHA-256 |
 | --- | --- | ---: | --- |
-| `initial-v1.json` | First requested eligible startup continuation, 34 ms, generation 1, 10 rows | 3549 | `09d2d2bc5b45df80603b6a44daff7851ead3241945617918acefd258b8a86060` |
-| `active-v1.json` | Ordinary readable workload, 68 ms, generation 2, 22 rows | 6275 | `c0b20da7dfbf0e7b0e1085b95987193f0a3197c5588b43b6cde6929d85b9f761` |
+| `initial-v1.json` | First requested eligible startup continuation, 34 ms, generation 1, 10 rows | 3553 | `dca6128035a23ba7a88427f1b005e991cd3397bad609a26f9cb78470478595ce` |
+| `active-v1.json` | Ordinary readable workload, 68 ms, generation 2, 22 rows | 6279 | `e01b1aeb7f775b5023cd8c76006ea67eaee814b9bc13d040f15120124bdef32a` |
 
 Initial means the first captured supported host boundary after startup has
 published its clock and accepted physical state. It is not a zero-time bare
@@ -35,6 +35,17 @@ files. Three independent writer processes produced identical bytes on
 the required environment after a harmless recorded PATH typo in the second.
 Command identities, originals and deterministic gzip archives are recorded in
 M2a15 evidence `owner_fixtures/fixture-equality-1.json`.
+
+The current pair was explicitly refreshed during M2a16 review on 2026-09-15.
+The strict installed-catalog fingerprint includes all of `src/city/mod.rs`,
+which gained a test-only memory observer. Three fresh writers from the
+preserved M2a16 debug executable agreed exactly. The only changed JSON path
+is `/scalars/definitions/installed_catalogs`; all gameplay state is identical.
+The original M2a15 bytes, current bytes, exact command provenance and
+independent review are preserved in M2a16 evidence under
+`host-component-fixture-refresh/` and
+`coordinator/host-fixture-refresh-audit.json`. The complete workspace rerun
+validates this current pair. The M2a15 record above remains historical.
 
 Preserve these bytes. A deliberately changed compatibility contract needs a new
 supported fixture and explicit review, not silent regeneration of this pair.

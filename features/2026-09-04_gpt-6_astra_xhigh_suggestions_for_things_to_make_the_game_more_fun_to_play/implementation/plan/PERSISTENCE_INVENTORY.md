@@ -524,3 +524,22 @@ committed speech messages, unread intentional chat/pending command and semantic
 sound gates. Exact decode/candidate and compatible-context byte comparisons run
 inside HostCaptureSet. Their fixture-only storage admission makes no claim about
 the live World's Running cohort or full-save availability.
+
+## M2a16 complete ownership reconciliation — accepted 2026-09-15
+
+The closed envelope composes all sixteen accepted owner categories and the
+saved lineage, exact manifest and shared boundary. The detailed
+[field reconciliation](evidence/m2a16/owner-design.md#complete-field-ownership-reconciliation)
+names every World/Engine authority and each installed or external role.
+World.events is an explicit empty-at-boundary fence; a nonempty queue refuses
+capture without a save-only drain. World.speech_actions derives exactly from
+saved speech semantic IDs, while every other retained semantic root participates
+in the complete ledger union. No replacement World/Engine is seeded to validate.
+
+The immutable candidate retains the original raw payload and exact installed
+role manifest after validation, with borrowed category views tied to its admitted
+owner. It grants no detached typed state or authority to install under a changed
+resolver. Current service capabilities, device handles, transcript artifacts,
+runtime generations and ECS/render construction retain their explicit M2c/M3
+policies. Complete read-only validation is separate from those later adoption
+and publication gates.

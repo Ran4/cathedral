@@ -1,0 +1,857 @@
+[
+  {
+    "binary": "/tmp/alibi-m2a16-host-reference-binary-1",
+    "binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+    "command": [
+      "/tmp/alibi-m2a16-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_complete_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:32:53.534416+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.7743129918817431,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_FIXTURE": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.json",
+      "ALIBI_COMPLETE_INITIAL": "1",
+      "ALIBI_COMPLETE_MODE": "authored",
+      "ALIBI_COMPLETE_REPORT": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.metrics.json",
+      "ALIBI_COMPLETE_SAMPLES": "1",
+      "ALIBI_COMPLETE_WORLD_ID": "4d326131362d666978747572652d3031",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-writer-1.log.gz",
+      "archive_sha256": "3c55b8528791e75d37e37c226b910125dfd44bc2163ab3318fac80c30123802f",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.stdout-stderr.log",
+      "original_bytes": 3184,
+      "original_sha256": "b5771ce8567bd19fc56440bc5883fc97ca316611dcc0b78b5d99648fea0c745e"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/initial-1.metrics.json.gz",
+      "archive_sha256": "a2de51006311a4d14a2962194a8b8d54f3d30c6bb67dad771e9f2d7fc7a2ab3e",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.metrics.json",
+      "original_bytes": 5029,
+      "original_sha256": "f1936f458422bb86c5148fca0856407981eb8ab0c388f719af64535068733af8"
+    },
+    "payload": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/initial-1.json.gz",
+      "archive_sha256": "29df4e16f08f73311c4910d82b3aecc57b69515fa6241335d84923fe8f1d351f",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.json",
+      "original_bytes": 3255759,
+      "original_sha256": "58eb9dd14b3955a63ab2cae142a468231fe827cffded79fef4b0ffb45deb6da3"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "repetition": 1,
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:32:52.682699+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-writer-1.time.gz",
+      "archive_sha256": "226bba868054681d39d683485bccaf88a032c98fd46622a178118365366a55c1",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.time",
+      "original_bytes": 872,
+      "original_sha256": "183e193ba8347f3d37b30ddad40e8b6288cb4343b2b6c70631e90892b9ed18a9"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a16-host-reference-binary-1",
+    "binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+    "command": [
+      "/tmp/alibi-m2a16-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_complete_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:32:54.831174+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.7801159671507776,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_FIXTURE": "/tmp/alibi-m2a16-fixture-generation-initial-writer-2.json",
+      "ALIBI_COMPLETE_INITIAL": "1",
+      "ALIBI_COMPLETE_MODE": "authored",
+      "ALIBI_COMPLETE_REPORT": "/tmp/alibi-m2a16-fixture-generation-initial-writer-2.metrics.json",
+      "ALIBI_COMPLETE_SAMPLES": "1",
+      "ALIBI_COMPLETE_WORLD_ID": "4d326131362d666978747572652d3031",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-writer-2.log.gz",
+      "archive_sha256": "8d5bd81526262c41558a23002bfece481426b54e8f25de9ca0c044cd1aec573f",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-2.stdout-stderr.log",
+      "original_bytes": 3184,
+      "original_sha256": "d5fc644dff4347bce974884efdd94ad58006c27b9f98b38411f278bd9dcd659f"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/initial-2.metrics.json.gz",
+      "archive_sha256": "71860357151f99ca4b37e3407694b83e9d5e4bb74d8a9ddb733b961f9c0380b0",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-2.metrics.json",
+      "original_bytes": 5049,
+      "original_sha256": "700f9f2392a46945a09b26461eaaef784d78cbc902176c6b42178897f03c79f4"
+    },
+    "payload": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/initial-2.json.gz",
+      "archive_sha256": "29df4e16f08f73311c4910d82b3aecc57b69515fa6241335d84923fe8f1d351f",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-2.json",
+      "original_bytes": 3255759,
+      "original_sha256": "58eb9dd14b3955a63ab2cae142a468231fe827cffded79fef4b0ffb45deb6da3"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "repetition": 2,
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:32:53.974126+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-writer-2.time.gz",
+      "archive_sha256": "138c5ba7ebeecec38a95035d934dedda31e9f2b169c53f824e7ae9a9a07fbce0",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-2.time",
+      "original_bytes": 872,
+      "original_sha256": "281597cac0417b565175ef616a214a5a4791c3ca362f33b390b9c3bd7f08e2ce"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a16-host-reference-binary-1",
+    "binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+    "command": [
+      "/tmp/alibi-m2a16-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_complete_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:32:56.126558+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.7773161779623479,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_FIXTURE": "/tmp/alibi-m2a16-fixture-generation-initial-writer-3.json",
+      "ALIBI_COMPLETE_INITIAL": "1",
+      "ALIBI_COMPLETE_MODE": "authored",
+      "ALIBI_COMPLETE_REPORT": "/tmp/alibi-m2a16-fixture-generation-initial-writer-3.metrics.json",
+      "ALIBI_COMPLETE_SAMPLES": "1",
+      "ALIBI_COMPLETE_WORLD_ID": "4d326131362d666978747572652d3031",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-writer-3.log.gz",
+      "archive_sha256": "3c55b8528791e75d37e37c226b910125dfd44bc2163ab3318fac80c30123802f",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-3.stdout-stderr.log",
+      "original_bytes": 3184,
+      "original_sha256": "b5771ce8567bd19fc56440bc5883fc97ca316611dcc0b78b5d99648fea0c745e"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/initial-3.metrics.json.gz",
+      "archive_sha256": "d4087d6ee45b55b779fc93c2043b43c99a2479f5e2ceda63c4bbed88f788646b",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-3.metrics.json",
+      "original_bytes": 5097,
+      "original_sha256": "aceddcfed604f7fa9dff6d808ef3f93011cade9194702711f302a9f409fbd34f"
+    },
+    "payload": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/initial-3.json.gz",
+      "archive_sha256": "29df4e16f08f73311c4910d82b3aecc57b69515fa6241335d84923fe8f1d351f",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-3.json",
+      "original_bytes": 3255759,
+      "original_sha256": "58eb9dd14b3955a63ab2cae142a468231fe827cffded79fef4b0ffb45deb6da3"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "repetition": 3,
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:32:55.272228+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-writer-3.time.gz",
+      "archive_sha256": "8bbcf47b581807a38e48a61c95a300b6d5bd5b3cf3f174eeb17cba20ad639d61",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-writer-3.time",
+      "original_bytes": 872,
+      "original_sha256": "44b2b08cb41101fafad49a547119593a9000504ab566efa6eb8e57be38911321"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a16-host-reference-binary-1",
+    "binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+    "command": [
+      "/tmp/alibi-m2a16-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_verify_complete_fixture",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:32:57.339671+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.7011951277963817,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_FIXTURE_IN": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-same-image-validator.log.gz",
+      "archive_sha256": "177bbf25b4f644965fc3cf8ad46fd0067ef2aa388a75c9d56851623ef0700ae5",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-same-image-validator.stdout-stderr.log",
+      "original_bytes": 3301,
+      "original_sha256": "7809882e783290e0419422cbb7f41934428e6ee6a909ab2c980c3c3115420e79"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:32:56.561796+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-same-image-validator.time.gz",
+      "archive_sha256": "5da61efcfda629ac1e9430218a54ee6fccd3d5170dc1ee27fab884e58699955b",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-same-image-validator.time",
+      "original_bytes": 879,
+      "original_sha256": "3e63de59e10491847e40cabb07c05756bed1eb6f045562bfe469e34381108495"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true,
+    "verification": "same-image"
+  },
+  {
+    "binary": "/tmp/alibi-m2a16-debug-reference-binary",
+    "binary_sha256": "350a576ec6cf59ffc1596ce60f7a5a5f062f3a38f7e10e19d791eb6e4a61be07",
+    "command": [
+      "/tmp/alibi-m2a16-debug-reference-binary",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_verify_complete_fixture",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:33:00.492172+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 1.837071946123615,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_EXPECT_IMAGE_MISMATCH": "1",
+      "ALIBI_COMPLETE_FIXTURE_IN": "/tmp/alibi-m2a16-fixture-generation-initial-writer-1.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-incompatible-image-validator.log.gz",
+      "archive_sha256": "87819910ece84a78f04a33f3d31842bfaaced274f4d8bc63d9842e697ce67b03",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-incompatible-image-validator.stdout-stderr.log",
+      "original_bytes": 3302,
+      "original_sha256": "7bccde545cb87d185d20947eb1edc9151c5221c17e10d10e32ae8741057069c1"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:32:57.540616+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-initial-incompatible-image-validator.time.gz",
+      "archive_sha256": "1396fd69fe506ed113644f84c28882371fa26e03ec1a53099bae3831a59cf4c7",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-initial-incompatible-image-validator.time",
+      "original_bytes": 877,
+      "original_sha256": "cf178b6125e74a4e44a9b7b25e60ba30f2ed79043b8614eeebb266427c0adfb6"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true,
+    "verification": "incompatible-image"
+  },
+  {
+    "binary": "/tmp/alibi-m2a16-host-reference-binary-1",
+    "binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+    "command": [
+      "/tmp/alibi-m2a16-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_complete_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:33:02.605713+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.8027670029550791,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_FIXTURE": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.json",
+      "ALIBI_COMPLETE_MODE": "authored",
+      "ALIBI_COMPLETE_REPORT": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.metrics.json",
+      "ALIBI_COMPLETE_SAMPLES": "1",
+      "ALIBI_COMPLETE_WORLD_ID": "4d326131362d666978747572652d3031",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-writer-1.log.gz",
+      "archive_sha256": "a974dcf7b72265b9f412f9352caea8fd46d09d2ebb106767c0e29af8493ab47b",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.stdout-stderr.log",
+      "original_bytes": 3588,
+      "original_sha256": "18ed283c6aa92304a385f8bfda75023adee929008225dae1cbd0c408f6bc8736"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/active-1.metrics.json.gz",
+      "archive_sha256": "4f49478a29d6ef9f2a54c0d14c170f47f48a43ab5168f5a6bf5ee7d615a15ad4",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.metrics.json",
+      "original_bytes": 5237,
+      "original_sha256": "28de44168bd09c90e015a5f4b6d948bd66999d7cb1450de6e9e8ccfd74649481"
+    },
+    "payload": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/active-1.json.gz",
+      "archive_sha256": "dd7186df334831007b095f846cdcc3b15830c3ed903ae1e8b3a903805c824607",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.json",
+      "original_bytes": 3309065,
+      "original_sha256": "04204bb7cb9f04d903128bae8bf066643a4bcf6fa57a4c2a4bd933a465e1bc63"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "repetition": 1,
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:33:01.726094+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-writer-1.time.gz",
+      "archive_sha256": "7300ad51090cb61eff521532b3c01c566276fd97f1cce9196e0a85a584303db0",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.time",
+      "original_bytes": 872,
+      "original_sha256": "ec71c996838e7020690494b0a308ea9518c2f3b2256ab0ca8c49b9d29bcbee1b"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a16-host-reference-binary-1",
+    "binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+    "command": [
+      "/tmp/alibi-m2a16-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_complete_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:33:03.931834+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.793393038911745,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_FIXTURE": "/tmp/alibi-m2a16-fixture-generation-active-writer-2.json",
+      "ALIBI_COMPLETE_MODE": "authored",
+      "ALIBI_COMPLETE_REPORT": "/tmp/alibi-m2a16-fixture-generation-active-writer-2.metrics.json",
+      "ALIBI_COMPLETE_SAMPLES": "1",
+      "ALIBI_COMPLETE_WORLD_ID": "4d326131362d666978747572652d3031",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-writer-2.log.gz",
+      "archive_sha256": "80822784dd062bf5586ee43d6c9b3e2dce2e6bf63054d3ebecbb97d4bdf5426e",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-2.stdout-stderr.log",
+      "original_bytes": 3588,
+      "original_sha256": "1bf59b62078ca523fc4ac1d337b9c9b417ea1f006a5d2919259fc202ef05369d"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/active-2.metrics.json.gz",
+      "archive_sha256": "4e6f1acb9d2cbaeef7dde196cd9141d710d17b4143d1db50f956f3a32d0bdc9a",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-2.metrics.json",
+      "original_bytes": 5256,
+      "original_sha256": "cbabd058cb2d29ee6da9ddb411104e2ba2d1a53da9d3ba46eb396df8ff9bea46"
+    },
+    "payload": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/active-2.json.gz",
+      "archive_sha256": "dd7186df334831007b095f846cdcc3b15830c3ed903ae1e8b3a903805c824607",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-2.json",
+      "original_bytes": 3309065,
+      "original_sha256": "04204bb7cb9f04d903128bae8bf066643a4bcf6fa57a4c2a4bd933a465e1bc63"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "repetition": 2,
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:33:03.061190+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-writer-2.time.gz",
+      "archive_sha256": "a19c85e4d7eea82b6486498721b009819cea604afa115dd03cdbcb7a4847d08b",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-2.time",
+      "original_bytes": 872,
+      "original_sha256": "4d369292a2d536688ddaf1a1b759a989714ee4bb50b0cbeea979342854e5932a"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a16-host-reference-binary-1",
+    "binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+    "command": [
+      "/tmp/alibi-m2a16-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_complete_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:33:05.245587+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.7959957839921117,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_FIXTURE": "/tmp/alibi-m2a16-fixture-generation-active-writer-3.json",
+      "ALIBI_COMPLETE_MODE": "authored",
+      "ALIBI_COMPLETE_REPORT": "/tmp/alibi-m2a16-fixture-generation-active-writer-3.metrics.json",
+      "ALIBI_COMPLETE_SAMPLES": "1",
+      "ALIBI_COMPLETE_WORLD_ID": "4d326131362d666978747572652d3031",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-writer-3.log.gz",
+      "archive_sha256": "80822784dd062bf5586ee43d6c9b3e2dce2e6bf63054d3ebecbb97d4bdf5426e",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-3.stdout-stderr.log",
+      "original_bytes": 3588,
+      "original_sha256": "1bf59b62078ca523fc4ac1d337b9c9b417ea1f006a5d2919259fc202ef05369d"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/active-3.metrics.json.gz",
+      "archive_sha256": "02520ae6786eb5a87a9fe4b292d63ad602b6f977f2a39cb44b416fa6c9463ff5",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-3.metrics.json",
+      "original_bytes": 5248,
+      "original_sha256": "3eae9d8e942063fdc28eca173a4ad2f927cec657615803b71ef01b79e64398aa"
+    },
+    "payload": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/active-3.json.gz",
+      "archive_sha256": "dd7186df334831007b095f846cdcc3b15830c3ed903ae1e8b3a903805c824607",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-3.json",
+      "original_bytes": 3309065,
+      "original_sha256": "04204bb7cb9f04d903128bae8bf066643a4bcf6fa57a4c2a4bd933a465e1bc63"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "repetition": 3,
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:33:04.372902+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-writer-3.time.gz",
+      "archive_sha256": "6e0f16e2e539fb690a24f014a9d2f93777d9b57e1b1ee86f2a166f3d32ddce9d",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-writer-3.time",
+      "original_bytes": 872,
+      "original_sha256": "fe5bf935559705c2e0d34f2eede4d84a8206643669becf11e1568396ea70cf73"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2a16-host-reference-binary-1",
+    "binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+    "command": [
+      "/tmp/alibi-m2a16-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_verify_complete_fixture",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:33:06.479601+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.7119706610683352,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_FIXTURE_IN": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-same-image-validator.log.gz",
+      "archive_sha256": "d4c091d462aefd355023d579ece96cacfd656ed3323e9fc5d4d60d0fdecdda85",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-same-image-validator.stdout-stderr.log",
+      "original_bytes": 3300,
+      "original_sha256": "6e7d6fa6efe18f0e9bba21af1719e61ba794612bc1232186d9db47cde61afdc2"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:33:05.690542+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-same-image-validator.time.gz",
+      "archive_sha256": "a6aba7895f0c9cdc280cd87415bb2385a9911369b620c2d243419a2472dbed9b",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-same-image-validator.time",
+      "original_bytes": 878,
+      "original_sha256": "444884e0ff9fc10884176845c8177d7de40bd9d7f17f9d2cdb54645bde883f58"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true,
+    "verification": "same-image"
+  },
+  {
+    "binary": "/tmp/alibi-m2a16-debug-reference-binary",
+    "binary_sha256": "350a576ec6cf59ffc1596ce60f7a5a5f062f3a38f7e10e19d791eb6e4a61be07",
+    "command": [
+      "/tmp/alibi-m2a16-debug-reference-binary",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_complete_owner::m2a16_verify_complete_fixture",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-14T22:33:09.649015+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 1.8605205630883574,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_EXPECT_IMAGE_MISMATCH": "1",
+      "ALIBI_COMPLETE_FIXTURE_IN": "/tmp/alibi-m2a16-fixture-generation-active-writer-1.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/run-release-fixtures.py": "77cc0cfa6c699bc21af325d2b91a8e41c89c259ab961a3a5802b8affd0c3bfa8"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-incompatible-image-validator.log.gz",
+      "archive_sha256": "cd17c49388feff17b1d1ea9c8fd50a942c582700188faf4f2f9b8dedd045f560",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-incompatible-image-validator.stdout-stderr.log",
+      "original_bytes": 3301,
+      "original_sha256": "db59106c4dd22215cd492d4d8d55089792cf9b2213e42c2739260a442b870e1e"
+    },
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "source_count": 961,
+    "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-14T22:33:06.682129+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/fixture-generation/fixture-generation-active-incompatible-image-validator.time.gz",
+      "archive_sha256": "1fe641143b2308434cae98904b6680d1ea417430a4ccab641b8c6bbb13daa515",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2a16-fixture-generation-active-incompatible-image-validator.time",
+      "original_bytes": 877,
+      "original_sha256": "c1f74a5479588a76252a91cf69d3987002e2c93f3cd096ec4076c6ba5e5cb298"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true,
+    "verification": "incompatible-image"
+  }
+]

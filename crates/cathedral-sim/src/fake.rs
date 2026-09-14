@@ -243,7 +243,44 @@ pub const MAX_FAKE_PROMPTS: usize = 32;
 pub const MAX_FAKE_PROMPT_BYTES: usize = 1024 * 1024;
 pub const MAX_FAKE_REPLY_BYTES: usize = 400_000;
 
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub struct FakeCognitionStorageInventory {
+    pub staged: usize,
+    pub staged_capacity: usize,
+    pub prompts: usize,
+    pub prompt_capacity: usize,
+    pub retained_upper_bytes: usize,
+}
+
 impl FakeCognition {
+    /// Actual retained capacities, including bounded prompt history and staged
+    /// replies. This observes without draining or generating completions.
+    pub fn checkpoint_storage_inventory(&self) -> FakeCognitionStorageInventory {
+        let bytes = std::mem::size_of::<Self>()
+            + self.staged.capacity() * std::mem::size_of::<Completion>()
+            + self.prompts.capacity() * std::mem::size_of::<String>()
+            + 64
+            + self
+                .prompts
+                .iter()
+                .map(|s| s.capacity() + 32)
+                .sum::<usize>()
+            + self
+                .staged
+                .iter()
+                .map(|c| match &c.result {
+                    Ok(s) => s.capacity() + 32,
+                    Err(e) => e.allocated_bytes() + 32,
+                })
+                .sum::<usize>();
+        FakeCognitionStorageInventory {
+            staged: self.staged.len(),
+            staged_capacity: self.staged.capacity(),
+            prompts: self.prompts.len(),
+            prompt_capacity: self.prompts.capacity(),
+            retained_upper_bytes: bytes,
+        }
+    }
     pub fn new() -> Self {
         Self::default()
     }

@@ -289,3 +289,42 @@ impl EngineLawCandidate {
 
 #[cfg(test)]
 mod tests;
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineLawDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: LawCheckpointContext<'_>,
+    ) -> Result<EngineLawCandidate> {
+        let w: Wire = meter.decode(bytes)?;
+        let d = Self {
+            version: w.version,
+            boundary: w.boundary,
+            world: w.world,
+            player_id: w.player_id,
+            last_law_standing: w.last_law_standing,
+        };
+        d.validate(c)?;
+        Ok(EngineLawCandidate { data: d })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_law<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let c = LawCheckpointContext::from_world(&self.world, now);
+        let binding = owner::context_for_export(c, r)?;
+        let view = View::new(self, now, owner::WorldView::new(&self.world, now, &binding));
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}

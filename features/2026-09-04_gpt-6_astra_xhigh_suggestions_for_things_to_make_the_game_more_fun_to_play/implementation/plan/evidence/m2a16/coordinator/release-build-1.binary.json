@@ -1,0 +1,77 @@
+{
+  "binary": null,
+  "binary_bytes": 151811648,
+  "binary_sha256": null,
+  "built_binary": "/home/ran/src/rust/cathedralbevy/target/release/deps/cathedralbevy-3a0d9b7554bbcda3",
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "--offline",
+    "-j1",
+    "--release",
+    "--bin",
+    "cathedralbevy",
+    "--no-run",
+    "--message-format=json"
+  ],
+  "completed_utc": "2026-09-14T22:27:05.711423+00:00",
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "elapsed_seconds": 324.6085277341772,
+  "environment_overrides": {
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+  },
+  "exit_code": 0,
+  "helper_sha256": {
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release-build.py": "acc77a2ec2d3bf5866f6771f5f40c935b033f61499202e435fba61fc9e5fa03c",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release_common.py": "392d297a4bcc9b2b48200d798acaeb4c1e3a9de6d44ec4f0728ebe4ad7947c58"
+  },
+  "inherited_build_environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_TARGET_DIR": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "log": {
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release-build-1.log.gz",
+    "archive_sha256": "165cce9ea29d4bd6759c7bb640156eb36bc35e1a35aaae60d5453193cc4dd799",
+    "normalization": "none; exact original bytes",
+    "original": "/tmp/alibi-m2a16-release-build-1.stdout-stderr.log",
+    "original_bytes": 453149,
+    "original_sha256": "598780103e1092d960e0aabad653b2e332507e08bab5c34955852347e98de3fc"
+  },
+  "reference_binary": "/tmp/alibi-m2a16-host-reference-binary-1",
+  "reference_binary_sha256": "feee70f0632732184c6a7b3aa3f2ebde02d0dc4b27a6a9d0e4225955988beabc",
+  "removed_build_environment": [
+    "LDFLAGS",
+    "RUSTFLAGS",
+    "CARGO_ENCODED_RUSTFLAGS",
+    "CARGO_BUILD_RUSTFLAGS",
+    "RUSTC_WRAPPER",
+    "RUSTC_WORKSPACE_WRAPPER"
+  ],
+  "source_count": 961,
+  "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+  "source_scope": "component-inputs-v2",
+  "started_utc": "2026-09-14T22:21:41.102702+00:00",
+  "time": {
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2a16/coordinator/release-build-1.time.gz",
+    "archive_sha256": "9c005e0e28bc35f32c57ccda1a6e25fa4f915fb45e4910718f05241d0930fd8c",
+    "normalization": "none; exact original bytes",
+    "original": "/tmp/alibi-m2a16-release-build-1.time",
+    "original_bytes": 849,
+    "original_sha256": "e128b3d965a063f63f4cf570760c6580476dece570933c2f5c6caa76042bb173"
+  },
+  "unchanged_binary": true,
+  "unchanged_helpers": true,
+  "unchanged_source": true
+}

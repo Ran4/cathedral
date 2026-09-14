@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "final_command": "workspace-final-14",
+  "exit": 0,
+  "groups": 46,
+  "passed": 2178,
+  "failed": 0,
+  "ignored": 40,
+  "log_sha256": "ce014fc41ca142925a6acf149ec637731d83aad1db4d877b22b49230cd5b906a",
+  "source_unchanged": true,
+  "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+  "debug_executable": {
+    "schema": 1,
+    "binary_path": "/tmp/alibi-m2a16-debug-reference-binary",
+    "built_path": "target/debug/deps/cathedralbevy-eafe86af140beaa1",
+    "bytes": 2283869832,
+    "sha256": "350a576ec6cf59ffc1596ce60f7a5a5f062f3a38f7e10e19d791eb6e4a61be07",
+    "source_manifest": "pre-repair-10-source_hashes.json",
+    "source_manifest_sha256": "7c7e896f1afeb606b39e50615fdf9479231619637eff3d07a863d3e658f8afd7",
+    "command": "owner-commands/workspace-final-10.start.json",
+    "copied_at_unix": 1789424225.4974697,
+    "note": "Exact final10 test image; source unchanged; command failed solely current legacy host fixture definitions."
+  },
+  "final_executable_still_exact_copied_image": true,
+  "artifacts": {
+    "workspace-final-10.start.json": "a3ee01bd6a6494e4a21cf48e5a5c045126440a5514f1da5ea2cb5ce814bf76a0",
+    "workspace-final-10.result.json": "7830089d618b1e575fcf9d3f77a74e9542611e335f77c2c2d2bf9cfbc6a29951",
+    "workspace-final-10.log.gz": "8b2532c3aebd0ccd3bdbeaff6e81ee5d4076a8e79bd4c701c001050524202b4b",
+    "host-fixtures-11.start.json": "8291154dc05a3c2edb5e6e664e91f32b451304d47b262f0c31c3684e29186e6d",
+    "host-fixtures-11.result.json": "9cd1a9f452e6a6bfcfbee92fd2cb85988d3fa4ff266ea3e8fce88493958e58f2",
+    "host-fixtures-11.log.gz": "d629e3a15e948ddc69ac03e746f78b2eccd2bdfabccc6668fd2528d37c661827",
+    "host-fixtures-12.start.json": "c22513465691708c800a9b9df3c010e07ebef29f03f41cb746e4bc0341494284",
+    "host-fixtures-12.result.json": "ec550beb77e933800aad59efb60de23b04468f0a47a51507b39f62f8a0aaf08f",
+    "host-fixtures-12.log.gz": "d629e3a15e948ddc69ac03e746f78b2eccd2bdfabccc6668fd2528d37c661827",
+    "host-fixtures-13.start.json": "ff4f39b68344b54ee0f943161f799b4520e20f645beea5af66618441fc7ef3bd",
+    "host-fixtures-13.result.json": "8f9e15c556dbb251a52e966da29b2de8828f88df59029575097c62159315067a",
+    "host-fixtures-13.log.gz": "d629e3a15e948ddc69ac03e746f78b2eccd2bdfabccc6668fd2528d37c661827",
+    "workspace-final-14.start.json": "63e01f34280ed5ce76499667c1542e58302c44cbfdf3e7c6c4de8050f75f67c6",
+    "workspace-final-14.result.json": "b612f5f361632bf802bd00ebee9c011df68ee9a239a680e2d3e2b0971173422a",
+    "workspace-final-14.log.gz": "4dbc3cc451b7aa3f0cc0a3855f0f4d86d9f0a333e055c4c9a7de84b6626f4d7e"
+  },
+  "recorded_at_unix": 1789424479.4647498
+}

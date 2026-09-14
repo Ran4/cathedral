@@ -275,3 +275,46 @@ impl EngineSocialCandidate {
 }
 #[cfg(test)]
 mod tests;
+
+// Closed full-envelope decoding: the shared meter reserves before every
+// typed allocation. This function never creates an independent component budget.
+impl EngineSocialDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: SocialCheckpointContext<'_>,
+    ) -> Result<EngineSocialCandidate> {
+        let w: Wire = meter.decode(bytes)?;
+        let d = Self {
+            version: w.version,
+            boundary: w.boundary,
+            player_id: w.player_id,
+            conversation: w.conversation,
+            warm_exchanges: w.warm_exchanges,
+            novelty: w.novelty,
+            idle_mode: w.idle_mode,
+            stage: w.stage,
+            idle_requires_news: w.idle_requires_news,
+            idle_curiosity: w.idle_curiosity,
+        };
+        d.validate(c)?;
+        Ok(EngineSocialCandidate { data: d })
+    }
+}
+
+impl Engine {
+    pub(crate) fn complete_write_social<W: std::io::Write>(
+        &self,
+        now: LogicalTime,
+        writer: &mut W,
+        r: &mut Reservation,
+    ) -> Result<()> {
+        r.require(
+            crate::checkpoint::Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )?;
+        let view = View::new(self, now);
+        validate_owners(&self.conversation, &self.npc_exchanges, &self.novelty)?;
+        crate::checkpoint::complete::write_json(writer, &view)
+    }
+}

@@ -186,3 +186,38 @@ planned host-frame target. M3 still owes bounded offload or incremental source
 observation/definition hashing, validation and disposal without freezing ordinary
 accepted input across frames. Full-envelope lifetime, renderer and complete
 save/load acceptance remain pending; no numerical ceiling changed.
+
+## M2a16 complete admission model — accepted 2026-09-15
+
+The complete candidate uses one owned raw buffer with immutable offsets, after
+all sixteen saved owner categories and their shared roots/definitions/boundary
+have been validated. Complete expansion accumulates across all typed owners and
+rebuilt indexes before any disposal; its limit remains128 MiB. Authored/populated
+encoded limits remain64/128 MiB and the shared four-cohort limit remains1 GiB.
+Earlier component costs and byte contracts are unchanged.
+
+For raw Vec capacity C, complete typed expansion E, and largest encoded string
+token L, the validation reservation is at least
+`3*C + 64 MiB + (32*L + 4096) + E`. This includes the original raw allocation,
+JSON escape scratch, validator/reference/definition scratch and temporary hostile
+diagnostics. Collection and custom-index construction is metered before allocation;
+the retained raw candidate shrinks only after typed and owned resolver disposal.
+Private subordinate leases preserve their cohort and charge after parent drop.
+
+`RUNNING_AUTHORITY_ALLOWANCE_BYTES` is a512 MiB minimum trusted caller contract.
+It is not an arbitrary Engine/ECS heap estimate; the caller must charge its actual
+retained authority, including spare capacities, and increase it when necessary.
+The selected authored/+2000 Running inventory, complete phase measurements and
+acceptance record belong to [M2a16 evidence](evidence/m2a16/owner-design.md).
+M2b typed hydration, M2c backend adoption and M3 actual ECS/assets/retiring
+admission remain separate. Synchronous complete capture is measured here; it
+does not establish the later ordinary-frame budget.
+
+The [final complete measurements](evidence/m2a16/performance/README.md) preserve
+2,400 end-to-end and 7,800 stage samples. Encoded authored/populated payloads are
+3,309,064/12,779,988 bytes; cumulative expansion is 38,046,363/133,351,183 bytes.
+Shared admitted peak including 512 MiB Running is 669,365,203/793,082,795 bytes.
+Populated expansion has only 866,545 bytes headroom; no cap increased. Capture
+p99 is 76.099/225.320 ms and load p99 is 34.257/104.522 ms. All 1,200 capture/load
+samples exceed 30 ms. Actual application offload/incremental coordination,
+hydration and retiring/runtime/renderer admission remain required.

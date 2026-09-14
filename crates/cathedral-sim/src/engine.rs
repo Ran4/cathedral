@@ -21,6 +21,7 @@
 pub mod animals_checkpoint;
 pub mod climate_checkpoint;
 mod command_policy;
+pub(crate) mod complete_checkpoint;
 pub mod continuity_checkpoint;
 pub mod knowledge_checkpoint;
 pub mod law_checkpoint;
@@ -203,6 +204,11 @@ impl Capabilities {
 /// Everything the host configures (`config.ron` → here; no env reads in the sim).
 #[derive(Debug, Clone, PartialEq)]
 pub struct EngineConfig {
+    /// Exact running host image digest, supplied once by the IO host.
+    pub checkpoint_host_image: Option<[u8; 32]>,
+    /// Stable lineage supplied once by the host. It is independent of service
+    /// generations; callers without one can run normally but cannot save a city.
+    pub checkpoint_world_identity: Option<crate::checkpoint::complete::WorldIdentity>,
     /// Ephemeral execution fence, supplied by the host, never restored from disk.
     pub runtime_generation: crate::RuntimeGeneration,
     pub operations: crate::operations::OperationConfig,
@@ -342,6 +348,8 @@ pub struct EngineConfig {
 impl Default for EngineConfig {
     fn default() -> Self {
         Self {
+            checkpoint_world_identity: None,
+            checkpoint_host_image: None,
             runtime_generation: crate::RuntimeGeneration::INITIAL,
             operations: Default::default(),
             player_id: ActorId::from_raw("player"),
@@ -1064,6 +1072,7 @@ pub struct PlayerCustody {
 }
 
 pub struct Engine {
+    checkpoint_seed_identity: [u8; 32],
     world: World,
     /// The omniscient run transcript. It lives here, not in [`World`]: it is a
     /// presentation artifact of *this session*, not world state (sim.md risk 10).
@@ -1385,6 +1394,8 @@ impl Engine {
         }
 
         Ok(Self {
+            checkpoint_seed_identity: crate::checkpoint::complete::hash(seed)
+                .expect("validated WorldSeed has a closed serialization"),
             world,
             transcript: Vec::new(),
             scheduler,

@@ -449,3 +449,90 @@ impl BackboneCandidate {
         }
     }
 }
+
+impl World {
+    pub(crate) fn complete_write_backbone<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
+        check(self.events.is_empty(), "unflushed domain events")?;
+        self.command_ledger.validate_checkpoint_boundary()?;
+        crate::checkpoint::complete::write_json(writer, &View::new(self))
+    }
+}
+impl WorldBackboneDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        catalog: &ItemCatalog,
+        ledger: &CommandLedger,
+    ) -> Result<BackboneCandidate> {
+        let Decoded(data) = meter.decode(bytes)?;
+        data.validate(catalog, ledger)?;
+        Ok(BackboneCandidate { data })
+    }
+}
+
+impl BackboneCandidate {
+    pub(crate) fn complete_roots(&self) -> impl Iterator<Item = crate::receipts::OperationId> + '_ {
+        self.data
+            .round_actions
+            .values()
+            .chain(self.data.travel_actions.values())
+            .map(|id| id.operation)
+    }
+    pub(crate) fn complete_revision(&self) -> i64 {
+        self.data.world_revision
+    }
+    pub(crate) fn complete_event_sequence(&self) -> i64 {
+        self.data.event_sequence
+    }
+}
+
+impl World {
+    // Intentionally exhaustive; see complete-envelope ownership reconciliation.
+    pub(crate) fn complete_field_inventory(&self) {
+        let World {
+            command_ledger: _,
+            operations: _,
+            round_actions: _,
+            travel_actions: _,
+            speech_actions: _,
+            area_map: _,
+            characters: _,
+            roster: _,
+            items: _,
+            item_catalog: _,
+            offers: _,
+            legacy_restock_shares: _,
+            transform_jobs: _,
+            completed_transform_jobs: _,
+            world_revision: _,
+            event_sequence: _,
+            spatial_sequence: _,
+            sounds_enabled: _,
+            view_cone_degrees: _,
+            sound_catalog: _,
+            current_time: _,
+            current_weather: _,
+            shelters: _,
+            nav: _,
+            places: _,
+            needle_claim: _,
+            notices: _,
+            custody: _,
+            dogs: _,
+            marks: _,
+            mark_catalog: _,
+            marks_enabled: _,
+            mark_kinds: _,
+            ward_moods: _,
+            knowledge: _,
+            fact_catalog: _,
+            salience: _,
+            knowledge_enabled: _,
+            area_adjacency: _,
+            household_doors: _,
+            pollen_no_salience: _,
+            spoke_this_turn: _,
+            events: _,
+        } = self;
+    }
+}

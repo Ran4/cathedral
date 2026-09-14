@@ -183,6 +183,28 @@ pub struct LocalEngine {
 }
 
 impl LocalEngine {
+    #[cfg(test)]
+    pub(crate) fn checkpoint_storage_inventory(&self) -> serde_json::Value {
+        let completions = self.completions.as_ref().map(|receiver| {
+            let usage = receiver.usage();
+            serde_json::json!({"queued":receiver.len(),"admitted_records":usage.records,"admitted_terminals":usage.terminals,"terminal_bytes":usage.terminal_bytes,"stream_bytes":usage.stream_bytes})
+        });
+        serde_json::json!({
+            "command_rows":self.commands.len(),
+            "command_channel_capacity":self.commands.capacity(),
+            "command_payload_upper_bytes":self.commands.len()*24*1024,
+            "event_rows":self.events.len(),
+            "event_channel_capacity":self.events.capacity(),
+            "publication_payload_bytes":self.publication_bytes.load(Ordering::Acquire),
+            "completions":completions,
+            "fake_cognition":self.fake_cognition.as_ref().map(|f|f.0.borrow().checkpoint_storage_inventory()),
+            "transcript_rows":self.engine.as_ref().map(|e|e.transcript().len()),
+            "transcript_retained_upper_bytes":self.engine.as_ref().map(|e|e.checkpoint_transcript_storage_bytes()),
+            "round_ladder_scratch_bytes":self.engine.as_ref().map(|e|e.round().checkpoint_ladder_scratch_bytes()),
+            "seed_released":self.seed.is_none(),
+            "live_service_runtime_and_device_allocations_included":false
+        })
+    }
     /// The single parsed map moves from the pending seed into the live sim at
     /// handshake time. Debug rendering borrows it here instead of loading or
     /// maintaining another coordinate source.
@@ -457,6 +479,9 @@ fn build(
     };
 
     let engine_config = EngineConfig {
+        checkpoint_world_identity: crate::host_checkpoint::identity::lineage_identity(),
+        checkpoint_host_image: crate::host_checkpoint::identity::image_identity()
+            .map(|identity| identity.digest),
         runtime_generation: generation,
         operations: Default::default(),
         player_id: SimActorId::from_raw(PLAYER_ID),

@@ -563,3 +563,12 @@ fn counts(n: &NightOffice, c: NightCheckpointContext<'_>) -> NightCounts {
 }
 #[cfg(test)]
 pub(crate) mod tests;
+
+impl NightOffice {
+    pub(crate) fn complete_roots(&self) -> impl Iterator<Item = crate::receipts::OperationId> + '_ {
+        self.queue
+            .iter()
+            .filter_map(|d| d.semantic)
+            .chain(self.in_flight.iter().map(|f| f.semantic))
+    }
+}

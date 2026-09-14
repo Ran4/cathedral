@@ -17,11 +17,20 @@ impl Cohort {
 
 #[derive(Debug, Default)]
 struct Usage {
-    cohorts: [Option<usize>; 4],
+    cohorts: [Option<Slot>; 4],
+    peak: usize,
+}
+#[derive(Debug)]
+struct Slot {
+    bytes: usize,
+    owners: usize,
 }
 impl Usage {
     fn total(&self) -> usize {
-        self.cohorts.iter().flatten().sum()
+        self.cohorts.iter().flatten().map(|slot| slot.bytes).sum()
+    }
+    fn record_peak(&mut self) {
+        self.peak = self.peak.max(self.total());
     }
 }
 
@@ -50,7 +59,8 @@ impl CheckpointBudget {
                 "shared resident byte budget exceeded",
             ));
         }
-        usage.cohorts[cohort.index()] = Some(bytes);
+        usage.cohorts[cohort.index()] = Some(Slot { bytes, owners: 1 });
+        usage.record_peak();
         Ok(Reservation {
             usage: self.usage.clone(),
             cohort,
@@ -62,6 +72,12 @@ impl CheckpointBudget {
             .lock()
             .expect("checkpoint admission lock poisoned")
             .total()
+    }
+    pub fn peak_retained_bytes(&self) -> usize {
+        self.usage
+            .lock()
+            .expect("checkpoint admission lock poisoned")
+            .peak
     }
 }
 
@@ -90,8 +106,54 @@ impl Reservation {
                 "shared resident byte budget exceeded",
             ));
         }
-        usage.cohorts[self.cohort.index()] = Some(bytes);
+        let slot = usage.cohorts[self.cohort.index()]
+            .as_mut()
+            .expect("retained checkpoint cohort missing");
+        slot.bytes = slot.bytes - self.bytes + bytes;
         self.bytes = bytes;
+        usage.record_peak();
+        Ok(())
+    }
+    /// A private disjoint allocation lease in this same cohort. This is not a
+    /// cloned charge: its bytes join the shared total before its owner allocates.
+    /// Dropping the coordinator cannot release a surviving child's cohort slot.
+    pub(crate) fn sublease(&self, bytes: usize) -> Result<Self> {
+        let mut usage = self
+            .usage
+            .lock()
+            .expect("checkpoint admission lock poisoned");
+        if bytes == 0 || bytes > MAX_RESIDENT_BYTES.saturating_sub(usage.total()) {
+            return Err(CheckpointError::new(
+                "admission",
+                "shared resident byte budget exceeded",
+            ));
+        }
+        let slot = usage.cohorts[self.cohort.index()]
+            .as_mut()
+            .expect("retained checkpoint cohort missing");
+        slot.bytes += bytes;
+        slot.owners += 1;
+        usage.record_peak();
+        Ok(Self {
+            usage: self.usage.clone(),
+            cohort: self.cohort,
+            bytes,
+        })
+    }
+    pub(crate) fn require_running(&self, bytes: usize) -> Result<()> {
+        let usage = self
+            .usage
+            .lock()
+            .expect("checkpoint admission lock poisoned");
+        if usage.cohorts[Cohort::Running.index()]
+            .as_ref()
+            .is_none_or(|slot| slot.bytes < bytes)
+        {
+            return Err(CheckpointError::new(
+                "admission",
+                "complete checkpoint requires its shared Running authority allowance",
+            ));
+        }
         Ok(())
     }
     pub(crate) fn require(&self, cohort: Cohort, bytes: usize) -> Result<()> {
@@ -107,10 +169,18 @@ impl Reservation {
 }
 impl Drop for Reservation {
     fn drop(&mut self) {
-        self.usage
+        let mut usage = self
+            .usage
             .lock()
-            .expect("checkpoint admission lock poisoned")
-            .cohorts[self.cohort.index()] = None;
+            .expect("checkpoint admission lock poisoned");
+        let slot = usage.cohorts[self.cohort.index()]
+            .as_mut()
+            .expect("retained checkpoint cohort missing");
+        slot.bytes -= self.bytes;
+        slot.owners -= 1;
+        if slot.owners == 0 {
+            usage.cohorts[self.cohort.index()] = None;
+        }
     }
 }
 

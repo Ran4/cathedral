@@ -1,0 +1,10 @@
+{
+  "source_scope": "component-inputs-v2",
+  "files": 961,
+  "source_manifest_sha256": "fe370c6f8a82815eb0d806f2975cee1a5db6814cfcbfafb0d56657c1c72ce53b",
+  "frozen_at_unix": 1789424333.2403326,
+  "state": "pre-release complete-fixture freeze; current legacy host component fixtures regenerated from unchanged production/test image",
+  "source_enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "prior_manifest": "pre-repair-10-source_hashes.json",
+  "delta_record": "host-component-fixture-refresh/record.json"
+}

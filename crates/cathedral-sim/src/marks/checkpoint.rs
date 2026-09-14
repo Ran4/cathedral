@@ -342,3 +342,9 @@ pub struct MarksCounts {
 }
 #[cfg(test)]
 pub(crate) mod tests;
+
+pub(crate) fn complete_catalog_identity(catalog: &MarkCatalog) -> Result<[u8; 32]> {
+    #[derive(Serialize)]
+    struct View<'a>(#[serde(with = "records::CatalogV1")] &'a MarkCatalog);
+    crate::checkpoint::complete::hash(&View(catalog))
+}

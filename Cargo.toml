@@ -29,6 +29,7 @@ bevy = { version = "0.19", default-features = false, features = ["3d", "ui", "be
 cathedral-backends = { workspace = true }
 cathedral-sim = { workspace = true }
 cpal = "0.17.3"
+sha2 = "0.10"
 crossbeam-channel = { workspace = true }
 hound = { workspace = true }
 libc = "0.2.186"

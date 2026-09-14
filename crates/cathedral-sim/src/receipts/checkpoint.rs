@@ -504,3 +504,33 @@ impl CommandLedger {
 
 mod speech;
 pub(crate) use speech::{CheckpointReceiptRef, validate_speech_receipt};
+
+impl CommandLedgerDtoV1 {
+    pub(crate) fn complete_index_upper_bytes(&self) -> usize {
+        fn nodes(n: usize, stride: usize) -> usize {
+            if n == 0 {
+                0
+            } else {
+                ((n - 1) / 5 + 1) * (160 + 11 * stride)
+            }
+        }
+        let rows = self.recent.0.len() + self.retained.0.len();
+        // Rebuilt retained indexes count toward the complete expansion ceiling.
+        // The extra factor includes collect's temporary sorted input allocation,
+        // sparse BTree roots, affected-reference Vecs and cloned text together.
+        std::mem::size_of::<CommandLedger>()
+            + 3 * (self.recent_heap_upper_bound()
+                + nodes(
+                    self.retained.0.len(),
+                    std::mem::size_of::<CommandId>() + std::mem::size_of::<LedgerEntry>(),
+                )
+                + self
+                    .retained
+                    .0
+                    .iter()
+                    .map(EntryV1::heap_strings)
+                    .sum::<usize>()
+                + nodes(self.protected.0.len(), std::mem::size_of::<OperationId>()))
+            + rows * 3 * (std::mem::size_of::<CommandId>() + std::mem::size_of::<LedgerEntry>())
+    }
+}

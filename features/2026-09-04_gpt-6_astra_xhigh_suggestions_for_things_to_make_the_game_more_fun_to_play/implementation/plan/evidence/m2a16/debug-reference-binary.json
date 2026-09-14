@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "binary_path": "/tmp/alibi-m2a16-debug-reference-binary",
+  "built_path": "target/debug/deps/cathedralbevy-eafe86af140beaa1",
+  "bytes": 2283869832,
+  "sha256": "350a576ec6cf59ffc1596ce60f7a5a5f062f3a38f7e10e19d791eb6e4a61be07",
+  "source_manifest": "pre-repair-10-source_hashes.json",
+  "source_manifest_sha256": "7c7e896f1afeb606b39e50615fdf9479231619637eff3d07a863d3e658f8afd7",
+  "command": "owner-commands/workspace-final-10.start.json",
+  "copied_at_unix": 1789424225.4974697,
+  "note": "Exact final10 test image; source unchanged; command failed solely current legacy host fixture definitions."
+}

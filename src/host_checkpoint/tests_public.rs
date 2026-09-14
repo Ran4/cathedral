@@ -48,7 +48,7 @@ struct CaptureProbe {
     bytes: Vec<u8>,
 }
 
-fn app() -> App {
+pub(super) fn app() -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
         .init_asset::<Mesh>()
@@ -113,7 +113,7 @@ fn run(app: &mut App, case: Case) -> Value {
     serde_json::from_slice(&probe.bytes).unwrap()
 }
 
-fn simulation_stamp(world: &World) -> (i64, i64, i64, usize) {
+pub(super) fn simulation_stamp(world: &World) -> (i64, i64, i64, usize) {
     let sim = world.non_send::<LocalEngine>().world().unwrap();
     (
         sim.world_revision,

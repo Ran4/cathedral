@@ -8,6 +8,7 @@
 
 pub(crate) mod aggregate;
 mod budget;
+pub mod complete;
 pub mod host;
 mod manifest;
 pub(crate) mod records;

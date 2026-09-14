@@ -146,3 +146,15 @@ pub(crate) fn fingerprint() -> crate::checkpoint::Result<[u8; 32]> {
         "ward-marks-sort-nearest-corners-v1",
     ))
 }
+
+pub(crate) fn complete_adjacency_identity(
+    v: &AreaAdjacency,
+) -> crate::checkpoint::Result<[u8; 32]> {
+    struct View<'a>(&'a AreaAdjacency);
+    impl Serialize for View<'_> {
+        fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+            AdjacencyV1::serialize(self.0, s)
+        }
+    }
+    crate::checkpoint::complete::hash(&View(v))
+}

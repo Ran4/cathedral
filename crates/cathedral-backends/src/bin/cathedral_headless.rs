@@ -498,6 +498,9 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         .collect::<Result<Vec<String>, String>>()?;
     let engine = Engine::new(
         EngineConfig {
+            // This standalone host does not yet provide complete host envelopes.
+            checkpoint_host_image: None,
+            checkpoint_world_identity: None,
             // This process owns one world and has no adoption/rebinding path.
             runtime_generation: cathedral_sim::RuntimeGeneration::INITIAL,
             operations: Default::default(),

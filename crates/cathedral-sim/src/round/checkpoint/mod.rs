@@ -360,3 +360,86 @@ fn validate_context_shape(c: RoundCheckpointContext<'_>) -> Result<()> {
         "shelter geometry context count exceeds v1 policy",
     )
 }
+
+impl Round {
+    pub(crate) fn complete_write<W: std::io::Write>(
+        &self,
+        c: RoundCheckpointContext<'_>,
+        writer: &mut W,
+    ) -> Result<()> {
+        check(self.ladder_scratch.is_empty(), "incomplete ladder pass")?;
+        crate::checkpoint::complete::write_json(
+            writer,
+            &View {
+                version: 1,
+                context: ContextV1::new(c),
+                round: self,
+            },
+        )
+    }
+}
+impl RoundDtoV1 {
+    pub(crate) fn complete_decode(
+        bytes: &[u8],
+        meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
+        c: RoundCheckpointContext<'_>,
+    ) -> Result<RoundCandidate> {
+        let wire: Wire = meter.decode(bytes)?;
+        let data = Self {
+            version: wire.version,
+            context: wire.context,
+            round: wire.round,
+        };
+        data.validate(c)?;
+        Ok(RoundCandidate { data })
+    }
+}
+
+impl RoundCandidate {
+    pub(crate) fn complete_lamp_revision(&self) -> u64 {
+        self.data.round.lamp_revision()
+    }
+    pub(crate) fn complete_clock_horizon(&self, next_days: f64, has_nav: bool) -> Result<()> {
+        let r = &self.data.round;
+        crate::checkpoint::complete::check(
+            r.seeded == has_nav,
+            "complete Engine Round seed/navigation disagreement",
+        )?;
+        if r.seeded {
+            crate::checkpoint::complete::check(
+                r.last_office_days.is_some(),
+                "complete seeded Round office cursor is missing",
+            )?;
+            for cursor in [
+                Some(r.last_game_days),
+                Some(r.production_last_game_days),
+                r.last_office_days,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                check(
+                    (next_days - cursor).abs() <= 3.0,
+                    "complete Round consumer calendar span exceeds supported horizon",
+                )?;
+            }
+        }
+        check(
+            r.lamp_revision < u64::MAX - 100_000,
+            "complete Round lamp counter headroom",
+        )
+    }
+}
+
+impl Round {
+    /// Retained ordinary ladder scratch, excluded from semantic wire owners.
+    pub fn checkpoint_ladder_scratch_bytes(&self) -> usize {
+        self.ladder_scratch.capacity() * std::mem::size_of::<ActorId>()
+            + 32
+            + self
+                .ladder_scratch
+                .iter()
+                .map(|id| id.allocated_bytes() + 32)
+                .sum::<usize>()
+    }
+}

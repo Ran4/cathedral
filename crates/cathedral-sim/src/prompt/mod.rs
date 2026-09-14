@@ -278,6 +278,7 @@ impl PromptStrings {
 pub struct PromptEnv {
     environment: Environment<'static>,
     strings: PromptStrings,
+    checkpoint_template_identity: [u8; 32],
 }
 
 impl std::fmt::Debug for PromptEnv {
@@ -418,6 +419,13 @@ impl PromptEnv {
             .map_err(|error| PromptError::new(format!("invalid night template: {error}")))?;
 
         Ok(Self {
+            checkpoint_template_identity: crate::checkpoint::complete::hash(&(
+                "minijinja-no-autoescape-keep-trailing-newline-v1",
+                turn_template,
+                night_template,
+                &strings,
+            ))
+            .map_err(|e| PromptError::new(e.to_string()))?,
             environment,
             strings,
         })
@@ -425,6 +433,14 @@ impl PromptEnv {
 
     pub fn strings(&self) -> &PromptStrings {
         &self.strings
+    }
+    pub(crate) fn checkpoint_identity(&self) -> [u8; 32] {
+        let Self {
+            environment: _,
+            strings: _,
+            checkpoint_template_identity: _,
+        } = self;
+        self.checkpoint_template_identity
     }
 }
 

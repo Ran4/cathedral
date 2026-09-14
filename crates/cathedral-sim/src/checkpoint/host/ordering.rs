@@ -32,7 +32,7 @@ fn rank<T>(r: &RecordV1<T>) -> u8 {
         PlayerReceipt { .. } => 23,
     }
 }
-pub(super) fn compare(a: &RecordV1<String>, b: &RecordV1<String>) -> Ordering {
+pub(super) fn compare<T: Ord>(a: &RecordV1<T>, b: &RecordV1<T>) -> Ordering {
     use RecordV1::*;
     rank(a).cmp(&rank(b)).then_with(|| match (a, b) {
         (Hud { slot: a, .. }, Hud { slot: b, .. }) => (*a as u8).cmp(&(*b as u8)),

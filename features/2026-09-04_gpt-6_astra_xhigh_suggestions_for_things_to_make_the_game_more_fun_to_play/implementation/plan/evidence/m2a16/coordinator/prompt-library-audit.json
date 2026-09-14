@@ -1,0 +1,19 @@
+{
+  "excerpt_convention": "Inclusive lines joined by newline, no added terminal newline; full original source hash checked separately",
+  "files": [
+    {
+      "excerpts": 2,
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/compiler/instructions.rs",
+      "sha256": "14be3e9612bc56cfa3d500bbcf582608814f88f6bbef70f590041a92b35fee4f"
+    },
+    {
+      "excerpts": 2,
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/value/mod.rs",
+      "sha256": "f61f39c2b7622ac889fddabd1141769abb1fe8144201f01bdf501ce2b9fa67dc"
+    }
+  ],
+  "owner_record_sha256": "33fc3896867614f3544a0740b593c8e56a987265e7df0c82f985fcea25e29917",
+  "prior_attempt": "Initial audit wrongly required a terminal newline on every excerpt and failed before writing a report. Inspection confirmed all four differed only by that added newline.",
+  "result": "passed",
+  "scope": "Installed locked MiniJinja source hashes and line excerpts; no full process allocation claim"
+}
