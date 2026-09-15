@@ -11,6 +11,8 @@ mod budget;
 pub mod complete;
 pub mod host;
 mod manifest;
+#[cfg(test)]
+mod promotion_review_tests;
 pub(crate) mod records;
 #[cfg(test)]
 mod retirement_review_tests;
@@ -25,8 +27,8 @@ mod wire;
 
 pub use aggregate::ComponentCost;
 pub use budget::{
-    Admitted, CheckpointBudget, Cohort, MAX_RESIDENT_BYTES, Reservation, RetirementLease,
-    RetirementRelease,
+    Admitted, CheckpointBudget, Cohort, MAX_RESIDENT_BYTES, PromotionPermit, Reservation,
+    RetirementLease, RetirementRelease,
 };
 pub use manifest::{CompatibilityManifestV1, VersionedAlgorithmV1};
 pub use time::{CalendarAnchorV1, HostTimeV1, LogicalAnchorV1};

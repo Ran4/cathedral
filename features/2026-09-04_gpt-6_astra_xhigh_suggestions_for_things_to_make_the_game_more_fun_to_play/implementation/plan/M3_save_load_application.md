@@ -1,4 +1,4 @@
-Status: M3a backend storage and M3b1 worker preparation/retirement transport implemented and independently reviewed (2026-09-15). M3b2 whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
+Status: M3a storage, M3b1 worker preparation/retirement transport and M3b2a atomic allocation promotion implemented and independently reviewed (2026-09-15). M3b2b allocation/runtime accounting, M3b2c whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
 
 # M3 — Save-anywhere in the application
 
@@ -53,12 +53,25 @@ exercises real M3a files and actual LocalEngine retirement, with 2,272 passing
 workspace tests and independent boundary/source/phase audits. It does not yet
 restore a running App.
 
-M3b2 belongs to the next fresh sequential owner. It closes actual allocation and
-detached-worker/log-queue accounting, atomic cohort promotion, inactive ECS
-staging, complete host/controller/time restoration, initial publication without
-a poll, and the final exclusive adoption barrier. M3b remains incomplete until
-both cuts pass independent review. M3c supplies player controls, and M3d measures
-the complete host path.
+M3b2 closes actual allocation and detached-worker/log-queue accounting, atomic
+cohort promotion, inactive ECS staging, complete host/controller/time
+restoration, initial publication without a poll, and the final exclusive
+adoption barrier. Source review divided it into three sequential review units:
+
+- M3b2a, accepted: stable allocation groups and a cancellable, atomic promotion primitive.
+  Existing children follow their world, persistent service charges stay
+  Running, and retirement release includes surviving migrated children.
+  The [M3b2a evidence](evidence/m3b2a/README.md) includes eight new witnesses,
+  2,280 passing workspace tests and independently audited fixed metadata bounds.
+- M3b2b: actual live/candidate/retired/persistent allocation accounting and
+  bounded log/runtime ownership. Cohort renaming alone cannot fit two 512 MiB
+  Running minima plus service overhead under the 1 GiB cap.
+- M3b2c: complete application staging and adoption using those accepted
+  contracts, including clocks, physical state, all host records and projections.
+
+Each unit has a fresh sequential owner and its own reviewed commit. M3b remains
+incomplete until all these boundaries work together. M3c supplies player
+controls, and M3d measures the complete host path.
 
 ## Entry
 

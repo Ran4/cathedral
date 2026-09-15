@@ -1,0 +1,358 @@
+{
+  "auditor_sha256": "54349c615978dcf91fb5f2e72e5aea49c7910e13749bd480214f873a0b5213fa",
+  "commands": [
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/usr/bin/git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-diff-check",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2a-final-diff-check.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "6ff87940ac3f400b0f266d508bc6801f5fc8a6e2918ec32b8c4df3f22f29b234",
+      "source_count": 1003,
+      "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.0037097891326993704
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--check",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-sim/src/checkpoint/budget.rs",
+        "crates/cathedral-sim/src/checkpoint/mod.rs",
+        "crates/cathedral-sim/src/checkpoint/promotion_review_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-format",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2a-final-format.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "6ff87940ac3f400b0f266d508bc6801f5fc8a6e2918ec32b8c4df3f22f29b234",
+      "source_count": 1003,
+      "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.01854173094034195
+    },
+    {
+      "archive_sha256": "eefc7bc6202fdd1ebad6a83c9c6a029aeed39ad320195a6ce050805fd01c303b",
+      "command": [
+        "/home/ran/.local/bin/uv",
+        "run",
+        "--no-project",
+        "--cache-dir",
+        "/tmp/alibi-uv",
+        "python",
+        "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3b2a/owner/layout.py",
+        "final-workspace"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-layout",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 3468,
+      "raw_log": "/tmp/alibi-m3b2a-final-layout.log",
+      "raw_sha256": "2238c598ff7de72c6911f05ceda77cf6df8a8528be6090c6bdb4c90f588ccf0c",
+      "runner_sha256": "6ff87940ac3f400b0f266d508bc6801f5fc8a6e2918ec32b8c4df3f22f29b234",
+      "source_count": 1003,
+      "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 5.846650963881984
+    },
+    {
+      "archive_sha256": "c35df04bdc82c7b5ae9f4b3c453a918fe1c23f5ec8a710dce8b0f2ea592258f6",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-workspace",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 519816,
+      "raw_log": "/tmp/alibi-m3b2a-final-workspace.log",
+      "raw_sha256": "6d9128f662662d617c237ec456bf98b8cc24cf991ff69cee20f463dfc6348010",
+      "runner_sha256": "6ff87940ac3f400b0f266d508bc6801f5fc8a6e2918ec32b8c4df3f22f29b234",
+      "source_count": 1003,
+      "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032",
+      "sources_unchanged": true,
+      "test_groups": 46,
+      "test_totals": [
+        2280,
+        0,
+        47
+      ],
+      "wall_seconds": 1497.4735277839936
+    },
+    {
+      "archive_sha256": "15e13014a5510e668e5e164f85b52ae8a37e6d156873f3fa6976c172b76dc7d2",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint::",
+        "--offline",
+        "-j1",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "focused-checkpoint-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 29071,
+      "raw_log": "/tmp/alibi-m3b2a-focused-checkpoint-01.log",
+      "raw_sha256": "7b7223822750e60eb7cedcc0f9fb7ae9743d2363611f7590664bbc8f928dbe70",
+      "runner_sha256": "6ff87940ac3f400b0f266d508bc6801f5fc8a6e2918ec32b8c4df3f22f29b234",
+      "source_count": 1003,
+      "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        210,
+        0,
+        27
+      ],
+      "wall_seconds": 0.8134317758958787
+    },
+    {
+      "archive_sha256": "f1c3fb4c85deed691bedbda51ee805df3fe2a01e18b56e0f6d13de32e1d801ab",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "checkpoint::budget::tests",
+        "--offline",
+        "-j1",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "focused-owner-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 697,
+      "raw_log": "/tmp/alibi-m3b2a-focused-owner-01.log",
+      "raw_sha256": "0378a9a9ee93f51136505543701379941fdc581227364fdd3e03696140ef9111",
+      "runner_sha256": "6ff87940ac3f400b0f266d508bc6801f5fc8a6e2918ec32b8c4df3f22f29b234",
+      "source_count": 1003,
+      "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        3,
+        0,
+        0
+      ],
+      "wall_seconds": 182.03418173710816
+    },
+    {
+      "archive_sha256": "964e9a091db6ef788b608171d6f1693c0238a235ad7c08000cf3c171004ccdae",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "promotion",
+        "--offline",
+        "-j1",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "focused-promotion-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 962,
+      "raw_log": "/tmp/alibi-m3b2a-focused-promotion-01.log",
+      "raw_sha256": "3545adc94c4397d7ba55658bc152aca8f71c1da905b681c1e6a7e43e92e1c9df",
+      "runner_sha256": "6ff87940ac3f400b0f266d508bc6801f5fc8a6e2918ec32b8c4df3f22f29b234",
+      "source_count": 1003,
+      "source_map_sha256": "42023fda0471f8fcd7a4881abc9fe90eed26dd19adde39a1e32ced46afb2433a",
+      "sources_unchanged": false,
+      "test_groups": 1,
+      "test_totals": [
+        5,
+        0,
+        0
+      ],
+      "wall_seconds": 254.6230157050304
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-sim/src/checkpoint/budget.rs",
+        "crates/cathedral-sim/src/checkpoint/mod.rs",
+        "crates/cathedral-sim/src/checkpoint/promotion_review_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "format-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2a-format-01.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "6ff87940ac3f400b0f266d508bc6801f5fc8a6e2918ec32b8c4df3f22f29b234",
+      "source_count": 1003,
+      "source_map_sha256": "7e472c139d4a1951053f60b2f45a57a142290c7ba8559370e54abf80790533f9",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.018447268987074494
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-sim/src/checkpoint/budget.rs",
+        "crates/cathedral-sim/src/checkpoint/mod.rs",
+        "crates/cathedral-sim/src/checkpoint/promotion_review_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "format-02",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2a-format-02.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "6ff87940ac3f400b0f266d508bc6801f5fc8a6e2918ec32b8c4df3f22f29b234",
+      "source_count": 1003,
+      "source_map_sha256": "bf536fc3d52b641f8719beecb70c57cf0e71acbd21e6c89fd0c987d5273d2de6",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.02696092310361564
+    }
+  ],
+  "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "maps_without_started_command": [],
+  "pending": []
+}

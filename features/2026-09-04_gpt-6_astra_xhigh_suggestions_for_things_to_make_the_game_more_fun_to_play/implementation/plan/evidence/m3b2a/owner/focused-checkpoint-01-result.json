@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "15e13014a5510e668e5e164f85b52ae8a37e6d156873f3fa6976c172b76dc7d2",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m3b2a-focused-checkpoint-01.log",
+  "raw_sha256": "7b7223822750e60eb7cedcc0f9fb7ae9743d2363611f7590664bbc8f928dbe70",
+  "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032",
+  "sources_unchanged": true,
+  "wall_seconds": 0.8134317758958787
+}

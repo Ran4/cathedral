@@ -1,0 +1,22 @@
+{
+  "added": {
+    "crates/cathedral-sim/src/checkpoint/promotion_review_tests.rs": "c6c02c862aac4c8ccb7e3a3354f4281d5220fa79eadd3271345ff7221e2b86bd"
+  },
+  "auditor_sha256": "6f1c4f2cc8a6048933338fcbdb95ed4d3b51a90e2564f1508aa3d93728f0ba35",
+  "changed": {
+    "crates/cathedral-sim/src/checkpoint/budget.rs": {
+      "after": "eaa5778bea878efceefb433600e55dc3afb329d29f655d667b5eef2aafe838f2",
+      "before": "30ecd176a00b7e3bb89a865a11b2bce6af677209c6b16e93acdf103fbcdcc7a6"
+    },
+    "crates/cathedral-sim/src/checkpoint/mod.rs": {
+      "after": "5e290b101cbc8ab5816e33f22275733fa5719f2ba43167cccc5f809ad6ec53c8",
+      "before": "fe9aa2abdd895d28e5b94b22a6ec2cf993dcdd31e035d5d256ddf626e9fa5fb5"
+    }
+  },
+  "current_count": 1003,
+  "predecessor_commit": "72bc316e592a260344033689ae33b1ca7aa4c361",
+  "prior_count": 1002,
+  "removed": [],
+  "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032",
+  "unchanged_predecessor_inputs": 1000
+}

@@ -1,0 +1,32 @@
+{
+  "auditor_sha256": "6e4aa5cad2ed5dd0987d011863088cc264758dd25a42aff0561e446ea11cf3c5",
+  "command_name": "final-workspace",
+  "migration_witnesses_passed": [
+    "promotion_review_dropped_ticket_keeps_live_root_and_all_original_roles",
+    "promotion_review_children_follow_their_world_and_release_observers_wait_for_them",
+    "promotion_review_foreign_and_persistent_roots_refuse_without_mutation",
+    "promotion_review_worker_resize_and_release_never_debit_the_new_running_group",
+    "promotion_review_opaque_admitted_payload_keeps_its_charge_through_disposal",
+    "opaque_admitted_owner_promotes_and_keeps_actual_payload_charged_through_drop",
+    "promotion_retirement_observation_tracks_children_without_pinning_them",
+    "previously_used_retirement_group_cannot_be_rewrapped_for_another_world"
+  ],
+  "predecessor_lifetime_boundaries_passed": [
+    "retirement_review_last_worker_owner_pins_charge_without_the_observer_pinning_it",
+    "retirement_review_recipe_cannot_outlive_its_charge_or_bypass_a_full_shared_budget",
+    "retirement_review_cannot_wrap_a_save_or_load_charge_as_a_retiring_generation",
+    "retirement_review_fence_preserves_payloads_until_worker_drain_and_last_endpoint_release",
+    "retirement_review_pin_refusals_preserve_the_original_live_mailbox_and_lease",
+    "retirement_review_every_terminal_family_is_inert_after_fence_with_live_reused_ids",
+    "preparation_review_shutdown_preserves_every_delivery_stage_behind_blocked_retirement",
+    "preparation_review_admission_failure_returns_a_disposal_only_candidate_without_freeing_it",
+    "real_local_retirement_drains_queues_flushes_promptlog_and_pins_external_owners",
+    "retirement_generation_refusal_returns_whole_local_bundle_unchanged",
+    "service_factory_refusal_mismatch_unwind_and_repeat_binding_release_all_owners",
+    "retained_service_mismatch_keeps_real_services_charged_until_candidate_disposal"
+  ],
+  "raw_log": "/tmp/alibi-m3b2a-final-workspace.log",
+  "raw_sha256": "6d9128f662662d617c237ec456bf98b8cc24cf991ff69cee20f463dfc6348010",
+  "scope": "Stable group/promotion/retirement identity and existing transport compatibility; no complete App adoption, numerical two-world residency or frame acceptance.",
+  "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032"
+}

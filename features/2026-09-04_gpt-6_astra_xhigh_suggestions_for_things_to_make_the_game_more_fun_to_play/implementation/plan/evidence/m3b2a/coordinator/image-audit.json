@@ -1,0 +1,96 @@
+{
+  "auditor_sha256": "61b0ad3f8c6ae817ddd654583a6ddb650dd1c66a2d588fdac7187dbff830c7ba",
+  "fixed_control_upper_bytes": 60712,
+  "layout_run": "final-layout",
+  "scope": "Fixed DWARF layouts and arithmetic, including promotion metadata; not actual world, host or native heap bounds. Both test ELFs were hashed in place, with no separately preserved copies.",
+  "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032",
+  "verified_metadata": {
+    "binary_copies_preserved": false,
+    "fixed_control_allowance_bytes": 65536,
+    "fixed_control_upper_bytes": 60712,
+    "helper_sha256": "8dd82b1d656a8d2d8b037c4f0848ec4d35a6e7dca51785729e5f2d277bfe2080",
+    "images": {
+      "cathedral_backends": {
+        "bytes": 381427848,
+        "command": [
+          "/usr/bin/gdb",
+          "-nx",
+          "-nh",
+          "--batch",
+          "/home/ran/src/rust/cathedralbevy/target/debug/deps/cathedral_backends-22310518b4c01644",
+          "-ex",
+          "set language rust",
+          "-ex",
+          "p sizeof(cathedral_backends::checkpoint_preparation::Core)",
+          "-ex",
+          "p sizeof(cathedral_backends::checkpoint_preparation::Queue)",
+          "-ex",
+          "p sizeof(cathedral_backends::checkpoint_preparation::PrepState)",
+          "-ex",
+          "p sizeof(cathedral_backends::checkpoint_preparation::PreparedDelivery)",
+          "-ex",
+          "p sizeof(cathedral_backends::checkpoint_preparation::DeliveryDisposal)",
+          "-ex",
+          "p sizeof(cathedral_backends::checkpoint_preparation::RetiredPayload)",
+          "-ex",
+          "p sizeof(cathedral_backends::checkpoint_preparation::PreparationPermit)",
+          "-ex",
+          "p sizeof(cathedral_backends::checkpoint_preparation::RetirementPermit)",
+          "-ex",
+          "p sizeof(cathedral_backends::checkpoint_preparation::Job)"
+        ],
+        "layout": {
+          "checkpoint_preparation::Core": 11712,
+          "checkpoint_preparation::DeliveryDisposal": 11384,
+          "checkpoint_preparation::Job": 440,
+          "checkpoint_preparation::PrepState": 11504,
+          "checkpoint_preparation::PreparationPermit": 448,
+          "checkpoint_preparation::PreparedDelivery": 11600,
+          "checkpoint_preparation::Queue": 11656,
+          "checkpoint_preparation::RetiredPayload": 24,
+          "checkpoint_preparation::RetirementPermit": 32
+        },
+        "path": "/home/ran/src/rust/cathedralbevy/target/debug/deps/cathedral_backends-22310518b4c01644",
+        "sha256": "283d7b8396732987133628e02ad768c58ca2078d3f1c845f214cbcfd823ae562",
+        "target_executed": false
+      },
+      "cathedral_sim": {
+        "bytes": 332683680,
+        "command": [
+          "/usr/bin/gdb",
+          "-nx",
+          "-nh",
+          "--batch",
+          "/home/ran/src/rust/cathedralbevy/target/debug/deps/cathedral_sim-29e329e3d5b1c8e4",
+          "-ex",
+          "set language rust",
+          "-ex",
+          "p sizeof(cathedral_sim::checkpoint::budget::Usage)",
+          "-ex",
+          "p sizeof(cathedral_sim::checkpoint::budget::Group)",
+          "-ex",
+          "p sizeof(cathedral_sim::checkpoint::budget::Reservation)",
+          "-ex",
+          "p sizeof(cathedral_sim::checkpoint::budget::PromotionPermit)",
+          "-ex",
+          "p sizeof(cathedral_sim::checkpoint::budget::RetirementOwner)",
+          "-ex",
+          "p sizeof(cathedral_sim::checkpoint::budget::RetirementRelease)"
+        ],
+        "layout": {
+          "checkpoint::budget::Group": 32,
+          "checkpoint::budget::PromotionPermit": 64,
+          "checkpoint::budget::Reservation": 24,
+          "checkpoint::budget::RetirementOwner": 64,
+          "checkpoint::budget::RetirementRelease": 24,
+          "checkpoint::budget::Usage": 240
+        },
+        "path": "/home/ran/src/rust/cathedralbevy/target/debug/deps/cathedral_sim-29e329e3d5b1c8e4",
+        "sha256": "78ca82284ea9c52d94e412c1858a8b80c96ac7310c273b06ab586f3bf4fce936",
+        "target_executed": false
+      }
+    },
+    "source_map_sha256": "04046178497e975d6942f76232ef3696fd5a4ad7674494ffc817e79d5b978032"
+  },
+  "workspace": "final-workspace"
+}
