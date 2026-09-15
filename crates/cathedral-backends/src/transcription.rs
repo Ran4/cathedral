@@ -51,6 +51,7 @@ use crate::{
 /// `server.py:585-587` — the batch queue.
 pub const STT_QUEUE_CAPACITY: usize = 4;
 pub const DISCARD_QUEUE_CAPACITY: usize = 64;
+pub const MAX_RECORDING_PATH_BYTES: usize = 4096;
 
 /// How much of a recording [`SttEngine::recording_seconds`] reads before it
 /// gives up on the short road. The microphone's own header is 44 bytes; a page
@@ -133,6 +134,9 @@ pub struct SttEngine {
     /// which has no microphone.
     session_dir: Option<PathBuf>,
     worker: Option<JoinHandle<()>>,
+    discard_worker: Option<JoinHandle<()>>,
+    // Worker closures retain only Handle. This outer owner survives both joins.
+    _runtime: Option<Arc<BackendRuntime>>,
 }
 
 impl std::fmt::Debug for SttEngine {
@@ -155,7 +159,20 @@ impl SttEngine {
         session_dir: Option<PathBuf>,
         events: BackendSender,
     ) -> Self {
-        let cloud = Arc::new(CloudTranscriber::new(settings));
+        Self::start(runtime, settings, session_dir, events, None)
+    }
+
+    fn start(
+        runtime: Arc<BackendRuntime>,
+        settings: &SpeechSettings,
+        session_dir: Option<PathBuf>,
+        events: BackendSender,
+        before_discard: Option<Arc<dyn Fn(&Path) + Send + Sync>>,
+    ) -> Self {
+        let cloud = Arc::new(CloudTranscriber::with_resolver(
+            settings,
+            runtime.resolver(events.clone()),
+        ));
         let local = Arc::new(CanaryTranscriber::new(settings, events.clone()));
         let realtime = RealtimeSttHandle::connect(&runtime, settings, events.clone());
 
@@ -163,8 +180,10 @@ impl SttEngine {
         let worker = {
             let cloud = Arc::clone(&cloud);
             let local = Arc::clone(&local);
+            let runtime = runtime.executor();
             std::thread::Builder::new()
                 .name("cathedral-stt".to_string())
+                .stack_size(crate::runtime::NATIVE_STACK_BYTES)
                 .spawn(move || {
                     for job in inbox {
                         if !job.delivery.is_active() {
@@ -188,20 +207,35 @@ impl SttEngine {
         };
 
         let (discards, disposals) = bounded::<Discard>(DISCARD_QUEUE_CAPACITY);
-        std::thread::Builder::new()
+        let discard_worker = std::thread::Builder::new()
             .name("cathedral-stt-discard".to_string())
+            .stack_size(crate::runtime::NATIVE_STACK_BYTES)
             .spawn(move || {
                 for job in disposals {
                     match job {
-                        Discard::File(path) => remove_recording(&path),
+                        Discard::File(path) => {
+                            if let Some(hook) = &before_discard {
+                                hook(&path);
+                            }
+                            remove_recording(&path)
+                        }
                         #[cfg(test)]
                         Discard::Barrier(done) => {
                             let _ = done.send(());
                         }
                     }
                 }
-            })
-            .expect("a recording-disposal thread");
+            });
+        let discard_worker = match discard_worker {
+            Ok(worker) => worker,
+            Err(error) => {
+                // Construction has not published an engine. Close the earlier
+                // queue and join its actual worker before unwinding its pins.
+                drop(jobs);
+                let _ = worker.join();
+                panic!("a recording-disposal thread: {error}");
+            }
+        };
 
         Self {
             events,
@@ -212,6 +246,36 @@ impl SttEngine {
             discards,
             session_dir,
             worker: Some(worker),
+            discard_worker: Some(discard_worker),
+            _runtime: Some(runtime),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_discard_hook(
+        runtime: Arc<BackendRuntime>,
+        settings: &SpeechSettings,
+        session_dir: Option<PathBuf>,
+        events: BackendSender,
+        hook: Arc<dyn Fn(&Path) + Send + Sync>,
+    ) -> Self {
+        Self::start(runtime, settings, session_dir, events, Some(hook))
+    }
+
+    /// Owned cleanup admission; exact input allocation returns on refusal.
+    /// This checks a resolved path and never performs IO or waits for the worker.
+    pub fn try_discard_resolved(&self, path: PathBuf) -> Result<(), PathBuf> {
+        if path.capacity() > MAX_RECORDING_PATH_BYTES || !self.events.is_active() {
+            return Err(path);
+        }
+        match self.discards.try_send(Discard::File(path)) {
+            Ok(()) => Ok(()),
+            Err(
+                TrySendError::Full(Discard::File(path))
+                | TrySendError::Disconnected(Discard::File(path)),
+            ) => Err(path),
+            #[cfg(test)]
+            Err(_) => unreachable!("submitted a file"),
         }
     }
 
@@ -220,6 +284,9 @@ impl SttEngine {
     /// path is the caller's own business — the headless runner and the tests
     /// hand over temp files.
     fn resolve(&self, path: PathBuf) -> Result<PathBuf, SpeechError> {
+        if path.capacity() > MAX_RECORDING_PATH_BYTES {
+            return Err(SpeechError::new("recording path exceeds byte limit"));
+        }
         if path.is_absolute() {
             return Ok(path);
         }
@@ -230,7 +297,24 @@ impl SttEngine {
             .session_dir
             .as_deref()
             .ok_or_else(|| SpeechError::new("there is no runtime directory for recordings"))?;
-        Ok(safe_session_path(directory, basename)?)
+        if directory
+            .as_os_str()
+            .len()
+            .saturating_add(basename.len())
+            .saturating_add(1)
+            > MAX_RECORDING_PATH_BYTES
+        {
+            return Err(SpeechError::new(
+                "resolved recording path exceeds byte limit",
+            ));
+        }
+        let path = safe_session_path(directory, basename)?;
+        if path.capacity() > MAX_RECORDING_PATH_BYTES {
+            return Err(SpeechError::new(
+                "resolved recording capacity exceeds byte limit",
+            ));
+        }
+        Ok(path)
     }
 
     /// Block until every recording handed to
@@ -370,7 +454,7 @@ impl Transcription for SttEngine {
         let Ok(path) = self.resolve(wav_path.to_path_buf()) else {
             return;
         };
-        if self.discards.try_send(Discard::File(path)).is_err() {
+        if self.try_discard_resolved(path).is_err() {
             // The private SessionDir still owns the file. Its retirement cleanup
             // removes deferred discards; never perform filesystem IO on the host.
             self.events.send(cathedral_sim::StatusEvent {
@@ -389,20 +473,24 @@ impl Drop for SttEngine {
         if let Some(realtime) = &self.realtime {
             realtime.close();
         }
-        // The child dies first — it is what unblocks a worker thread parked on a
-        // model download — and the queue closes behind it. Not joined: a cloud
-        // request still inside its timeout must not hold the game's exit open.
+        // Final disposal runs off-frame. Interrupt local work, close both queues,
+        // then join while retaining the outer generation endpoint and runtime.
+        // Closure return precedes native stack teardown; detached handles are
+        // not a lifetime barrier.
         if let Some(local) = &self.local {
             local.close();
         }
         let (dead, _) = bounded(0);
         drop(std::mem::replace(&mut self.jobs, dead));
-        // The disposal thread ends with its queue too. Not joined either: what
-        // it still owes is a handful of unlinks inside a directory `SessionDir`
-        // is about to remove wholesale.
+        // Accepted unlinks remain owned until the disposal worker has joined.
         let (dead, _) = bounded(0);
         drop(std::mem::replace(&mut self.discards, dead));
-        self.worker.take();
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
+        if let Some(worker) = self.discard_worker.take() {
+            let _ = worker.join();
+        }
     }
 }
 

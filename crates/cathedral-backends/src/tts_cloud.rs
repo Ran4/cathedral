@@ -299,8 +299,17 @@ pub struct CloudTts {
 
 impl CloudTts {
     pub fn new(settings: &SpeechSettings) -> Self {
+        Self::with_resolver(settings, crate::dns::NativeResolver::standalone())
+    }
+    pub(crate) fn with_resolver(
+        settings: &SpeechSettings,
+        resolver: crate::dns::NativeResolver,
+    ) -> Self {
         Self {
-            http: reqwest::Client::new(),
+            http: reqwest::Client::builder()
+                .dns_resolver(std::sync::Arc::new(resolver))
+                .build()
+                .expect("speech HTTP client"),
             api_key: settings.api_key.clone(),
             base_url: settings.base_url.trim_end_matches('/').to_string(),
             model: settings.tts_model.clone(),

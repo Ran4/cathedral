@@ -32,7 +32,7 @@ use std::{
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
     sync::{
         Arc, Mutex, OnceLock,
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::{Duration, Instant},
 };
@@ -149,6 +149,79 @@ struct WorkerIo {
     stdout: BufReader<ChildStdout>,
 }
 
+/// Includes active children, stderr readers and unfinished native reapers.
+/// Restart refuses while both original child generations still own resources.
+pub const MAX_CHILD_GENERATIONS: usize = 2;
+struct NativeChild {
+    child: Option<Child>,
+    logger: Option<std::thread::JoinHandle<()>>,
+    reaper: Option<std::thread::JoinHandle<()>>,
+    // Native joins run before this immutable endpoint is released.
+    _events: BackendSender,
+}
+impl NativeChild {
+    fn finished(&self) -> bool {
+        self.child.is_none()
+            && self.logger.as_ref().is_none_or(|h| h.is_finished())
+            && self.reaper.as_ref().is_none_or(|h| h.is_finished())
+    }
+    fn start_reaper(
+        &mut self,
+        source: &'static str,
+        after_reap: Option<Arc<dyn Fn() + Send + Sync>>,
+    ) {
+        let Some(child) = self.child.take() else {
+            return;
+        };
+        // A failed spawn drops its closure. Keep recoverable ownership outside
+        // that closure so the actual Child can never be abandoned on failure.
+        let child = Arc::new(Mutex::new(Some(child)));
+        let worker_child = Arc::clone(&child);
+        match std::thread::Builder::new()
+            .name(format!("{source}-worker-reaper"))
+            .stack_size(crate::runtime::NATIVE_STACK_BYTES)
+            .spawn(move || {
+                if let Some(child) = worker_child.lock().unwrap().take() {
+                    terminate_and_reap(child);
+                }
+                if let Some(hook) = after_reap {
+                    hook();
+                }
+            }) {
+            Ok(worker) => self.reaper = Some(worker),
+            Err(_) => {
+                // This path is already on the blocking STT/TTS request worker.
+                if let Some(child) = child.lock().unwrap().take() {
+                    terminate_and_reap(child);
+                }
+            }
+        }
+    }
+}
+impl Drop for NativeChild {
+    fn drop(&mut self) {
+        if let Some(child) = self.child.take() {
+            terminate_and_reap(child);
+        }
+        if let Some(worker) = self.reaper.take() {
+            let _ = worker.join();
+        }
+        if let Some(worker) = self.logger.take() {
+            let _ = worker.join();
+        }
+    }
+}
+struct Children {
+    active: Option<NativeChild>,
+    retired: Vec<NativeChild>,
+}
+impl Children {
+    fn collect_finished(&mut self) {
+        // Only completed native workers are joined on the request path.
+        self.retired.retain(|child| !child.finished());
+    }
+}
+
 /// One lazily-started, reused ML worker subprocess.
 pub struct Worker {
     spec: WorkerSpec,
@@ -157,7 +230,10 @@ pub struct Worker {
     io: Mutex<Option<WorkerIo>>,
     /// Separate on purpose — [`Worker::close`] must be able to kill a child that
     /// a request thread is currently blocked on.
-    child: Mutex<Option<Child>>,
+    children: Mutex<Children>,
+    closed: AtomicBool,
+    #[cfg(test)]
+    reap_hook: Option<Arc<dyn Fn() + Send + Sync>>,
     next_request_id: AtomicU64,
     spawns: AtomicU64,
 }
@@ -178,7 +254,13 @@ impl Worker {
             spec,
             events,
             io: Mutex::new(None),
-            child: Mutex::new(None),
+            children: Mutex::new(Children {
+                active: None,
+                retired: Vec::with_capacity(MAX_CHILD_GENERATIONS),
+            }),
+            closed: AtomicBool::new(false),
+            #[cfg(test)]
+            reap_hook: None,
             next_request_id: AtomicU64::new(0),
             spawns: AtomicU64::new(0),
         }
@@ -259,10 +341,15 @@ impl Worker {
     /// `SIGTERM → wait 1 s → SIGKILL`, without the request lock: shutdown must
     /// interrupt a worker that is mid-download (`speech_client.py:778-789`).
     pub fn close(&self) {
-        let child = self.child.lock().expect("worker child lock").take();
-        if let Some(child) = child {
-            terminate_and_reap(child);
-        }
+        self.closed.store(true, Ordering::Release);
+        let mut children = self.children.lock().expect("worker child lock");
+        // Do not hold the child mutex while termination/join may block. This
+        // remains independent of the request IO mutex and can interrupt reads.
+        let active = children.active.take();
+        let retired = std::mem::take(&mut children.retired);
+        drop(children);
+        drop(active);
+        drop(retired);
     }
 
     // ------------------------------------------------------------- internals
@@ -271,9 +358,14 @@ impl Worker {
         if io.is_some() && self.child_is_running() {
             return Ok(());
         }
-        *io = None;
-        if !self.available() {
+        self.forget(io);
+        if self.closed.load(Ordering::Acquire) || !self.available() {
             return Err(self.error(self.spec.messages.unavailable));
+        }
+        let mut children = self.children.lock().expect("worker child lock");
+        children.collect_finished();
+        if self.closed.load(Ordering::Acquire) || children.retired.len() >= MAX_CHILD_GENERATIONS {
+            return Err(self.error("local worker cleanup capacity exhausted"));
         }
         self.status("loading", self.spec.loading_message);
 
@@ -296,15 +388,20 @@ impl Worker {
         let stdin = child.stdin.take().expect("piped stdin");
         let stdout = BufReader::new(child.stdout.take().expect("piped stdout"));
         let stderr = child.stderr.take().expect("piped stderr");
-        self.forward_stderr(stderr);
-
-        {
-            let mut slot = self.child.lock().expect("worker child lock");
-            if let Some(mut previous) = slot.replace(child) {
-                let _ = previous.kill();
-                let _ = previous.wait();
+        let logger = match self.forward_stderr(stderr) {
+            Ok(logger) => logger,
+            Err(_) => {
+                terminate_and_reap(child);
+                return Err(self.error(self.spec.messages.start_failed));
             }
-        }
+        };
+        children.active = Some(NativeChild {
+            child: Some(child),
+            logger: Some(logger),
+            reaper: None,
+            _events: self.events.clone(),
+        });
+        drop(children);
         *io = Some(WorkerIo { stdin, stdout });
 
         // The handshake. Anything but `ready` means the model did not load.
@@ -351,46 +448,53 @@ impl Worker {
     /// (`_forget_process`, `speech_client.py:446-450`).
     fn forget(&self, io: &mut Option<WorkerIo>) {
         *io = None;
-        let child = self.child.lock().expect("worker child lock").take();
-        let Some(child) = child else { return };
-        // A dead child is reaped by its *parent*, not by the OS, and `Child` has
-        // no `Drop` that waits — a signalled worker we drop here stays a zombie
-        // for the rest of the session, one pid per poisoned stream. But we
-        // cannot wait for it either: forgetting happens on the request path and
-        // a wedged child must not hold a turn. So the corpse goes to a
-        // short-lived thread that runs the same `SIGTERM → 1 s → SIGKILL → wait`
-        // shutdown does, out of the caller's way.
-        let reaper = std::thread::Builder::new()
-            .name(format!("{}-worker-reaper", self.spec.log_source))
-            .spawn(move || terminate_and_reap(child));
-        if reaper.is_err() {
-            log(
-                self.spec.log_source,
-                "could not start a reaper thread; a forgotten worker may linger",
-            );
-        }
+        let mut children = self.children.lock().expect("worker child lock");
+        let Some(mut child) = children.active.take() else {
+            return;
+        };
+        #[cfg(test)]
+        let hook = self.reap_hook.clone();
+        #[cfg(not(test))]
+        let hook = None;
+        child.start_reaper(self.spec.log_source, hook);
+        // Admission preceded spawning the active child; this push cannot exceed
+        // the two-entry allocation even after repeated poisoned streams.
+        children.retired.push(child);
     }
 
     /// The pid of the child currently held, so a test can follow it into
     /// `/proc` after the worker has let go of it.
     #[cfg(test)]
     fn child_pid(&self) -> Option<u32> {
-        self.child
+        self.children
             .lock()
             .expect("worker child lock")
+            .active
             .as_ref()
+            .and_then(|native| native.child.as_ref())
             .map(Child::id)
     }
 
     fn child_is_running(&self) -> bool {
-        let mut slot = self.child.lock().expect("worker child lock");
-        match slot.as_mut() {
-            Some(child) => matches!(child.try_wait(), Ok(None)),
-            None => false,
-        }
+        let mut children = self.children.lock().expect("worker child lock");
+        children
+            .active
+            .as_mut()
+            .and_then(|native| native.child.as_mut())
+            .is_some_and(|child| matches!(child.try_wait(), Ok(None)))
     }
 
-    fn forward_stderr(&self, stderr: std::process::ChildStderr) {
+    #[cfg(test)]
+    pub(crate) fn native_children(&self) -> usize {
+        let mut children = self.children.lock().unwrap();
+        children.collect_finished();
+        children.retired.len() + usize::from(children.active.is_some())
+    }
+
+    fn forward_stderr(
+        &self,
+        stderr: std::process::ChildStderr,
+    ) -> std::io::Result<std::thread::JoinHandle<()>> {
         let events = self.events.clone();
         let source = self.spec.log_source;
         let subsystem = self.spec.subsystem;
@@ -398,6 +502,7 @@ impl Worker {
         let progress = self.spec.install_progress_statuses;
         std::thread::Builder::new()
             .name(format!("{source}-worker-log"))
+            .stack_size(crate::runtime::NATIVE_STACK_BYTES)
             .spawn(move || {
                 let mut reader = BufReader::new(stderr);
                 while let Ok(line) = bounded_line(&mut reader, MAX_WORKER_LOG_BYTES) {
@@ -425,7 +530,6 @@ impl Worker {
                     }
                 }
             })
-            .expect("a log-forwarding thread");
     }
 
     fn status(&self, state: &str, message: &str) {
@@ -1033,5 +1137,60 @@ done
             "terminate, wait one second, then kill: {elapsed:?}"
         );
         assert!(!worker.child_is_running(), "the child is gone");
+    }
+    #[test]
+    fn native_child_cleanup_slots_include_reaped_but_unjoined_threads() {
+        let stub = StubWorker::new(
+            "bounded-reapers",
+            &[
+                r#"{"type":"ready"}"#,
+                r#"{"type":"result","request_id":99,"text":"poison"}"#,
+            ],
+        );
+        let (sender, _events) = backend_channel();
+        let (entered, waiting) = crossbeam_channel::bounded(2);
+        let (release, gate) = crossbeam_channel::bounded(2);
+        let mut worker = Worker::new(stub.spec(MESSAGES), sender);
+        worker.reap_hook = Some(Arc::new(move || {
+            entered.send(()).unwrap();
+            gate.recv_timeout(Duration::from_secs(20)).unwrap();
+        }));
+        struct ReleaseOnDrop(crossbeam_channel::Sender<()>);
+        impl Drop for ReleaseOnDrop {
+            fn drop(&mut self) {
+                for _ in 0..MAX_CHILD_GENERATIONS {
+                    let _ = self.0.try_send(());
+                }
+            }
+        }
+        let _unwind_release = ReleaseOnDrop(release.clone());
+        for _ in 0..MAX_CHILD_GENERATIONS {
+            echo(&worker, body(&[])).expect_err("poisoned real child");
+            waiting.recv_timeout(Duration::from_secs(20)).unwrap();
+        }
+        assert_eq!(worker.native_children(), MAX_CHILD_GENERATIONS);
+        let before = worker.spawn_count();
+        assert_eq!(
+            worker.warm().unwrap_err().presentable,
+            "local worker cleanup capacity exhausted"
+        );
+        assert_eq!(
+            worker.spawn_count(),
+            before,
+            "refusal precedes process spawn"
+        );
+        release.send(()).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(20);
+        while worker.native_children() == MAX_CHILD_GENERATIONS {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        worker.warm().expect("joined slot permits one replacement");
+        assert_eq!(worker.spawn_count(), before + 1);
+        assert_eq!(worker.native_children(), MAX_CHILD_GENERATIONS);
+        release.send(()).unwrap();
+        worker.close();
+        assert_eq!(worker.native_children(), 0);
+        assert!(worker.warm().is_err(), "close is terminal");
     }
 }

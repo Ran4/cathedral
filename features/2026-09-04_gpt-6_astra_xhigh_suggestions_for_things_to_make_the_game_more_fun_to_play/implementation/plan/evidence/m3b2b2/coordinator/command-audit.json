@@ -1,0 +1,757 @@
+{
+  "auditor_sha256": "8e9ff9827cd460a771502af8b605595a017af79dc1af57a14107ba182d01a22e",
+  "commands": [
+    {
+      "archive_sha256": "0e22dbf282786da41bb9f56c5f4b48056318eeab73c0baca1b655483da27a9bf",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "--no-run",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-backend-check-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 1081,
+      "raw_log": "/tmp/alibi-m3b2b2-development-backend-check-01.log",
+      "raw_sha256": "7eb2a02371155bce5da89dd31f1e8bc0a3d06f0377fcb1d3e9ab9436279552eb",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1006,
+      "source_map_sha256": "f9457e07f4c7bc08f3ae70e601c06f08ad0d2cd71971bb073468ede9637c0569",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 120.1721541217994
+    },
+    {
+      "archive_sha256": "99522063797f03f36bbeb360f09c756167867a4376732505dfac0ce19a8efd10",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-backend-tests-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 18724,
+      "raw_log": "/tmp/alibi-m3b2b2-development-backend-tests-01.log",
+      "raw_sha256": "ce400953a146340d71d059786684fe4e8bce43ccc1390e00c191150b38abfafc",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1006,
+      "source_map_sha256": "7e4442cb959a218ee89ccc9d50b205955f7511febf4d49a0f58afcb6fe0ea2b5",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        197,
+        0,
+        3
+      ],
+      "wall_seconds": 140.7518671490252
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/dns.rs",
+        "crates/cathedral-backends/src/runtime.rs",
+        "crates/cathedral-backends/src/lib.rs",
+        "crates/cathedral-backends/src/llm.rs",
+        "crates/cathedral-backends/src/stt_cloud.rs",
+        "crates/cathedral-backends/src/stt_realtime.rs",
+        "crates/cathedral-backends/src/transcription.rs",
+        "crates/cathedral-backends/src/tts.rs",
+        "crates/cathedral-backends/src/tts_cloud.rs",
+        "crates/cathedral-backends/src/worker.rs",
+        "src/smart_actors/local_engine.rs",
+        "src/smart_actors/local_engine/retirement_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-format-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-development-format-01.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1006,
+      "source_map_sha256": "ec3db7fcb00a312936b479a4bade6ebfac7c4900aa3fe5a2d0b765da3c9a8f27",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.11525960080325603
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/worker.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-format-02",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-development-format-02.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1006,
+      "source_map_sha256": "31758fef524514b2f8ed9b2e6869c8a6b7ad50eea63e6897a29e17ad43900025",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.0167981528211385
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/lib.rs",
+        "crates/cathedral-backends/src/native_retention_review_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-format-03",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-development-format-03.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "6850b42df8ee4e973adda154fa6626397097e3e70d3b048a45bbf59d823478d0",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.014134061988443136
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/stt_realtime.rs",
+        "crates/cathedral-backends/src/worker.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-format-04",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-development-format-04.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "f7138355fde11a86e0e7297467068b1c1232b96476385707b6f45054c24c6cc2",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.024672626052051783
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/native_retention_review_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-format-05",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-development-format-05.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "63e2312b85fc75686fff608e409e3af207795a7ed563e1fe83157d031334d022",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.012960467021912336
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/stt_realtime.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-format-06",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-development-format-06.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "28a7c5b02107296df76a965507afc37a36f06e2df469e98731f420547497a4de",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.058624002151191235
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/dns.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-format-07",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-development-format-07.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "32069beb42f126a7b0ead6924208f80173bd640262eee6d075e2a266e2c3b183",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.018940876005217433
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/usr/bin/git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-diff-check",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-final-diff-check.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "320640c264e4646c374ccbc3c8681ea14a05dddede6b273810fff46e8feaf0ef",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.015472837956622243
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--check",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/dns.rs",
+        "crates/cathedral-backends/src/runtime.rs",
+        "crates/cathedral-backends/src/lib.rs",
+        "crates/cathedral-backends/src/llm.rs",
+        "crates/cathedral-backends/src/stt_cloud.rs",
+        "crates/cathedral-backends/src/stt_realtime.rs",
+        "crates/cathedral-backends/src/transcription.rs",
+        "crates/cathedral-backends/src/tts.rs",
+        "crates/cathedral-backends/src/tts_cloud.rs",
+        "crates/cathedral-backends/src/worker.rs",
+        "crates/cathedral-backends/src/native_retention_review_tests.rs",
+        "src/smart_actors/local_engine.rs",
+        "src/smart_actors/local_engine/retirement_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-format-02",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-final-format-02.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "320640c264e4646c374ccbc3c8681ea14a05dddede6b273810fff46e8feaf0ef",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.09756584418937564
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--check",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/dns.rs",
+        "crates/cathedral-backends/src/runtime.rs",
+        "crates/cathedral-backends/src/lib.rs",
+        "crates/cathedral-backends/src/llm.rs",
+        "crates/cathedral-backends/src/stt_cloud.rs",
+        "crates/cathedral-backends/src/stt_realtime.rs",
+        "crates/cathedral-backends/src/transcription.rs",
+        "crates/cathedral-backends/src/tts.rs",
+        "crates/cathedral-backends/src/tts_cloud.rs",
+        "crates/cathedral-backends/src/worker.rs",
+        "crates/cathedral-backends/src/native_retention_review_tests.rs",
+        "src/smart_actors/local_engine.rs",
+        "src/smart_actors/local_engine/retirement_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "final-format",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b2-final-format.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "75b29c55cdb8b2f0d07a81d66774bb7f33cc2e6805b9108d329b401d1732a330",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.08085421193391085
+    },
+    {
+      "archive_sha256": "2abb03a0de54bc8648c6ed59f5f66a14fb9592399a47f70c4b8466ceccf5aefb",
+      "command": [
+        "/home/ran/.local/bin/uv",
+        "run",
+        "--no-project",
+        "--cache-dir",
+        "/tmp/alibi-uv",
+        "python",
+        "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3b2b2/owner/layout.py",
+        "final-workspace-02"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-layout",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 6510,
+      "raw_log": "/tmp/alibi-m3b2b2-final-layout.log",
+      "raw_sha256": "acf301c6bcec526b26ddb7b9f2ed207e097f8c5c5fc8e006b24e61e62ad53b8f",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "320640c264e4646c374ccbc3c8681ea14a05dddede6b273810fff46e8feaf0ef",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 5.995305561926216
+    },
+    {
+      "archive_sha256": "940bf29332fed3e949a6093abfb26e576d4dc2b040a7923994ca33f3fe79bdae",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-workspace-02",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 522215,
+      "raw_log": "/tmp/alibi-m3b2b2-final-workspace-02.log",
+      "raw_sha256": "6d231160b1feaa49ad5b1e9da7f550ecd3ffc8628783b6256b3c3aff1f40e682",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "320640c264e4646c374ccbc3c8681ea14a05dddede6b273810fff46e8feaf0ef",
+      "sources_unchanged": true,
+      "test_groups": 46,
+      "test_totals": [
+        2300,
+        0,
+        47
+      ],
+      "wall_seconds": 1172.2024258149322
+    },
+    {
+      "archive_sha256": "eb40b302c543be5fb64d4200b85e66482bec049fd6b31462d51e3ebf280da7df",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 130,
+      "matches_final_map": false,
+      "name": "final-workspace",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 2883,
+      "raw_log": "/tmp/alibi-m3b2b2-final-workspace.log",
+      "raw_sha256": "ebf250862749b6587d7998e89a037a59ef986e189737bf21efdec4c9ef910707",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "75b29c55cdb8b2f0d07a81d66774bb7f33cc2e6805b9108d329b401d1732a330",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 333.3252
+    },
+    {
+      "archive_sha256": "dc2b4a7b84d52e60a35d72874c49796cbb40bfd553105eb8d42a84c10e3e9f3a",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "focused-backend-02",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 18564,
+      "raw_log": "/tmp/alibi-m3b2b2-focused-backend-02.log",
+      "raw_sha256": "9811c53eac25008cf1a46ae8cd89704249881b675bdf5c4ac8d667f69eef8546",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "320640c264e4646c374ccbc3c8681ea14a05dddede6b273810fff46e8feaf0ef",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        202,
+        0,
+        3
+      ],
+      "wall_seconds": 124.67053293297067
+    },
+    {
+      "archive_sha256": "996da936f1ca6f8250106247d1ef5244c013f14fc8b81324c3f664130546d20f",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "native_",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 101,
+      "matches_final_map": false,
+      "name": "focused-native-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 3014,
+      "raw_log": "/tmp/alibi-m3b2b2-focused-native-01.log",
+      "raw_sha256": "c95008ca715d4e83dabfb8e23a299227163a5b1f77e9eda65289507359e4ddc1",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "183902709ee72b00c61c704fd9083b52c2c5b068530b3c82a55848ab1c6d9eb7",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        2,
+        3,
+        0
+      ],
+      "wall_seconds": 86.18670796696097
+    },
+    {
+      "archive_sha256": "e3301fcafcb7813d53c2833e36ae6d11006d1fa2f458565c06e2c5bb3b9f03f3",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "native_",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "focused-native-02",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 1026,
+      "raw_log": "/tmp/alibi-m3b2b2-focused-native-02.log",
+      "raw_sha256": "45e48c90c005d769ede4d477579ce37468cce0d14ed10fa100ecd4a174bf38a7",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "75b29c55cdb8b2f0d07a81d66774bb7f33cc2e6805b9108d329b401d1732a330",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        5,
+        0,
+        0
+      ],
+      "wall_seconds": 80.79091926198453
+    },
+    {
+      "archive_sha256": "6aea448206d35d09734258fd763f19b6b590ec2a80d4705319b6d85465750eee",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "native_",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "focused-native-03",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 1138,
+      "raw_log": "/tmp/alibi-m3b2b2-focused-native-03.log",
+      "raw_sha256": "3a374258a043a87ff27fe7873a7d858555304c954cbf38f02528cb62af217c48",
+      "runner_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+      "source_count": 1007,
+      "source_map_sha256": "dbca368d904fa111d6d03a5531b91c7242e8f2e924a87e5cdf4736e183ad361f",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        6,
+        0,
+        0
+      ],
+      "wall_seconds": 91.54013985791244
+    }
+  ],
+  "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "maps_without_started_command": [],
+  "pending": []
+}

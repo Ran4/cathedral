@@ -151,6 +151,8 @@ pub struct TtsEngine {
     /// collision is still a bug worth refusing (`PathInUse`).
     in_flight: Arc<Mutex<HashSet<SpeechEventId>>>,
     worker: Option<JoinHandle<()>>,
+    // Final owner stays outside the worker closure through its native join.
+    _runtime: Option<Arc<BackendRuntime>>,
 }
 
 impl std::fmt::Debug for TtsEngine {
@@ -169,7 +171,10 @@ impl TtsEngine {
         settings: &SpeechSettings,
         events: BackendSender,
     ) -> Self {
-        let cloud = Some(Arc::new(CloudTts::new(settings)));
+        let cloud = Some(Arc::new(CloudTts::with_resolver(
+            settings,
+            runtime.resolver(events.clone()),
+        )));
         let local = Some(Arc::new(PocketTts::new(settings, events.clone())));
         Self::with_backends(runtime, cloud, local, events)
     }
@@ -185,11 +190,13 @@ impl TtsEngine {
 
         let worker = {
             let events = events.clone();
+            let runtime = runtime.executor();
             let cloud = cloud.clone();
             let local = local.clone();
             let in_flight = Arc::clone(&in_flight);
             std::thread::Builder::new()
                 .name("cathedral-tts".to_string())
+                .stack_size(crate::runtime::NATIVE_STACK_BYTES)
                 .spawn(move || {
                     // The channel closing (the engine dropped) ends the thread.
                     for job in inbox {
@@ -223,6 +230,7 @@ impl TtsEngine {
             jobs,
             in_flight,
             worker: Some(worker),
+            _runtime: Some(runtime),
         }
     }
 }
@@ -247,7 +255,7 @@ fn warm(local: Option<&PocketTts>, events: &BackendSender) {
 }
 
 fn synthesize(
-    runtime: &BackendRuntime,
+    runtime: &crate::runtime::BackendExecutor,
     cloud: Option<&CloudTts>,
     local: Option<&PocketTts>,
     request: TtsRequest,
@@ -430,13 +438,13 @@ impl Drop for TtsEngine {
         if let Some(local) = &self.local {
             local.close();
         }
-        // Closing the queue ends the thread once it has drained. Deliberately
-        // **not** joined: a provider call with 30 seconds left on its timeout
-        // must not hold the game's exit open (Python joined for 0.1 s and moved
-        // on for the same reason).
+        // Off-frame final disposal waits for accepted payloads and actual
+        // thread teardown, retaining generation and runtime until after join.
         let (dead, _) = bounded(0);
         drop(std::mem::replace(&mut self.jobs, dead));
-        self.worker.take();
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
     }
 }
 

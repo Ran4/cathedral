@@ -440,7 +440,14 @@ pub struct LlmClient {
 
 impl LlmClient {
     pub fn new(settings: LlmSettings) -> Result<Self, LlmError> {
+        Self::with_resolver(settings, crate::dns::NativeResolver::standalone())
+    }
+    pub(crate) fn with_resolver(
+        settings: LlmSettings,
+        resolver: crate::dns::NativeResolver,
+    ) -> Result<Self, LlmError> {
         let http = reqwest::Client::builder()
+            .dns_resolver(Arc::new(resolver))
             .build()
             .map_err(|error| LlmError::Transport(error.to_string()))?;
         Ok(Self {
@@ -666,9 +673,9 @@ impl HttpCognition {
         events: BackendSender,
     ) -> Self {
         let model = settings.as_ref().ok().map(|s| s.model.clone());
-        let client = settings
-            .map_err(LlmError::from)
-            .and_then(|settings| LlmClient::new(settings).map(Arc::new));
+        let client = settings.map_err(LlmError::from).and_then(|settings| {
+            LlmClient::with_resolver(settings, runtime.resolver(events.clone())).map(Arc::new)
+        });
         Self {
             runtime,
             client,

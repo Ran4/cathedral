@@ -159,10 +159,12 @@ impl RealtimeSttHandle {
         let api_key = settings.api_key.clone()?;
         let url = settings.realtime.url.clone();
         let key = api_key.clone();
+        let resolver = runtime.resolver(events.clone());
         let factory: TransportFactory = Arc::new(move || {
             let url = url.clone();
             let key = key.clone();
-            Box::pin(async move { WebsocketTransport::open(&url, &key).await })
+            let resolver = resolver.clone();
+            Box::pin(async move { WebsocketTransport::open(&url, &key, &resolver).await })
         });
         Some(Self::with_transport(
             runtime,
@@ -196,6 +198,7 @@ impl RealtimeSttHandle {
             api_key,
             factory,
             events: events.clone(),
+            close_slots: Arc::new(tokio::sync::Semaphore::new(1)),
         };
         runtime.spawn(task.run(inbox));
 
@@ -366,6 +369,27 @@ struct SessionTask {
     api_key: Option<String>,
     factory: TransportFactory,
     events: BackendSender,
+    close_slots: Arc<tokio::sync::Semaphore>,
+}
+
+/// Cancellation before first poll and at await must dispose the actual close
+/// future/transport before releasing the original endpoint or close admission.
+/// Drop prevents async closure capture from splitting this ordered aggregate.
+struct RetainedClose {
+    future: BoxFuture<'static, ()>,
+    _events: BackendSender,
+    _slot: tokio::sync::OwnedSemaphorePermit,
+}
+impl Future for RetainedClose {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<()> {
+        self.get_mut().future.as_mut().poll(cx)
+    }
+}
+impl Drop for RetainedClose {
+    fn drop(&mut self) {
+        // Fields drop in declaration order on completion, panic and cancellation.
+    }
 }
 
 enum Next {
@@ -649,7 +673,18 @@ impl SessionTask {
             state.connected = false;
         }
         if let Some(transport) = transport {
-            tokio::spawn(transport.close());
+            // At most one detached close survives reconnects. Close is best
+            // effort; a wedged transport never creates an unbounded task list.
+            if let Ok(slot) = Arc::clone(&self.close_slots).try_acquire_owned() {
+                let retained = RetainedClose {
+                    future: transport.close(),
+                    _events: self.events.clone(),
+                    _slot: slot,
+                };
+                tokio::spawn(async move {
+                    let _ = tokio::time::timeout(Duration::from_secs(1), retained).await;
+                });
+            }
         }
     }
 
@@ -711,7 +746,11 @@ struct WebsocketTransport {
 }
 
 impl WebsocketTransport {
-    async fn open(url: &str, api_key: &str) -> Result<Box<dyn RealtimeTransport>, String> {
+    async fn open(
+        url: &str,
+        api_key: &str,
+        resolver: &crate::dns::NativeResolver,
+    ) -> Result<Box<dyn RealtimeTransport>, String> {
         use tokio_tungstenite::tungstenite::{
             client::IntoClientRequest,
             http::{HeaderValue, header::AUTHORIZATION},
@@ -727,10 +766,37 @@ impl WebsocketTransport {
         let socket_config = tokio_tungstenite::tungstenite::protocol::WebSocketConfig::default()
             .max_message_size(Some(MAX_REALTIME_FRAME_BYTES))
             .max_frame_size(Some(MAX_REALTIME_FRAME_BYTES));
-        let (socket, _response) =
-            tokio_tungstenite::connect_async_with_config(request, Some(socket_config), false)
-                .await
-                .map_err(|error| format!("{}: {error}", error_kind(&error)))?;
+        let host = request.uri().host().ok_or("realtime URL has no host")?;
+        let port =
+            request
+                .uri()
+                .port_u16()
+                .unwrap_or(if request.uri().scheme_str() == Some("wss") {
+                    443
+                } else {
+                    80
+                });
+        let addresses = resolver
+            .lookup(host.trim_matches(['[', ']']), port)
+            .await
+            .map_err(|e| e.to_string())?;
+        let mut stream = None;
+        for address in addresses {
+            // SocketAddr avoids Tokio's implicit unbounded string DNS path.
+            if let Ok(connected) = tokio::net::TcpStream::connect(address).await {
+                stream = Some(connected);
+                break;
+            }
+        }
+        let stream = stream.ok_or("realtime connection failed")?;
+        let (socket, _response) = tokio_tungstenite::client_async_tls_with_config(
+            request,
+            stream,
+            Some(socket_config),
+            None,
+        )
+        .await
+        .map_err(|error| format!("{}: {error}", error_kind(&error)))?;
         Ok(Box::new(Self { socket }))
     }
 }
@@ -1467,5 +1533,194 @@ mod tests {
         let transcription = &config["session"]["audio"]["input"]["transcription"];
         assert_eq!(transcription["language"], "sv");
         assert_eq!(transcription["model"], "gpt-realtime-whisper-next");
+    }
+    #[test]
+    fn native_close_saturation_is_finite_and_timeout_disposes_its_transport() {
+        use std::sync::atomic::AtomicUsize;
+        struct StuckClose {
+            started: Arc<AtomicUsize>,
+            disposed: Arc<AtomicUsize>,
+        }
+        impl Drop for StuckClose {
+            fn drop(&mut self) {
+                self.disposed.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+        impl RealtimeTransport for StuckClose {
+            fn send(&mut self, _: String) -> BoxFuture<'_, Result<(), String>> {
+                unreachable!()
+            }
+            fn recv(&mut self) -> BoxFuture<'_, Result<String, String>> {
+                unreachable!()
+            }
+            fn close(self: Box<Self>) -> BoxFuture<'static, ()> {
+                self.started.fetch_add(1, Ordering::SeqCst);
+                Box::pin(async move {
+                    let _owner = self;
+                    std::future::pending::<()>().await;
+                })
+            }
+        }
+        let runtime = BackendRuntime::new().unwrap();
+        let (events, _) = backend_channel();
+        let budget = cathedral_sim::checkpoint::CheckpointBudget::default();
+        let pin = cathedral_sim::checkpoint::RetirementLease::new(
+            budget
+                .reserve(
+                    cathedral_sim::checkpoint::Cohort::RetiringGeneration,
+                    1024 * 1024,
+                )
+                .unwrap(),
+        )
+        .unwrap();
+        let released = pin.release_observer();
+        events.pin_retirement(&budget, &pin).unwrap();
+        drop(pin);
+        let slots = Arc::new(tokio::sync::Semaphore::new(1));
+        let task = SessionTask {
+            state: Arc::new(Mutex::new(SessionState::default())),
+            closing: Arc::new(AtomicBool::new(false)),
+            clock: monotonic_clock(),
+            settings: RealtimeSettings::default(),
+            api_key: None,
+            factory: Arc::new(|| unreachable!()),
+            events,
+            close_slots: Arc::clone(&slots),
+        };
+        let started = Arc::new(AtomicUsize::new(0));
+        let disposed = Arc::new(AtomicUsize::new(0));
+        runtime.block_on(async {
+            for _ in 0..20 {
+                task.detach_close(Some(Box::new(StuckClose {
+                    started: Arc::clone(&started),
+                    disposed: Arc::clone(&disposed),
+                })));
+            }
+            assert_eq!(slots.available_permits(), 0);
+            assert_eq!(disposed.load(Ordering::SeqCst), 19);
+            drop(task);
+            assert!(
+                !released.released(),
+                "actual close retains its original generation"
+            );
+            tokio::time::timeout(Duration::from_secs(5), async {
+                while disposed.load(Ordering::SeqCst) != 20 || slots.available_permits() != 1 {
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                }
+            })
+            .await
+            .unwrap();
+            assert_eq!(started.load(Ordering::SeqCst), 1);
+            assert_eq!(slots.available_permits(), 1);
+            assert!(released.released());
+            assert_eq!(budget.retained_bytes(), 0);
+        });
+    }
+    #[test]
+    fn native_close_cancellation_keeps_endpoint_until_blocked_transport_drop_finishes() {
+        use cathedral_sim::checkpoint::{CheckpointBudget, Cohort, RetirementLease};
+        use std::sync::{Condvar, mpsc as sync_mpsc};
+        type Gate = Arc<(Mutex<bool>, Condvar)>;
+        struct OpenOnDrop(Gate);
+        impl Drop for OpenOnDrop {
+            fn drop(&mut self) {
+                *self.0.0.lock().unwrap() = true;
+                self.0.1.notify_all();
+            }
+        }
+        struct BlockedClose {
+            entered: sync_mpsc::SyncSender<()>,
+            gate: Gate,
+            polled: Arc<AtomicBool>,
+        }
+        impl Drop for BlockedClose {
+            fn drop(&mut self) {
+                self.entered.send(()).unwrap();
+                let (open, _) = self
+                    .gate
+                    .1
+                    .wait_timeout_while(
+                        self.gate.0.lock().unwrap(),
+                        Duration::from_secs(20),
+                        |open| !*open,
+                    )
+                    .unwrap();
+                assert!(*open, "transport drop gate timed out");
+            }
+        }
+        impl RealtimeTransport for BlockedClose {
+            fn send(&mut self, _: String) -> BoxFuture<'_, Result<(), String>> {
+                unreachable!()
+            }
+            fn recv(&mut self) -> BoxFuture<'_, Result<String, String>> {
+                unreachable!()
+            }
+            fn close(self: Box<Self>) -> BoxFuture<'static, ()> {
+                Box::pin(async move {
+                    self.polled.store(true, Ordering::Release);
+                    let _owner = self;
+                    std::future::pending::<()>().await;
+                })
+            }
+        }
+        for poll_first in [false, true] {
+            // A current-thread runtime makes pre-first-poll cancellation exact:
+            // nothing runs until the explicit block_on below.
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            let budget = CheckpointBudget::default();
+            let pin = RetirementLease::new(
+                budget
+                    .reserve(Cohort::RetiringGeneration, 1024 * 1024)
+                    .unwrap(),
+            )
+            .unwrap();
+            let released = pin.release_observer();
+            let (events, receiver) = backend_channel();
+            events.pin_retirement(&budget, &pin).unwrap();
+            let slots = Arc::new(tokio::sync::Semaphore::new(1));
+            let gate = Arc::new((Mutex::new(false), Condvar::new()));
+            let (entered, entered_drop) = sync_mpsc::sync_channel(1);
+            let polled = Arc::new(AtomicBool::new(false));
+            let retained = RetainedClose {
+                future: Box::new(BlockedClose {
+                    entered,
+                    gate: Arc::clone(&gate),
+                    polled: Arc::clone(&polled),
+                })
+                .close(),
+                _events: events,
+                _slot: Arc::clone(&slots).try_acquire_owned().unwrap(),
+            };
+            let task = runtime.spawn(async move {
+                let _ = tokio::time::timeout(Duration::from_secs(3600), retained).await;
+            });
+            // Unwind opens the transport before local Runtime Drop joins tasks.
+            let release = OpenOnDrop(gate);
+            drop((receiver, pin));
+            if poll_first {
+                runtime.block_on(async {
+                    tokio::task::yield_now().await;
+                });
+            }
+            assert_eq!(polled.load(Ordering::Acquire), poll_first);
+            task.abort();
+            let worker = std::thread::spawn(move || {
+                assert!(runtime.block_on(task).unwrap_err().is_cancelled());
+            });
+            entered_drop.recv_timeout(Duration::from_secs(20)).unwrap();
+            assert!(
+                !released.released(),
+                "endpoint outlives blocked transport destructor"
+            );
+            assert_eq!(slots.available_permits(), 0);
+            drop(release);
+            worker.join().unwrap();
+            assert!(released.released());
+            assert_eq!(slots.available_permits(), 1);
+            assert_eq!(budget.retained_bytes(), 0);
+        }
     }
 }

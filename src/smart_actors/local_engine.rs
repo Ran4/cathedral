@@ -39,8 +39,8 @@ use std::{
 
 use bevy::prelude::*;
 use cathedral_backends::{
-    BackendCapabilities, BackendEvent, BackendsConfig, BackendsHandle, BackendsOptions,
-    PromptExchange, PromptLog, SessionDir, world_data::load_world_seed,
+    BackendCapabilities, BackendEvent, BackendsConfig, BackendsHandle, BackendsOptions, PromptLog,
+    SessionDir, world_data::load_world_seed,
 };
 use cathedral_sim::{
     ActorId as SimActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand,

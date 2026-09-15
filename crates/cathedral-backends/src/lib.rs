@@ -17,7 +17,7 @@
 //!
 //! The host ([`LocalEngine`] in the game, the headless loop in the binary) holds
 //! a [`BackendsHandle`], drains [`BackendEvent`]s once per pump, and hands them
-//! to the engine. Dropping the handle stops every worker.
+//! to the engine. Final off-frame disposal joins the native workers.
 //!
 //! [`LocalEngine`]: https://github.com/ (game crate, P5)
 
@@ -28,12 +28,15 @@ pub mod checkpoint_services;
 #[cfg(target_os = "linux")]
 pub mod checkpoint_storage;
 pub mod config;
+pub mod dns;
 pub mod events;
 pub mod fake;
 pub mod llm;
 pub mod mailbox;
 #[cfg(test)]
 mod mailbox_retirement_review_tests;
+#[cfg(test)]
+mod native_retention_review_tests;
 #[cfg(test)]
 mod prompt_archive_review_tests;
 pub mod prompt_log;
@@ -86,7 +89,7 @@ pub use worker::{LogSink, Worker, WorkerSpec, WorkerStep, set_log_sink};
 /// tasks, the channel their results arrive on, the capability set the engine
 /// reports at handshake, and the private audio directory.
 ///
-/// Dropping it drops the runtime (tasks are abandoned, not awaited) and the
+/// Final off-frame disposal joins the shared runtime and drops the
 /// session directory (removed from disk).
 pub struct BackendsHandle {
     runtime: Arc<BackendRuntime>,

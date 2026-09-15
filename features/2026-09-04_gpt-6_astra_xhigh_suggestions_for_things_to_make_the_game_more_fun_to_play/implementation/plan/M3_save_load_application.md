@@ -1,4 +1,4 @@
-Status: M3a storage, M3b1 worker preparation/retirement transport, M3b2a atomic allocation promotion and M3b2b1 prompt archive admission implemented and independently reviewed (2026-09-15). Remaining allocation/runtime accounting, M3b2c whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
+Status: M3a storage, M3b1 worker preparation/retirement transport, M3b2a atomic allocation promotion, M3b2b1 prompt archive admission and M3b2b2 native worker retention implemented and independently reviewed (2026-09-15). M3b2b3 diagnostic sinks, remaining allocation accounting, M3b2c whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
 
 # M3 — Save-anywhere in the application
 
@@ -81,12 +81,26 @@ ownership through held results, immutable exchange publication, queued writes
 and rendering. Restored held results need admission before service activation;
 their archive identity cannot depend on a fresh backend reusing saved request
 numbers. Refusals preserve caller input and simulation retry obligations.
-Native/detached worker lifetimes, diagnostic sinks, the immutable installed
-recipe and actual disjoint application allocation bounds remain subsequent
-M3b2b work. A bounded archive queue alone cannot close that complete budget.
+Diagnostic sinks, the immutable installed recipe and actual disjoint application
+allocation bounds remain subsequent M3b2b work. A bounded archive queue alone cannot close that complete budget.
 The default production writer is finite; its tested shared-budget constructor
 still needs the complete startup recipe. Idle session configuration and native
 runtime ownership are not inferred from the accepted archive payload bound.
+
+The **M3b2b2 native retention** cut is [accepted](evidence/m3b2b2/README.md),
+with 2,300 passing workspace tests and eight new lifecycle witnesses. The shared
+runtime has two async plus two blocking workers, a two-slot DNS admission and a
+16 MiB scoped native allowance retained through joins and surviving resolver
+owners. STT/TTS join native workers off-frame; each local driver retains at most
+two child generations through logger/reaper termination. Realtime close is
+bounded and keeps its endpoint until actual transport disposal, including
+cancellation before first poll. Recording disposal preserves accepted bounded
+work and returns the original owned input on refusal. The configured full speech
+bundle has at most eleven native threads / 22 MiB explicit stack extent; this
+inventory does not prove the old world allowance covers it. All 46 compiled
+layouts and the unchanged 60,952 / 65,536-byte preparation-control bound are
+independently audited. M3b2b3 diagnostic sinks are next; complete shared startup
+admission and application allocation remain pending.
 
 ## Entry
 

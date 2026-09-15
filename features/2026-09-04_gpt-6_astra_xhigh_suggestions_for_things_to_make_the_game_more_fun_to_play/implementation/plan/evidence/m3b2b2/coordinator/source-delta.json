@@ -1,0 +1,59 @@
+{
+  "added": {
+    "crates/cathedral-backends/src/dns.rs": "87c5f59a48419de382d6b6f61a3d505c125ceb53f38cd25b8157716538e3efe8",
+    "crates/cathedral-backends/src/native_retention_review_tests.rs": "034e96f4e249e688a75ef2c05b13392fe6cf94eb0586883613ca9ecbf202afc9"
+  },
+  "auditor_sha256": "3a7d3b37eceb3444dbb7e3bb3e0ef153bbab8a512a91407ba569c34b228f8982",
+  "changed": {
+    "crates/cathedral-backends/src/lib.rs": {
+      "after": "81c0e933df97c79af91b7d62334de9dcf18199e818385a26ed8b5a5c980a429c",
+      "before": "ab0e260f46a0480c3fab314924a3f2fa197e82b235533c4e66f27ff49fe3c688"
+    },
+    "crates/cathedral-backends/src/llm.rs": {
+      "after": "6189f34467e62d25f5b0e275e90dc973d9ae4e5d973d6737dad641d3fc278cc0",
+      "before": "29218d671492a48504cb9934d7916e1ce407b52566e10fb4edc33cdcb5e338e0"
+    },
+    "crates/cathedral-backends/src/runtime.rs": {
+      "after": "3074afa2fd82ba63460f71844d44e39398402734d33c63f02e9151d25981f4d3",
+      "before": "09dc0b242e04fd628a764a33cbe5e77d5e93b64ce98445ac423092194d51d190"
+    },
+    "crates/cathedral-backends/src/stt_cloud.rs": {
+      "after": "c31aa92edb852096777b1adb49e80851d850280db63ffa1f5b41bc81f3940cc4",
+      "before": "f21ceaa2529bc15424b39d2b52b74e8af40cfe8376cdb1d019e15385bd5e96ee"
+    },
+    "crates/cathedral-backends/src/stt_realtime.rs": {
+      "after": "34b8a95a262530e6f4cca56e9e6dc94757dc3b4ec7ea643e1dc19216530ba835",
+      "before": "23394c3cfd71117f395edc6c22f99ca441b2882cb444ea625c06c3cd5798b106"
+    },
+    "crates/cathedral-backends/src/transcription.rs": {
+      "after": "0437e95fc68124c137b3346c69d7d6a3411f90943bbcbc9092304dd91af98da3",
+      "before": "26b54bb07e202aa2474c763edef83a30d278cc60a65b4b64d2fb8ccfb0df0381"
+    },
+    "crates/cathedral-backends/src/tts.rs": {
+      "after": "05d1de3d6d15b8634d17b64d93cbf100a0269f9f4446af6f1350e019e93cbd61",
+      "before": "ad30cf302a7ce736424040d19c748292b8a16106b84bb5458e84a2b9150fb57d"
+    },
+    "crates/cathedral-backends/src/tts_cloud.rs": {
+      "after": "e5e22d227770c68a70d7fe2ca078bce4dd49c64d8b32d92db51d8134de66aef6",
+      "before": "89c672c45b82347da40d5df2907735375a5e64383ce974c198892e0acf87f6c3"
+    },
+    "crates/cathedral-backends/src/worker.rs": {
+      "after": "8e7a9bdb36330f7188c1b5f8ebda647f9f35049fad75a2a3d03dc4006aedeef9",
+      "before": "de0adff98d01bba4098ebe59bf6a5879258a54d1f6465b31ae8f551e23279448"
+    },
+    "src/smart_actors/local_engine.rs": {
+      "after": "ec806cff8082d5f5ab1d38ecf1f250f3d9d111e4c293d955c1565df6c3551605",
+      "before": "4de19ec3f4aa5854a3763e38da6cf179412990c4347427a3e37a2c8dd10c1dd0"
+    },
+    "src/smart_actors/local_engine/retirement_tests.rs": {
+      "after": "914eab3a9326d173a4f8ddd7078cdeec58517c886f3ade80fe20a7cae38d2b81",
+      "before": "d223103684d5d5c1b568b60f4c59ee7f90371559cac9838787a59a4aa2086bd0"
+    }
+  },
+  "current_count": 1007,
+  "predecessor_commit": "b37d8fcff58efcd219766a98fd0e1a83b731df7c",
+  "prior_count": 1005,
+  "removed": [],
+  "source_map_sha256": "320640c264e4646c374ccbc3c8681ea14a05dddede6b273810fff46e8feaf0ef",
+  "unchanged_predecessor_inputs": 994
+}

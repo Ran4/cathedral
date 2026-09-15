@@ -1,0 +1,56 @@
+{
+  "command": [
+    "/home/ran/.cargo/bin/rustfmt",
+    "--check",
+    "--edition",
+    "2024",
+    "--config",
+    "skip_children=true",
+    "crates/cathedral-backends/src/dns.rs",
+    "crates/cathedral-backends/src/runtime.rs",
+    "crates/cathedral-backends/src/lib.rs",
+    "crates/cathedral-backends/src/llm.rs",
+    "crates/cathedral-backends/src/stt_cloud.rs",
+    "crates/cathedral-backends/src/stt_realtime.rs",
+    "crates/cathedral-backends/src/transcription.rs",
+    "crates/cathedral-backends/src/tts.rs",
+    "crates/cathedral-backends/src/tts_cloud.rs",
+    "crates/cathedral-backends/src/worker.rs",
+    "crates/cathedral-backends/src/native_retention_review_tests.rs",
+    "src/smart_actors/local_engine.rs",
+    "src/smart_actors/local_engine/retirement_tests.rs"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "LDFLAGS": null,
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "RUSTFLAGS": null
+  },
+  "helper_sha256": "532ee16d8827c255b1548a3b5550eea1ad5aaa910c487683cc9d56669f610a5d",
+  "inherited_removed_environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "inherited_target_environment": {
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_TARGET_DIR": null
+  },
+  "raw_log": "/tmp/alibi-m3b2b2-final-format.log",
+  "source_map_sha256": "75b29c55cdb8b2f0d07a81d66774bb7f33cc2e6805b9108d329b401d1732a330",
+  "utc": "2026-09-15T09:55:54.926946+00:00"
+}

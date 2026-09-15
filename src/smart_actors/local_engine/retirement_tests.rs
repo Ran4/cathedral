@@ -1,5 +1,7 @@
 use super::*;
-use cathedral_backends::{LocalTime, checkpoint_preparation::CheckpointPreparation};
+use cathedral_backends::{
+    LocalTime, PromptExchange, checkpoint_preparation::CheckpointPreparation,
+};
 use cathedral_sim::checkpoint::{CheckpointBudget, Cohort};
 use std::{
     thread::ThreadId,

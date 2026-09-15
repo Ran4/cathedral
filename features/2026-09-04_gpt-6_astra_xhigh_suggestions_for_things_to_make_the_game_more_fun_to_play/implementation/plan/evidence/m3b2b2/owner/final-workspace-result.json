@@ -1,0 +1,12 @@
+{
+  "archive_sha256": "eb40b302c543be5fb64d4200b85e66482bec049fd6b31462d51e3ebf280da7df",
+  "exit_code": 130,
+  "interrupted_by_owner": true,
+  "interruption_reason": "Root source review found detached-close cancellation drop ordering needs an aggregate owner; tool write_stdin Ctrl-C returned exit 130. No acceptance claim.",
+  "raw_log": "/tmp/alibi-m3b2b2-final-workspace.log",
+  "raw_sha256": "ebf250862749b6587d7998e89a037a59ef986e189737bf21efdec4c9ef910707",
+  "result_finalized_after_tool_interrupt": true,
+  "source_map_sha256": "75b29c55cdb8b2f0d07a81d66774bb7f33cc2e6805b9108d329b401d1732a330",
+  "sources_unchanged": true,
+  "wall_seconds": 333.3252
+}
