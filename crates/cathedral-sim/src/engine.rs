@@ -22,6 +22,9 @@ pub mod animals_checkpoint;
 pub mod climate_checkpoint;
 mod command_policy;
 pub(crate) mod complete_checkpoint;
+pub(crate) mod continuation;
+#[cfg(test)]
+mod continuation_review_tests;
 pub mod continuity_checkpoint;
 pub(crate) mod hydration;
 pub mod knowledge_checkpoint;

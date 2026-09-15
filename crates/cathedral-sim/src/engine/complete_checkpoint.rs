@@ -383,6 +383,9 @@ pub(crate) fn decode_components(
         m,
         EngineSchedulerCheckpointContext::from_backbone(&backbone, now, &ledger, d.player),
     )?;
+    scheduler
+        .scheduler()
+        .validate_context_knowledge(knowledge.knowledge())?;
     m.begin_category(Category::Night);
     let night = EngineNightDtoV1::complete_decode(
         w.night.get().as_bytes(),

@@ -1,0 +1,43 @@
+{
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "check",
+    "-p",
+    "cathedral-sim",
+    "--offline",
+    "-j1"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "LDFLAGS": null,
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "RUSTFLAGS": null
+  },
+  "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+  "inherited_removed_environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "inherited_target_environment": {
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_TARGET_DIR": null
+  },
+  "raw_log": "/tmp/alibi-m2c-check-01.log",
+  "source_map_sha256": "12a504ca5559130e090e0000a8a007a2e5a1356cd26a90cef4533cb970e86a29",
+  "utc": "2026-09-15T00:30:26.534270+00:00"
+}

@@ -59,6 +59,20 @@ impl<'a> SpeechCheckpointContext<'a> {
             Ledger::Saved(l) => l.checkpoint_speech_receipt(id),
         }
     }
+    pub(super) fn history_agrees(self, r: &Receipt) -> bool {
+        match self.ledger {
+            Ledger::Live(l) => {
+                l.valid_history_receipt(r)
+                    && l.checkpoint_history_receipt(r.id)
+                        .is_none_or(|known| known.matches(r))
+            }
+            Ledger::Saved(l) => {
+                l.valid_history_receipt(r)
+                    && l.checkpoint_history_receipt(r.id)
+                        .is_none_or(|known| known.matches(r))
+            }
+        }
+    }
     pub(super) fn owners(self, ids: impl Iterator<Item = CommandId> + Clone) -> Result<()> {
         if let Some(s) = self.speech_actions {
             check(

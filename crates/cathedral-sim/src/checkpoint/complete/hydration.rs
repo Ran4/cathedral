@@ -115,12 +115,12 @@ pub struct HydratedEngine {
     pub(crate) speech: EngineSpeechCandidate,
     pub(crate) host: super::super::host::HostCandidate,
     pub(crate) cognition: EngineCognitionInputsCandidate,
-    boundary: LogicalTime,
-    world_identity: WorldIdentity,
-    cost: HydrationCost,
+    pub(crate) boundary: LogicalTime,
+    pub(crate) world_identity: WorldIdentity,
+    pub(crate) cost: HydrationCost,
     // Last field: all assets held by Engine and all continuation owners above
     // are disposed before their subordinate asset lease can release capacity.
-    asset_reservation: Reservation,
+    pub(crate) asset_reservation: Reservation,
 }
 impl Admitted<HydrationPreparation> {
     pub fn hydrate(

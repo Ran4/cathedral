@@ -1,0 +1,67 @@
+{
+  "binary": "/tmp/alibi-m2c-host-reference-binary-1",
+  "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+  "command": [
+    "/tmp/alibi-m2c-host-reference-binary-1",
+    "--ignored",
+    "--exact",
+    "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "environment_overrides": {
+    "ALIBI_COMPLETE_WORLD_ID": "4d32632d666978747572652d30303031",
+    "ALIBI_CONTINUATION_FIXTURE": "/tmp/alibi-m2c-fixtures-1-authored-write-1.json",
+    "ALIBI_CONTINUATION_MODE": "authored",
+    "ALIBI_CONTINUATION_REPORT": "/tmp/alibi-m2c-fixtures-1-authored-write-1.report.json",
+    "ALIBI_CONTINUATION_SAMPLES": "1",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+  },
+  "helper_sha256": {
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/release_common.py": "017db6df1a0164bdb501491409065b3dbaa06890bc6ba0c172d973696baddeba",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/run-release-fixtures.py": "607172e8b75d6d3d02cf1d7d4d5f887303642a6b7d4154b69bda740525aa9e56"
+  },
+  "inherited_build_environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_TARGET_DIR": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "removed_build_environment": [
+    "LDFLAGS",
+    "RUSTFLAGS",
+    "CARGO_ENCODED_RUSTFLAGS",
+    "CARGO_BUILD_RUSTFLAGS",
+    "RUSTC_WRAPPER",
+    "RUSTC_WORKSPACE_WRAPPER"
+  ],
+  "removed_probe_environment": {
+    "ALIBI_COMPLETE_WORLD_ID": null,
+    "ALIBI_CONTINUATION_FIXTURE": null,
+    "ALIBI_CONTINUATION_MODE": null,
+    "ALIBI_CONTINUATION_READ_FIXTURE": null,
+    "ALIBI_CONTINUATION_REPORT": null,
+    "ALIBI_CONTINUATION_SAMPLES": null,
+    "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+    "ALIBI_HYDRATION_FIXTURE": null,
+    "ALIBI_HYDRATION_INITIAL": null,
+    "ALIBI_HYDRATION_MODE": null,
+    "ALIBI_HYDRATION_REPORT": null,
+    "ALIBI_HYDRATION_SAMPLES": null
+  },
+  "source_count": 980,
+  "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+  "source_scope": "component-inputs-v2",
+  "started_utc": "2026-09-15T02:13:51.505004+00:00"
+}

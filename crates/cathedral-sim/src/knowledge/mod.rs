@@ -718,6 +718,12 @@ pub struct Occasion {
     pub offered: bool,
 }
 
+pub(crate) struct ResumedPromptScope {
+    seated: Option<(ActorId, Vec<FactKey>)>,
+    occasion: Option<Occasion>,
+    original: Option<Occasion>,
+}
+
 /// The player's remembered telling, kept even after its holding leaves the store.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LearnedHow {
@@ -895,6 +901,87 @@ impl Knowledge {
         } else {
             Vec::new()
         }
+    }
+
+    /// Transfer the exact accepted prompt's private context when its external
+    /// execution is retired. Later events can own a distinct occasion.
+    pub(crate) fn detach_prompt(
+        &mut self,
+        actor: &ActorId,
+    ) -> crate::scheduler::continuation::PromptContext {
+        crate::scheduler::continuation::PromptContext {
+            seated: self.take_seated(actor),
+            occasion: if self.occasions.get(actor).is_some_and(|o| o.offered) {
+                self.occasions.remove(actor)
+            } else {
+                None
+            },
+        }
+    }
+    pub(crate) fn valid_resumed_keys(
+        &self,
+        context: &crate::scheduler::continuation::PromptContext,
+    ) -> bool {
+        context.seated.iter().all(|key| key.0 < self.next_key)
+    }
+
+    pub(crate) fn install_resumed_prompt(
+        &mut self,
+        actor: &ActorId,
+        context: crate::scheduler::continuation::PromptContext,
+    ) -> ResumedPromptScope {
+        let saved = ResumedPromptScope {
+            seated: self.seated.take(),
+            occasion: self.occasions.remove(actor),
+            original: context.occasion.clone(),
+        };
+        self.seated = Some((actor.clone(), context.seated));
+        if let Some(occasion) = context.occasion {
+            self.occasions.insert(actor.clone(), occasion);
+        }
+        saved
+    }
+
+    pub(crate) fn finish_resumed_prompt(
+        &mut self,
+        actor: &ActorId,
+        saved: ResumedPromptScope,
+        held: bool,
+    ) -> crate::scheduler::continuation::PromptContext {
+        let seated = self.take_seated(actor);
+        let mut occasion = self.occasions.remove(actor);
+        self.seated = saved.seated;
+        let current = if held {
+            saved.occasion
+        } else {
+            // A completion may itself create an occasion after spending the old
+            // one. Preserve that ordinary effect; otherwise the newer input wins.
+            let created = occasion.as_ref().is_some_and(|o| {
+                saved.original.as_ref().is_none_or(|old| {
+                    o.subject != old.subject
+                        || o.from != old.from
+                        || o.at_game_days != old.at_game_days
+                })
+            });
+            // Replay/stale completion branches never applied the old prompt.
+            // Their still-offered receipt is retired with that obligation.
+            if occasion == saved.original {
+                occasion = None;
+            }
+            match (saved.occasion, occasion.take()) {
+                (Some(newer), Some(applied))
+                    if created && applied.at_game_days >= newer.at_game_days =>
+                {
+                    Some(applied)
+                }
+                (Some(newer), _) => Some(newer),
+                (None, applied) => applied,
+            }
+        };
+        if let Some(current) = current {
+            self.occasions.insert(actor.clone(), current);
+        }
+        crate::scheduler::continuation::PromptContext { seated, occasion }
     }
     /// A witness's stored override remains first hand and pristine.
     pub fn set_heat_at(&mut self, actor: &ActorId, key: FactKey, heat: f32, on: Option<f64>) {

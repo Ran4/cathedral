@@ -1,0 +1,573 @@
+{
+  "above_2ms": 300,
+  "above_30ms": 0,
+  "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+  "cold_first_samples": [
+    {
+      "microseconds": 10.186,
+      "mode": "authored",
+      "phase": "preparation",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 1.9240000000000002,
+      "mode": "authored",
+      "phase": "service_binding",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 1496.605,
+      "mode": "authored",
+      "phase": "prepared_owner_disposal",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 0.9309999999999999,
+      "mode": "authored",
+      "phase": "Admission",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.401,
+      "mode": "authored",
+      "phase": "Inputs",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 6.666,
+      "mode": "authored",
+      "phase": "Speech",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.13699999999999998,
+      "mode": "authored",
+      "phase": "Floor",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.524,
+      "mode": "authored",
+      "phase": "Prepared",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 9.794,
+      "mode": "authored",
+      "phase": "preparation",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 2.809,
+      "mode": "authored",
+      "phase": "service_binding",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 1494.296,
+      "mode": "authored",
+      "phase": "prepared_owner_disposal",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 0.778,
+      "mode": "authored",
+      "phase": "Admission",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.316,
+      "mode": "authored",
+      "phase": "Inputs",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 6.471,
+      "mode": "authored",
+      "phase": "Speech",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.13899999999999998,
+      "mode": "authored",
+      "phase": "Floor",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.534,
+      "mode": "authored",
+      "phase": "Prepared",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 10.176,
+      "mode": "authored",
+      "phase": "preparation",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 1.623,
+      "mode": "authored",
+      "phase": "service_binding",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 1402.1000000000001,
+      "mode": "authored",
+      "phase": "prepared_owner_disposal",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 0.877,
+      "mode": "authored",
+      "phase": "Admission",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.266,
+      "mode": "authored",
+      "phase": "Inputs",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 6.698,
+      "mode": "authored",
+      "phase": "Speech",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.29400000000000004,
+      "mode": "authored",
+      "phase": "Floor",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.46699999999999997,
+      "mode": "authored",
+      "phase": "Prepared",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 9.88,
+      "mode": "populated",
+      "phase": "preparation",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 2.556,
+      "mode": "populated",
+      "phase": "service_binding",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 4291.376,
+      "mode": "populated",
+      "phase": "prepared_owner_disposal",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 0.752,
+      "mode": "populated",
+      "phase": "Admission",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.428,
+      "mode": "populated",
+      "phase": "Inputs",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 6.681,
+      "mode": "populated",
+      "phase": "Speech",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.14100000000000001,
+      "mode": "populated",
+      "phase": "Floor",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.41800000000000004,
+      "mode": "populated",
+      "phase": "Prepared",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 10.030000000000001,
+      "mode": "populated",
+      "phase": "preparation",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 2.727,
+      "mode": "populated",
+      "phase": "service_binding",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 4226.298,
+      "mode": "populated",
+      "phase": "prepared_owner_disposal",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 0.865,
+      "mode": "populated",
+      "phase": "Admission",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.649,
+      "mode": "populated",
+      "phase": "Inputs",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 6.569,
+      "mode": "populated",
+      "phase": "Speech",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.17700000000000002,
+      "mode": "populated",
+      "phase": "Floor",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.345,
+      "mode": "populated",
+      "phase": "Prepared",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 9.995,
+      "mode": "populated",
+      "phase": "preparation",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 2.741,
+      "mode": "populated",
+      "phase": "service_binding",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 4023.2009999999996,
+      "mode": "populated",
+      "phase": "prepared_owner_disposal",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 0.721,
+      "mode": "populated",
+      "phase": "Admission",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.506,
+      "mode": "populated",
+      "phase": "Inputs",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 6.842,
+      "mode": "populated",
+      "phase": "Speech",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.14700000000000002,
+      "mode": "populated",
+      "phase": "Floor",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.391,
+      "mode": "populated",
+      "phase": "Prepared",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    }
+  ],
+  "dataset": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance",
+  "end_to_end_samples": 1800,
+  "maximum_rss_kib": {
+    "authored": 383636,
+    "populated": 495908
+  },
+  "maximum_shared_budget_bytes": {
+    "authored": 758093673,
+    "populated": 977116076
+  },
+  "normalization": "none; every process and sample retained, nearest-rank quantiles",
+  "phases": {
+    "authored": {
+      "preparation": {
+        "maximum_us": 13.964,
+        "minimum_us": 9.133999999999999,
+        "p50_us": 9.864,
+        "p95_us": 10.512,
+        "p99_us": 11.561,
+        "samples": 300
+      },
+      "prepared_owner_disposal": {
+        "maximum_us": 1821.5040000000001,
+        "minimum_us": 626.102,
+        "p50_us": 853.095,
+        "p95_us": 1078.475,
+        "p99_us": 1402.1000000000001,
+        "samples": 300
+      },
+      "service_binding": {
+        "maximum_us": 3.6109999999999998,
+        "minimum_us": 1.38,
+        "p50_us": 1.945,
+        "p95_us": 2.809,
+        "p99_us": 2.985,
+        "samples": 300
+      }
+    },
+    "populated": {
+      "preparation": {
+        "maximum_us": 13.964,
+        "minimum_us": 9.469000000000001,
+        "p50_us": 10.152999999999999,
+        "p95_us": 10.642999999999999,
+        "p99_us": 13.114,
+        "samples": 300
+      },
+      "prepared_owner_disposal": {
+        "maximum_us": 4961.803,
+        "minimum_us": 3673.38,
+        "p50_us": 3839.359,
+        "p95_us": 4252.6630000000005,
+        "p99_us": 4524.353,
+        "samples": 300
+      },
+      "service_binding": {
+        "maximum_us": 5.39,
+        "minimum_us": 2.007,
+        "p50_us": 2.7819999999999996,
+        "p95_us": 3.21,
+        "p99_us": 3.649,
+        "samples": 300
+      }
+    }
+  },
+  "result": "passed",
+  "results_sha256": "b93a89587c23fcbc09591bb318ae9844579dcd34dbf5a48033de7c5a3f2d570f",
+  "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+  "source_pending_shape_counts": {
+    "authored": {
+      "night_held": 0,
+      "night_submitted": 0,
+      "scheduler_held": 0,
+      "scheduler_submitted": 300,
+      "scheduler_unfinished": 300
+    },
+    "populated": {
+      "night_held": 0,
+      "night_submitted": 0,
+      "scheduler_held": 0,
+      "scheduler_submitted": 300,
+      "scheduler_unfinished": 300
+    }
+  },
+  "stage_samples": 3000,
+  "stages": {
+    "authored": {
+      "Admission": {
+        "maximum_us": 1.369,
+        "minimum_us": 0.616,
+        "p50_us": 0.762,
+        "p95_us": 0.881,
+        "p99_us": 0.9739999999999999,
+        "samples": 300
+      },
+      "Floor": {
+        "maximum_us": 0.352,
+        "minimum_us": 0.08,
+        "p50_us": 0.142,
+        "p95_us": 0.266,
+        "p99_us": 0.298,
+        "samples": 300
+      },
+      "Inputs": {
+        "maximum_us": 2.023,
+        "minimum_us": 1.253,
+        "p50_us": 1.484,
+        "p95_us": 1.742,
+        "p99_us": 1.812,
+        "samples": 300
+      },
+      "Prepared": {
+        "maximum_us": 4.25,
+        "minimum_us": 0.29900000000000004,
+        "p50_us": 0.504,
+        "p95_us": 0.5940000000000001,
+        "p99_us": 0.671,
+        "samples": 300
+      },
+      "Speech": {
+        "maximum_us": 9.725,
+        "minimum_us": 5.893,
+        "p50_us": 6.457,
+        "p95_us": 6.904,
+        "p99_us": 7.401,
+        "samples": 300
+      }
+    },
+    "populated": {
+      "Admission": {
+        "maximum_us": 1.111,
+        "minimum_us": 0.6859999999999999,
+        "p50_us": 0.788,
+        "p95_us": 0.9369999999999999,
+        "p99_us": 1.017,
+        "samples": 300
+      },
+      "Floor": {
+        "maximum_us": 0.35,
+        "minimum_us": 0.125,
+        "p50_us": 0.142,
+        "p95_us": 0.253,
+        "p99_us": 0.312,
+        "samples": 300
+      },
+      "Inputs": {
+        "maximum_us": 4.099,
+        "minimum_us": 1.286,
+        "p50_us": 1.542,
+        "p95_us": 1.769,
+        "p99_us": 1.905,
+        "samples": 300
+      },
+      "Prepared": {
+        "maximum_us": 0.565,
+        "minimum_us": 0.26399999999999996,
+        "p50_us": 0.351,
+        "p95_us": 0.414,
+        "p99_us": 0.519,
+        "samples": 300
+      },
+      "Speech": {
+        "maximum_us": 10.612,
+        "minimum_us": 6.219,
+        "p50_us": 6.836,
+        "p95_us": 7.302,
+        "p99_us": 9.927,
+        "samples": 300
+      }
+    }
+  },
+  "timing_scope": "preparation, inert service factory binding and prepared-owner disposal measured separately; prior capture/validation/hydration and subsequent re-save excluded; source host retains shared nav",
+  "typed_ranges_bytes": {
+    "authored": {
+      "maximum": 38447138,
+      "minimum": 38447138
+    },
+    "populated": {
+      "maximum": 133751958,
+      "minimum": 133751958
+    }
+  }
+}

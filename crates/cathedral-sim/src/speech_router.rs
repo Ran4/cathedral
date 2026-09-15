@@ -273,6 +273,9 @@ struct UtteranceTiming {
 /// drops the oldest.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SpeechRouter {
+    /// Durable unsent input and interruption notifications. These have no
+    /// transport jobs and do not contribute to player_composing.
+    pub(crate) interrupted: Vec<checkpoint::InterruptedSpeech>,
     /// How long a committed recording waits for its realtime transcript before
     /// paying for a batch upload.
     stt_stream_grace_seconds: f64,

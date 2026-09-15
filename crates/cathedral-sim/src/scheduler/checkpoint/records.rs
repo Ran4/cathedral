@@ -35,6 +35,82 @@ struct FlightV1 {
 }
 remote_adapters!(flight, InFlight, FlightV1);
 #[derive(Serialize, Deserialize)]
+#[serde(remote = "InFlight", deny_unknown_fields)]
+pub(crate) struct FlightV2 {
+    #[serde(with = "accepted_budget")]
+    output_token_budget: crate::traits::AcceptedOutputBudget,
+    actor_id: ActorId,
+    presence_epoch: u64,
+    #[serde(with = "crate::traits::checkpoint::request_id")]
+    request_id: RequestId,
+    #[serde(with = "OperationIdV1")]
+    semantic: OperationId,
+    #[serde(with = "LaneV1")]
+    lane: TurnLane,
+    #[serde(with = "text::vec")]
+    drained_events: Vec<String>,
+    #[serde(with = "text::vec")]
+    presented: Vec<String>,
+    #[serde(with = "TextV1")]
+    prompt: String,
+}
+pub(crate) mod accepted_budget {
+    use super::*;
+    pub fn serialize<S: serde::Serializer>(
+        v: &crate::traits::AcceptedOutputBudget,
+        s: S,
+    ) -> std::result::Result<S::Ok, S::Error> {
+        match v {
+            crate::traits::AcceptedOutputBudget::Accepted(v) => v.serialize(s),
+            _ => Err(serde::ser::Error::custom("missing accepted input")),
+        }
+    }
+    pub fn deserialize<'de, D: serde::Deserializer<'de>>(
+        d: D,
+    ) -> std::result::Result<crate::traits::AcceptedOutputBudget, D::Error> {
+        Option::<u32>::deserialize(d).map(crate::traits::AcceptedOutputBudget::Accepted)
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ContinuationV2 {
+    pub(crate) load_retries: VecDeque<continuation::LoadRetry>,
+    #[serde(deserialize_with = "required_option")]
+    pub(crate) resumed_context: Option<continuation::PromptContext>,
+}
+#[derive(Serialize)]
+pub(crate) struct ContinuationView<'a> {
+    load_retries: &'a VecDeque<continuation::LoadRetry>,
+    resumed_context: &'a Option<continuation::PromptContext>,
+}
+impl NpcScheduler {
+    pub(crate) fn continuation_view(&self) -> ContinuationView<'_> {
+        ContinuationView {
+            load_retries: &self.load_retries,
+            resumed_context: &self.resumed_context,
+        }
+    }
+    pub(crate) fn install_continuation_v2(&mut self, v: ContinuationV2) {
+        self.load_retries = v.load_retries;
+        self.resumed_context = v.resumed_context;
+    }
+}
+pub(crate) fn validate_context(c: &continuation::PromptContext) -> Result<()> {
+    check(
+        c.seated.len() <= crate::knowledge::KNOWN_SHEET_MAX,
+        "resumed seated key limit",
+    )?;
+    if let Some(o) = &c.occasion {
+        for a in o.subject.iter().chain(o.from.iter()) {
+            id(a)?;
+        }
+        crate::checkpoint::calendar(OWNER, o.at_game_days)?;
+        check(o.offered, "resumed prompt occasion is not offered")?;
+    }
+    Ok(())
+}
+#[derive(Serialize, Deserialize)]
 #[serde(remote = "RetryWork", deny_unknown_fields)]
 struct RetryV1 {
     #[serde(with = "OperationIdV1")]
@@ -117,6 +193,12 @@ pub(crate) struct SchedulerV1 {
     player_reactions: VecDeque<ActorId>,
     #[serde(with = "flight::option")]
     in_flight: Option<InFlight>,
+    // Explicit V1 conversion has no load-created obligations. V1 exports
+    // refuse such states; complete V2 restores its mandatory extension below.
+    #[serde(skip)]
+    load_retries: VecDeque<continuation::LoadRetry>,
+    #[serde(skip)]
+    resumed_context: Option<continuation::PromptContext>,
     #[serde(with = "retry::map")]
     retry_work: BTreeMap<ActorId, RetryWork>,
     #[serde(with = "crate::traits::checkpoint::completion::option")]

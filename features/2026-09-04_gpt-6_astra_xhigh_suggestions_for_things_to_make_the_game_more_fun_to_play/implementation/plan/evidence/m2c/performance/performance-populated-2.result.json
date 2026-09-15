@@ -1,0 +1,87 @@
+{
+  "binary": "/tmp/alibi-m2c-host-reference-binary-1",
+  "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+  "command": [
+    "/tmp/alibi-m2c-host-reference-binary-1",
+    "--ignored",
+    "--exact",
+    "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "completed_utc": "2026-09-15T02:12:46.237647+00:00",
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "elapsed_seconds": 50.33260230021551,
+  "environment_overrides": {
+    "ALIBI_CONTINUATION_MODE": "populated",
+    "ALIBI_CONTINUATION_REPORT": "/tmp/alibi-m2c-performance-populated-2.metrics.json",
+    "ALIBI_CONTINUATION_SAMPLES": "100",
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+  },
+  "exit_code": 0,
+  "helper_sha256": {
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/release_common.py": "017db6df1a0164bdb501491409065b3dbaa06890bc6ba0c172d973696baddeba",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/run-release-probes.py": "c3cc16294d5fd9802139874a86ce7c75af93651fc4e6356d29dcff43f1a966e6"
+  },
+  "inherited_build_environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_TARGET_DIR": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "log": {
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-populated-2.log.gz",
+    "archive_sha256": "9002dd6b06237af7525f85966d2843b856fcf5ddb74ad72e33c3fe225f94fdf4",
+    "normalization": "none; exact original bytes",
+    "original": "/tmp/alibi-m2c-performance-populated-2.stdout-stderr.log",
+    "original_bytes": 3599,
+    "original_sha256": "5e55826c85a6bb9cf104a7fcd331d624c113c525e727e73213894be7fc3c6ecb"
+  },
+  "removed_build_environment": [
+    "LDFLAGS",
+    "RUSTFLAGS",
+    "CARGO_ENCODED_RUSTFLAGS",
+    "CARGO_BUILD_RUSTFLAGS",
+    "RUSTC_WRAPPER",
+    "RUSTC_WORKSPACE_WRAPPER"
+  ],
+  "removed_probe_environment": {
+    "ALIBI_COMPLETE_WORLD_ID": null,
+    "ALIBI_CONTINUATION_FIXTURE": null,
+    "ALIBI_CONTINUATION_MODE": null,
+    "ALIBI_CONTINUATION_READ_FIXTURE": null,
+    "ALIBI_CONTINUATION_REPORT": null,
+    "ALIBI_CONTINUATION_SAMPLES": null,
+    "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+    "ALIBI_HYDRATION_FIXTURE": null,
+    "ALIBI_HYDRATION_INITIAL": null,
+    "ALIBI_HYDRATION_MODE": null,
+    "ALIBI_HYDRATION_REPORT": null,
+    "ALIBI_HYDRATION_SAMPLES": null
+  },
+  "source_count": 980,
+  "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+  "source_scope": "component-inputs-v2",
+  "started_utc": "2026-09-15T02:11:55.825547+00:00",
+  "time": {
+    "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-populated-2.time.gz",
+    "archive_sha256": "ab68d8ce25777c874407baff477645203ea5ddd01e1814e0d9f5caab53e3655c",
+    "normalization": "none; exact original bytes",
+    "original": "/tmp/alibi-m2c-performance-populated-2.time",
+    "original_bytes": 877,
+    "original_sha256": "a7fd14fd11d443a54b61f7404001cecd04ad12f612bbdbecca4a70d967ce6792"
+  },
+  "unchanged_binary": true,
+  "unchanged_helpers": true,
+  "unchanged_source": true
+}

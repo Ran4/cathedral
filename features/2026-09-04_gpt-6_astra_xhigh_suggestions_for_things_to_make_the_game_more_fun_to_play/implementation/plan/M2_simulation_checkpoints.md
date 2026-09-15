@@ -1,4 +1,4 @@
-Status: In progress (2026-09-15). M2a1–M2a16 complete capture/validation and M2b quarantined hydration are implemented and reviewed. M2c pending-work restoration and M2d continuation remain.
+Status: In progress (2026-09-15). M2a1–M2a16 complete capture/validation and M2b quarantined hydration are implemented and reviewed. M2c pending-work restoration is implemented and reviewed. M2d continuation remains.
 
 # M2 — Complete simulation checkpoints
 
@@ -106,6 +106,21 @@ non-Send Engine do not establish host-frame acceptance.
 
 ### M2c — Pending cognition and speech
 
+Implemented and reviewed (2026-09-15). The public transition consumes
+an admitted HydratedEngine into quarantined PreparedContinuation, with inert
+generation-bound service binding and complete immediate re-save. Actual scheduler,
+Night, speech/ledger and Floor owners are prepared jointly; no public Engine/World
+borrow, extraction or poll is introduced. The [owner design](evidence/m2c/owner-design.md)
+and [admission proof](evidence/m2c/ADMISSION.md) record exact state policies,
+explicit V2 extensions, legacy migration limits, count pressure and drop order.
+The final full workspace passes2,215 tests with zero failures and44 intentional
+ignores across46 groups, including independent public/behavior suites and the
+complete old-deferred/new-active second-load regression. All39 changed/new Rust
+files pass formatting at the same980-input source map. The [owner handoff](evidence/m2c/OWNER_HANDOFF.md)
+records exact source, binary, archive and debug-probe identities. The [coordinator review](evidence/m2c/coordinator/review.md) accepts the unchanged
+source, 600 release preparations and eight fresh-process fixture checks. M2d
+and whole-application adoption remain separate gates.
+
 Separate committed actions from unfinished requests. A submitted NPC prompt may have drained its inbox; preserve its input receipt and the obligation to respond. The default is exact held-result restoration for completed-but-unapplied success/error completions, and exactly one load-specific retry for submitted/unfinished work. Do not both restore the drained inbox and apply its saved completion. Preserve newer arrivals separately and retain lane/fairness identity. The existing idle-retry and provider-failure helpers are not valid substitutes: one drops idle work, the other creates false failure/backoff effects.
 
 External sockets, HTTP jobs, audio handles and raw microphone capture are not engine state. Outstanding provider jobs belong to the old runtime generation. Completed, committed speech remains in transcript/knowledge receipts; audio can be regenerated or replaced with readable text without saying the line to the world a second time.
@@ -116,7 +131,7 @@ Preserve Night Office duty identity, owed day, subject/incarnation and queued/su
 
 ### M2d — Deterministic continuation
 
-Build fixtures that run to a chosen boundary, capture, hydrate into fresh services, then execute the same subsequent inputs as an uninterrupted control. Compare canonical authoritative state and committed domain events, excluding declared transient presentation counters. Use fake or recorded cognition completions with controlled timing. Exact equality covers retained/recorded completions; intentional re-rendering of unfinished work instead proves obligation conservation and exactly-once application, since a live provider need not reproduce the unsaved future.
+Build fixtures that run to a chosen boundary, capture, hydrate into fresh services, then execute the same subsequent inputs as an uninterrupted control. Compare canonical authoritative state and committed domain events, excluding declared transient presentation counters. Use fake or recorded cognition completions with controlled timing. Exact equality covers retained/recorded completions; resubmission of unfinished work instead proves obligation conservation and exactly-once application, since a live provider need not reproduce the unsaved future.
 
 Test boundaries during a food transformation, market queue, road-party departure, warm conversation, pending offer, custody escort, weather transition, bell sequence, knowledge propagation and night reflection. Later milestones must add their own continuation cases before acceptance.
 

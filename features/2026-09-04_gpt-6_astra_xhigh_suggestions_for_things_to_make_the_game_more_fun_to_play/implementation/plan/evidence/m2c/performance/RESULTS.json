@@ -1,0 +1,590 @@
+[
+  {
+    "binary": "/tmp/alibi-m2c-host-reference-binary-1",
+    "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+    "command": [
+      "/tmp/alibi-m2c-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T02:10:29.688993+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 17.111059702001512,
+    "environment_overrides": {
+      "ALIBI_CONTINUATION_MODE": "authored",
+      "ALIBI_CONTINUATION_REPORT": "/tmp/alibi-m2c-performance-authored-1.metrics.json",
+      "ALIBI_CONTINUATION_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/release_common.py": "017db6df1a0164bdb501491409065b3dbaa06890bc6ba0c172d973696baddeba",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/run-release-probes.py": "c3cc16294d5fd9802139874a86ce7c75af93651fc4e6356d29dcff43f1a966e6"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-authored-1.log.gz",
+      "archive_sha256": "26606485d5047c3c5cc0f8d1fef2832c8f03c8f878d6a7ea44bbeeb90ddc27be",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-authored-1.stdout-stderr.log",
+      "original_bytes": 3595,
+      "original_sha256": "73c5e092023e5efe32b34b868b98184c4f92a2263fb4f97faf4c7772b30d9a62"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/authored-1.json.gz",
+      "archive_sha256": "dc51a40d1049e38f67572a9ae3fd07d3513ee53fb6a811c4c1b6d998a93e3dfa",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-authored-1.metrics.json",
+      "original_bytes": 196076,
+      "original_sha256": "99d358ed63b1f96e2e1ca3fbaecd90391442a190cc479151d8698ae89636dcbc"
+    },
+    "mode": "authored",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_CONTINUATION_FIXTURE": null,
+      "ALIBI_CONTINUATION_MODE": null,
+      "ALIBI_CONTINUATION_READ_FIXTURE": null,
+      "ALIBI_CONTINUATION_REPORT": null,
+      "ALIBI_CONTINUATION_SAMPLES": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 1,
+    "samples": 100,
+    "source_count": 980,
+    "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T02:10:12.497524+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-authored-1.time.gz",
+      "archive_sha256": "d091a5da61edc2376e3ec9a42fd2056664561dd1652c6976864a8f7951ea038c",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-authored-1.time",
+      "original_bytes": 877,
+      "original_sha256": "9cc13c443618d01cf42f7d474c4f54f299ac13b63f491ba49e2fb2f952b141bc"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2c-host-reference-binary-1",
+    "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+    "command": [
+      "/tmp/alibi-m2c-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T02:10:47.219278+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 17.14020537910983,
+    "environment_overrides": {
+      "ALIBI_CONTINUATION_MODE": "authored",
+      "ALIBI_CONTINUATION_REPORT": "/tmp/alibi-m2c-performance-authored-2.metrics.json",
+      "ALIBI_CONTINUATION_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/release_common.py": "017db6df1a0164bdb501491409065b3dbaa06890bc6ba0c172d973696baddeba",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/run-release-probes.py": "c3cc16294d5fd9802139874a86ce7c75af93651fc4e6356d29dcff43f1a966e6"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-authored-2.log.gz",
+      "archive_sha256": "e56071e6e358f99570af959dfefc571f34e9969088a85bf6be9279b59d6ede8c",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-authored-2.stdout-stderr.log",
+      "original_bytes": 3595,
+      "original_sha256": "a832b02668e6bd539c6859befa1eb9707eeae2b03f68ab8d3352d54f7f195900"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/authored-2.json.gz",
+      "archive_sha256": "882d9fd3acf9c0b3e638aa5ac538648f6f64edc5c3aad6ff3923e49d1db6533d",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-authored-2.metrics.json",
+      "original_bytes": 196285,
+      "original_sha256": "0c5ca1ca16a58253832189947b7edfdf967b1a63a9107c75b35f5a9b320701a5"
+    },
+    "mode": "authored",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_CONTINUATION_FIXTURE": null,
+      "ALIBI_CONTINUATION_MODE": null,
+      "ALIBI_CONTINUATION_READ_FIXTURE": null,
+      "ALIBI_CONTINUATION_REPORT": null,
+      "ALIBI_CONTINUATION_SAMPLES": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 2,
+    "samples": 100,
+    "source_count": 980,
+    "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T02:10:29.998506+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-authored-2.time.gz",
+      "archive_sha256": "2ace8076a7e5c11deb761e5c4b37a11739ef4ff08b5cef20982d81ad25aaf4bb",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-authored-2.time",
+      "original_bytes": 877,
+      "original_sha256": "2635d74472667bec06195ba089648f37a4e7f86571bd8a81f41ecbcc7aca4d9c"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2c-host-reference-binary-1",
+    "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+    "command": [
+      "/tmp/alibi-m2c-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T02:11:04.724209+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 17.121757411863655,
+    "environment_overrides": {
+      "ALIBI_CONTINUATION_MODE": "authored",
+      "ALIBI_CONTINUATION_REPORT": "/tmp/alibi-m2c-performance-authored-3.metrics.json",
+      "ALIBI_CONTINUATION_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/release_common.py": "017db6df1a0164bdb501491409065b3dbaa06890bc6ba0c172d973696baddeba",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/run-release-probes.py": "c3cc16294d5fd9802139874a86ce7c75af93651fc4e6356d29dcff43f1a966e6"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-authored-3.log.gz",
+      "archive_sha256": "26606485d5047c3c5cc0f8d1fef2832c8f03c8f878d6a7ea44bbeeb90ddc27be",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-authored-3.stdout-stderr.log",
+      "original_bytes": 3595,
+      "original_sha256": "73c5e092023e5efe32b34b868b98184c4f92a2263fb4f97faf4c7772b30d9a62"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/authored-3.json.gz",
+      "archive_sha256": "d6c58b16fa9e521facdb143199a7b7ad5581572af94c72f00d61f5814374348c",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-authored-3.metrics.json",
+      "original_bytes": 196275,
+      "original_sha256": "70f78f681a6cd64e9afde3dc1b7ba391ce0ad28454a04f25c0005fdbdabfabcd"
+    },
+    "mode": "authored",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_CONTINUATION_FIXTURE": null,
+      "ALIBI_CONTINUATION_MODE": null,
+      "ALIBI_CONTINUATION_READ_FIXTURE": null,
+      "ALIBI_CONTINUATION_REPORT": null,
+      "ALIBI_CONTINUATION_SAMPLES": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 3,
+    "samples": 100,
+    "source_count": 980,
+    "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T02:10:47.522704+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-authored-3.time.gz",
+      "archive_sha256": "7b1ee4ff8af34bf943742e2b2594467862f32047462453447765c77757a44e7e",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-authored-3.time",
+      "original_bytes": 876,
+      "original_sha256": "8b2550d9989938d5f45520d1fef375a31d08b260cb4673ea385ab5fa24471267"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2c-host-reference-binary-1",
+    "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+    "command": [
+      "/tmp/alibi-m2c-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T02:11:55.510742+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 50.4007463878952,
+    "environment_overrides": {
+      "ALIBI_CONTINUATION_MODE": "populated",
+      "ALIBI_CONTINUATION_REPORT": "/tmp/alibi-m2c-performance-populated-1.metrics.json",
+      "ALIBI_CONTINUATION_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/release_common.py": "017db6df1a0164bdb501491409065b3dbaa06890bc6ba0c172d973696baddeba",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/run-release-probes.py": "c3cc16294d5fd9802139874a86ce7c75af93651fc4e6356d29dcff43f1a966e6"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-populated-1.log.gz",
+      "archive_sha256": "bf918b5c1312bf8801fa9264278e11252bc0c8de709b04ac95a8780263df7450",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-populated-1.stdout-stderr.log",
+      "original_bytes": 3599,
+      "original_sha256": "5aa6cafabb00a2bf0924664f038de8c4e02ba74d49d0017860d1136b22ec4975"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/populated-1.json.gz",
+      "archive_sha256": "1fd3b517baef180cca3874b2798ec1f03d3572fb187121053e9d35aa66e9937c",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-populated-1.metrics.json",
+      "original_bytes": 197435,
+      "original_sha256": "c6c7bf840170b9052b9197e2933ae960d3d386694713cdc1f92f59a079f0d307"
+    },
+    "mode": "populated",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_CONTINUATION_FIXTURE": null,
+      "ALIBI_CONTINUATION_MODE": null,
+      "ALIBI_CONTINUATION_READ_FIXTURE": null,
+      "ALIBI_CONTINUATION_REPORT": null,
+      "ALIBI_CONTINUATION_SAMPLES": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 1,
+    "samples": 100,
+    "source_count": 980,
+    "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T02:11:05.029726+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-populated-1.time.gz",
+      "archive_sha256": "cdc462e8cb9d691baa478d9c846187e4b93c36f8391317f3a74e7db645c47233",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-populated-1.time",
+      "original_bytes": 877,
+      "original_sha256": "6e24534db148c99a86ab832d12dd524f47d7af6b276872a03470119739612461"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2c-host-reference-binary-1",
+    "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+    "command": [
+      "/tmp/alibi-m2c-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T02:12:46.237647+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 50.33260230021551,
+    "environment_overrides": {
+      "ALIBI_CONTINUATION_MODE": "populated",
+      "ALIBI_CONTINUATION_REPORT": "/tmp/alibi-m2c-performance-populated-2.metrics.json",
+      "ALIBI_CONTINUATION_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/release_common.py": "017db6df1a0164bdb501491409065b3dbaa06890bc6ba0c172d973696baddeba",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/run-release-probes.py": "c3cc16294d5fd9802139874a86ce7c75af93651fc4e6356d29dcff43f1a966e6"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-populated-2.log.gz",
+      "archive_sha256": "9002dd6b06237af7525f85966d2843b856fcf5ddb74ad72e33c3fe225f94fdf4",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-populated-2.stdout-stderr.log",
+      "original_bytes": 3599,
+      "original_sha256": "5e55826c85a6bb9cf104a7fcd331d624c113c525e727e73213894be7fc3c6ecb"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/populated-2.json.gz",
+      "archive_sha256": "5fcc5749b44d20f094b8210776138d170d1bf275dd13ebfcf984f264a99b4c98",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-populated-2.metrics.json",
+      "original_bytes": 196731,
+      "original_sha256": "9af2e7a244a09c533a080b1222e4c10361a40897cecbbe398948255f8d27890c"
+    },
+    "mode": "populated",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_CONTINUATION_FIXTURE": null,
+      "ALIBI_CONTINUATION_MODE": null,
+      "ALIBI_CONTINUATION_READ_FIXTURE": null,
+      "ALIBI_CONTINUATION_REPORT": null,
+      "ALIBI_CONTINUATION_SAMPLES": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 2,
+    "samples": 100,
+    "source_count": 980,
+    "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T02:11:55.825547+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-populated-2.time.gz",
+      "archive_sha256": "ab68d8ce25777c874407baff477645203ea5ddd01e1814e0d9f5caab53e3655c",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-populated-2.time",
+      "original_bytes": 877,
+      "original_sha256": "a7fd14fd11d443a54b61f7404001cecd04ad12f612bbdbecca4a70d967ce6792"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2c-host-reference-binary-1",
+    "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+    "command": [
+      "/tmp/alibi-m2c-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T02:13:36.993635+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 50.36513421894051,
+    "environment_overrides": {
+      "ALIBI_CONTINUATION_MODE": "populated",
+      "ALIBI_CONTINUATION_REPORT": "/tmp/alibi-m2c-performance-populated-3.metrics.json",
+      "ALIBI_CONTINUATION_SAMPLES": "100",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/release_common.py": "017db6df1a0164bdb501491409065b3dbaa06890bc6ba0c172d973696baddeba",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/coordinator/run-release-probes.py": "c3cc16294d5fd9802139874a86ce7c75af93651fc4e6356d29dcff43f1a966e6"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-populated-3.log.gz",
+      "archive_sha256": "3511e8915b740854a1760575b60b2a95a25c621d0f701ecd3172f84d5f810000",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-populated-3.stdout-stderr.log",
+      "original_bytes": 3599,
+      "original_sha256": "7df23362447f0d3c96923122321d2bd5084df7727454863732a2e33d59fb8773"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/populated-3.json.gz",
+      "archive_sha256": "66efd74d3dfacf3edf8130f5bc86b63d298cfe7ef40eb06926173f761e84d55d",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-populated-3.metrics.json",
+      "original_bytes": 196628,
+      "original_sha256": "fb95c65f3f795cd876bec04f618484699771487dfe0dc60b0ea94a7cba93a16a"
+    },
+    "mode": "populated",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_CONTINUATION_FIXTURE": null,
+      "ALIBI_CONTINUATION_MODE": null,
+      "ALIBI_CONTINUATION_READ_FIXTURE": null,
+      "ALIBI_CONTINUATION_REPORT": null,
+      "ALIBI_CONTINUATION_SAMPLES": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 3,
+    "samples": 100,
+    "source_count": 980,
+    "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T02:12:46.548469+00:00",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/performance/performance-populated-3.time.gz",
+      "archive_sha256": "83ef8ce15fa25f8a356b82c2606324a903d9dde3c59a6d4fbfb1a84bad34195d",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2c-performance-populated-3.time",
+      "original_bytes": 877,
+      "original_sha256": "eea886db5d2346e89f3274b1bd3d89bef48e6bfcf4a5297ea606fead12b66d7b"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  }
+]

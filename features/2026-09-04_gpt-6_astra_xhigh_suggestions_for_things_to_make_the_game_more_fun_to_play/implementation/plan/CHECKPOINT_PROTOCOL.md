@@ -1,4 +1,4 @@
-Status: M1 identities/time/generation fences, M2a complete capture/validation and M2b quarantined hydration are implemented and reviewed (2026-09-15). M2c pending-work preparation, M2d continuation and M3 application adoption/storage remain.
+Status: M1 identities/time/generation fences, M2a complete capture/validation and M2b quarantined hydration are implemented and reviewed (2026-09-15). M2c pending-work preparation is implemented and reviewed. M2d continuation and M3 application adoption/storage remain.
 
 # Capturing and resuming one coherent city
 
@@ -44,13 +44,54 @@ Also preserve ordinary **unaccepted wall-time debt accumulated before capture**,
 | Committed effects awaiting presentation | Domain event, speech/utterance identity, readable receipt and presentation progress policy | Preserve the effects. Rebuild readable presentation; never execute the speech/action again |
 | Uncommitted player microphone/STT | Available text, original input purpose, draft/proposition version, learned selections and interruption status | Restore as unsent text/status. A new intentional submission is required; old callbacks cannot submit it or fall back to public chat. Preserve any earlier committed speech effects separately |
 
-Restore drained event/history prefixes chronologically before newer arrivals, applying the existing bounded-buffer/coalescing policy without losing protected reactions. Do not both restore the drained inbox and apply its saved completion. Do not call the generic provider-failure path: loading is not a failed provider request and must not generate a false error percept or change backoff.
+M2c keeps exact drained/presented inputs on a separate load-retry obligation;
+it never restores them into the actor's inbox or merges newer arrivals into the
+accepted prompt. This avoids any prefix/coalescing ambiguity and preserves empty
+idle prompts. Held input likewise stays drained until ordinary application.
+Loading and provider Busy do not generate failure percepts or change the failure
+counter/backoff. A real subsequent provider failure is separately reported while
+its exact retry remains owned.
 
 An unfinished idle turn is still an obligation. The present `requeue_unspent_turn` intentionally ignores `TurnLane::Idle`, so it is not sufficient for load recovery. Persist a load-specific pending-turn selection state, including fairness position, so an empty-inbox/off-stage idle turn is neither lost nor resubmitted twice. A newer player priority can defer that restored idle work through the ordinary policy.
 
+The implemented queue is bounded at64. At saturation, new ordinary prompt
+creation is backpressured until an existing exact retry retires; protected
+intents remain queued. Composing suppression stalls that attempt as well. This
+explicit capacity exception keeps every newly reachable active/deferred state
+representable on the next complete save/load. The original seated Knowledge keys
+and offered occasion belong to each deferred/resumed obligation, independently
+of a newer same-actor context. Application temporarily installs the old context
+and then reconciles it with the preserved newer context and application effects.
+
 For Night Office, introduce a durable duty identity with subject, owed game day, actor incarnation when applicable, and queued/submitted/completed/dropped status. Current `last_reflected` is stamped at queue time and cannot substitute for completion status. Hydrate the saved queue directly rather than calling `enqueue`, which can suppress previously spent work. Unfinished night work retries only inside its restored validity window, still yielding to the player; already completed or deliberately dropped work stays spent. Ambient rerolls use a separate once-per-day guard.
 
-Strict future state/event equality applies when exact held completions or recorded future execution/timing are supplied. Re-rendering unfinished prompts can legitimately produce different prose and choices. For that path, prove conservation of obligations, current validation and exactly-once effects; do not claim an uncontrolled live LLM reproduces the unsaved future.
+Night V2 distinguishes an inactive saved flight from an accepted replacement
+execution; inactive flights cannot harvest another lane's reused numeric request
+ID and still participate in lazy gate computation with an empty ordinary queue.
+New person duties record their queue-time incarnation in an explicit ordered V2
+extension. Historical V1 supplied only an admission-time epoch: migration uses
+that epoch or the saved current person lifetime and cannot invent earlier
+authority. Missing-person migration checks its dropped-counter delta before any
+mutation. Queue-time stamps and the ambient guard remain exact.
+
+Speech V2 retains nonempty interrupted-input groups, original accepted provenance
+and the owed terminal interruption receipts after draining the ledger update
+queue. Those notifications survive complete re-save for later M3 publication.
+Original committed effects and receipts remain unchanged. The current purpose
+is public player speech; absent proposition state is not fabricated. Floor clears
+microphone liveness, preserves foreground/background reading deadlines, and
+reconciles old voiced waits to surviving readable progress capped by the original
+failsafe. Missing readable progress releases the old wait at the saved instant;
+preparation does not grant a fresh post-audio beat.
+
+Strict future state/event equality applies when exact held completions or
+recorded future execution/timing are supplied. M2c retries the exact accepted
+prompt/options; it does not re-render them. A live provider can still return
+different prose, so prove conservation of obligations, current validation and
+exactly-once effects without claiming an uncontrolled live LLM reproduces the
+unsaved future. The public prepared wrapper remains quarantined and can be
+captured immediately, including an older deferred retry beside newer active
+work. Only insufficient legacy V1 component export APIs refuse V2 state.
 
 ## 4. Host state that is more than presentation
 

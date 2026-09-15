@@ -68,7 +68,7 @@ pub enum RecordingSource {
     BatchPending,
     Parked,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct InterruptedStream {
     pub(super) basename: String,
     #[serde(deserialize_with = "required_option")]
@@ -90,7 +90,7 @@ impl InterruptedStream {
         self.available_text.as_deref()
     }
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AcceptedRecording {
     pub(super) source: RecordingSource,
     #[serde(with = "command::option")]
@@ -150,7 +150,7 @@ impl AcceptedRecording {
         self.parked_deadline
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct StateV1 {
     #[serde(with = "raw_float")]

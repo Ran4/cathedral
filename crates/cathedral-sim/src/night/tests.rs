@@ -1353,6 +1353,7 @@ fn busy_night_obligation_does_not_rebind_after_departure_and_reentry() {
     let actor = ActorId::from_raw("mjr01");
     let mut night = office(all_tiers(), &world, 0.0);
     night.queue.push_back(Due {
+        queued_presence_epoch: None,
         subject: Subject::Person(actor.clone()),
         day: 0,
         semantic: None,

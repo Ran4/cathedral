@@ -267,6 +267,28 @@ pub(crate) fn write_envelope<W: Write>(
     writer: &mut W,
     reservation: &mut Reservation,
 ) -> Result<()> {
+    write_envelope_with_host(
+        engine,
+        profile,
+        identity,
+        now,
+        manifest,
+        writer,
+        reservation,
+        |writer| super::super::host::complete_write(source, writer),
+    )
+}
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn write_envelope_with_host<W: Write>(
+    engine: &Engine,
+    profile: CheckpointProfile,
+    identity: WorldIdentity,
+    now: LogicalTime,
+    manifest: &CompleteManifestV1,
+    writer: &mut W,
+    reservation: &mut Reservation,
+    mut host: impl FnMut(&mut W) -> Result<()>,
+) -> Result<()> {
     writer
         .write_all(b"{\"version\":1,\"profile\":")
         .map_err(super::diagnostic)?;
@@ -288,7 +310,7 @@ pub(crate) fn write_envelope<W: Write>(
         write_json(writer, category.name())?;
         writer.write_all(b":").map_err(super::diagnostic)?;
         if category == CheckpointCategory::Host {
-            super::super::host::complete_write(source, writer)?;
+            host(writer)?;
         } else {
             engine.complete_write_category(category, now, writer, reservation)?;
         }

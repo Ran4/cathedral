@@ -56,6 +56,30 @@ impl CheckpointReceiptRef<'_> {
     }
 }
 impl CommandLedger {
+    pub(crate) fn checkpoint_history_receipt(
+        &self,
+        id: CommandId,
+    ) -> Option<CheckpointReceiptRef<'_>> {
+        self.get(id).map(CheckpointReceiptRef::Live)
+    }
+    pub(crate) fn valid_history_receipt(&self, r: &Receipt) -> bool {
+        r.id.operation.sequence > 0
+            && r.id.step <= MAX_STEPS
+            && r.ordinal <= self.next_ordinal
+            && self
+                .recent
+                .values()
+                .chain(self.retained.values())
+                .all(|e| e.receipt.id == r.id || e.receipt.ordinal != r.ordinal)
+            && self
+                .producers
+                .get(usize::from(r.id.operation.producer))
+                .is_some_and(|p| {
+                    r.id.operation.sequence <= p.high_water
+                        && (self.checkpoint_history_receipt(r.id).is_some()
+                            || r.id.operation.sequence <= p.compacted_floor)
+                })
+    }
     pub(crate) fn checkpoint_speech_receipt(
         &self,
         id: CommandId,
@@ -73,6 +97,36 @@ impl CommandLedger {
     }
 }
 impl CommandLedgerDtoV1 {
+    pub(crate) fn checkpoint_history_receipt(
+        &self,
+        id: CommandId,
+    ) -> Option<CheckpointReceiptRef<'_>> {
+        self.recent
+            .0
+            .iter()
+            .chain(&self.retained.0)
+            .find(|e| CommandId::from(e.receipt.id) == id)
+            .map(CheckpointReceiptRef::Saved)
+    }
+    pub(crate) fn valid_history_receipt(&self, r: &Receipt) -> bool {
+        r.id.operation.sequence > 0
+            && r.id.step <= MAX_STEPS
+            && r.ordinal <= self.next_ordinal
+            && self
+                .recent
+                .0
+                .iter()
+                .chain(&self.retained.0)
+                .all(|e| CommandId::from(e.receipt.id) == r.id || e.receipt.ordinal != r.ordinal)
+            && self
+                .producers
+                .get(usize::from(r.id.operation.producer))
+                .is_some_and(|p| {
+                    r.id.operation.sequence <= p.high_water
+                        && (self.checkpoint_history_receipt(r.id).is_some()
+                            || r.id.operation.sequence <= p.compacted_floor)
+                })
+    }
     pub(crate) fn checkpoint_speech_receipt(
         &self,
         id: CommandId,

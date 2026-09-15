@@ -15,6 +15,177 @@ pub use records::{
     AcceptedRecording, InputPurpose, InterruptedStream, InterruptionStatus, RecordingSource,
 };
 use records::{RecordingView, StateV1, StreamView};
+/// One load's frozen available input plus the truthful new terminal receipts.
+/// Original accepted receipt provenance is retained in `state`; neither record
+/// is active execution or a protected semantic root after interruption.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InterruptedSpeech {
+    at: LogicalTime,
+    state: StateV1,
+    #[serde(with = "records::receipt::vec")]
+    receipts: Vec<Receipt>,
+}
+pub const MAX_INTERRUPTED_INPUTS: usize = 64;
+pub(crate) const INTERRUPTION_CODE: &str = "recording_interrupted_by_load";
+pub(crate) const INTERRUPTION_MESSAGE: &str =
+    "Recording interrupted by loading; submit the available text intentionally.";
+impl InterruptedSpeech {
+    pub fn at(&self) -> LogicalTime {
+        self.at
+    }
+    pub fn captures(&self) -> &[String] {
+        &self.state.captures
+    }
+    pub fn streams(&self) -> &[InterruptedStream] {
+        &self.state.streams
+    }
+    pub fn recordings(&self) -> &[AcceptedRecording] {
+        &self.state.accepted_recordings
+    }
+    pub fn receipts(&self) -> &[Receipt] {
+        &self.receipts
+    }
+    pub fn purpose(&self) -> InputPurpose {
+        self.state.purpose
+    }
+    pub fn status(&self) -> InterruptionStatus {
+        self.state.status
+    }
+    pub(crate) fn count(&self) -> usize {
+        self.state.captures.len() + self.state.streams.len() + self.state.accepted_recordings.len()
+    }
+    pub(crate) fn new(at: LogicalTime, state: StateV1, receipts: Vec<Receipt>) -> Self {
+        Self {
+            at,
+            state,
+            receipts,
+        }
+    }
+    pub(crate) fn validate(&self, c: SpeechCheckpointContext<'_>) -> Result<()> {
+        check(self.count() > 0, "empty speech interruption group")?;
+        check(
+            self.at.seconds() <= c.now.seconds(),
+            "interruption after capture",
+        )?;
+        self.state.validate_interrupted(c)?;
+        check(
+            self.receipts.len() <= MAX_ACTIVE_STREAMS,
+            "interruption receipt limit",
+        )?;
+        for (i, r) in self.receipts.iter().enumerate() {
+            crate::receipts::validate_speech_receipt(r, c.now)?;
+            check(
+                r.outcome.state == ReceiptState::Interrupted
+                    && r.at.to_bits() == self.at.seconds().to_bits(),
+                "invalid interruption receipt",
+            )?;
+            check(
+                r.outcome.code == INTERRUPTION_CODE
+                    && r.outcome.message == INTERRUPTION_MESSAGE
+                    && c.history_agrees(r),
+                "interruption outcome/history disagreement",
+            )?;
+            check(
+                self.receipts[..i].iter().all(|p| p.id != r.id),
+                "duplicate interruption receipt",
+            )?;
+            check(
+                self.state.accepted_recordings.iter().any(|old| {
+                    old.semantic == Some(r.id)
+                        && old.receipt.as_ref().is_some_and(|prior| {
+                            matches!(
+                                prior.outcome.state,
+                                ReceiptState::Accepted | ReceiptState::InProgress
+                            ) && prior.ordinal == r.ordinal
+                                && prior.affected == r.affected
+                                && prior.at <= r.at
+                        })
+                }),
+                "interruption receipt has no matching accepted provenance",
+            )?;
+        }
+        for t in &self.state.accepted_recordings {
+            if let Some(r) = &t.receipt
+                && matches!(
+                    r.outcome.state,
+                    ReceiptState::Accepted | ReceiptState::InProgress
+                )
+            {
+                check(
+                    self.receipts.iter().any(|done| done.id == r.id),
+                    "accepted input missing interruption outcome",
+                )?;
+            } else if let Some(r) = &t.receipt {
+                check(
+                    r.at <= self.at.seconds(),
+                    "historical receipt after interruption boundary",
+                )?;
+                check(c.history_agrees(r), "committed speech history disagreement")?;
+            }
+        }
+        Ok(())
+    }
+}
+pub(crate) fn validate_interrupted(
+    groups: &[InterruptedSpeech],
+    c: SpeechCheckpointContext<'_>,
+) -> Result<()> {
+    check(
+        groups.len() <= MAX_INTERRUPTED_INPUTS
+            && groups.iter().map(InterruptedSpeech::count).sum::<usize>() <= MAX_INTERRUPTED_INPUTS,
+        "interrupted input count limit",
+    )?;
+    for group in groups {
+        group.validate(c)?;
+    }
+    for (i, group) in groups.iter().enumerate() {
+        for (j, t) in group.recordings().iter().enumerate() {
+            if let Some(id) = t.semantic() {
+                check(
+                    groups[..i]
+                        .iter()
+                        .all(|prior| prior.recordings().iter().all(|r| r.semantic() != Some(id))),
+                    "duplicate interrupted speech identity",
+                )?;
+            }
+            if let Some(receipt) = &t.receipt {
+                // Accepted provenance and its terminal update share one ordinal;
+                // distinct command identities never do, even after eviction.
+                check(
+                    groups[..i]
+                        .iter()
+                        .flat_map(|g| g.recordings())
+                        .chain(&group.recordings()[..j])
+                        .all(|prior| {
+                            prior
+                                .receipt
+                                .as_ref()
+                                .is_none_or(|p| p.ordinal != receipt.ordinal)
+                        }),
+                    "duplicate interrupted speech ordinal",
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+pub(crate) fn validate_active_overlap(
+    groups: &[InterruptedSpeech],
+    active: impl Iterator<Item = CommandId> + Clone,
+) -> Result<()> {
+    for group in groups {
+        for task in group.recordings() {
+            if let Some(id) = task.semantic() {
+                check(
+                    active.clone().all(|live| live != id),
+                    "interrupted speech is still active",
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
 pub(crate) const OWNER: &str = "speech";
 pub const MAX_TEXT_BYTES: usize = 400_000;
 pub const MAX_REQUEST_BYTES: usize = 65_536;
@@ -105,6 +276,7 @@ pub(crate) struct StateView<'a> {
 impl<'a> StateView<'a> {
     pub(crate) fn new(router: &'a SpeechRouter, context: SpeechCheckpointContext<'a>) -> Self {
         let SpeechRouter {
+            interrupted: _,
             stt_stream_grace_seconds: _,
             streams: _,
             captures: _,
@@ -152,6 +324,10 @@ impl<'a> StateView<'a> {
     pub(crate) fn validate(&self) -> Result<()> {
         let r = self.router;
         self.context.validate()?;
+        validate_active_overlap(
+            &r.interrupted,
+            self.tasks().filter_map(|(t, _, _)| t.semantic),
+        )?;
         check(
             r.resolved.is_empty(),
             "synchronous resolved staging is not a completed boundary",
@@ -311,6 +487,12 @@ impl Serialize for StateView<'_> {
 }
 impl StateV1 {
     pub(crate) fn validate(&self, c: SpeechCheckpointContext<'_>) -> Result<()> {
+        self.validate_inner(c, true)
+    }
+    pub(crate) fn validate_interrupted(&self, c: SpeechCheckpointContext<'_>) -> Result<()> {
+        self.validate_inner(c, false)
+    }
+    fn validate_inner(&self, c: SpeechCheckpointContext<'_>, active: bool) -> Result<()> {
         c.validate()?;
         check(
             self.captures.len() <= MAX_ACTIVE_STREAMS
@@ -365,10 +547,18 @@ impl StateV1 {
                 )?;
                 let r = t.receipt.as_ref().expect("presence checked");
                 check(r.id == id, "speech task receipt identity disagreement")?;
-                validate_receipt(r, c)?;
+                if active {
+                    validate_receipt(r, c)?;
+                } else {
+                    crate::receipts::validate_speech_receipt(r, c.now)?;
+                }
             }
         }
-        c.owners(self.accepted_recordings.iter().filter_map(|r| r.semantic))
+        if active {
+            c.owners(self.accepted_recordings.iter().filter_map(|r| r.semantic))
+        } else {
+            Ok(())
+        }
     }
     pub(crate) fn counts(&self, c: SpeechCheckpointContext<'_>) -> SpeechCounts {
         let a = &self.accepted_recordings;
@@ -474,6 +664,10 @@ impl SpeechRouter {
         c: SpeechCheckpointContext<'_>,
         mut r: Reservation,
     ) -> Result<Admitted<SpeechCost>> {
+        check(
+            self.interrupted.is_empty(),
+            "interrupted speech requires complete V2",
+        )?;
         let v = View {
             version: 1,
             boundary: c.now,
@@ -488,6 +682,10 @@ impl SpeechRouter {
         c: SpeechCheckpointContext<'_>,
         mut r: Reservation,
     ) -> Result<Admitted<SpeechRouterDtoV1>> {
+        check(
+            self.interrupted.is_empty(),
+            "interrupted speech requires complete V2",
+        )?;
         let v = View {
             version: 1,
             boundary: c.now,

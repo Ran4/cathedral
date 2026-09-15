@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "a1fc1c4824a0ba2fd9b8be615f96709abfe871a9a7430bfec1195356c5f47a09",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m2c-sim-lib-01.log",
+  "raw_sha256": "38bf700cc25ae550bd38c75986e7df0f13b7166a06f45ec091435b65dd9a4454",
+  "source_map_sha256": "941fbaf6b54df6c5a32d0ef6d4925859c6c280ab9efb3b019e2a2e577c2664d8",
+  "sources_unchanged": true,
+  "wall_seconds": 297.15781254996546
+}

@@ -23,6 +23,8 @@ remote_adapters!(operation, OperationId, OperationIdV1);
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "Due", deny_unknown_fields)]
 struct DueV1 {
+    #[serde(skip)]
+    queued_presence_epoch: Option<u64>,
     #[serde(with = "operation::option")]
     semantic: Option<OperationId>,
     #[serde(deserialize_with = "required_option")]
@@ -179,6 +181,8 @@ pub(crate) struct NightV1 {
     queue: VecDeque<Due>,
     #[serde(with = "flight::option")]
     in_flight: Option<Flight>,
+    #[serde(skip)]
+    load_retry_pending: bool,
     #[serde(with = "crate::traits::checkpoint::completion::option")]
     held_result: Option<Completion>,
     #[serde(with = "stamps")]

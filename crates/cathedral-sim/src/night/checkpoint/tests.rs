@@ -530,6 +530,7 @@ fn checkpoint_night_max_shapes_and_sparse_private_maps() {
         n.bedtimes.insert(id.clone(), Office::Snuffing);
         n.last_reflected.insert(Subject::Person(id.clone()), -1);
         n.queue.push_back(Due {
+            queued_presence_epoch: None,
             semantic: None,
             presence_epoch: None,
             subject: Subject::Person(id),

@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16 and M2b implemented and reviewed (2026-09-15). M2c–M2d and M3–M19 remain. M0 renderer/full-stress evidence is pending.
+Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16 and M2b–M2c implemented and reviewed (2026-09-15). M2d and M3–M19 remain. M0 renderer/full-stress evidence is pending.
 
 # An Alibi in Stone — systems first, then the full quest
 
@@ -122,4 +122,8 @@ exact saved lineage/time and protected pending authority. The final workspace
 passes 2,191 tests. All 600 release hydrations preserve all sixteen owner hashes;
 fresh-process fixtures reproduce exact bytes and reject incompatible images.
 Hydration p99 is 39.981/119.324 ms, so M3 still owes bounded host coordination.
-M2c pending-work preparation is next; M2d continuation and M3–M19 remain.
+[M2c’s reviewed continuation preparation](evidence/m2c/README.md) retains exact
+pending obligations, interrupts uncommitted recording once, and preserves
+immediate complete re-save. It passes 2,215 workspace tests, 600 release samples
+and eight fresh-process fixture checks. M2d deterministic future continuation
+is next; M3–M19 remain.

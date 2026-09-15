@@ -91,6 +91,60 @@ fn save_night(
         .unwrap()
 }
 
+fn refuse_current_person_queue(
+    night: &NightOffice,
+    context: NightCheckpointContext<'_>,
+    budget: &CheckpointBudget,
+) {
+    let before = budget.retained_bytes();
+    let error = night
+        .export_checkpoint(context, budget.reserve(Cohort::SavePayload, 4096).unwrap())
+        .unwrap_err();
+    assert!(error.reason.contains("V2"));
+    assert_eq!(budget.retained_bytes(), before);
+}
+
+/// Explicit historical V1 codec input, not an export of today's person queue.
+/// Current queue-time incarnation capture is exercised by complete V2 tests.
+fn historical_night(
+    context: NightCheckpointContext<'_>,
+    budget: &CheckpointBudget,
+    clock: &WorldClock,
+    now: f64,
+    edit: impl FnOnce(&mut serde_json::Value),
+) -> Admitted<Vec<u8>> {
+    let engine: serde_json::Value =
+        serde_json::from_str(include_str!("fixtures/checkpoint_v1/engine_night.json")).unwrap();
+    let mut wire = engine["night"].clone();
+    wire["boundary"] = now.into();
+    wire["context"]["clock"] = serde_json::to_value(clock.checkpoint_v1(at(now)).unwrap()).unwrap();
+    wire["night"]["config"]["wards"] = false.into();
+    wire["night"]["config"]["ambients"] = false.into();
+    edit(&mut wire["night"]);
+    let bytes = serde_json::to_vec(&wire).unwrap();
+    let candidate = NightOfficeDtoV1::decode(
+        &bytes,
+        budget
+            .reserve(Cohort::LoadCandidate, bytes.len() + 4096)
+            .unwrap(),
+        context,
+    )
+    .unwrap()
+    .into_candidate(context)
+    .unwrap();
+    save_night(candidate.value().night(), context, budget)
+}
+
+fn historical_unsubmitted(night: &mut serde_json::Value) {
+    let subject = night["in_flight"]["subject"].clone();
+    night["queue"].as_array_mut().unwrap().insert(
+        0,
+        serde_json::json!({"semantic":null,"presence_epoch":null,"subject":subject,"day":0}),
+    );
+    night["in_flight"] = serde_json::Value::Null;
+    night["next_attempt_at"] = serde_json::json!({"at":901.0});
+}
+
 #[test]
 fn public_ward_moods_keep_exact_text_beyond_the_provider_writer_limit() {
     let mut world = prompt_support::seed_world();
@@ -141,7 +195,11 @@ fn ringing_twice_retains_queue_time_stamps_and_an_unspent_lane() {
     );
     let budget = CheckpointBudget::default();
     let context = NightCheckpointContext::from_world(&world, at(901.0), &clock);
-    let saved = save_night(&night, context, &budget);
+    assert_eq!(night.owed(), 3);
+    assert_eq!(night.totals(), (0, 0));
+    assert!(night.wants_slot(901.0));
+    refuse_current_person_queue(&night, context, &budget);
+    let saved = historical_night(context, &budget, &clock, 901.0, historical_unsubmitted);
     let wire: serde_json::Value = serde_json::from_slice(saved.value()).unwrap();
     let data = &wire["night"];
     assert_eq!(data["queue"].as_array().unwrap().len(), 3);
@@ -189,11 +247,18 @@ fn a_busy_duty_keeps_its_departed_incarnation_and_requires_its_ledger_root() {
         &prompt_support::prompt_env(),
     );
     let budget = CheckpointBudget::default();
-    let first = save_night(
-        &night,
-        NightCheckpointContext::from_world(&world, at(901.0), &clock),
-        &budget,
-    );
+    let initial_context = NightCheckpointContext::from_world(&world, at(901.0), &clock);
+    refuse_current_person_queue(&night, initial_context, &budget);
+    assert_eq!(night.owed(), 3);
+    assert!(!night.wants_slot(905.999));
+    assert!(night.wants_slot(906.0));
+    let first = historical_night(initial_context, &budget, &clock, 901.0, |n| {
+        let semantic = n["in_flight"]["semantic"].clone();
+        historical_unsubmitted(n);
+        n["queue"][0]["semantic"] = semantic;
+        n["queue"][0]["presence_epoch"] = 0.into();
+        n["next_attempt_at"] = serde_json::json!({"at":906.0});
+    });
     let wire: serde_json::Value = serde_json::from_slice(first.value()).unwrap();
     let row = &wire["night"]["queue"][0];
     let actor = prompt_support::actor(row["subject"]["person"].as_str().unwrap());
@@ -267,7 +332,16 @@ fn a_submitted_prompt_is_not_rendered_again_from_changed_live_intent() {
     let clock_changed = clock.with_scale(901.0, 2.0);
     let budget = CheckpointBudget::default();
     let context = NightCheckpointContext::from_world(&world, at(901.0), &clock);
-    let saved = save_night(&night, context, &budget);
+    refuse_current_person_queue(&night, context, &budget);
+    assert!(!night.wants_slot(10_000.0));
+    let saved = historical_night(context, &budget, &clock, 901.0, |n| {
+        n["in_flight"]["request_id"] = 79.into();
+        // The historical fixture came from a fully initialized Engine; this
+        // public Night-only world has no calendar/wallet/wayfinding setup.
+        // Supply its independently recorded original request as the explicit
+        // V1 input, then prove the codec ignores the later live goal edit.
+        n["in_flight"]["prompt"] = capture.prompts[0].clone().into();
+    });
     let wire: serde_json::Value = serde_json::from_slice(saved.value()).unwrap();
     assert_eq!(wire["night"]["in_flight"]["prompt"], capture.prompts[0]);
     assert_eq!(wire["night"]["in_flight"]["request_id"], 79);
@@ -343,7 +417,12 @@ fn an_overflowed_pace_survives_a_return_to_an_admitted_clock_scale() {
     world.command_ledger.drain_updates();
     let budget = CheckpointBudget::default();
     let context = NightCheckpointContext::from_world(&world, at(902.0), &clock);
-    let saved = save_night(&night, context, &budget);
+    refuse_current_person_queue(&night, context, &budget);
+    let saved = historical_night(context, &budget, &clock, 902.0, |n| {
+        n["in_flight"] = serde_json::Value::Null;
+        n["next_attempt_at"] = "never".into();
+        n["dropped"] = 1.into();
+    });
     let wire: serde_json::Value = serde_json::from_slice(saved.value()).unwrap();
     assert_eq!(wire["night"]["next_attempt_at"], "never");
     let candidate = NightOfficeDtoV1::decode(

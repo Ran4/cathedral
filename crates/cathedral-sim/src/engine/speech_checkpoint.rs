@@ -65,6 +65,7 @@ struct View<'a> {
 #[derive(Debug)]
 pub struct EngineSpeechCandidate {
     data: EngineSpeechDtoV1,
+    interrupted: Vec<owner::InterruptedSpeech>,
 }
 fn binding(
     boundary: LogicalTime,
@@ -89,6 +90,10 @@ impl Engine {
         now: LogicalTime,
         mut r: Reservation,
     ) -> Result<Admitted<SpeechCost>> {
+        owner::check(
+            self.speech_router.interrupted.is_empty(),
+            "interrupted speech requires complete V2",
+        )?;
         let c = self.speech_checkpoint_context(now);
         let v = View {
             version: 1,
@@ -106,6 +111,10 @@ impl Engine {
         now: LogicalTime,
         mut r: Reservation,
     ) -> Result<Admitted<EngineSpeechDtoV1>> {
+        owner::check(
+            self.speech_router.interrupted.is_empty(),
+            "interrupted speech requires complete V2",
+        )?;
         let c = self.speech_checkpoint_context(now);
         let v = View {
             version: 1,
@@ -169,7 +178,10 @@ impl Admitted<EngineSpeechDtoV1> {
     ) -> Result<Admitted<EngineSpeechCandidate>> {
         self.try_map(|d, _| {
             d.validate(c)?;
-            Ok(EngineSpeechCandidate { data: d })
+            Ok(EngineSpeechCandidate {
+                data: d,
+                interrupted: Vec::new(),
+            })
         })
     }
 }
@@ -217,7 +229,28 @@ impl EngineSpeechDtoV1 {
         meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
         c: EngineSpeechCheckpointContext<'_>,
     ) -> Result<EngineSpeechCandidate> {
-        let w: Wire = meter.decode(bytes)?;
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct V2 {
+            version: u16,
+            base: Wire,
+            interrupted: Vec<owner::InterruptedSpeech>,
+        }
+        meter.prepare_diagnostics(bytes)?;
+        let (w, interrupted) = match crate::checkpoint::complete::owner_version(bytes)? {
+            1 => (meter.decode::<Wire>(bytes)?, Vec::new()),
+            2 => {
+                let v: V2 = meter.decode(bytes)?;
+                owner::check(v.version == 2, "unsupported speech extension")?;
+                (v.base, v.interrupted)
+            }
+            _ => {
+                return Err(crate::checkpoint::CheckpointError::new(
+                    "speech",
+                    "unsupported speech complete version",
+                ));
+            }
+        };
         let d = Self {
             version: w.version,
             boundary: w.boundary,
@@ -225,7 +258,18 @@ impl EngineSpeechDtoV1 {
             state: w.state,
         };
         d.validate(c)?;
-        Ok(EngineSpeechCandidate { data: d })
+        owner::validate_interrupted(&interrupted, c.speech)?;
+        owner::validate_active_overlap(
+            &interrupted,
+            d.state
+                .accepted_recordings
+                .iter()
+                .filter_map(|t| t.semantic()),
+        )?;
+        Ok(EngineSpeechCandidate {
+            data: d,
+            interrupted,
+        })
     }
 }
 
@@ -248,12 +292,93 @@ impl Engine {
             state: StateView::new(&self.speech_router, c.speech),
         };
         view.state.validate()?;
-        crate::checkpoint::complete::write_json(writer, &view)
+        owner::validate_interrupted(&self.speech_router.interrupted, c.speech)?;
+        write_complete(writer, &view, &self.speech_router.interrupted)
     }
 }
 
 impl EngineSpeechCandidate {
     pub(crate) fn complete_write_retained<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
-        crate::checkpoint::complete::write_json(writer, &self.data)
+        write_complete(writer, &self.data, &self.interrupted)
+    }
+}
+
+fn write_complete<W: std::io::Write, T: Serialize>(
+    writer: &mut W,
+    base: &T,
+    interrupted: &[owner::InterruptedSpeech],
+) -> Result<()> {
+    if interrupted.is_empty() {
+        crate::checkpoint::complete::write_json(writer, base)
+    } else {
+        #[derive(Serialize)]
+        struct V2<'a, T: Serialize> {
+            version: u16,
+            base: &'a T,
+            interrupted: &'a [owner::InterruptedSpeech],
+        }
+        crate::checkpoint::complete::write_json(
+            writer,
+            &V2 {
+                version: 2,
+                base,
+                interrupted,
+            },
+        )
+    }
+}
+
+impl EngineSpeechCandidate {
+    pub(crate) fn continuation_preflight(&self) -> Result<()> {
+        let existing: usize = self
+            .interrupted
+            .iter()
+            .map(owner::InterruptedSpeech::count)
+            .sum();
+        let s = &self.data.state;
+        owner::check(
+            existing + s.captures.len() + s.streams.len() + s.accepted_recordings.len()
+                <= owner::MAX_INTERRUPTED_INPUTS,
+            "interrupted input count limit",
+        )
+    }
+    pub(crate) fn prepare_continuation(
+        self,
+        world: &mut World,
+        router: &mut SpeechRouter,
+        now: LogicalTime,
+    ) -> Result<()> {
+        // Every accepted command was already validated against the ledger at
+        // this boundary. Advance never repeats an already committed effect.
+        for task in &self.data.state.accepted_recordings {
+            if let Some(id) = task.semantic() {
+                let _ = world
+                    .command_ledger
+                    .advance(
+                        id,
+                        now.seconds(),
+                        crate::receipts::Outcome::new(
+                            crate::receipts::ReceiptState::Interrupted,
+                            owner::INTERRUPTION_CODE,
+                            owner::INTERRUPTION_MESSAGE,
+                        ),
+                    )
+                    .map_err(|e| crate::checkpoint::CheckpointError::new("speech", e.message))?;
+                world.speech_actions.remove(&id);
+                crate::receipts::release_finished_root(world, id.operation);
+            }
+        }
+        let receipts = world.command_ledger.drain_updates();
+        router.interrupted = self.interrupted;
+        let state = self.data.state;
+        if !state.captures.is_empty()
+            || !state.streams.is_empty()
+            || !state.accepted_recordings.is_empty()
+        {
+            router
+                .interrupted
+                .push(owner::InterruptedSpeech::new(now, state, receipts));
+        }
+        Ok(())
     }
 }

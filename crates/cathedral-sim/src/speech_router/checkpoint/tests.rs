@@ -84,6 +84,148 @@ fn fixture() -> (SpeechRouter, World) {
         .push(("draft.wav".into(), Conversation::default().capture(9.0, &w)));
     (r, w)
 }
+
+#[test]
+fn continuation_interrupted_ordinals_remain_unique_after_eviction_and_across_live_families() {
+    let (router, mut world) = fixture();
+    let saved = router.export_checkpoint(context(&world), save()).unwrap();
+    let state = saved.value().state.clone();
+    drop(saved);
+    let mut groups = Vec::new();
+    for recording in &state.accepted_recordings {
+        let id = recording.semantic.unwrap();
+        let terminal = world
+            .command_ledger
+            .advance(
+                id,
+                10.0,
+                Outcome::new(
+                    ReceiptState::Interrupted,
+                    INTERRUPTION_CODE,
+                    INTERRUPTION_MESSAGE,
+                ),
+            )
+            .unwrap();
+        let mut one = state.clone();
+        one.captures.clear();
+        one.streams.clear();
+        one.accepted_recordings = vec![recording.clone()];
+        groups.push(InterruptedSpeech::new(at(10.0), one, vec![terminal]));
+        world.speech_actions.remove(&id);
+    }
+    world
+        .command_ledger
+        .unprotect(groups[0].receipts[0].id.operation);
+    world.command_ledger.drain_updates();
+    for _ in 0..crate::receipts::RECENT_CAPACITY + 2 {
+        let id = world
+            .command_ledger
+            .issue(HOST_PRODUCER)
+            .unwrap()
+            .command(0);
+        let Admission::New(ticket) = world
+            .command_ledger
+            .begin(id, &json!({"ordinary":"completed"}))
+        else {
+            panic!("new command")
+        };
+        world.command_ledger.finish(
+            ticket,
+            10.0,
+            Outcome::new(ReceiptState::Completed, "done", "done"),
+            vec![],
+        );
+    }
+    world.command_ledger.drain_updates();
+    for g in &groups {
+        assert!(world.command_ledger.get(g.receipts[0].id).is_none());
+        assert!(world.command_ledger.valid_history_receipt(&g.receipts[0]));
+    }
+    validate_interrupted(&groups, context(&world)).unwrap();
+    let mut contradictory = groups.clone();
+    let ordinal = contradictory[0].receipts[0].ordinal;
+    contradictory[1].receipts[0].ordinal = ordinal;
+    contradictory[1].state.accepted_recordings[0]
+        .receipt
+        .as_mut()
+        .unwrap()
+        .ordinal = ordinal;
+    // Each history is independently valid and both IDs have actually evicted.
+    // Only their contradictory shared ordinal should reject the pair.
+    for g in &contradictory {
+        g.validate(context(&world)).unwrap();
+    }
+    assert!(
+        validate_interrupted(&contradictory, context(&world))
+            .unwrap_err()
+            .reason
+            .contains("ordinal")
+    );
+    let mut together = contradictory[0].clone();
+    together
+        .state
+        .accepted_recordings
+        .extend(contradictory[1].state.accepted_recordings.clone());
+    together.receipts.extend(contradictory[1].receipts.clone());
+    assert!(
+        validate_interrupted(&[together], context(&world))
+            .unwrap_err()
+            .reason
+            .contains("ordinal")
+    );
+
+    // A different command family owns a current retained ordinal. Archived
+    // speech cannot take it, even though that speech command itself evicted.
+    let live = world
+        .command_ledger
+        .issue(crate::receipts::TURN_PRODUCER)
+        .unwrap()
+        .command(0);
+    let Admission::New(ticket) = world
+        .command_ledger
+        .begin(live, &json!({"other_family":true}))
+    else {
+        panic!("new command")
+    };
+    let live = world.command_ledger.finish(
+        ticket,
+        10.0,
+        Outcome::new(ReceiptState::Completed, "done", "done"),
+        vec![],
+    );
+    let mut collision = groups[0].clone();
+    collision.receipts[0].ordinal = live.ordinal;
+    collision.state.accepted_recordings[0]
+        .receipt
+        .as_mut()
+        .unwrap()
+        .ordinal = live.ordinal;
+    assert!(
+        !world
+            .command_ledger
+            .valid_history_receipt(&collision.receipts[0])
+    );
+    assert!(
+        collision
+            .validate(context(&world))
+            .unwrap_err()
+            .reason
+            .contains("history")
+    );
+    let ledger = world
+        .command_ledger
+        .checkpoint_v1(
+            at(10.0),
+            CheckpointBudget::default()
+                .reserve(Cohort::SavePayload, CommandLedgerDtoV1::WORKING_BYTES)
+                .unwrap(),
+        )
+        .unwrap();
+    assert!(!ledger.value().valid_history_receipt(&collision.receipts[0]));
+    for group in groups {
+        assert!(ledger.value().valid_history_receipt(&group.receipts[0]));
+    }
+}
 #[test]
 fn checkpoint_speech_preserves_occurrences_siblings_and_exact_drafts() {
     let (r, w) = fixture();

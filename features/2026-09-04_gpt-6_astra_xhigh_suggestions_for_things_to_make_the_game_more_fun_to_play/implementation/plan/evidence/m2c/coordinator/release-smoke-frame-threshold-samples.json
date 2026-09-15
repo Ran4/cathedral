@@ -1,0 +1,20 @@
+[
+  {
+    "above_30ms": false,
+    "microseconds": 4340.9349999999995,
+    "mode": "populated",
+    "phase": "prepared_owner_disposal",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "end_to_end"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 3767.767,
+    "mode": "populated",
+    "phase": "prepared_owner_disposal",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "end_to_end"
+  }
+]

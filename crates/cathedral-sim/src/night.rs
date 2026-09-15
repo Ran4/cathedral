@@ -41,6 +41,7 @@
 //! thought at midnight must not become the morning's news.
 
 pub mod checkpoint;
+pub(crate) mod continuation;
 
 use crate::receipts::{
     self, AffectedRef, BatchAdmission, NIGHT_PRODUCER, OperationId, Outcome, Ticket,
@@ -140,6 +141,9 @@ impl Subject {
 /// A reflection that is owed, and the night it is owed for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Due {
+    /// Lifetime at queue time. Complete V2 owns this separately from the
+    /// original V1 admission-time incarnation.
+    queued_presence_epoch: Option<u64>,
     semantic: Option<OperationId>,
     presence_epoch: Option<u64>,
     subject: Subject,
@@ -234,6 +238,8 @@ pub struct NightOffice {
     config: NightOfficeConfig,
     queue: VecDeque<Due>,
     in_flight: Option<Flight>,
+    /// The saved external execution is gone; the exact flight remains owed.
+    load_retry_pending: bool,
     /// Exact completion retained when the complete receipt batch cannot fit.
     held_result: Option<Completion>,
     /// The game day each subject last reflected on, so a bedtime crossed twice
@@ -266,6 +272,7 @@ impl NightOffice {
             config,
             queue: VecDeque::new(),
             in_flight: None,
+            load_retry_pending: false,
             held_result: None,
             last_reflected: BTreeMap::new(),
             bedtimes: BTreeMap::new(),
@@ -347,8 +354,7 @@ impl NightOffice {
     /// asked here, a flight whose reply has already landed still counts as out.
     pub fn wants_slot(&self, now: f64) -> bool {
         self.enabled()
-            && self.in_flight.is_none()
-            && !self.queue.is_empty()
+            && ((self.in_flight.is_none() && !self.queue.is_empty()) || self.load_retry_pending)
             && now >= self.next_attempt_at
     }
 
@@ -369,6 +375,9 @@ impl NightOffice {
     /// complete a reflection. Call [`Self::ring`] first, so a bedtime that rang
     /// this very poll is already in the queue when this is asked.
     pub fn could_submit(&self, now: f64, completions: &[Completion]) -> bool {
+        if self.load_retry_pending {
+            return self.enabled() && now >= self.next_attempt_at;
+        }
         let slot_free = match &self.in_flight {
             None => true,
             Some(flight) => {
@@ -425,6 +434,7 @@ impl NightOffice {
         if let Some(completion) = self.held_result.take() {
             self.apply(now, world, completion, &mut events);
         } else if let Some(flight) = &self.in_flight
+            && !self.load_retry_pending
             && let Some(index) = completions
                 .iter()
                 .position(|completion| completion.request_id == flight.request_id)
@@ -435,6 +445,9 @@ impl NightOffice {
 
         if self.wants_slot(now) {
             match gate.reason() {
+                None if self.load_retry_pending => {
+                    self.submit_load_retry(now, world, clock, cognition)
+                }
                 None => self.submit(now, world, clock, cognition, env, &mut events),
                 Some(reason) if now >= self.next_yield_report => {
                     self.next_yield_report = now + YIELD_REPORT_SECONDS;
@@ -473,7 +486,14 @@ impl NightOffice {
                     if !world.is_present(actor_id) {
                         continue;
                     }
-                    self.enqueue(Subject::Person(actor_id.clone()), day);
+                    let subject = Subject::Person(actor_id.clone());
+                    let epoch = world.characters[actor_id].state.presence_epoch;
+                    self.enqueue(subject.clone(), day);
+                    if let Some(due) = self.queue.iter_mut().find(|d| d.subject == subject)
+                        && due.queued_presence_epoch.is_none()
+                    {
+                        due.queued_presence_epoch = Some(epoch);
+                    }
                 }
             }
             if self.config.wards && office == WARD_OFFICE {
@@ -513,6 +533,7 @@ impl NightOffice {
         // up on a night that is over.
         self.last_reflected.insert(subject.clone(), day);
         self.queue.push_back(Due {
+            queued_presence_epoch: None,
             subject,
             day,
             semantic: None,
@@ -551,6 +572,11 @@ impl NightOffice {
                 // the bell: a Major who left the city, or one the round never
                 // enrolled, has no day for a reflection to alter.
                 if !world.is_present(actor_id)
+                    || due.queued_presence_epoch.is_some_and(|epoch| {
+                        world.characters.get(actor_id).is_none_or(|a| {
+                            a.control() != Control::Llm || a.state.presence_epoch != epoch
+                        })
+                    })
                     || (due.semantic.is_some()
                         && world
                             .characters

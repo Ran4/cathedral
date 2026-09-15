@@ -25,6 +25,7 @@
 //! parameter here.
 
 pub mod checkpoint;
+pub(crate) mod continuation;
 
 use std::collections::{BTreeMap, VecDeque};
 
@@ -169,6 +170,12 @@ pub struct NpcScheduler {
     /// two pops would spend two provider calls on the one turn's worth of news.
     player_reactions: VecDeque<ActorId>,
     in_flight: Option<InFlight>,
+    /// Accepted exact work whose old external execution was retired by loading.
+    /// Separate from actor-deduplicated intents and ordinary failure retries.
+    load_retries: VecDeque<continuation::LoadRetry>,
+    /// Prompt-side knowledge authority for a resumed current flight. Ordinary
+    /// flights still own the existing Knowledge seated/occasion slots.
+    resumed_context: Option<continuation::PromptContext>,
     /// Unfinished obligations retained across failed external attempts.
     retry_work: BTreeMap<ActorId, RetryWork>,
     /// A finished turn the floor would not let us apply yet.
@@ -207,6 +214,8 @@ impl NpcScheduler {
             priority_handoffs: VecDeque::new(),
             player_reactions: VecDeque::new(),
             in_flight: None,
+            load_retries: VecDeque::new(),
+            resumed_context: None,
             retry_work: BTreeMap::new(),
             held_result: None,
             // The first turn is eligible immediately.
@@ -317,7 +326,12 @@ impl NpcScheduler {
     /// player who is mid-conversation is the one state in which the whole city
     /// should be spending its attention on him.
     pub fn player_reaction_pending(&self) -> bool {
-        !self.player_reactions.is_empty() || self.in_flight_is_player_reaction()
+        !self.player_reactions.is_empty()
+            || self.in_flight_is_player_reaction()
+            || self
+                .load_retries
+                .iter()
+                .any(|r| r.flight.lane == TurnLane::PlayerReaction)
     }
 
     pub fn turn_order(&self) -> &[ActorId] {
@@ -426,6 +440,7 @@ impl NpcScheduler {
         env: &PromptEnv,
     ) -> Vec<SchedulerEvent> {
         let mut events: Vec<SchedulerEvent> = Vec::new();
+        self.retire_obsolete_load_retries(world);
         let obsolete: Vec<_> = self
             .retry_work
             .iter()
@@ -504,6 +519,36 @@ impl NpcScheduler {
         transcript: &mut Vec<String>,
         completion: Completion,
         events: &mut Vec<SchedulerEvent>,
+    ) {
+        // A deferred exact prompt owns its knowledge receipt, independently of
+        // any newer same-actor event/occasion. Install only during application.
+        if let Some(context) = self.resumed_context.take() {
+            let actor = self
+                .in_flight
+                .as_ref()
+                .expect("resumed flight")
+                .actor_id
+                .clone();
+            let saved = world.knowledge.install_resumed_prompt(&actor, context);
+            self.apply_result_inner(now, world, transcript, completion, events, true);
+            let held = self.in_flight.is_some();
+            let context = world.knowledge.finish_resumed_prompt(&actor, saved, held);
+            if held {
+                self.resumed_context = Some(context);
+            }
+        } else {
+            self.apply_result_inner(now, world, transcript, completion, events, false);
+        }
+    }
+
+    fn apply_result_inner(
+        &mut self,
+        now: f64,
+        world: &mut World,
+        transcript: &mut Vec<String>,
+        completion: Completion,
+        events: &mut Vec<SchedulerEvent>,
+        resumed: bool,
     ) {
         let flight = self
             .in_flight
@@ -616,7 +661,11 @@ impl NpcScheduler {
             .take()
             .expect("a result is only harvested while a request is in flight");
         // The prompt's only remaining job is the archive below.
-        let prompt = std::mem::take(&mut flight.prompt);
+        let prompt = if resumed {
+            flight.prompt.clone()
+        } else {
+            std::mem::take(&mut flight.prompt)
+        };
 
         // The size limit is a provider failure, not a turn (D17). Enforced
         // before the archive so an oversized reply is logged as the error it is.
@@ -690,6 +739,9 @@ impl NpcScheduler {
         }
 
         match result {
+            Err(error) if resumed => {
+                self.apply_load_failure(now, world, flight, &actor_name, &error, events)
+            }
             Err(error) => self.apply_failure(now, world, &flight, &actor_name, &error, events),
             Ok(reply) => self.apply_reply(
                 now,
@@ -925,6 +977,9 @@ impl NpcScheduler {
         env: &PromptEnv,
         events: &mut Vec<SchedulerEvent>,
     ) {
+        if self.submit_load_retry(now, world, idle, cognition, events) {
+            return;
+        }
         // Selection happens — and the rotation advances / the queued handoff is
         // consumed — BEFORE the validity check: a skipped actor still burns its
         // turn, and so do a failed render and a refused submit. Intentional

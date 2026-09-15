@@ -1,0 +1,317 @@
+{
+  "above_2ms": 2,
+  "above_30ms": 0,
+  "binary_sha256": "36512740197e3a687f86dff2efdc86a8e06c7189690b3634b8215ba4c6701e52",
+  "cold_first_samples": [
+    {
+      "microseconds": 10.366,
+      "mode": "authored",
+      "phase": "preparation",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 2.038,
+      "mode": "authored",
+      "phase": "service_binding",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 1569.287,
+      "mode": "authored",
+      "phase": "prepared_owner_disposal",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 0.749,
+      "mode": "authored",
+      "phase": "Admission",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.957,
+      "mode": "authored",
+      "phase": "Inputs",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 6.4799999999999995,
+      "mode": "authored",
+      "phase": "Speech",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.207,
+      "mode": "authored",
+      "phase": "Floor",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.501,
+      "mode": "authored",
+      "phase": "Prepared",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 10.522,
+      "mode": "populated",
+      "phase": "preparation",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 2.964,
+      "mode": "populated",
+      "phase": "service_binding",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 4340.9349999999995,
+      "mode": "populated",
+      "phase": "prepared_owner_disposal",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 0.711,
+      "mode": "populated",
+      "phase": "Admission",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.775,
+      "mode": "populated",
+      "phase": "Inputs",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 7.031,
+      "mode": "populated",
+      "phase": "Speech",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.266,
+      "mode": "populated",
+      "phase": "Floor",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.376,
+      "mode": "populated",
+      "phase": "Prepared",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    }
+  ],
+  "dataset": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2c/smoke",
+  "end_to_end_samples": 12,
+  "maximum_rss_kib": {
+    "authored": 382636,
+    "populated": 493036
+  },
+  "maximum_shared_budget_bytes": {
+    "authored": 758093661,
+    "populated": 977116079
+  },
+  "normalization": "none; every process and sample retained, nearest-rank quantiles",
+  "phases": {
+    "authored": {
+      "preparation": {
+        "maximum_us": 10.366,
+        "minimum_us": 9.882,
+        "p50_us": 9.882,
+        "p95_us": 10.366,
+        "p99_us": 10.366,
+        "samples": 2
+      },
+      "prepared_owner_disposal": {
+        "maximum_us": 1569.287,
+        "minimum_us": 973.25,
+        "p50_us": 973.25,
+        "p95_us": 1569.287,
+        "p99_us": 1569.287,
+        "samples": 2
+      },
+      "service_binding": {
+        "maximum_us": 2.261,
+        "minimum_us": 2.038,
+        "p50_us": 2.038,
+        "p95_us": 2.261,
+        "p99_us": 2.261,
+        "samples": 2
+      }
+    },
+    "populated": {
+      "preparation": {
+        "maximum_us": 10.522,
+        "minimum_us": 9.741999999999999,
+        "p50_us": 9.741999999999999,
+        "p95_us": 10.522,
+        "p99_us": 10.522,
+        "samples": 2
+      },
+      "prepared_owner_disposal": {
+        "maximum_us": 4340.9349999999995,
+        "minimum_us": 3767.767,
+        "p50_us": 3767.767,
+        "p95_us": 4340.9349999999995,
+        "p99_us": 4340.9349999999995,
+        "samples": 2
+      },
+      "service_binding": {
+        "maximum_us": 2.964,
+        "minimum_us": 2.784,
+        "p50_us": 2.784,
+        "p95_us": 2.964,
+        "p99_us": 2.964,
+        "samples": 2
+      }
+    }
+  },
+  "result": "passed",
+  "results_sha256": "e32865365404351b6a99840dcc246266cac1a39e70bad76fdf1f5c34bb5b02b6",
+  "source_manifest_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+  "source_pending_shape_counts": {
+    "authored": {
+      "night_held": 0,
+      "night_submitted": 0,
+      "scheduler_held": 0,
+      "scheduler_submitted": 2,
+      "scheduler_unfinished": 2
+    },
+    "populated": {
+      "night_held": 0,
+      "night_submitted": 0,
+      "scheduler_held": 0,
+      "scheduler_submitted": 2,
+      "scheduler_unfinished": 2
+    }
+  },
+  "stage_samples": 20,
+  "stages": {
+    "authored": {
+      "Admission": {
+        "maximum_us": 0.752,
+        "minimum_us": 0.749,
+        "p50_us": 0.749,
+        "p95_us": 0.752,
+        "p99_us": 0.752,
+        "samples": 2
+      },
+      "Floor": {
+        "maximum_us": 0.207,
+        "minimum_us": 0.14,
+        "p50_us": 0.14,
+        "p95_us": 0.207,
+        "p99_us": 0.207,
+        "samples": 2
+      },
+      "Inputs": {
+        "maximum_us": 1.957,
+        "minimum_us": 1.5319999999999998,
+        "p50_us": 1.5319999999999998,
+        "p95_us": 1.957,
+        "p99_us": 1.957,
+        "samples": 2
+      },
+      "Prepared": {
+        "maximum_us": 0.501,
+        "minimum_us": 0.43300000000000005,
+        "p50_us": 0.43300000000000005,
+        "p95_us": 0.501,
+        "p99_us": 0.501,
+        "samples": 2
+      },
+      "Speech": {
+        "maximum_us": 6.605,
+        "minimum_us": 6.4799999999999995,
+        "p50_us": 6.4799999999999995,
+        "p95_us": 6.605,
+        "p99_us": 6.605,
+        "samples": 2
+      }
+    },
+    "populated": {
+      "Admission": {
+        "maximum_us": 0.7150000000000001,
+        "minimum_us": 0.711,
+        "p50_us": 0.711,
+        "p95_us": 0.7150000000000001,
+        "p99_us": 0.7150000000000001,
+        "samples": 2
+      },
+      "Floor": {
+        "maximum_us": 0.266,
+        "minimum_us": 0.145,
+        "p50_us": 0.145,
+        "p95_us": 0.266,
+        "p99_us": 0.266,
+        "samples": 2
+      },
+      "Inputs": {
+        "maximum_us": 1.775,
+        "minimum_us": 1.438,
+        "p50_us": 1.438,
+        "p95_us": 1.775,
+        "p99_us": 1.775,
+        "samples": 2
+      },
+      "Prepared": {
+        "maximum_us": 0.376,
+        "minimum_us": 0.353,
+        "p50_us": 0.353,
+        "p95_us": 0.376,
+        "p99_us": 0.376,
+        "samples": 2
+      },
+      "Speech": {
+        "maximum_us": 7.031,
+        "minimum_us": 6.672,
+        "p50_us": 6.672,
+        "p95_us": 7.031,
+        "p99_us": 7.031,
+        "samples": 2
+      }
+    }
+  },
+  "timing_scope": "preparation, inert service factory binding and prepared-owner disposal measured separately; prior capture/validation/hydration and subsequent re-save excluded; source host retains shared nav",
+  "typed_ranges_bytes": {
+    "authored": {
+      "maximum": 38447138,
+      "minimum": 38447138
+    },
+    "populated": {
+      "maximum": 133751958,
+      "minimum": 133751958
+    }
+  }
+}

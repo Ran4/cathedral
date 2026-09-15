@@ -55,29 +55,28 @@ fn logical(n: f64) -> LogicalTime {
 }
 fn bytes(e: &Engine, now: f64) -> Vec<u8> {
     let b = CheckpointBudget::default();
-    e.export_night_checkpoint(logical(now), b.reserve(Cohort::SavePayload, 4096).unwrap())
-        .unwrap()
-        .encode()
-        .unwrap()
-        .value()
-        .clone()
+    let mut r = b
+        .reserve(
+            Cohort::SavePayload,
+            crate::checkpoint::complete::meter::VALIDATION_SCRATCH,
+        )
+        .unwrap();
+    let mut raw = Vec::new();
+    e.complete_write_night(logical(now), &mut raw, &mut r)
+        .unwrap();
+    raw
 }
 fn install(control: &Engine, other: &mut Engine, now: f64) {
     let raw = bytes(control, now);
     let b = CheckpointBudget::default();
     let c = other.night_checkpoint_context(logical(now));
-    let candidate = EngineNightDtoV1::decode(
-        &raw,
-        b.reserve(Cohort::LoadCandidate, raw.len() + 4096).unwrap(),
-        c,
-    )
-    .unwrap()
-    .into_candidate(c)
-    .unwrap();
+    let mut r = b.reserve(Cohort::LoadCandidate, raw.len() + 4096).unwrap();
+    let meter = crate::checkpoint::complete::meter::DecodeMeter::new(&mut r, raw.len()).unwrap();
+    let candidate = EngineNightDtoV1::complete_decode(&raw, &meter, c).unwrap();
     other.night = NightOffice::new(NightOfficeConfig::default(), 999.0, &other.clock);
     other.world.ward_moods.clear();
     other.config.night_office = NightOfficeConfig::default();
-    let d = &candidate.value().data;
+    let d = &candidate.data;
     other.night = owner::copy(&d.night.night);
     other.world.ward_moods = d.world.ward_moods.clone();
     other.config.night_office = d.config_night_office;
@@ -135,9 +134,39 @@ fn checkpoint_night_engine_queue_and_unfinished_flight_continue_on_ordinary_poll
 fn checkpoint_night_engine_fixture() {
     let mut e = engine();
     prefix(&mut e);
+    let old = include_bytes!("../../../tests/fixtures/checkpoint_v1/engine_night.json");
+    let b = CheckpointBudget::default();
+    let decoded = EngineNightDtoV1::decode(
+        old,
+        b.reserve(Cohort::LoadCandidate, old.len() + 4096).unwrap(),
+        e.night_checkpoint_context(logical(901.0)),
+    )
+    .unwrap();
     assert_eq!(
-        bytes(&e, 901.0),
-        include_bytes!("../../../tests/fixtures/checkpoint_v1/engine_night.json")
+        serde_json::to_vec(decoded.value()).unwrap().as_slice(),
+        old,
+        "historical V1 decoder and canonical bytes remain exact"
+    );
+    assert!(
+        e.export_night_checkpoint(
+            logical(901.0),
+            b.reserve(Cohort::SavePayload, 4096).unwrap()
+        )
+        .is_err(),
+        "new queue-time lifetime authority cannot be exported as V1"
+    );
+    let current: serde_json::Value = serde_json::from_slice(&bytes(&e, 901.0)).unwrap();
+    assert_eq!(current["version"], 2);
+    assert_eq!(
+        current["base"],
+        serde_json::from_slice::<serde_json::Value>(old).unwrap(),
+        "all historical fields remain unchanged"
+    );
+    assert!(
+        !current["queued_incarnations"]
+            .as_array()
+            .unwrap()
+            .is_empty()
     );
 }
 #[test]

@@ -558,3 +558,10 @@ mod tests_hydration_owner;
 #[cfg(test)]
 #[path = "host_checkpoint/tests_hydration_public.rs"]
 mod tests_hydration_public;
+
+#[cfg(test)]
+#[path = "host_checkpoint/tests_continuation_owner.rs"]
+mod tests_continuation_owner;
+#[cfg(test)]
+#[path = "host_checkpoint/tests_continuation_public.rs"]
+mod tests_continuation_public;

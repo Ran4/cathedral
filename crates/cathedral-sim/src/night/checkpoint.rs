@@ -41,7 +41,7 @@ pub const MAX_PERSONS: usize = 25_000;
 pub const MAX_SUBJECTS: usize = MAX_PERSONS + 8;
 pub const VALIDATION_WORKING_BYTES: usize = 4 * 1024 * 1024;
 pub const MAX_PROMPT_BYTES: usize = 65_536;
-const COUNTER_DROP_HEADROOM: u64 = (2 * MAX_SUBJECTS + 1) as u64;
+pub(super) const COUNTER_DROP_HEADROOM: u64 = (2 * MAX_SUBJECTS + 1) as u64;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct NightCost {
     pub encoded_bytes: usize,
@@ -100,6 +100,10 @@ pub(crate) fn binding(
 }
 fn validate(n: &NightOffice, c: NightCheckpointContext<'_>) -> Result<()> {
     check(
+        !n.load_retry_pending || (n.in_flight.is_some() && n.held_result.is_none()),
+        "invalid pending Night retry",
+    )?;
+    check(
         n.queue.len() <= MAX_SUBJECTS
             && n.last_reflected.len() <= MAX_SUBJECTS
             && n.bedtimes.len() <= MAX_PERSONS,
@@ -130,6 +134,16 @@ fn validate(n: &NightOffice, c: NightCheckpointContext<'_>) -> Result<()> {
         id(a.as_str())?;
     }
     for (index, due) in n.queue.iter().enumerate() {
+        if let Some(epoch) = due.queued_presence_epoch {
+            check(
+                matches!(due.subject, Subject::Person(_)),
+                "ward queue incarnation",
+            )?;
+            check(
+                due.semantic.is_none() || due.presence_epoch == Some(epoch),
+                "Night queue lifetime disagreement",
+            )?;
+        }
         subject(&due.subject)?;
         day(due.day)?;
         check(
@@ -226,6 +240,7 @@ pub(crate) fn copy(n: &NightOffice) -> NightOffice {
             f
         }),
         held_result: n.held_result.clone(),
+        load_retry_pending: n.load_retry_pending,
         last_reflected: n.last_reflected.clone(),
         bedtimes: n.bedtimes.clone(),
         last_office_days: n.last_office_days,
@@ -296,6 +311,7 @@ impl NightOffice {
         c: NightCheckpointContext<'_>,
         mut r: Reservation,
     ) -> Result<Admitted<NightOfficeDtoV1>> {
+        self.require_legacy()?;
         let context = binding(c, &mut r)?;
         prepare(&View::new(self, c.now, &context), &mut r)?;
         validate(self, c)?;

@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "2931f87d7425d27465ca15b6ce61207f5a4d4054c12722be7911e3380d337851",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m2c-continuation-01.log",
+  "raw_sha256": "a0b63af028fa31f7e01d32092b9aa83062edf1f1ce9b8269dedf5bea2b053fb8",
+  "source_map_sha256": "a530cb2d6a5e66b630b08f02d30ee4168be6489ffa46b1f9eb8c510f47883c9f",
+  "sources_unchanged": false,
+  "wall_seconds": 368.4507490270771
+}

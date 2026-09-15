@@ -55,6 +55,7 @@ impl Engine {
         now: LogicalTime,
         mut r: Reservation,
     ) -> Result<Admitted<NightCost>> {
+        self.night.require_legacy()?;
         let c = self.night_checkpoint_context(now);
         let binding = owner::binding(c, &mut r)?;
         let cost = owner::prepare(
@@ -74,6 +75,7 @@ impl Engine {
         now: LogicalTime,
         mut r: Reservation,
     ) -> Result<Admitted<EngineNightDtoV1>> {
+        self.night.require_legacy()?;
         let c = self.night_checkpoint_context(now);
         let binding = owner::binding(c, &mut r)?;
         owner::prepare(
@@ -201,7 +203,33 @@ impl EngineNightDtoV1 {
         meter: &crate::checkpoint::complete::meter::DecodeMeter<'_>,
         c: NightCheckpointContext<'_>,
     ) -> Result<EngineNightCandidate> {
-        let w: Wire = meter.decode(bytes)?;
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct V2 {
+            version: u16,
+            base: Wire,
+            load_retry_pending: bool,
+            queued_incarnations: Vec<Option<u64>>,
+        }
+        meter.prepare_diagnostics(bytes)?;
+        let w: Wire = match crate::checkpoint::complete::owner_version(bytes)? {
+            1 => meter.decode(bytes)?,
+            2 => {
+                let mut v: V2 = meter.decode(bytes)?;
+                owner::check(v.version == 2, "unsupported Night extension")?;
+                v.base
+                    .night
+                    .night
+                    .install_continuation_v2(v.load_retry_pending, v.queued_incarnations)?;
+                v.base
+            }
+            _ => {
+                return Err(crate::checkpoint::CheckpointError::new(
+                    OWNER,
+                    "unsupported Night complete version",
+                ));
+            }
+        };
         let d = Self {
             version: w.version,
             boundary: w.boundary,
@@ -234,6 +262,25 @@ impl Engine {
             night: owner::View::new(&self.night, now, &binding),
             config_night_office: &self.config.night_office,
         };
-        crate::checkpoint::complete::write_json(writer, &view)
+        if self.night.has_continuation() {
+            #[derive(Serialize)]
+            struct V2<T: Serialize, Q: Serialize> {
+                version: u16,
+                base: T,
+                load_retry_pending: bool,
+                queued_incarnations: Q,
+            }
+            crate::checkpoint::complete::write_json(
+                writer,
+                &V2 {
+                    version: 2,
+                    base: view,
+                    load_retry_pending: self.night.load_retry_pending(),
+                    queued_incarnations: self.night.queued_incarnations(),
+                },
+            )
+        } else {
+            crate::checkpoint::complete::write_json(writer, &view)
+        }
     }
 }

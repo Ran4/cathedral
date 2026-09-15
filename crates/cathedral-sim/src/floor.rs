@@ -67,6 +67,49 @@ struct AwaitedSpeech {
 }
 
 impl ConversationFloor {
+    /// Audio execution never survives load. Keep existing reading/beat pacing;
+    /// translate each old voiced wait to its surviving readable progress, capped
+    /// by the original failsafe. A wait with no readable owner releases now.
+    pub(crate) fn prepare_continuation(
+        &mut self,
+        now: f64,
+        readable_rows: &[crate::checkpoint::host::RecordV1<String>],
+    ) -> usize {
+        use crate::checkpoint::host::RecordV1;
+        let count = self.awaiting.len();
+        for awaited in self.awaiting.drain(..) {
+            let mut readable = now;
+            for row in readable_rows {
+                let (speech, deadline) = match row {
+                    RecordV1::Subtitle {
+                        speech,
+                        minimum_seconds,
+                        visible_since,
+                        ..
+                    } => (speech, visible_since.0.unwrap_or(now) + minimum_seconds),
+                    RecordV1::Bubble {
+                        speech, expires_at, ..
+                    } => (speech, *expires_at),
+                    RecordV1::UnreadSpeech { speech, .. } => {
+                        (speech, now + speech_reading_seconds(&speech.text))
+                    }
+                    _ => continue,
+                };
+                if speech.event == awaited.event_id.0.as_str() {
+                    readable = readable.max(deadline);
+                }
+            }
+            let deadline = readable.min(awaited.deadline);
+            let floor = if awaited.blocks_player_reaction {
+                &mut self.foreground_floor_until
+            } else {
+                &mut self.background_floor_until
+            };
+            *floor = floor.max(deadline);
+        }
+        self.player_hold_until = 0.0;
+        count
+    }
     pub fn new() -> Self {
         Self::default()
     }
@@ -244,6 +287,66 @@ mod tests {
         assert_eq!(
             floor_audio_failsafe_seconds(&"x".repeat(10_000)),
             FLOOR_AUDIO_FAILSAFE_MAX_SECONDS
+        );
+    }
+
+    #[test]
+    fn continuation_preserves_reading_pacing_reconciles_each_audio_scope_and_clears_microphone() {
+        use crate::checkpoint::host::{Nullable, RecordV1, SpeechV1};
+        let speech = |id: &str| SpeechV1 {
+            sequence: 1,
+            event: id.into(),
+            speaker: "sv3n1".into(),
+            label: "Sven".into(),
+            target: Nullable(None),
+            text: "readable words".into(),
+            position: [0.0; 3],
+            recipient_count: 1,
+            expect_audio: true,
+        };
+        let mut f = ConversationFloor::new();
+        f.acquire_scoped(8.0, &SpeechEventId("reading-fg".into()), "", false, true); // 11
+        f.acquire_scoped(10.0, &SpeechEventId("reading-bg".into()), "", false, false); // 13
+        f.acquire_scoped(9.0, &SpeechEventId("voiced-fg".into()), "", true, true); // 17
+        f.acquire_scoped(9.0, &SpeechEventId("voiced-bg".into()), "", true, false); // 17
+        f.acquire_scoped(9.0, &SpeechEventId("missing".into()), "", true, true);
+        f.bump_player_hold(10.0, 60.0);
+        let rows = [
+            RecordV1::Subtitle {
+                speech: speech("voiced-fg"),
+                formatted_text: "Sven: readable words".into(),
+                minimum_seconds: 5.0,
+                visible_since: Nullable(Some(9.0)),
+                audio_playing: true,
+            },
+            RecordV1::Bubble {
+                speech: speech("voiced-bg"),
+                text: "readable words".into(),
+                world_anchor: [0.0; 3],
+                expires_at: 30.0,
+                audio_extended: true,
+            },
+        ];
+        assert_eq!(f.prepare_continuation(10.0, &rows), 3);
+        assert_eq!(f.awaiting_len(), 0);
+        assert_eq!(f.player_hold_until(), 0.0);
+        assert_eq!(f.foreground_floor_until, 14.0);
+        assert_eq!(
+            f.background_floor_until, 17.0,
+            "original failsafe caps readable audio extension"
+        );
+        assert!(!f.busy_for_player_reaction(14.0));
+        assert!(f.busy(14.0));
+        let once = f.clone();
+        assert_eq!(f.prepare_continuation(10.0, &rows), 0);
+        assert_eq!(
+            f, once,
+            "second preparation neither resets nor re-arms reading"
+        );
+        f.release(16.0, &SpeechEventId("voiced-bg".into()));
+        assert_eq!(
+            f, once,
+            "old presentation ack cannot re-arm a post-audio beat"
         );
     }
 }

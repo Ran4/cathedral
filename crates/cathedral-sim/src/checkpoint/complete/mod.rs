@@ -2,7 +2,11 @@
 //! Application adoption and external-service continuation remain separate.
 //! A candidate owns one immutable raw envelope; every private component and its
 //! references have been validated against that same envelope before admission.
+mod continuation;
 mod hydration;
+pub use continuation::{
+    ContinuationReport, ContinuationServices, ContinuationStage, PreparedContinuation,
+};
 pub use hydration::{
     HydratedEngine, HydrationAssets, HydrationCost, HydrationPreparation, HydrationStage,
     HydrationWorldAssets,
@@ -15,6 +19,18 @@ use crate::{Engine, timeline::LogicalTime};
 pub use manifest::{CompleteManifestV1, InstalledCheckpointDefinitions};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
+
+/// Dispatch metadata only; the selected owner then performs its complete
+/// closed/metered parse. Unknown fields here grant no authority.
+pub(crate) fn owner_version(bytes: &[u8]) -> Result<u16> {
+    #[derive(Deserialize)]
+    struct Tag {
+        version: u16,
+    }
+    serde_json::from_slice::<Tag>(bytes)
+        .map(|v| v.version)
+        .map_err(diagnostic)
+}
 
 /// Minimum reservation for the scoped complete-checkpoint caller contract.
 /// This is not a universal Engine/ECS heap bound. The trusted host must keep

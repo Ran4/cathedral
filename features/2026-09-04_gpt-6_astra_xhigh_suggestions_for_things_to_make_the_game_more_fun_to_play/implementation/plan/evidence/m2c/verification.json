@@ -1,0 +1,1713 @@
+{
+  "binaries": [
+    {
+      "bytes": 2298531808,
+      "path": "target/debug/deps/cathedralbevy-eafe86af140beaa1",
+      "sha256": "b5ed7a238bcf1bff423cbacfc69fd82925d46029cad0d5017315257e0adf3c61"
+    },
+    {
+      "bytes": 323261552,
+      "path": "target/debug/deps/cathedral_sim-29e329e3d5b1c8e4",
+      "sha256": "d077b552e99be196653b57984d79fce41969257eedd1b1d79ff7e838120583f2"
+    }
+  ],
+  "commands": [
+    {
+      "archive": "owner/check-01.log.gz",
+      "name": "check-01",
+      "result": {
+        "archive_sha256": "920edc3f783ea0bf5e59c8c33a607d15c637ef7f4ad76ce60582db9e4427a406",
+        "exit_code": 101,
+        "raw_log": "/tmp/alibi-m2c-check-01.log",
+        "raw_sha256": "0231337a65df497cfff809ce6bc872d60a882a0f31d5feca7b8d275327a73f0f",
+        "source_map_sha256": "12a504ca5559130e090e0000a8a007a2e5a1356cd26a90cef4533cb970e86a29",
+        "sources_unchanged": true,
+        "wall_seconds": 8.475403349846601
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "check",
+          "-p",
+          "cathedral-sim",
+          "--offline",
+          "-j1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-check-01.log",
+        "source_map_sha256": "12a504ca5559130e090e0000a8a007a2e5a1356cd26a90cef4533cb970e86a29",
+        "utc": "2026-09-15T00:30:26.534270+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/check-02.log.gz",
+      "name": "check-02",
+      "result": {
+        "archive_sha256": "a48c3fc34efc2ddd708d2fbbe9bf44208ca33be91abc844abc79e9def3146b9d",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-check-02.log",
+        "raw_sha256": "312de7c54b8498376827962c5d7e4646011ccfe7a6ebeebc803387c2d451214a",
+        "source_map_sha256": "f6d9cbd4fb01409d90cd4645056adb14860b60f0aa03efcac1f887dfafa4b399",
+        "sources_unchanged": true,
+        "wall_seconds": 8.912062752060592
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "check",
+          "-p",
+          "cathedral-sim",
+          "--offline",
+          "-j1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-check-02.log",
+        "source_map_sha256": "f6d9cbd4fb01409d90cd4645056adb14860b60f0aa03efcac1f887dfafa4b399",
+        "utc": "2026-09-15T00:33:56.594690+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/public-01.log.gz",
+      "name": "public-01",
+      "result": {
+        "archive_sha256": "9f88a31f51968304c44e4781a9c28c6b97f5e50fa508962e14be918945b546c4",
+        "exit_code": 101,
+        "raw_log": "/tmp/alibi-m2c-public-01.log",
+        "raw_sha256": "e0673f6fbe0d9a1a33f15632268ca4b87092a41497082e50ad9d8971209ec87f",
+        "source_map_sha256": "a06261269f0397b25312b137caddf44aee292bd1cc312b239535790d395772ef",
+        "sources_unchanged": false,
+        "wall_seconds": 401.04183977795765
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "--bin",
+          "cathedralbevy",
+          "host_checkpoint::tests_continuation_public",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-public-01.log",
+        "source_map_sha256": "a06261269f0397b25312b137caddf44aee292bd1cc312b239535790d395772ef",
+        "utc": "2026-09-15T00:38:42.704562+00:00"
+      },
+      "test_counts": {
+        "failed": 1,
+        "ignored": 0,
+        "passed": 6
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/continuation-01.log.gz",
+      "name": "continuation-01",
+      "result": {
+        "archive_sha256": "2931f87d7425d27465ca15b6ce61207f5a4d4054c12722be7911e3380d337851",
+        "exit_code": 101,
+        "raw_log": "/tmp/alibi-m2c-continuation-01.log",
+        "raw_sha256": "a0b63af028fa31f7e01d32092b9aa83062edf1f1ce9b8269dedf5bea2b053fb8",
+        "source_map_sha256": "a530cb2d6a5e66b630b08f02d30ee4168be6489ffa46b1f9eb8c510f47883c9f",
+        "sources_unchanged": false,
+        "wall_seconds": 368.4507490270771
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-sim",
+          "continuation",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-continuation-01.log",
+        "source_map_sha256": "a530cb2d6a5e66b630b08f02d30ee4168be6489ffa46b1f9eb8c510f47883c9f",
+        "utc": "2026-09-15T00:46:07.125843+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/check-tests-01.log.gz",
+      "name": "check-tests-01",
+      "result": {
+        "archive_sha256": "ccd739063883b852ce217fb3bf95df2ee77782aa57a485f440079cc285a5ad7a",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-check-tests-01.log",
+        "raw_sha256": "024915d8b2faa3165fc4043b5e844e800e4d6b2652edebb9466373e6dfb28f86",
+        "source_map_sha256": "74ff07ce3f207df8068a65a693c4d0f0526d56216e3e4bf783a0cf6e7ad57390",
+        "sources_unchanged": false,
+        "wall_seconds": 34.57198213110678
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "check",
+          "--workspace",
+          "--tests",
+          "--offline",
+          "-j1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-check-tests-01.log",
+        "source_map_sha256": "74ff07ce3f207df8068a65a693c4d0f0526d56216e3e4bf783a0cf6e7ad57390",
+        "utc": "2026-09-15T00:52:53.170169+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/continuation-02.log.gz",
+      "name": "continuation-02",
+      "result": {
+        "archive_sha256": "2fd786cd24866432069269f2efcf870d25874b8873764d7331029e8aad4d5fa7",
+        "exit_code": 101,
+        "raw_log": "/tmp/alibi-m2c-continuation-02.log",
+        "raw_sha256": "2b47f6dc9dad14c65f7d9127667c4b627a2e8a672926589a523e7e648067bdd9",
+        "source_map_sha256": "4da8ceec5be91cfcdcf215f2f5f14e80fbbcef243236b3c7a514278772bf744f",
+        "sources_unchanged": false,
+        "wall_seconds": 510.46499398187734
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-sim",
+          "continuation",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-continuation-02.log",
+        "source_map_sha256": "4da8ceec5be91cfcdcf215f2f5f14e80fbbcef243236b3c7a514278772bf744f",
+        "utc": "2026-09-15T00:55:00.096036+00:00"
+      },
+      "test_counts": {
+        "failed": 2,
+        "ignored": 1,
+        "passed": 31
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/public-02.log.gz",
+      "name": "public-02",
+      "result": {
+        "archive_sha256": "fe8fafbc04bb033389ae00d2d09bcd4f6d2a0f4665dee0ef281cc108d42c357d",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-public-02.log",
+        "raw_sha256": "0cc70b340a018c3e9078d143b8752e9321c732551064ca6c6095a39da801da26",
+        "source_map_sha256": "25fe2e3e81385e7b8bb8c995a677cc204a64daa2ef843f1d24cb23a4d9bb4528",
+        "sources_unchanged": false,
+        "wall_seconds": 376.40201281709597
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "--bin",
+          "cathedralbevy",
+          "host_checkpoint::tests_continuation_public",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-public-02.log",
+        "source_map_sha256": "25fe2e3e81385e7b8bb8c995a677cc204a64daa2ef843f1d24cb23a4d9bb4528",
+        "utc": "2026-09-15T01:05:03.885013+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 7
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/check-tests-02.log.gz",
+      "name": "check-tests-02",
+      "result": {
+        "archive_sha256": "26f6f2e1c18405576a3fc9d89371bab4825292302a4520a7424097bc82de60aa",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-check-tests-02.log",
+        "raw_sha256": "e3257dccfdcbb983267ec16d36cc48c1855080e73880339388713fc7fa697ac9",
+        "source_map_sha256": "f709bd403b468a6aae488daaab53b224be321ed7e81b64b5cf54fc8acf3e7ead",
+        "sources_unchanged": true,
+        "wall_seconds": 16.182498228969052
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "check",
+          "--workspace",
+          "--tests",
+          "--offline",
+          "-j1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-check-tests-02.log",
+        "source_map_sha256": "f709bd403b468a6aae488daaab53b224be321ed7e81b64b5cf54fc8acf3e7ead",
+        "utc": "2026-09-15T01:13:58.515721+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/format-01.log.gz",
+      "name": "format-01",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-format-01.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "f709bd403b468a6aae488daaab53b224be321ed7e81b64b5cf54fc8acf3e7ead",
+        "sources_unchanged": false,
+        "wall_seconds": 0.20762200211174786
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "crates/cathedral-sim/src/checkpoint/complete/continuation.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/hydration.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/wire.rs",
+          "crates/cathedral-sim/src/engine.rs",
+          "crates/cathedral-sim/src/engine/complete_checkpoint.rs",
+          "crates/cathedral-sim/src/engine/continuation.rs",
+          "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+          "crates/cathedral-sim/src/engine/night_checkpoint.rs",
+          "crates/cathedral-sim/src/engine/night_checkpoint/tests.rs",
+          "crates/cathedral-sim/src/engine/scheduler_checkpoint.rs",
+          "crates/cathedral-sim/src/engine/speech_checkpoint.rs",
+          "crates/cathedral-sim/src/floor.rs",
+          "crates/cathedral-sim/src/knowledge/mod.rs",
+          "crates/cathedral-sim/src/night.rs",
+          "crates/cathedral-sim/src/night/checkpoint.rs",
+          "crates/cathedral-sim/src/night/checkpoint/records.rs",
+          "crates/cathedral-sim/src/night/checkpoint/tests.rs",
+          "crates/cathedral-sim/src/night/continuation.rs",
+          "crates/cathedral-sim/src/night/continuation/tests.rs",
+          "crates/cathedral-sim/src/night/tests.rs",
+          "crates/cathedral-sim/src/receipts/checkpoint/speech.rs",
+          "crates/cathedral-sim/src/scheduler.rs",
+          "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+          "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+          "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+          "crates/cathedral-sim/src/scheduler/continuation.rs",
+          "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+          "crates/cathedral-sim/src/speech_router.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint/context.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint/records.rs",
+          "src/host_checkpoint.rs",
+          "src/host_checkpoint/tests_continuation_owner.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-format-01.log",
+        "source_map_sha256": "f709bd403b468a6aae488daaab53b224be321ed7e81b64b5cf54fc8acf3e7ead",
+        "utc": "2026-09-15T01:14:48.338035+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/sim-lib-01.log.gz",
+      "name": "sim-lib-01",
+      "result": {
+        "archive_sha256": "a1fc1c4824a0ba2fd9b8be615f96709abfe871a9a7430bfec1195356c5f47a09",
+        "exit_code": 101,
+        "raw_log": "/tmp/alibi-m2c-sim-lib-01.log",
+        "raw_sha256": "38bf700cc25ae550bd38c75986e7df0f13b7166a06f45ec091435b65dd9a4454",
+        "source_map_sha256": "941fbaf6b54df6c5a32d0ef6d4925859c6c280ab9efb3b019e2a2e577c2664d8",
+        "sources_unchanged": true,
+        "wall_seconds": 297.15781254996546
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-sim",
+          "--lib",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-sim-lib-01.log",
+        "source_map_sha256": "941fbaf6b54df6c5a32d0ef6d4925859c6c280ab9efb3b019e2a2e577c2664d8",
+        "utc": "2026-09-15T01:15:04.820130+00:00"
+      },
+      "test_counts": {
+        "failed": 1,
+        "ignored": 28,
+        "passed": 822
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/probe-authored-01.log.gz",
+      "name": "probe-authored-01",
+      "result": {
+        "archive_sha256": "81e972e5b76da1f257906cae57b5cfa21a99c186cba0f866203281e6c5e497be",
+        "exit_code": 101,
+        "raw_log": "/tmp/alibi-m2c-probe-authored-01.log",
+        "raw_sha256": "edbdf80d01662f88f32264a834553b88046851c3ec75c1b842aba06e8e3ea115",
+        "source_map_sha256": "30f457659f26fe3b4c0e7de5068593a4c0dfe82f5869210249a8981d7d2c4dda",
+        "sources_unchanged": false,
+        "wall_seconds": 337.4839991440531
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_CONTINUATION_MODE=authored",
+          "ALIBI_CONTINUATION_SAMPLES=1",
+          "ALIBI_CONTINUATION_REPORT=/tmp/alibi-m2c-probe-authored-01.json",
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "--bin",
+          "cathedralbevy",
+          "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+          "--offline",
+          "-j1",
+          "--",
+          "--ignored",
+          "--exact",
+          "--nocapture",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-probe-authored-01.log",
+        "source_map_sha256": "30f457659f26fe3b4c0e7de5068593a4c0dfe82f5869210249a8981d7d2c4dda",
+        "utc": "2026-09-15T01:21:11.059262+00:00"
+      },
+      "test_counts": {
+        "failed": 1,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/format-02.log.gz",
+      "name": "format-02",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-format-02.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "d9b023fa1e4d355dd034df32be936b31f31fe8a60adc8763c071fb97551b9e91",
+        "sources_unchanged": false,
+        "wall_seconds": 0.03138142614625394
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+          "crates/cathedral-sim/tests/checkpoint_night_boundary.rs",
+          "crates/cathedral-sim/tests/checkpoint_cognition_inputs_boundary.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-format-02.log",
+        "source_map_sha256": "d9b023fa1e4d355dd034df32be936b31f31fe8a60adc8763c071fb97551b9e91",
+        "utc": "2026-09-15T01:23:55.069146+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/format-03.log.gz",
+      "name": "format-03",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-format-03.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "f30f406531b910f4f65204879438da602547eca2f98680e4a8b8d004ca2bbedf",
+        "sources_unchanged": false,
+        "wall_seconds": 0.17566453921608627
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "crates/cathedral-sim/src/receipts/checkpoint/speech.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint/tests.rs",
+          "src/host_checkpoint/tests_continuation_owner.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-format-03.log",
+        "source_map_sha256": "f30f406531b910f4f65204879438da602547eca2f98680e4a8b8d004ca2bbedf",
+        "utc": "2026-09-15T01:29:21.211667+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/check-tests-03.log.gz",
+      "name": "check-tests-03",
+      "result": {
+        "archive_sha256": "43c5953c907751f2eacb2ccaa835d351414a5d70112ca420d168b89cdc5c751e",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-check-tests-03.log",
+        "raw_sha256": "f64a0a5cc21d41d0c14f4298e469579b408f10f460cdbc01f87253018b8b3cc5",
+        "source_map_sha256": "b4c977f468369006090ef5fabab74591891d6fca8db8d6497c7050843f071cc7",
+        "sources_unchanged": true,
+        "wall_seconds": 28.806327457074076
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "check",
+          "--workspace",
+          "--tests",
+          "--offline",
+          "-j1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-check-tests-03.log",
+        "source_map_sha256": "b4c977f468369006090ef5fabab74591891d6fca8db8d6497c7050843f071cc7",
+        "utc": "2026-09-15T01:29:21.687411+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/format-04.log.gz",
+      "name": "format-04",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-format-04.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "3c6995ef5429fd7c99e63b4f0e19a8bd8928beac4d1e8887c26c6c31556822eb",
+        "sources_unchanged": false,
+        "wall_seconds": 0.020530482986941934
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "crates/cathedral-sim/src/speech_router/checkpoint/tests.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-format-04.log",
+        "source_map_sha256": "3c6995ef5429fd7c99e63b4f0e19a8bd8928beac4d1e8887c26c6c31556822eb",
+        "utc": "2026-09-15T01:30:09.601750+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/probe-authored-02.log.gz",
+      "name": "probe-authored-02",
+      "result": {
+        "archive_sha256": "42b0b002859112e4346d389cec79cf7edb30ab9f749b22d8940ebaf1d893c294",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-probe-authored-02.log",
+        "raw_sha256": "0a1c508b2ecdca357b843fc2368dc2930c5710ea98f1ec536dc244943023e69f",
+        "source_map_sha256": "7cc3c5f0b71713502bd5f8001768196e6ca138f55e4e9356960a97c1629fcf4c",
+        "sources_unchanged": true,
+        "wall_seconds": 237.8773929120507
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_CONTINUATION_MODE=authored",
+          "ALIBI_CONTINUATION_SAMPLES=1",
+          "ALIBI_CONTINUATION_REPORT=/tmp/alibi-m2c-probe-authored-02.json",
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "--bin",
+          "cathedralbevy",
+          "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+          "--offline",
+          "-j1",
+          "--",
+          "--ignored",
+          "--exact",
+          "--nocapture",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-probe-authored-02.log",
+        "source_map_sha256": "7cc3c5f0b71713502bd5f8001768196e6ca138f55e4e9356960a97c1629fcf4c",
+        "utc": "2026-09-15T01:30:09.931562+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 1
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/probe-populated-01.log.gz",
+      "name": "probe-populated-01",
+      "result": {
+        "archive_sha256": "99f6749953ba6ebc7b88662860e2caaa8e6d3847ac714bb493b3b218b8e9125a",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-probe-populated-01.log",
+        "raw_sha256": "0428ade9b710ff73865454c340f6134e271c02f52959edd2a38aed69bea408cb",
+        "source_map_sha256": "7cc3c5f0b71713502bd5f8001768196e6ca138f55e4e9356960a97c1629fcf4c",
+        "sources_unchanged": true,
+        "wall_seconds": 5.5614742988254875
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_CONTINUATION_MODE=populated",
+          "ALIBI_CONTINUATION_SAMPLES=1",
+          "ALIBI_CONTINUATION_REPORT=/tmp/alibi-m2c-probe-populated-01.json",
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "--bin",
+          "cathedralbevy",
+          "host_checkpoint::tests_continuation_owner::m2c_continuation_probe",
+          "--offline",
+          "-j1",
+          "--",
+          "--ignored",
+          "--exact",
+          "--nocapture",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-probe-populated-01.log",
+        "source_map_sha256": "7cc3c5f0b71713502bd5f8001768196e6ca138f55e4e9356960a97c1629fcf4c",
+        "utc": "2026-09-15T01:34:39.371786+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 1
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/legacy-integration-01.log.gz",
+      "name": "legacy-integration-01",
+      "result": {
+        "archive_sha256": "341c37cc5829188d1c2ed1a20eabbb460b52355e978fe36c1dc9edf0ae41ffb4",
+        "exit_code": 101,
+        "raw_log": "/tmp/alibi-m2c-legacy-integration-01.log",
+        "raw_sha256": "df9eade80870ba1131f08700e4ec48b3bba5a426667642575f4486adb739fe83",
+        "source_map_sha256": "7cc3c5f0b71713502bd5f8001768196e6ca138f55e4e9356960a97c1629fcf4c",
+        "sources_unchanged": true,
+        "wall_seconds": 187.85259152692743
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-sim",
+          "--test",
+          "checkpoint_night_boundary",
+          "--test",
+          "checkpoint_cognition_inputs_boundary",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-legacy-integration-01.log",
+        "source_map_sha256": "7cc3c5f0b71713502bd5f8001768196e6ca138f55e4e9356960a97c1629fcf4c",
+        "utc": "2026-09-15T01:35:12.130467+00:00"
+      },
+      "test_counts": {
+        "failed": 1,
+        "ignored": 0,
+        "passed": 5
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/format-check-01.log.gz",
+      "name": "format-check-01",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-format-check-01.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "7cc3c5f0b71713502bd5f8001768196e6ca138f55e4e9356960a97c1629fcf4c",
+        "sources_unchanged": true,
+        "wall_seconds": 0.21540261199697852
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "--check",
+          "crates/cathedral-sim/src/checkpoint/complete/continuation.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/hydration.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/wire.rs",
+          "crates/cathedral-sim/src/engine.rs",
+          "crates/cathedral-sim/src/engine/complete_checkpoint.rs",
+          "crates/cathedral-sim/src/engine/continuation.rs",
+          "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+          "crates/cathedral-sim/src/engine/continuation_review_tests.rs",
+          "crates/cathedral-sim/src/engine/night_checkpoint.rs",
+          "crates/cathedral-sim/src/engine/night_checkpoint/tests.rs",
+          "crates/cathedral-sim/src/engine/scheduler_checkpoint.rs",
+          "crates/cathedral-sim/src/engine/speech_checkpoint.rs",
+          "crates/cathedral-sim/src/floor.rs",
+          "crates/cathedral-sim/src/knowledge/mod.rs",
+          "crates/cathedral-sim/src/night.rs",
+          "crates/cathedral-sim/src/night/checkpoint.rs",
+          "crates/cathedral-sim/src/night/checkpoint/records.rs",
+          "crates/cathedral-sim/src/night/checkpoint/tests.rs",
+          "crates/cathedral-sim/src/night/continuation.rs",
+          "crates/cathedral-sim/src/night/continuation/tests.rs",
+          "crates/cathedral-sim/src/night/tests.rs",
+          "crates/cathedral-sim/src/receipts/checkpoint/speech.rs",
+          "crates/cathedral-sim/src/scheduler.rs",
+          "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+          "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+          "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+          "crates/cathedral-sim/src/scheduler/continuation.rs",
+          "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+          "crates/cathedral-sim/src/speech_router.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint/context.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint/records.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint/tests.rs",
+          "crates/cathedral-sim/tests/checkpoint_cognition_inputs_boundary.rs",
+          "crates/cathedral-sim/tests/checkpoint_night_boundary.rs",
+          "src/host_checkpoint.rs",
+          "src/host_checkpoint/tests_continuation_owner.rs",
+          "src/host_checkpoint/tests_continuation_public.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-format-check-01.log",
+        "source_map_sha256": "7cc3c5f0b71713502bd5f8001768196e6ca138f55e4e9356960a97c1629fcf4c",
+        "utc": "2026-09-15T01:35:28.479508+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/legacy-integration-02.log.gz",
+      "name": "legacy-integration-02",
+      "result": {
+        "archive_sha256": "9a200bc0448f7cf5f59da26deb55d6060285f10fb68527ea64c011d79b590241",
+        "exit_code": 101,
+        "raw_log": "/tmp/alibi-m2c-legacy-integration-02.log",
+        "raw_sha256": "cbc6960525157849ba9f592c85ad6c4c10bea73be307fa084323a0c55a7ee12c",
+        "source_map_sha256": "7cb006183b690962623a3cb15ec81eac5ea9547985bc41ce3a1c2c0b24728502",
+        "sources_unchanged": true,
+        "wall_seconds": 1.2598749420139939
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-sim",
+          "--test",
+          "checkpoint_night_boundary",
+          "--test",
+          "checkpoint_cognition_inputs_boundary",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-legacy-integration-02.log",
+        "source_map_sha256": "7cb006183b690962623a3cb15ec81eac5ea9547985bc41ce3a1c2c0b24728502",
+        "utc": "2026-09-15T01:39:31.814503+00:00"
+      },
+      "test_counts": {
+        "failed": 1,
+        "ignored": 0,
+        "passed": 11
+      },
+      "test_groups": 2
+    },
+    {
+      "archive": "owner/legacy-integration-03.log.gz",
+      "name": "legacy-integration-03",
+      "result": {
+        "archive_sha256": "154a1d73dc1fc455d136a451844e0d89fd52051f51b94ea73a5804e561a45500",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-legacy-integration-03.log",
+        "raw_sha256": "5a4029420922c4ab81884badbaf87f627d786539b90f2f05bf1dc8d0585e2b7b",
+        "source_map_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+        "sources_unchanged": true,
+        "wall_seconds": 0.904379767132923
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-sim",
+          "--test",
+          "checkpoint_night_boundary",
+          "--test",
+          "checkpoint_cognition_inputs_boundary",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-legacy-integration-03.log",
+        "source_map_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+        "utc": "2026-09-15T01:40:21.810359+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 12
+      },
+      "test_groups": 2
+    },
+    {
+      "archive": "owner/format-check-02.log.gz",
+      "name": "format-check-02",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-format-check-02.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+        "sources_unchanged": true,
+        "wall_seconds": 0.17722579394467175
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "--check",
+          "crates/cathedral-sim/src/checkpoint/complete/continuation.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/hydration.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/wire.rs",
+          "crates/cathedral-sim/src/engine.rs",
+          "crates/cathedral-sim/src/engine/complete_checkpoint.rs",
+          "crates/cathedral-sim/src/engine/continuation.rs",
+          "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+          "crates/cathedral-sim/src/engine/continuation_review_tests.rs",
+          "crates/cathedral-sim/src/engine/night_checkpoint.rs",
+          "crates/cathedral-sim/src/engine/night_checkpoint/tests.rs",
+          "crates/cathedral-sim/src/engine/scheduler_checkpoint.rs",
+          "crates/cathedral-sim/src/engine/speech_checkpoint.rs",
+          "crates/cathedral-sim/src/floor.rs",
+          "crates/cathedral-sim/src/knowledge/mod.rs",
+          "crates/cathedral-sim/src/night.rs",
+          "crates/cathedral-sim/src/night/checkpoint.rs",
+          "crates/cathedral-sim/src/night/checkpoint/records.rs",
+          "crates/cathedral-sim/src/night/checkpoint/tests.rs",
+          "crates/cathedral-sim/src/night/continuation.rs",
+          "crates/cathedral-sim/src/night/continuation/tests.rs",
+          "crates/cathedral-sim/src/night/tests.rs",
+          "crates/cathedral-sim/src/receipts/checkpoint/speech.rs",
+          "crates/cathedral-sim/src/scheduler.rs",
+          "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+          "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+          "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+          "crates/cathedral-sim/src/scheduler/continuation.rs",
+          "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+          "crates/cathedral-sim/src/speech_router.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint/context.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint/records.rs",
+          "crates/cathedral-sim/src/speech_router/checkpoint/tests.rs",
+          "crates/cathedral-sim/tests/checkpoint_cognition_inputs_boundary.rs",
+          "crates/cathedral-sim/tests/checkpoint_night_boundary.rs",
+          "src/host_checkpoint.rs",
+          "src/host_checkpoint/tests_continuation_owner.rs",
+          "src/host_checkpoint/tests_continuation_public.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-format-check-02.log",
+        "source_map_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+        "utc": "2026-09-15T01:40:42.873272+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/workspace-01.log.gz",
+      "name": "workspace-01",
+      "result": {
+        "archive_sha256": "e3fa83441b2e6bf2f8177f47c5c66048c64e3a3cb04e8b5a755487a68eb443be",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m2c-workspace-01.log",
+        "raw_sha256": "dc88e0c8d1498345a5b0a54313fe1a1468b9ec36bf479c0769ef279641502216",
+        "source_map_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+        "sources_unchanged": true,
+        "wall_seconds": 1156.6342127809767
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "--workspace",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "fab34dfc37eae308a3711820d4631dc4940f09484b2220892a0e7e9dae6d2929",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m2c-workspace-01.log",
+        "source_map_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+        "utc": "2026-09-15T01:40:59.551289+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 44,
+        "passed": 2215
+      },
+      "test_groups": 46
+    }
+  ],
+  "debug_probes": [
+    {
+      "fixture_sha256": "a533d34afd82ae4cc97c7cc3e489cb32444834c2e6866fe394614a644939b6f5",
+      "input_sha256": [
+        "6d23211e04ffc407ae717df96b4d04357e012449b6723ec862058fe94f8d4895"
+      ],
+      "interpretation": "One debug sample: reachability/admission and same-process immediate V2 re-save; no release distribution or fresh-process reader claim.",
+      "name": "probe-authored-02",
+      "report": "owner/probe-authored-02-report.json",
+      "report_sha256": "80d770dff2470acc6d8123cdc4667b0c1770f4a2f8f4e0a413a9b7366cdcc73a",
+      "resave_sha256": "a533d34afd82ae4cc97c7cc3e489cb32444834c2e6866fe394614a644939b6f5",
+      "source_delta_to_final": [
+        "crates/cathedral-sim/tests/checkpoint_cognition_inputs_boundary.rs",
+        "crates/cathedral-sim/tests/checkpoint_night_boundary.rs"
+      ]
+    },
+    {
+      "fixture_sha256": "650cf75e65fca92094d6057b7d05752dd4a082cd3004470a2cc6ddb429f6cadc",
+      "input_sha256": [
+        "c636bcac58a526eef95face9da7b069ebcef46e0b18ddafe8d0755d1b67d73cf"
+      ],
+      "interpretation": "One debug sample: reachability/admission and same-process immediate V2 re-save; no release distribution or fresh-process reader claim.",
+      "name": "probe-populated-01",
+      "report": "owner/probe-populated-01-report.json",
+      "report_sha256": "1e52d21667cfe3976c797de167fcc0b23de6ef252d0e8e391c1863794e505f04",
+      "resave_sha256": "650cf75e65fca92094d6057b7d05752dd4a082cd3004470a2cc6ddb429f6cadc",
+      "source_delta_to_final": [
+        "crates/cathedral-sim/tests/checkpoint_cognition_inputs_boundary.rs",
+        "crates/cathedral-sim/tests/checkpoint_night_boundary.rs"
+      ]
+    }
+  ],
+  "formatted_rust_files": [
+    "crates/cathedral-sim/src/checkpoint/complete/continuation.rs",
+    "crates/cathedral-sim/src/checkpoint/complete/hydration.rs",
+    "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+    "crates/cathedral-sim/src/checkpoint/complete/wire.rs",
+    "crates/cathedral-sim/src/engine.rs",
+    "crates/cathedral-sim/src/engine/complete_checkpoint.rs",
+    "crates/cathedral-sim/src/engine/continuation.rs",
+    "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+    "crates/cathedral-sim/src/engine/continuation_review_tests.rs",
+    "crates/cathedral-sim/src/engine/night_checkpoint.rs",
+    "crates/cathedral-sim/src/engine/night_checkpoint/tests.rs",
+    "crates/cathedral-sim/src/engine/scheduler_checkpoint.rs",
+    "crates/cathedral-sim/src/engine/speech_checkpoint.rs",
+    "crates/cathedral-sim/src/floor.rs",
+    "crates/cathedral-sim/src/knowledge/mod.rs",
+    "crates/cathedral-sim/src/night.rs",
+    "crates/cathedral-sim/src/night/checkpoint.rs",
+    "crates/cathedral-sim/src/night/checkpoint/records.rs",
+    "crates/cathedral-sim/src/night/checkpoint/tests.rs",
+    "crates/cathedral-sim/src/night/continuation.rs",
+    "crates/cathedral-sim/src/night/continuation/tests.rs",
+    "crates/cathedral-sim/src/night/tests.rs",
+    "crates/cathedral-sim/src/receipts/checkpoint/speech.rs",
+    "crates/cathedral-sim/src/scheduler.rs",
+    "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+    "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+    "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+    "crates/cathedral-sim/src/scheduler/continuation.rs",
+    "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+    "crates/cathedral-sim/src/speech_router.rs",
+    "crates/cathedral-sim/src/speech_router/checkpoint.rs",
+    "crates/cathedral-sim/src/speech_router/checkpoint/context.rs",
+    "crates/cathedral-sim/src/speech_router/checkpoint/records.rs",
+    "crates/cathedral-sim/src/speech_router/checkpoint/tests.rs",
+    "crates/cathedral-sim/tests/checkpoint_cognition_inputs_boundary.rs",
+    "crates/cathedral-sim/tests/checkpoint_night_boundary.rs",
+    "src/host_checkpoint.rs",
+    "src/host_checkpoint/tests_continuation_owner.rs",
+    "src/host_checkpoint/tests_continuation_public.rs"
+  ],
+  "owner_command_count": 23,
+  "predecessor_commit": "019f451c12bf7c94c9823678403f50244c88d421",
+  "seal_helper_sha256": "da0e07eb8f09b16bbb5ddf4c447d18c3dd337d0a1bfae01570ca7efd3ff07f01",
+  "source_count": 980,
+  "source_map": "source_hashes.json",
+  "source_map_matches_current": true,
+  "source_map_sha256": "b277379757dd70a1476adb44e583aeb808533ef58178fa88f70f5e20600d35a1",
+  "source_scope": "component-inputs-v2",
+  "status": "owner verification complete; Cargo ceded to coordinator; release acceptance pending",
+  "workspace": {
+    "groups": 46,
+    "test_counts": {
+      "failed": 0,
+      "ignored": 44,
+      "passed": 2215
+    }
+  }
+}

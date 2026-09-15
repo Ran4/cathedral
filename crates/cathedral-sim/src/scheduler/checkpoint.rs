@@ -137,13 +137,27 @@ pub(crate) fn validate(n: &NpcScheduler, c: SchedulerCheckpointContext<'_>) -> R
             "duplicate scheduler lane actor",
         )?;
     }
-    let mut roots = Vec::with_capacity(n.retry_work.len() + usize::from(n.in_flight.is_some()));
+    check(
+        n.load_retries.len() <= continuation::MAX_LOAD_RETRIES,
+        "load retry count limit",
+    )?;
+    check(
+        n.resumed_context.is_none() || n.in_flight.is_some(),
+        "resumed context without flight",
+    )?;
+    let mut roots = Vec::with_capacity(
+        n.retry_work.len() + n.load_retries.len() + usize::from(n.in_flight.is_some()),
+    );
     for (actor, work) in &n.retry_work {
         id(actor)?;
         check(c.root(work.semantic), "scheduler retry root disagreement")?;
         roots.push(work.semantic);
     }
-    if let Some(f) = &n.in_flight {
+    for f in n
+        .in_flight
+        .iter()
+        .chain(n.load_retries.iter().map(|r| &r.flight))
+    {
         id(&f.actor_id)?;
         check(c.root(f.semantic), "scheduler flight root disagreement")?;
         roots.push(f.semantic);
@@ -158,6 +172,22 @@ pub(crate) fn validate(n: &NpcScheduler, c: SchedulerCheckpointContext<'_>) -> R
                 .all(|s| s.len() <= checkpoint::records::MAX_TEXT_BYTES)
                 && f.prompt.len() <= MAX_PROMPT_BYTES,
             "scheduler input text limit",
+        )?;
+    }
+    for context in n
+        .resumed_context
+        .iter()
+        .chain(n.load_retries.iter().map(|r| &r.context))
+    {
+        records::validate_context(context)?;
+    }
+    for retry in &n.load_retries {
+        check(
+            matches!(
+                retry.flight.output_token_budget,
+                crate::traits::AcceptedOutputBudget::Accepted(_)
+            ),
+            "load retry missing exact budget",
         )?;
     }
     roots.sort_unstable();
@@ -202,6 +232,8 @@ pub(crate) fn copy(n: &NpcScheduler) -> NpcScheduler {
             f
         }),
         retry_work: n.retry_work.clone(),
+        load_retries: n.load_retries.clone(),
+        resumed_context: n.resumed_context.clone(),
         held_result: n.held_result.clone(),
         next_turn_at: n.next_turn_at,
         provider_failures: n.provider_failures,
@@ -240,6 +272,7 @@ impl NpcScheduler {
         c: SchedulerCheckpointContext<'_>,
         mut r: Reservation,
     ) -> Result<Admitted<NpcSchedulerDtoV1>> {
+        self.require_legacy()?;
         prepare(
             &View {
                 version: 1,
@@ -388,6 +421,7 @@ impl NpcScheduler {
             .values()
             .map(|w| w.semantic)
             .chain(self.in_flight.iter().map(|f| f.semantic))
+            .chain(self.load_retries.iter().map(|r| r.flight.semantic))
     }
 }
 

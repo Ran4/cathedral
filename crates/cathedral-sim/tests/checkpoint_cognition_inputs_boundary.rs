@@ -331,7 +331,9 @@ fn busy_attempt_has_no_accepted_input_and_later_acceptance_resolves_fresh_option
 
 #[test]
 fn new_wire_is_closed_and_legacy_wire_cannot_claim_the_new_authority() {
-    let mut h = Harness::new(true, Some(false), false);
+    // Ward queues remain V1-representable. Person queue-time incarnations now
+    // use complete Night V2; the earlier exact-input matrix covers both lanes.
+    let mut h = Harness::new(true, Some(true), false);
     h.poll(0.0);
     h.until_accepted("request_night");
     let wire = h.wire();
@@ -479,7 +481,9 @@ fn padded_input_keeps_its_original_lease_through_candidate_conversion() {
 
 #[test]
 fn exact_input_binds_unadopted_legacy_components_without_constructing_a_world() {
-    let mut h = Harness::new(true, Some(false), false);
+    // This intentionally exercises the legacy component composition API.
+    // Current person queues require the complete V2 path tested in-engine.
+    let mut h = Harness::new(true, Some(true), false);
     h.poll(0.0);
     h.until_accepted("request_night");
     let now = at(h.now);
@@ -576,11 +580,11 @@ fn exact_input_binds_unadopted_legacy_components_without_constructing_a_world() 
     .unwrap();
     assert_eq!(
         candidate.value().scheduler().unwrap().output_token_budget(),
-        Some(2400)
+        Some(1400)
     );
     assert_eq!(
         candidate.value().night().unwrap().output_token_budget(),
-        Some(2400)
+        Some(1400)
     );
     assert_eq!(
         calls
