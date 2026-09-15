@@ -19,9 +19,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub(super) struct TempDir(PathBuf);
+pub(crate) struct TempDir(PathBuf);
 impl TempDir {
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         static NEXT: AtomicU64 = AtomicU64::new(1);
         let p = std::env::temp_dir().join(format!(
             "alibi-m3a-test-{}-{}",
@@ -31,7 +31,7 @@ impl TempDir {
         std::fs::create_dir(&p).unwrap();
         Self(p)
     }
-    pub(super) fn path(&self) -> &Path {
+    pub(crate) fn path(&self) -> &Path {
         &self.0
     }
 }
@@ -88,14 +88,14 @@ impl Cognition for Unavailable {
         Err(CognitionBusy)
     }
 }
-pub(super) struct Fixture {
+pub(crate) struct Fixture {
     engine: Engine,
     host: Host,
-    pub(super) budget: Arc<CheckpointBudget>,
+    pub(crate) budget: Arc<CheckpointBudget>,
     _running: Reservation,
 }
 impl Fixture {
-    pub(super) fn new() -> Self {
+    pub(crate) fn configuration() -> EngineConfig {
         static IMAGE: OnceLock<[u8; 32]> = OnceLock::new();
         let image = *IMAGE.get_or_init(|| {
             use sha2::{Digest, Sha256};
@@ -112,13 +112,16 @@ impl Fixture {
             }
             hash.finalize().into()
         });
-        let config = EngineConfig {
+        EngineConfig {
             checkpoint_host_image: Some(image),
             checkpoint_world_identity: Some(WorldIdentity::from_bytes([9; 16]).unwrap()),
             knowledge_enabled: false,
             marks_enabled: false,
             ..Default::default()
-        };
+        }
+    }
+    pub(crate) fn new() -> Self {
+        let config = Self::configuration();
         let clock = config.clock;
         let seed = WorldSeed::from_json_str(include_str!(
             "../../../cathedral-sim/tests/fixtures/demo_seed.json"
@@ -198,7 +201,49 @@ impl Fixture {
             _running: running,
         }
     }
-    pub(super) fn capture(&self) -> Admitted<CompleteCheckpointCandidate> {
+    pub(crate) fn definitions(&self) -> checkpoint::host::DefinitionsV1 {
+        self.host.0.definitions
+    }
+    pub(crate) fn assets() -> checkpoint::Result<complete::HydrationAssets> {
+        Self::assets_with_config(Self::configuration())
+    }
+    pub(crate) fn assets_with_config(
+        config: EngineConfig,
+    ) -> checkpoint::Result<complete::HydrationAssets> {
+        let seed = WorldSeed::from_json_str(include_str!(
+            "../../../cathedral-sim/tests/fixtures/demo_seed.json"
+        ))
+        .unwrap();
+        let areas =
+            AreaMap::from_json_str(include_str!("../../../../assets/world/areas.json")).unwrap();
+        let adjacency = Arc::new(knowledge::AreaAdjacency::build(&areas));
+        let assets = complete::HydrationWorldAssets {
+            areas,
+            sounds: SoundCatalog::from_toml_str(include_str!(
+                "../../../../assets/sounds/catalog.toml"
+            ))
+            .unwrap(),
+            items: ItemCatalog::embedded(),
+            nav: None,
+            shelters: config.shelters.clone(),
+            marks: Arc::new(marks::MarkCatalog::default()),
+            facts: Arc::new(knowledge::FactCatalog::default()),
+            salience: Arc::new(knowledge::SalienceTable::default()),
+            area_adjacency: adjacency,
+        };
+        complete::HydrationAssets::new(
+            &seed,
+            config,
+            PromptEnv::new(
+                include_str!("../../../../assets/prompts/turn.j2"),
+                include_str!("../../../../assets/prompts/night.j2"),
+                include_str!("../../../../assets/prompts/strings.toml"),
+            )
+            .unwrap(),
+            assets,
+        )
+    }
+    pub(crate) fn capture(&self) -> Admitted<CompleteCheckpointCandidate> {
         complete::capture(
             &self.engine,
             &self.host,
@@ -207,7 +252,7 @@ impl Fixture {
         )
         .unwrap()
     }
-    pub(super) fn validate(
+    pub(crate) fn validate(
         &self,
         loaded: LoadedCheckpoint,
     ) -> Admitted<CompleteCheckpointCandidate> {
@@ -1148,13 +1193,13 @@ fn storage_release_probe() {
         .unwrap();
     println!("{report}");
 }
-pub(super) fn metadata(title: &str) -> SaveMetadata {
+pub(crate) fn metadata(title: &str) -> SaveMetadata {
     SaveMetadata::new(title, 1_789_430_400, "The square").unwrap()
 }
-pub(super) fn slot() -> SlotId {
+pub(crate) fn slot() -> SlotId {
     SlotId::new("manual-1").unwrap()
 }
-pub(super) fn wait_result(service: &CheckpointStorage, id: OperationId) -> Outcome {
+pub(crate) fn wait_result(service: &CheckpointStorage, id: OperationId) -> Outcome {
     let until = Instant::now() + Duration::from_secs(20);
     loop {
         if let Some(result) = service.take_result(id) {

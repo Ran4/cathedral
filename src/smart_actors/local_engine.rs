@@ -29,12 +29,10 @@
 //! in the world before the first snapshot leaves it.
 
 use std::{
-    cell::RefCell,
     panic::{self, AssertUnwindSafe},
     path::{Path, PathBuf},
-    rc::Rc,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicU64, AtomicUsize, Ordering},
     },
 };
@@ -64,6 +62,10 @@ use super::{
 };
 use crate::config::WeatherSettings;
 use crate::controller::{PhysicalPosition, PlayerController};
+
+#[cfg(all(test, target_os = "linux"))]
+#[path = "local_engine/retirement_tests.rs"]
+mod retirement_tests;
 
 /// Complete ordinary pump boundary, suitable for capture without an extra poll.
 /// M2 persists the watermark and matching physical identity with host dynamics.
@@ -113,11 +115,14 @@ pub struct EngineGuard {
 /// hand those completions back as commands. That somebody is the host — here,
 /// as in `e2e_fake.rs` and the headless runner.
 #[derive(Clone, Default)]
-struct SharedCognition(Rc<RefCell<FakeCognition>>, cathedral_sim::RuntimeGeneration);
+struct SharedCognition(Arc<Mutex<FakeCognition>>, cathedral_sim::RuntimeGeneration);
 
 impl Cognition for SharedCognition {
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
-        self.0.borrow_mut().request(prompt)
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .request(prompt)
     }
 
     fn request_with_budget(
@@ -126,7 +131,8 @@ impl Cognition for SharedCognition {
         max_output_tokens: Option<u32>,
     ) -> Result<RequestId, CognitionBusy> {
         self.0
-            .borrow_mut()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
             .request_with_budget(prompt, max_output_tokens)
     }
 
@@ -137,7 +143,10 @@ impl Cognition for SharedCognition {
         prompt: String,
         max_output_tokens: Option<u32>,
     ) -> Result<RequestId, CognitionBusy> {
-        self.0.borrow_mut().request_night(prompt, max_output_tokens)
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .request_night(prompt, max_output_tokens)
     }
 }
 
@@ -162,6 +171,8 @@ pub struct LocalEngine {
     pub(crate) issued_at_boundary: Option<u64>,
     generation: cathedral_sim::RuntimeGeneration,
     publication_bytes: Arc<AtomicUsize>,
+    publication_lifetime: super::bridge::RetirementPin,
+    services: Option<cathedral_backends::checkpoint_services::ForwardingServices>,
     command_endpoint: Option<super::bridge::BridgeCommandSender>,
     seed: Option<EngineSeed>,
     engine: Option<Engine>,
@@ -183,6 +194,116 @@ pub struct LocalEngine {
 }
 
 impl LocalEngine {
+    /// Consumes the complete old transport after retirement admission. Refusal
+    /// returns every original owner unchanged. M3b2 supplies a measured/trusted
+    /// whole-owner bound and performs cohort promotion; the fixed Running
+    /// allowance alone is not a heap inventory or proof of two-world residency.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn retire_to_worker(
+        self,
+        guard: EngineGuard,
+        handle: BridgeHandle,
+        inbox: BridgeInbox,
+        permit: cathedral_backends::checkpoint_preparation::RetirementPermit,
+    ) -> Result<
+        cathedral_backends::checkpoint_preparation::PreparationId,
+        (
+            &'static str,
+            Self,
+            EngineGuard,
+            BridgeHandle,
+            BridgeInbox,
+            cathedral_backends::checkpoint_preparation::RetirementPermit,
+        ),
+    > {
+        let check = (|| {
+            if self.engine.is_none() || self.seed.is_some() || self.services.is_none() {
+                return Err("only a fully started engine has a complete retirement transport");
+            }
+            if handle.generation() != self.generation
+                || inbox.generation() != self.generation
+                || guard
+                    ._backends
+                    .as_ref()
+                    .is_none_or(|b| b.generation() != self.generation)
+            {
+                return Err("old host retirement generation mismatch");
+            }
+            self.publication_lifetime
+                .preflight(permit.budget(), permit.lease())?;
+            handle
+                .retirement_pin()
+                .preflight(permit.budget(), permit.lease())?;
+            self.completions
+                .as_ref()
+                .ok_or("missing old completion receiver")?
+                .can_pin_retirement(permit.budget(), permit.lease())
+                .map_err(|_| "old mailbox pin refused")?;
+            Ok(())
+        })();
+        if let Err(error) = check {
+            return Err((error, self, guard, handle, inbox, permit));
+        }
+        // All fallible checks precede fencing. Only this host owns retirement
+        // admission for these transports; no concurrent repin is authorized.
+        self.publication_lifetime.pin(permit.lease());
+        handle.retirement_pin().pin(permit.lease());
+        self.completions
+            .as_ref()
+            .unwrap()
+            .pin_retirement(permit.budget(), permit.lease())
+            .expect("preflighted mailbox pin");
+        handle.retire();
+        self.completions.as_ref().unwrap().fence();
+        let LocalEngine {
+            issued_at_boundary,
+            generation,
+            publication_bytes,
+            publication_lifetime,
+            services,
+            command_endpoint,
+            seed,
+            engine,
+            completions,
+            fake_cognition,
+            prompt_log,
+            commands,
+            events,
+            dead,
+            input_watermark,
+            accepted_boundary,
+        } = self;
+        let services = services.unwrap().into_send();
+        let (domain, adapters) = engine.unwrap().into_retirement();
+        // Known empty forwarding wrappers and NullSight only; all real service
+        // storage is already detached. No domain or queued payload dies here.
+        adapters.dispose();
+        drop(seed);
+        let _ = (
+            issued_at_boundary,
+            generation,
+            dead,
+            input_watermark,
+            accepted_boundary,
+        );
+        let id = permit.id();
+        permit.submit(RetiredLocalEngine {
+            completions,
+            commands,
+            inbox,
+            prompt_log: Some(prompt_log),
+            _domain: domain,
+            _services: services,
+            _fake_cognition: fake_cognition,
+            _events: events,
+            _command_endpoint: command_endpoint,
+            _handle: handle,
+            _guard: guard,
+            _publication_bytes: publication_bytes,
+            _publication_lifetime: publication_lifetime,
+        });
+        Ok(id)
+    }
     #[cfg(test)]
     pub(crate) fn checkpoint_storage_inventory(&self) -> serde_json::Value {
         let completions = self.completions.as_ref().map(|receiver| {
@@ -197,7 +318,7 @@ impl LocalEngine {
             "event_channel_capacity":self.events.capacity(),
             "publication_payload_bytes":self.publication_bytes.load(Ordering::Acquire),
             "completions":completions,
-            "fake_cognition":self.fake_cognition.as_ref().map(|f|f.0.borrow().checkpoint_storage_inventory()),
+            "fake_cognition":self.fake_cognition.as_ref().map(|f|f.0.lock().unwrap_or_else(|e| e.into_inner()).checkpoint_storage_inventory()),
             "transcript_rows":self.engine.as_ref().map(|e|e.transcript().len()),
             "transcript_retained_upper_bytes":self.engine.as_ref().map(|e|e.checkpoint_transcript_storage_bytes()),
             "round_ladder_scratch_bytes":self.engine.as_ref().map(|e|e.round().checkpoint_ladder_scratch_bytes()),
@@ -261,6 +382,37 @@ impl LocalEngine {
     }
 }
 
+/// Opaque Send disposal transport, not a pollable Engine. The worker explicitly
+/// drains receivers before endpoint drops: surviving senders otherwise keep
+/// crossbeam's queued allocations alive. PromptLog's writer fence can block and
+/// therefore belongs here too. Global writer queues/runtime allocations remain
+/// separate M3b2 accounting obligations, including after this owner is disposed.
+struct RetiredLocalEngine {
+    completions: Option<cathedral_backends::BackendReceiver>,
+    commands: Receiver<BridgeCommand>,
+    inbox: BridgeInbox,
+    prompt_log: Option<PromptLog>,
+    _domain: cathedral_sim::engine::RetiredEngineState,
+    _services: cathedral_backends::checkpoint_services::SendContinuationServices,
+    _fake_cognition: Option<SharedCognition>,
+    _events: Sender<BridgeEvent>,
+    _command_endpoint: Option<super::bridge::BridgeCommandSender>,
+    _handle: BridgeHandle,
+    _guard: EngineGuard,
+    _publication_bytes: Arc<AtomicUsize>,
+    _publication_lifetime: super::bridge::RetirementPin,
+}
+impl Drop for RetiredLocalEngine {
+    fn drop(&mut self) {
+        if let Some(receiver) = &self.completions {
+            receiver.retire();
+        }
+        while self.commands.try_recv().is_ok() {}
+        self.inbox.dispose_queued();
+        drop(self.prompt_log.take());
+    }
+}
+
 /// Start the engine and hand the ECS its resources.
 ///
 /// Nothing here can fail loudly: a missing asset, an unusable temp directory or
@@ -287,6 +439,8 @@ pub fn spawn(
     let mut engine = LocalEngine {
         generation,
         publication_bytes: Arc::new(AtomicUsize::new(0)),
+        publication_lifetime: Default::default(),
+        services: None,
         command_endpoint: None,
         seed: None,
         engine: None,
@@ -308,11 +462,12 @@ pub fn spawn(
         Err("runtime generation identities exhausted".to_owned())
     };
     match built {
-        Ok((seed, backends, fake_cognition, prompt_log)) => {
+        Ok((seed, backends, fake_cognition, prompt_log, services)) => {
             engine.completions = Some(backends.events().clone());
             engine.seed = Some(seed);
             engine.fake_cognition = fake_cognition;
             engine.prompt_log = prompt_log;
+            engine.services = Some(services);
             guard._backends = Some(backends);
             // The handshake still opens with the same event, so mod.rs's
             // ProcessStarted arm (which answers with `Hello`) is untouched.
@@ -342,6 +497,7 @@ type Built = (
     BackendsHandle,
     Option<SharedCognition>,
     PromptLog,
+    cathedral_backends::checkpoint_services::ForwardingServices,
 );
 
 /// Fill the streets: `config.ron: smart_actors.extra_ambient_npcs` generated
@@ -443,17 +599,17 @@ fn build(
     let backends = BackendsHandle::start_for_generation(backends_config, session, generation)
         .map_err(|error| format!("could not start the actor backends: {error}"))?;
 
-    let (cognition, fake_cognition): (Box<dyn Cognition>, Option<SharedCognition>) =
+    let (cognition, fake_cognition): (Box<dyn Cognition + Send>, Option<SharedCognition>) =
         if config.fake_backend {
-            let fake = SharedCognition(Rc::new(RefCell::new(FakeCognition::new())), generation);
+            let fake = SharedCognition(Arc::new(Mutex::new(FakeCognition::new())), generation);
             (Box::new(fake.clone()), Some(fake))
         } else {
             (Box::new(backends.cognition()), None)
         };
     // Real STT/TTS engines (or their offline stand-ins): the handle picks by
     // `fake_mode`, so this one call site is both modes.
-    let transcription: Box<dyn Transcription> = backends.transcription();
-    let tts: Box<dyn Tts> = backends.tts();
+    let transcription: Box<dyn Transcription + Send> = backends.transcription();
+    let tts: Box<dyn Tts + Send> = backends.tts();
     let (capabilities, tts_startup_message) =
         engine_capabilities(backends.capabilities(), &config.tts_backend);
 
@@ -546,6 +702,18 @@ fn build(
         ..EngineConfig::default()
     };
 
+    let services = cathedral_backends::checkpoint_services::ForwardingServices::new(
+        cathedral_backends::checkpoint_services::SendContinuationServices {
+            generation,
+            cognition,
+            transcription,
+            tts,
+            sight: Box::new(NullSight),
+            capabilities,
+            runtime_dir: engine_config.runtime_dir.clone(),
+        },
+    );
+    let adapters = services.adapters();
     Ok((
         EngineSeed {
             seed,
@@ -554,13 +722,14 @@ fn build(
             prompts,
             config: engine_config,
             capabilities,
-            cognition,
-            transcription,
-            tts,
+            cognition: adapters.cognition,
+            transcription: adapters.transcription,
+            tts: adapters.tts,
         },
         backends,
         fake_cognition,
         prompt_log,
+        services,
     ))
 }
 
@@ -831,7 +1000,12 @@ impl LocalEngine {
     /// world finished since the last pump, handed back as commands.
     fn collect_completions(&mut self, commands: &mut Vec<EngineCommand>) {
         if let Some(fake) = &self.fake_cognition {
-            for completion in fake.0.borrow_mut().drain_completions() {
+            for completion in fake
+                .0
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .drain_completions()
+            {
                 commands.push(EngineCommand::LlmCompletion(completion).in_generation(fake.1));
             }
         }
@@ -957,30 +1131,33 @@ impl LocalEngine {
                 BridgeEvent::Disconnected(message) => message.capacity(),
                 _ => 0,
             };
-        let allocation = super::bridge::PublicationAllocation::reserve(
+        let allocation = super::bridge::PublicationAllocation::reserve_pinned(
             &self.publication_bytes,
+            &self.publication_lifetime,
             bytes,
             matches!(event, BridgeEvent::Disconnected(_)),
         );
-        let (event, allocation) = if self.events.len() >= MAX_BRIDGE_EVENTS - 1
-            || allocation.is_none()
-        {
-            drop(allocation);
-            self.retire_runtime();
-            let Some(allocation) =
-                super::bridge::PublicationAllocation::reserve(&self.publication_bytes, 512, true)
-            else {
-                return;
+        let (event, allocation) =
+            if self.events.len() >= MAX_BRIDGE_EVENTS - 1 || allocation.is_none() {
+                drop(allocation);
+                self.retire_runtime();
+                let Some(allocation) = super::bridge::PublicationAllocation::reserve_pinned(
+                    &self.publication_bytes,
+                    &self.publication_lifetime,
+                    512,
+                    true,
+                ) else {
+                    return;
+                };
+                (
+                    BridgeEvent::Disconnected(
+                        "actor publication exceeded its bounded delivery capacity".into(),
+                    ),
+                    allocation,
+                )
+            } else {
+                (event, allocation.expect("checked above"))
             };
-            (
-                BridgeEvent::Disconnected(
-                    "actor publication exceeded its bounded delivery capacity".into(),
-                ),
-                allocation,
-            )
-        } else {
-            (event, allocation.expect("checked above"))
-        };
         if self
             .events
             .try_send(BridgeEvent::InGeneration {
@@ -1532,7 +1709,8 @@ mod tests {
             .as_ref()
             .unwrap()
             .0
-            .borrow_mut()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
             .drain_completions()
             .into_iter()
             .next()
@@ -1727,7 +1905,7 @@ mod tests {
         let fake = || {
             let mut fake = FakeCognition::new();
             assert_eq!(fake.request("fixture".into()).unwrap(), RequestId(0));
-            Rc::new(RefCell::new(fake))
+            Arc::new(Mutex::new(fake))
         };
         harness.engine.fake_cognition = Some(SharedCognition(
             fake(),
@@ -2174,7 +2352,7 @@ mod tests {
     /// so the microphone worker is spawned and the cast has a (silent) voice.
     #[test]
     fn fake_mode_reports_every_capability_and_selects_the_configured_voice() {
-        let (seed, _backends, fake, _log) = build(
+        let (seed, _backends, fake, _log, _services) = build(
             &fake_config(),
             &WeatherSettings::default(),
             None,
@@ -2206,7 +2384,7 @@ mod tests {
     /// else would fail.
     #[test]
     fn the_game_gates_idle_cognition_on_the_players_neighborhood_and_on_news() {
-        let (seed, _backends, _fake, _log) = build(
+        let (seed, _backends, _fake, _log, _services) = build(
             &fake_config(),
             &WeatherSettings::default(),
             None,
@@ -2229,7 +2407,7 @@ mod tests {
             },
             ..fake_config()
         };
-        let (seed, _backends, _fake, _log) = build(
+        let (seed, _backends, _fake, _log, _services) = build(
             &ungated,
             &WeatherSettings::default(),
             None,
@@ -2249,7 +2427,7 @@ mod tests {
         let session = SessionDir::create(&session_id).expect("a private audio directory");
         let path = session.path().to_path_buf();
 
-        let (seed, backends, _fake, _log) = build(
+        let (seed, backends, _fake, _log, _services) = build(
             &fake_config(),
             &WeatherSettings::default(),
             Some(session),

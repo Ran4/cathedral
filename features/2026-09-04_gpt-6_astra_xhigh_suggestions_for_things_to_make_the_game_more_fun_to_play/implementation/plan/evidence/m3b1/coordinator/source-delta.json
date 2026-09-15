@@ -1,0 +1,86 @@
+{
+  "added": {
+    "crates/cathedral-backends/src/checkpoint_preparation.rs": "e967cdf0e9e99f88d5414fe56975e010ec3fb41b67ce874985ead2bbe2b7eb78",
+    "crates/cathedral-backends/src/checkpoint_preparation/tests.rs": "712aaa711cca92ba855c27feb3fed7a758d61d71fc85ede272f3236a871c6799",
+    "crates/cathedral-backends/src/checkpoint_preparation_review_tests.rs": "5b19c932ff1edcb5b058b15bd352cb9dd9b6cf98f49f78e082da11fe0d55783d",
+    "crates/cathedral-backends/src/checkpoint_services.rs": "5f2e592a62d66bf2d0d3528c6e22931d80a5a59f29c2b780e1e32eeb21eef682",
+    "crates/cathedral-backends/src/mailbox_retirement_review_tests.rs": "bfeefce67e3aabb4ab26dac48e3fec7fa89cb2a3b165ce3357fc5c0912b5f913",
+    "crates/cathedral-sim/src/checkpoint/complete/disposal.rs": "fe046558fc08e136fe8770f229cd29726a0a340c1d3020c0ab2489c2f7b206f7",
+    "crates/cathedral-sim/src/checkpoint/retirement_review_tests.rs": "3421aa845fd8876ed9f1ee60717327b07d54b9b650f248c8d5611ad2b4874eb5",
+    "crates/cathedral-sim/src/engine/retirement.rs": "64e47bb60d3f6897ef7b2c49d35e2eb538c119d83d250659d6860fbdf7044a23",
+    "src/smart_actors/local_engine/retirement_tests.rs": "894b0145327cf5105f35efb6519896902b20f436ff94f57133d0d95b22adfcf9"
+  },
+  "auditor_sha256": "9146623f8d46cb199f32e49a3db39378dae14bdf0167810886ca4f6c4885820f",
+  "changed": {
+    "crates/cathedral-backends/src/checkpoint_storage/disk.rs": {
+      "after": "cefc7f85c5709a5643e5c9ac24a355e942128a5190e8a32cdbcca7e638e09cc7",
+      "before": "dca76b6a364d812b0a5cf2402fef069bbc5dc03f5cea484a97a34b6e300903d7"
+    },
+    "crates/cathedral-backends/src/checkpoint_storage/mod.rs": {
+      "after": "759ccc22a29557f010de1f714eaf59f67bc21b2be1d1f263d546cbfdb034a687",
+      "before": "bc7e1ea72ce089481d61de5aff88a1d892ae17392f214569796201788318194c"
+    },
+    "crates/cathedral-backends/src/checkpoint_storage/tests.rs": {
+      "after": "e962ed6e60cd257eefc2ad70b8d4532438a7422177b8e4f0ecb4abcd144d9362",
+      "before": "468326c691b2290492afaba507bb59056054035cfc305611ef04d0d4ca5025d7"
+    },
+    "crates/cathedral-backends/src/lib.rs": {
+      "after": "d7d770ca699bece32efe45f252e0006c5ff2f77622d1317c2bd0dd8a0a82171f",
+      "before": "ec01fb68885af5397200025694ae3cf4c47f1b5c2f3479fcdc87491c611a7289"
+    },
+    "crates/cathedral-backends/src/mailbox.rs": {
+      "after": "908e72f659c42fc32ab1ca8e0d1989f4220980e886e35f7eaad5aa10f75f6f0f",
+      "before": "cbd9149c2cadba3fc3ee5e782d77713f83ba67c4aa08dc0f053f8dd02d0dbef1"
+    },
+    "crates/cathedral-sim/src/checkpoint/budget.rs": {
+      "after": "30ecd176a00b7e3bb89a865a11b2bce6af677209c6b16e93acdf103fbcdcc7a6",
+      "before": "b3008f92e5ee07efe0bda4b98682a2165d75849aa448613a0e0e1358d4cb8e77"
+    },
+    "crates/cathedral-sim/src/checkpoint/complete/continuation.rs": {
+      "after": "19afaa2545aee8a0a6f1f761c58c0f0219d714739099f8fe0c4caffdacd03756",
+      "before": "2e67a4ac7870c9ca2b96f1ad1883c776499fbc7f704ee6e6f8e1c63d78891494"
+    },
+    "crates/cathedral-sim/src/checkpoint/complete/hydration.rs": {
+      "after": "1e879ba91930800f06376ed156a63448001324edea6bb1698d77672464fad644",
+      "before": "ded186809f3c9a2255ea5e4162c501f8cde1e50ee8936054333aa312778ce71c"
+    },
+    "crates/cathedral-sim/src/checkpoint/complete/mod.rs": {
+      "after": "77788c9b1633cb5596281d98779cbfa8d4aac2023008f3dc6fcf86462a3db853",
+      "before": "d6615888aadceeb59f3ba6bb22e571c69c6748bfd4fec0390d128dfe2ec90714"
+    },
+    "crates/cathedral-sim/src/checkpoint/mod.rs": {
+      "after": "fe9aa2abdd895d28e5b94b22a6ec2cf993dcdd31e035d5d256ddf626e9fa5fb5",
+      "before": "0ad29f0cce3223e2bff8c1578905162d04edd84cacaf100391af0f63b540a8a7"
+    },
+    "crates/cathedral-sim/src/engine.rs": {
+      "after": "4488e1dfaf1f7cfba321d3efb6f5557bebf095280a4366e0caaa896f0734374a",
+      "before": "3a1ad4b29b8b4ab8f0a249ae6cdd0c3b3be97b4b1405e1d121c309c477af43a7"
+    },
+    "crates/cathedral-sim/src/engine/continuation.rs": {
+      "after": "93414e841d5a0bca62b024cc9c8dea3a43c5aa23b29b38acf4cba8145cdec3aa",
+      "before": "caf85cac55015e715658546c13126c6996c65789b306999f69a2573424210ff0"
+    },
+    "crates/cathedral-sim/src/engine/speech_checkpoint.rs": {
+      "after": "752a15d2b168fc7d689031f4a73be31a4be3b17125db1dbfa4cc3534e7796fe3",
+      "before": "fb9bdd48b61882aedebd587add674e20ca98b164476bf9b4598e5fc2c965c671"
+    },
+    "src/host_checkpoint/tests_continuation_public.rs": {
+      "after": "4bce1325279dda7fb2bd94499d40d83ae8cbd8e79aa7ce29466225bcdab0a439",
+      "before": "cb82388c4dd0cd6ad6e70762997f31402c334412ac95ef32edeb4ff15ddcc2c1"
+    },
+    "src/smart_actors/bridge.rs": {
+      "after": "add420dd636fdd5820ecf4f5eb25cfc47ec073cff83dc13be4a3ed08227c5f50",
+      "before": "66153865af82957cfa7edc3c1e5aefd7d594eb5ab742218958b818ca5a4d0847"
+    },
+    "src/smart_actors/local_engine.rs": {
+      "after": "868eefdd4bae09924261cb81287aae3c941ca883dcda874360187301b69b1216",
+      "before": "d0a19a93a5f6736283896daa315cc8a0c282198ee9197a5fd60cd693aa99beed"
+    }
+  },
+  "current_count": 1002,
+  "predecessor_commit": "5559d26654faba677971ceeef66f0869495e6489",
+  "prior_count": 993,
+  "removed": [],
+  "source_map_sha256": "ea4086cf10fdf5e6d0781f3191e2f73cc9dcd7460889a4d98646a1f993783d80",
+  "unchanged_predecessor_inputs": 977
+}

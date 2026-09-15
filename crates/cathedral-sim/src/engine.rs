@@ -1077,6 +1077,9 @@ pub struct PlayerCustody {
     pub booked_as: Option<String>,
 }
 
+mod retirement;
+pub use retirement::{RetiredEngineAdapters, RetiredEngineState};
+
 pub struct Engine {
     checkpoint_seed_identity: [u8; 32],
     world: World,

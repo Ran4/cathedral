@@ -49,8 +49,72 @@ pub(super) struct Store {
     #[cfg(test)]
     pub(super) partial_payload_bytes: Option<usize>,
 }
+impl Drop for Store {
+    fn drop(&mut self) {
+        // The worker owns the lock lifetime. A concurrent fork/dup can retain
+        // this open-file-description even after our File closes; CLOEXEC only
+        // closes an inherited descriptor once that child reaches exec.
+        loop {
+            // SAFETY: Store retains its live owned descriptor until after Drop.
+            if unsafe { libc::flock(self.directory.as_raw_fd(), libc::LOCK_UN) } == 0
+                || std::io::Error::last_os_error().kind() != std::io::ErrorKind::Interrupted
+            {
+                break;
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod lock_lifetime_tests {
+    use super::*;
+    use crate::checkpoint_storage::tests::TempDir;
+
+    #[test]
+    fn store_unlocks_on_owner_disposal_while_a_duplicate_descriptor_survives() {
+        let directory = TempDir::new();
+        let store = Store::open(directory.path()).unwrap();
+        // dup and fork share the locked open-file-description. CLOEXEC cannot
+        // release an inherited descriptor until a concurrent child reaches exec.
+        let duplicate = store.directory.try_clone().unwrap();
+        assert!(matches!(Store::open(directory.path()), Err(error)
+            if error.phase == Phase::Open && error.kind == std::io::ErrorKind::WouldBlock));
+        drop(store);
+        assert!(
+            Store::open(directory.path()).is_ok(),
+            "the actual worker owner must release its lock despite an inherited descriptor"
+        );
+        drop(duplicate);
+    }
+
+    #[test]
+    fn post_lock_startup_sync_failure_unlocks_while_a_duplicate_survives() {
+        let directory = TempDir::new();
+        let mut duplicate = None;
+        let failed = Store::open_with_sync(directory.path(), |locked| {
+            duplicate = Some(locked.try_clone()?);
+            assert!(matches!(Store::open(directory.path()), Err(error)
+                if error.phase == Phase::Open && error.kind == std::io::ErrorKind::WouldBlock));
+            Err(std::io::Error::from_raw_os_error(libc::EIO))
+        });
+        assert!(matches!(failed, Err(error) if error.phase == Phase::Open
+            && error.kind == std::io::Error::from_raw_os_error(libc::EIO).kind()));
+        assert!(duplicate.is_some());
+        assert!(
+            Store::open(directory.path()).is_ok(),
+            "failed startup must release the acquired lock"
+        );
+        drop(duplicate);
+    }
+}
 impl Store {
     pub(super) fn open(path: &Path) -> Result<Self, StorageError> {
+        Self::open_with_sync(path, File::sync_all)
+    }
+    fn open_with_sync(
+        path: &Path,
+        sync: impl FnOnce(&File) -> std::io::Result<()>,
+    ) -> Result<Self, StorageError> {
         use std::os::unix::fs::OpenOptionsExt;
         let directory = std::fs::OpenOptions::new()
             .read(true)
@@ -83,17 +147,17 @@ impl Store {
                 std::io::Error::last_os_error(),
             ));
         }
-        directory
-            .sync_all()
-            .map_err(|e| StorageError::io(Phase::Open, e))?;
-        Ok(Self {
+        // Establish the unlock guard before any fallible post-lock work.
+        let store = Self {
             directory,
             uncertain: None,
             #[cfg(test)]
             hook: None,
             #[cfg(test)]
             partial_payload_bytes: None,
-        })
+        };
+        sync(&store.directory).map_err(|e| StorageError::io(Phase::Open, e))?;
+        Ok(store)
     }
     fn at<T>(
         &self,

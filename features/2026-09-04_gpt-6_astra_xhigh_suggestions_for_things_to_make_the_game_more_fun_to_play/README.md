@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16, M2b–M2d and M3a implemented and reviewed (2026-09-15). M3b–M19 remain. M0 renderer/full-stress evidence is pending.
+Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16, M2b–M2d, M3a and M3b1 implemented and reviewed (2026-09-15). M3b2 whole-App adoption and M3c–M19 remain. M0 renderer/full-stress evidence is pending.
 
 # An Alibi in Stone
 

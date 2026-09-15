@@ -21,6 +21,9 @@
 //!
 //! [`LocalEngine`]: https://github.com/ (game crate, P5)
 
+#[cfg(target_os = "linux")]
+pub mod checkpoint_preparation;
+pub mod checkpoint_services;
 /// Durable checkpoint storage currently supports Linux local filesystems only.
 #[cfg(target_os = "linux")]
 pub mod checkpoint_storage;
@@ -29,6 +32,8 @@ pub mod events;
 pub mod fake;
 pub mod llm;
 pub mod mailbox;
+#[cfg(test)]
+mod mailbox_retirement_review_tests;
 pub mod prompt_log;
 pub mod runtime;
 pub mod session_dir;
@@ -137,6 +142,11 @@ impl BackendsHandle {
     /// M3 retains this bundle until its bounded destruction phase.
     pub fn retire(&self) {
         self.events.retire();
+    }
+
+    /// Fence without destroying queued callback payloads on the caller thread.
+    pub fn fence(&self) {
+        self.events.fence();
     }
 
     /// Share the runtime, with fresh endpoints and a distinct recording owner.

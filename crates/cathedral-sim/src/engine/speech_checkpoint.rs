@@ -342,28 +342,40 @@ impl EngineSpeechCandidate {
             "interrupted input count limit",
         )
     }
+    #[allow(dead_code)] // Compatibility wrapper; the host uses retained preparation.
     pub(crate) fn prepare_continuation(
         self,
         world: &mut World,
         router: &mut SpeechRouter,
         now: LogicalTime,
     ) -> Result<()> {
+        self.prepare_continuation_retained(world, router, now)
+            .map_err(|(error, _)| error)
+    }
+    pub(crate) fn prepare_continuation_retained(
+        self,
+        world: &mut World,
+        router: &mut SpeechRouter,
+        now: LogicalTime,
+    ) -> std::result::Result<(), (crate::checkpoint::CheckpointError, Self)> {
         // Every accepted command was already validated against the ledger at
         // this boundary. Advance never repeats an already committed effect.
         for task in &self.data.state.accepted_recordings {
             if let Some(id) = task.semantic() {
-                let _ = world
-                    .command_ledger
-                    .advance(
-                        id,
-                        now.seconds(),
-                        crate::receipts::Outcome::new(
-                            crate::receipts::ReceiptState::Interrupted,
-                            owner::INTERRUPTION_CODE,
-                            owner::INTERRUPTION_MESSAGE,
-                        ),
-                    )
-                    .map_err(|e| crate::checkpoint::CheckpointError::new("speech", e.message))?;
+                if let Err(e) = world.command_ledger.advance(
+                    id,
+                    now.seconds(),
+                    crate::receipts::Outcome::new(
+                        crate::receipts::ReceiptState::Interrupted,
+                        owner::INTERRUPTION_CODE,
+                        owner::INTERRUPTION_MESSAGE,
+                    ),
+                ) {
+                    return Err((
+                        crate::checkpoint::CheckpointError::new("speech", e.message),
+                        self,
+                    ));
+                }
                 world.speech_actions.remove(&id);
                 crate::receipts::release_finished_root(world, id.operation);
             }

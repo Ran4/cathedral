@@ -1,5 +1,5 @@
 use super::{CheckpointError, Result};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 
 pub const MAX_RESIDENT_BYTES: usize = 1024 * 1024 * 1024;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +46,23 @@ impl CheckpointBudget {
     /// IO coordinators use this before accepting a worker-owned complete save.
     pub fn owns_admitted<T>(&self, owner: &Admitted<T>, cohort: Cohort) -> bool {
         Arc::ptr_eq(&self.usage, &owner.reservation.usage) && owner.reservation.cohort == cohort
+    }
+
+    /// Exact budget/cohort identity without releasing or cloning its charge.
+    pub fn owns_reservation(&self, owner: &Reservation, cohort: Cohort) -> bool {
+        Arc::ptr_eq(&self.usage, &owner.usage) && owner.cohort == cohort
+    }
+    pub fn owns_complete_input(&self, input: &super::complete::CompleteCheckpointInput) -> bool {
+        self.owns_reservation(&input.reservation, Cohort::LoadCandidate)
+    }
+    /// Before constructing an owned worker recipe, reserve its disjoint retained
+    /// input in the already admitted load cohort. It pins that cohort until the
+    /// actual recipe drops, including when the original input owner is gone.
+    pub fn reserve_load_overhead(&self, bytes: usize) -> Result<Reservation> {
+        reserve_subordinate(&self.usage, Cohort::LoadCandidate, bytes)
+    }
+    pub fn owns_retirement_lease(&self, owner: &RetirementLease) -> bool {
+        self.owns_reservation(&owner.0, Cohort::RetiringGeneration)
     }
 
     /// Disjoint service/worker overhead in an already admitted Running cohort.
@@ -210,6 +227,34 @@ impl Drop for Reservation {
     }
 }
 
+/// A single admitted retired-generation charge shared by its actual lifetime
+/// owners. Cloning this pins the existing charge; it never duplicates capacity
+/// or permits extraction of a checkpoint. Last release alone frees the cohort.
+#[derive(Debug, Clone)]
+pub struct RetirementLease(Arc<Reservation>);
+#[derive(Debug, Clone)]
+pub struct RetirementRelease(Weak<Reservation>);
+impl RetirementLease {
+    pub fn new(reservation: Reservation) -> Result<Self> {
+        reservation.require(Cohort::RetiringGeneration, 1)?;
+        Ok(Self(Arc::new(reservation)))
+    }
+    pub fn bytes(&self) -> usize {
+        self.0.bytes()
+    }
+    pub fn release_observer(&self) -> RetirementRelease {
+        RetirementRelease(Arc::downgrade(&self.0))
+    }
+    pub fn same_owner(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+impl RetirementRelease {
+    pub fn released(&self) -> bool {
+        self.0.strong_count() == 0
+    }
+}
+
 /// A retained component owns its charge. There is no Clone or extraction API:
 /// a caller cannot release the cohort while retaining the admitted allocation.
 /// Send values can travel to a worker with the same charge. M3 still owns the
@@ -229,6 +274,18 @@ impl<T> Admitted<T> {
     }
     pub(crate) fn new(value: T, reservation: Reservation) -> Self {
         Self { value, reservation }
+    }
+    pub(crate) fn map<U>(self, f: impl FnOnce(T) -> U) -> Admitted<U> {
+        Admitted::new(f(self.value), self.reservation)
+    }
+    pub(crate) fn try_map_retained<U>(
+        mut self,
+        f: impl FnOnce(T, &mut Reservation) -> std::result::Result<U, (CheckpointError, T)>,
+    ) -> std::result::Result<Admitted<U>, (CheckpointError, Admitted<T>)> {
+        match f(self.value, &mut self.reservation) {
+            Ok(value) => Ok(Admitted::new(value, self.reservation)),
+            Err((error, value)) => Err((error, Admitted::new(value, self.reservation))),
+        }
     }
     pub(crate) fn try_map_mut<U>(
         mut self,

@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "7b705dfb9af2ea1ab033bcdbac4b54713e1aa539a5384c655b153d705ef08dc1",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m3b1-lock-regression-before.log",
+  "raw_sha256": "b3b206bd0aabf8afda8c8ca9f5639dce2a96709f5a01608c99e1fdbc61b5145c",
+  "source_map_sha256": "8288a8194a10b9dcc2cf67550ebb38a411f80b930640b203275495ad3368708f",
+  "sources_unchanged": true,
+  "wall_seconds": 78.95382370310836
+}

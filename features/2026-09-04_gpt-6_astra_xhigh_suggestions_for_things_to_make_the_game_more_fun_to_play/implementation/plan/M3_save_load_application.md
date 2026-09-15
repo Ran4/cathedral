@@ -1,4 +1,4 @@
-Status: M3a backend storage implemented and independently reviewed (2026-09-15). M3b application adoption, M3c controls and M3d host-frame acceptance remain pending.
+Status: M3a backend storage and M3b1 worker preparation/retirement transport implemented and independently reviewed (2026-09-15). M3b2 whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
 
 # M3 — Save-anywhere in the application
 
@@ -41,6 +41,24 @@ cancellation, worker lifetime and verification details.
 The [owner handoff](evidence/m3a/OWNER_HANDOFF.md) records final focused tests,
 42 returned-fault cases, 37 process-death cases/fresh M2 readers, a retained
 same-image release fixture and the final 2,249-passed workspace run.
+
+## M3b sequential implementation boundary — 2026-09-15
+
+M3b1 moves full validation and typed-owner decoding onto a bounded worker,
+constructs and prepares the non-Send Engine on its host thread, and transports
+actual retired domain/service owners for disposal. Its retained preparation and
+retirement slots remain charged through cancellation, delivery and surviving
+callback ownership. The [accepted M3b1 evidence](evidence/m3b1/README.md)
+exercises real M3a files and actual LocalEngine retirement, with 2,272 passing
+workspace tests and independent boundary/source/phase audits. It does not yet
+restore a running App.
+
+M3b2 belongs to the next fresh sequential owner. It closes actual allocation and
+detached-worker/log-queue accounting, atomic cohort promotion, inactive ECS
+staging, complete host/controller/time restoration, initial publication without
+a poll, and the final exclusive adoption barrier. M3b remains incomplete until
+both cuts pass independent review. M3c supplies player controls, and M3d measures
+the complete host path.
 
 ## Entry
 

@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "fda58597deb6bde75aed88459db12927dee1f0e7404c5c13b69afc81bf16944b",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m3b1-final-workspace.log",
+  "raw_sha256": "1d6470802577091d2f1c1c0e5e7b75d2583aa93a5cc730c2f6304622c1e59d38",
+  "source_map_sha256": "7966a653200651a5f138aabb0425e79c035a21b48fd95185ac75ba2ea7bbdfd0",
+  "sources_unchanged": true,
+  "wall_seconds": 1179.6458530430682
+}

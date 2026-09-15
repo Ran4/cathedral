@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "1dc4041965974d09e0f71702d46fd4dd4f66d1ee0d3078382dc887e58a68cced",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m3b1-test-local-retire-01.log",
+  "raw_sha256": "b834c4334299494b118877e0c769d1ca7b212df993fbdb77166f282d770fc60c",
+  "source_map_sha256": "88ab977dcdae0c1b7680175f8db1e0013f64c0fba7a5671df1922c471e5318be",
+  "sources_unchanged": false,
+  "wall_seconds": 379.76064947014675
+}

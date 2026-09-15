@@ -34,6 +34,32 @@ pub(super) const COMMAND_QUEUE_CAPACITY: usize = 128;
 pub(super) const MAX_BRIDGE_COMMAND_BYTES: usize = 24 * 1024;
 pub(super) const MAX_PUBLICATION_BYTES: usize = 128 * 1024 * 1024;
 
+/// No channel is retained here. External producers and publication allocations
+/// pin the retiring cohort without forming a channel/payload ownership cycle.
+#[derive(Debug, Clone, Default)]
+pub(super) struct RetirementPin(Arc<Mutex<Option<cathedral_sim::checkpoint::RetirementLease>>>);
+impl RetirementPin {
+    pub(super) fn preflight(
+        &self,
+        budget: &cathedral_sim::checkpoint::CheckpointBudget,
+        lease: &cathedral_sim::checkpoint::RetirementLease,
+    ) -> Result<(), &'static str> {
+        if !budget.owns_retirement_lease(lease) {
+            return Err("foreign retirement budget");
+        }
+        let pin = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        if pin.as_ref().is_some_and(|old| !old.same_owner(lease)) {
+            return Err("transport already pinned");
+        }
+        Ok(())
+    }
+    pub(super) fn pin(&self, lease: &cathedral_sim::checkpoint::RetirementLease) {
+        let mut pin = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        assert!(pin.as_ref().is_none_or(|old| old.same_owner(lease)));
+        *pin = Some(lease.clone());
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TranscriptionBackend {
     Cloud,
@@ -554,6 +580,7 @@ pub enum BridgeEvent {
 /// owns no channel, so queued publications cannot create an ownership cycle.
 #[derive(Debug)]
 pub struct PublicationAllocation {
+    _lifetime: RetirementPin,
     total: Arc<AtomicUsize>,
     bytes: usize,
 }
@@ -564,6 +591,14 @@ impl PublicationAllocation {
         bytes: usize,
         terminal: bool,
     ) -> Option<Arc<Self>> {
+        Self::reserve_pinned(total, &RetirementPin::default(), bytes, terminal)
+    }
+    pub(super) fn reserve_pinned(
+        total: &Arc<AtomicUsize>,
+        lifetime: &RetirementPin,
+        bytes: usize,
+        terminal: bool,
+    ) -> Option<Arc<Self>> {
         let cap = MAX_PUBLICATION_BYTES - if terminal { 0 } else { 1024 };
         total
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |used| {
@@ -571,6 +606,7 @@ impl PublicationAllocation {
             })
             .ok()?;
         Some(Arc::new(Self {
+            _lifetime: lifetime.clone(),
             total: Arc::clone(total),
             bytes,
         }))
@@ -588,6 +624,7 @@ impl Drop for PublicationAllocation {
 pub struct BridgeHandle {
     generation: RuntimeGeneration,
     active: Arc<AtomicBool>,
+    lifetime: RetirementPin,
     commands: Sender<BridgeCommand>,
     runtime_dir: PathBuf,
     /// Sequence publication and enqueue share this small critical section.
@@ -612,10 +649,15 @@ impl BridgeHandle {
         Self {
             generation,
             active: Arc::new(AtomicBool::new(true)),
+            lifetime: Default::default(),
             commands,
             runtime_dir,
             issued: Mutex::new(0),
         }
+    }
+
+    pub(super) fn retirement_pin(&self) -> &RetirementPin {
+        &self.lifetime
     }
 
     pub fn runtime_dir(&self) -> &Path {
@@ -630,6 +672,7 @@ impl BridgeHandle {
             commands: self.commands.clone(),
             generation: self.generation,
             active: Arc::clone(&self.active),
+            lifetime: self.lifetime.clone(),
         }
     }
 
@@ -648,11 +691,13 @@ impl BridgeHandle {
             .map_err(|_| cathedral_sim::checkpoint::host::error("poisoned command allocator"))
     }
     pub fn retire(&self) {
+        let _gate = self.lifetime.0.lock().unwrap_or_else(|e| e.into_inner());
         self.active.store(false, Ordering::Release);
     }
 
     /// Enqueue without ever waiting on the engine.
     pub fn try_send(&self, command: BridgeCommand) -> Result<(), String> {
+        let _gate = self.lifetime.0.lock().unwrap_or_else(|e| e.into_inner());
         if !self.active.load(Ordering::Acquire) {
             return Err("command runtime is retired".into());
         }
@@ -729,6 +774,7 @@ pub struct BridgeCommandSender {
     commands: Sender<BridgeCommand>,
     generation: RuntimeGeneration,
     active: Arc<AtomicBool>,
+    lifetime: RetirementPin,
 }
 
 impl BridgeCommandSender {
@@ -736,9 +782,11 @@ impl BridgeCommandSender {
         self.generation
     }
     pub(super) fn retire(&self) {
+        let _gate = self.lifetime.0.lock().unwrap_or_else(|e| e.into_inner());
         self.active.store(false, Ordering::Release);
     }
     pub fn try_send(&self, command: BridgeCommand) -> Result<(), TrySendError<BridgeCommand>> {
+        let _gate = self.lifetime.0.lock().unwrap_or_else(|e| e.into_inner());
         if !self.active.load(Ordering::Acquire)
             || command.is_consequential()
             || matches!(command, BridgeCommand::InGeneration { .. })
@@ -762,6 +810,7 @@ impl BridgeCommandSender {
             commands,
             generation: RuntimeGeneration::INITIAL,
             active: Arc::new(AtomicBool::new(true)),
+            lifetime: Default::default(),
         }
     }
 }
@@ -775,6 +824,14 @@ pub struct BridgeInbox {
 }
 
 impl BridgeInbox {
+    pub(super) fn generation(&self) -> RuntimeGeneration {
+        self.generation
+    }
+    /// Worker-only draining, including envelopes already fenced on the host.
+    pub(super) fn dispose_queued(&self) {
+        while self.events.try_recv().is_ok() {}
+    }
+
     pub(super) fn new(events: Receiver<BridgeEvent>) -> Self {
         Self::new_for_generation(events, RuntimeGeneration::INITIAL)
     }

@@ -12,6 +12,8 @@ pub mod complete;
 pub mod host;
 mod manifest;
 pub(crate) mod records;
+#[cfg(test)]
+mod retirement_review_tests;
 pub(crate) mod serde_support;
 pub mod social;
 #[cfg(test)]
@@ -22,7 +24,10 @@ mod time;
 mod wire;
 
 pub use aggregate::ComponentCost;
-pub use budget::{Admitted, CheckpointBudget, Cohort, MAX_RESIDENT_BYTES, Reservation};
+pub use budget::{
+    Admitted, CheckpointBudget, Cohort, MAX_RESIDENT_BYTES, Reservation, RetirementLease,
+    RetirementRelease,
+};
 pub use manifest::{CompatibilityManifestV1, VersionedAlgorithmV1};
 pub use time::{CalendarAnchorV1, HostTimeV1, LogicalAnchorV1};
 pub(crate) use wire::{BoundedText, BoundedVec, encoded_len};
@@ -43,6 +48,20 @@ pub struct CheckpointError {
     pub reason: String,
 }
 impl CheckpointError {
+    /// A transport diagnostic has bounded allocation capacity, even when the
+    /// original string had large spare capacity. Call while factory admission
+    /// still owns the original allocation.
+    pub fn bounded(self) -> Self {
+        const LIMIT: usize = 4096;
+        let mut end = self.reason.len().min(LIMIT);
+        while !self.reason.is_char_boundary(end) {
+            end -= 1;
+        }
+        Self {
+            owner: self.owner,
+            reason: self.reason[..end].to_owned(),
+        }
+    }
     pub(crate) fn new(owner: &'static str, reason: impl Into<String>) -> Self {
         Self {
             owner,

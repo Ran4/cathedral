@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "221c61820936666215f9dc41028bb466d31c404c68f810a41ba9458ca9248b8f",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m3b1-check-sim-02.log",
+  "raw_sha256": "11e502de46ad0a309af9ea3824e5eb6e5ea749fc3623137dd29206a7a50120ab",
+  "source_map_sha256": "5fd71c7f995edfb3c11a345e6c5de1c7e6a3f9530157320c2106f538d3002540",
+  "sources_unchanged": true,
+  "wall_seconds": 7.0704819050151855
+}

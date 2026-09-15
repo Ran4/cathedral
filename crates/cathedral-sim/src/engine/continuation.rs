@@ -22,6 +22,7 @@ impl Engine {
         self.night.continuation_preflight(&self.world)?;
         speech.continuation_preflight()
     }
+    #[cfg(test)]
     pub(crate) fn prepare_pending_work(
         &mut self,
         speech: speech_checkpoint::EngineSpeechCandidate,
@@ -30,10 +31,27 @@ impl Engine {
         typed: usize,
         observer: &mut impl FnMut(ContinuationStage),
     ) -> Result<ContinuationReport> {
+        self.prepare_pending_work_retained(speech, readable, now, typed, observer)
+            .map_err(|(error, _)| error)
+    }
+    pub(crate) fn prepare_pending_work_retained(
+        &mut self,
+        speech: speech_checkpoint::EngineSpeechCandidate,
+        readable: &[crate::checkpoint::host::RecordV1<String>],
+        now: crate::timeline::LogicalTime,
+        typed: usize,
+        observer: &mut impl FnMut(ContinuationStage),
+    ) -> std::result::Result<
+        ContinuationReport,
+        (
+            crate::checkpoint::CheckpointError,
+            speech_checkpoint::EngineSpeechCandidate,
+        ),
+    > {
         self.scheduler.prepare_continuation(&mut self.world);
         self.night.prepare_continuation(&mut self.world);
         observer(ContinuationStage::Inputs);
-        speech.prepare_continuation(&mut self.world, &mut self.speech_router, now)?;
+        speech.prepare_continuation_retained(&mut self.world, &mut self.speech_router, now)?;
         observer(ContinuationStage::Speech);
         let released_audio_waits = self.floor.prepare_continuation(now.seconds(), readable);
         observer(ContinuationStage::Floor);

@@ -491,6 +491,45 @@ fn service_factory_refusal_mismatch_unwind_and_repeat_binding_release_all_owners
 }
 
 #[test]
+fn retained_service_mismatch_keeps_real_services_charged_until_candidate_disposal() {
+    let (app, captured) = fixture(false);
+    let (hydrated, budget, running, _, _) = hydrate(&app, captured);
+    let prepared = hydrated.prepare_continuation().unwrap();
+    let minimum_charge = budget.retained_bytes() + SERVICES;
+    let drops = Rc::new(Cell::new(0));
+    let (error, quarantined) = prepared
+        .bind_services_retained(SERVICES, |generation| {
+            Ok(services(
+                generation.successor().unwrap(),
+                &budget,
+                &drops,
+                minimum_charge,
+            ))
+        })
+        .err()
+        .expect("mismatched generation must retain the failed candidate");
+    assert!(error.reason.contains("generation"));
+    assert!(!quarantined.value().ready_for_adoption());
+    assert_eq!(drops.get(), 0);
+    assert_eq!(budget.retained_bytes(), minimum_charge);
+    let called = Cell::new(false);
+    let (error, quarantined) = quarantined
+        .bind_services_retained(SERVICES, |_| {
+            called.set(true);
+            panic!("failed candidate must never call another factory")
+        })
+        .err()
+        .expect("failed binding is disposal-only");
+    assert!(error.reason.contains("disposal-only"));
+    assert!(!called.get());
+    assert_eq!(drops.get(), 0);
+    assert_eq!(budget.retained_bytes(), minimum_charge);
+    drop(quarantined);
+    assert_eq!(drops.get(), 4);
+    assert_eq!(budget.retained_bytes(), running.bytes());
+}
+
+#[test]
 fn service_admission_precedes_factory_and_observation_requires_the_same_budget() {
     let (app, captured) = fixture(false);
     let (hydrated, budget, running, _, _) = hydrate(&app, captured);

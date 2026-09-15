@@ -49,13 +49,15 @@ pub struct ContinuationServices {
 /// Host time remains unbound; retained Host is the saved authoritative boundary.
 pub struct PreparedContinuation {
     pub(crate) engine: Engine,
-    host: super::super::host::HostCandidate,
-    boundary: LogicalTime,
-    world_identity: WorldIdentity,
-    report: ContinuationReport,
+    pub(crate) host: super::super::host::HostCandidate,
+    pub(crate) boundary: LogicalTime,
+    pub(crate) world_identity: WorldIdentity,
+    pub(crate) report: ContinuationReport,
+    pub(crate) binding_failed: bool,
+    pub(crate) failed_services: Option<ContinuationServices>,
     // All service, asset and semantic owners above die before these leases.
-    asset_reservation: Reservation,
-    service_reservation: Option<Reservation>,
+    pub(crate) asset_reservation: Reservation,
+    pub(crate) service_reservation: Option<Reservation>,
 }
 impl Admitted<HydratedEngine> {
     pub fn prepare_continuation(self) -> Result<Admitted<PreparedContinuation>> {
@@ -65,24 +67,60 @@ impl Admitted<HydratedEngine> {
         self,
         observer: &mut impl FnMut(ContinuationStage),
     ) -> Result<Admitted<PreparedContinuation>> {
-        self.try_map_mut(|mut h, r| {
-            r.require_running(RUNNING_AUTHORITY_ALLOWANCE_BYTES)?;
-            let typed = h
-                .cost
-                .decoded_upper_bytes
-                .checked_add(CONTINUATION_STRUCTURAL_BYTES)
-                .filter(|n| *n <= meter::MAX_EXPANSION)
-                .ok_or_else(|| error("continuation typed expansion limit exceeded"))?;
-            r.resize(typed.max(r.bytes()))?;
-            h.engine.preflight_continuation(&h.cognition, &h.speech)?;
+        self.prepare_continuation_retained_observed(observer)
+            .map_err(|(error, _)| error)
+    }
+    /// The inactive graph remains admitted on refusal. A host must return that
+    /// actual owner through its preparation disposal entitlement, not Drop it
+    /// in a frame. No arbitrary observer runs in this host-facing variant.
+    pub fn prepare_continuation_retained(
+        self,
+    ) -> std::result::Result<Admitted<PreparedContinuation>, (CheckpointError, Self)> {
+        self.prepare_continuation_retained_observed(&mut |_| {})
+    }
+    fn prepare_continuation_retained_observed(
+        self,
+        observer: &mut impl FnMut(ContinuationStage),
+    ) -> std::result::Result<Admitted<PreparedContinuation>, (CheckpointError, Self)> {
+        self.try_map_retained(|mut h, r| {
+            let checked = (|| {
+                check(
+                    !h.continuation_failed,
+                    "failed continuation is disposal-only",
+                )?;
+                r.require_running(RUNNING_AUTHORITY_ALLOWANCE_BYTES)?;
+                let typed = h
+                    .cost
+                    .decoded_upper_bytes
+                    .checked_add(CONTINUATION_STRUCTURAL_BYTES)
+                    .filter(|n| *n <= meter::MAX_EXPANSION)
+                    .ok_or_else(|| error("continuation typed expansion limit exceeded"))?;
+                r.resize(typed.max(r.bytes()))?;
+                h.engine.preflight_continuation(&h.cognition, &h.speech)?;
+                Ok(typed)
+            })();
+            let typed = match checked {
+                Ok(value) => value,
+                Err(error) => {
+                    h.continuation_failed = true;
+                    return Err((error, h));
+                }
+            };
             observer(ContinuationStage::Admission);
-            let report = h.engine.prepare_pending_work(
+            let report = match h.engine.prepare_pending_work_retained(
                 h.speech,
                 h.host.records(),
                 h.boundary,
                 typed,
                 observer,
-            )?;
+            ) {
+                Ok(report) => report,
+                Err((error, speech)) => {
+                    h.speech = speech;
+                    h.continuation_failed = true;
+                    return Err((error, h));
+                }
+            };
             let prepared = PreparedContinuation {
                 engine: h.engine,
                 host: h.host,
@@ -91,6 +129,8 @@ impl Admitted<HydratedEngine> {
                 report,
                 asset_reservation: h.asset_reservation,
                 service_reservation: None,
+                binding_failed: false,
+                failed_services: None,
             };
             drop(h.cognition);
             observer(ContinuationStage::Prepared);
@@ -98,36 +138,73 @@ impl Admitted<HydratedEngine> {
         })
     }
 }
+
 impl Admitted<PreparedContinuation> {
     pub fn bind_services(
         self,
         upper_bytes: usize,
         factory: impl FnOnce(RuntimeGeneration) -> Result<ContinuationServices>,
     ) -> Result<Admitted<PreparedContinuation>> {
-        self.try_map(|mut prepared, r| {
-            check(
-                !prepared.report.services_bound,
-                "continuation services already bound",
-            )?;
-            prepared.service_reservation = Some(r.sublease(upper_bytes)?);
-            // Explicit owner order protects handles on mismatch/error/unwind.
-            struct Owner {
-                services: Option<ContinuationServices>,
-                prepared: PreparedContinuation,
+        self.bind_services_impl(upper_bytes, factory, false)
+            .map_err(|(error, _)| error)
+    }
+    /// Failure returns the entire quarantined owner for worker disposal. This
+    /// does not roll back partially prepared semantic work or authorize retry.
+    /// Production factories supply lightweight forwarding adapters whose actual
+    /// Send services remain owned by the host's preparation delivery permit.
+    pub fn bind_services_retained(
+        self,
+        upper_bytes: usize,
+        factory: impl FnOnce(RuntimeGeneration) -> Result<ContinuationServices>,
+    ) -> std::result::Result<Self, (CheckpointError, Self)> {
+        self.bind_services_impl(upper_bytes, factory, true)
+    }
+    fn bind_services_impl(
+        self,
+        upper_bytes: usize,
+        factory: impl FnOnce(RuntimeGeneration) -> Result<ContinuationServices>,
+        catch_factory_panic: bool,
+    ) -> std::result::Result<Self, (CheckpointError, Self)> {
+        self.try_map_retained(|mut prepared, r| {
+            let checked = (|| {
+                check(!prepared.binding_failed, "failed binding is disposal-only")?;
+                check(
+                    !prepared.report.services_bound,
+                    "continuation services already bound",
+                )?;
+                prepared.service_reservation = Some(r.sublease(upper_bytes)?);
+                Ok(())
+            })();
+            if let Err(error) = checked {
+                prepared.binding_failed = true;
+                return Err((error, prepared));
             }
-            let mut owner = Owner {
-                services: None,
-                prepared,
+            let factory_result = if catch_factory_panic {
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    factory(prepared.runtime_generation())
+                }))
+            } else {
+                Ok(factory(prepared.runtime_generation()))
             };
-            owner.services = Some(factory(owner.prepared.runtime_generation())?);
-            check(
-                owner.services.as_ref().unwrap().generation == owner.prepared.runtime_generation(),
-                "continuation service generation mismatch",
-            )?;
-            let services = owner.services.take().unwrap();
-            owner.prepared.engine.bind_continuation_services(services);
-            owner.prepared.report.services_bound = true;
-            Ok(owner.prepared)
+            let services = match factory_result {
+                Ok(Ok(value)) => value,
+                Ok(Err(error)) => {
+                    prepared.binding_failed = true;
+                    return Err((error.bounded(), prepared));
+                }
+                Err(_) => {
+                    prepared.binding_failed = true;
+                    return Err((error("continuation service factory panicked"), prepared));
+                }
+            };
+            if services.generation != prepared.runtime_generation() {
+                prepared.failed_services = Some(services);
+                prepared.binding_failed = true;
+                return Err((error("continuation service generation mismatch"), prepared));
+            }
+            prepared.engine.bind_continuation_services(services);
+            prepared.report.services_bound = true;
+            Ok(prepared)
         })
     }
 }
@@ -192,6 +269,9 @@ impl PreparedContinuation {
         };
         r.resize(candidate.cost.retained_candidate_bytes.max(1))?;
         Ok(Admitted::new(candidate, r))
+    }
+    pub fn ready_for_adoption(&self) -> bool {
+        self.report.services_bound && !self.binding_failed
     }
     pub fn boundary(&self) -> LogicalTime {
         self.boundary

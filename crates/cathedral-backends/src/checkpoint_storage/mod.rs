@@ -270,4 +270,4 @@ impl std::error::Error for StorageError {}
 #[cfg(test)]
 mod review_tests;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

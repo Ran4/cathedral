@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "cba442fa045d36be7c7a42966067f941dffbf57ed97d261de53dca4d3b33e1a4",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m3b1-check-app-01.log",
+  "raw_sha256": "c672f38780209ee347af24581f1c22e86ce728cb08d6bb17bceca27f70ae19cb",
+  "source_map_sha256": "b520ac48d2d628bcafbddccc6cfeca0adbc59bcb1bb0e5a1d73b6323343664e8",
+  "sources_unchanged": true,
+  "wall_seconds": 12.516582421958447
+}

@@ -59,7 +59,7 @@ impl HydrationAssets {
 pub(crate) const HYDRATION_STRUCTURAL_BYTES: usize = 256 * 1024;
 
 pub struct HydrationPreparation {
-    candidate: CompleteCheckpointCandidate,
+    bytes: Vec<u8>,
     // Candidate raw storage drops before this subordinate admission owner.
     asset_reservation: Reservation,
 }
@@ -79,7 +79,7 @@ impl Admitted<CompleteCheckpointCandidate> {
             r.require_running(RUNNING_AUTHORITY_ALLOWANCE_BYTES)?;
             let asset_reservation = r.sublease(assets_upper_bytes)?;
             Ok(HydrationPreparation {
-                candidate,
+                bytes: candidate.bytes,
                 asset_reservation,
             })
         })
@@ -107,11 +107,12 @@ pub enum HydrationStage {
 /// extraction: even &World would expose navigation's interior-mutable caches.
 /// Speech interruption/drafts/accepted recordings, exact accepted cognition
 /// inputs and the entire host continuation remain owned until M2c/M3.
-/// The existing Engine service trait objects make this wrapper non-Send. M3
-/// must separate a Send decoded bundle from bounded host-thread construction
-/// and service binding; this synchronous seam is not frame-budget acceptance.
+/// The Engine service trait objects keep this wrapper non-Send. DecodedHydration
+/// supplies the worker boundary; this wrapper is constructed on the host thread.
+/// Whole-App adoption and measured frame acceptance remain separate.
 pub struct HydratedEngine {
     pub(crate) engine: Engine,
+    pub(crate) continuation_failed: bool,
     pub(crate) speech: EngineSpeechCandidate,
     pub(crate) host: super::super::host::HostCandidate,
     pub(crate) cognition: EngineCognitionInputsCandidate,
@@ -121,6 +122,55 @@ pub struct HydratedEngine {
     // Last field: all assets held by Engine and all continuation owners above
     // are disposed before their subordinate asset lease can release capacity.
     pub(crate) asset_reservation: Reservation,
+}
+/// Fully validated, owned typed graph. This is Send without carrying an Engine
+/// or a service trait object. Raw bytes and resolver scratch have already died;
+/// its asset and typed leases follow it through worker delivery/cancellation.
+pub struct DecodedHydration {
+    owners: crate::engine::complete_checkpoint::ValidatedOwners,
+    assets: HydrationAssets,
+    boundary: LogicalTime,
+    world_identity: WorldIdentity,
+    generation: RuntimeGeneration,
+    cost: HydrationCost,
+    asset_reservation: Reservation,
+}
+impl DecodedHydration {
+    pub fn boundary(&self) -> LogicalTime {
+        self.boundary
+    }
+    pub fn world_identity(&self) -> WorldIdentity {
+        self.world_identity
+    }
+    pub fn runtime_generation(&self) -> RuntimeGeneration {
+        self.generation
+    }
+    pub fn cost(&self) -> HydrationCost {
+        self.cost
+    }
+    pub fn host(&self) -> &super::super::host::HostCandidate {
+        &self.owners.host
+    }
+}
+impl CompleteCheckpointInput {
+    /// Direct file-input path. The existing complete decoder validates all
+    /// sixteen owners and their exact installed agreement before returning typed
+    /// authority. No intermediate unchecked candidate or second world copy.
+    pub fn prepare_hydration(
+        self,
+        assets_upper_bytes: usize,
+    ) -> Result<Admitted<HydrationPreparation>> {
+        let Self { bytes, reservation } = self;
+        Admitted::new(bytes, reservation).try_map(|bytes, r| {
+            r.require(Cohort::LoadCandidate, bytes.capacity().saturating_add(4096))?;
+            r.require_running(RUNNING_AUTHORITY_ALLOWANCE_BYTES)?;
+            let asset_reservation = r.sublease(assets_upper_bytes)?;
+            Ok(HydrationPreparation {
+                bytes,
+                asset_reservation,
+            })
+        })
+    }
 }
 impl Admitted<HydrationPreparation> {
     pub fn hydrate(
@@ -138,9 +188,29 @@ impl Admitted<HydrationPreparation> {
         generation: RuntimeGeneration,
         observer: &mut impl FnMut(HydrationStage),
     ) -> Result<Admitted<HydratedEngine>> {
+        Ok(self
+            .decode_observed(factory, host_definitions, generation, observer)?
+            .construct_observed(observer))
+    }
+    pub fn decode(
+        self,
+        factory: impl FnOnce() -> Result<HydrationAssets>,
+        host_definitions: super::super::host::DefinitionsV1,
+        generation: RuntimeGeneration,
+    ) -> Result<Admitted<DecodedHydration>> {
+        self.decode_observed(factory, host_definitions, generation, &mut |_| {})
+    }
+    /// Eligible for a worker. The factory's existing captured input must already
+    /// be admitted by the caller; the asset lease covers its produced assets and
+    /// work. Resolver/diagnostic scratch is admitted before factory or resolver.
+    pub fn decode_observed(
+        self,
+        factory: impl FnOnce() -> Result<HydrationAssets>,
+        host_definitions: super::super::host::DefinitionsV1,
+        generation: RuntimeGeneration,
+        observer: &mut impl FnMut(HydrationStage),
+    ) -> Result<Admitted<DecodedHydration>> {
         self.try_map_mut(|preparation, reservation| {
-            // Never split leases into locals whose reverse drop order could
-            // release admission ahead of assets on an error or panic.
             struct Owner {
                 assets: Option<HydrationAssets>,
                 preparation: HydrationPreparation,
@@ -154,39 +224,39 @@ impl Admitted<HydrationPreparation> {
                 generation.0 != 0,
                 "hydration requires a nonzero runtime generation",
             )?;
-            owner.assets = Some(factory()?);
-            observer(HydrationStage::Assets);
-            let c = &owner.preparation.candidate;
-            let meter = meter::DecodeMeter::new(reservation, c.bytes.capacity())?;
-            meter.prepare_diagnostics(&c.bytes)?;
+            // Includes prepare_definition_resolution's full allowance before
+            // any owned resolver is built, also on the direct M3a input path.
+            let meter = meter::DecodeMeter::new(reservation, owner.preparation.bytes.capacity())?;
+            meter.prepare_diagnostics(&owner.preparation.bytes)?;
             meter.charge(16 * 1024)?;
             meter.charge(HYDRATION_STRUCTURAL_BYTES)?;
+            owner.assets = Some(factory()?);
+            observer(HydrationStage::Assets);
+            let wire = wire::parse(&owner.preparation.bytes)?;
             let d = InstalledCheckpointDefinitions::from_assets(
                 owner.assets.as_ref().unwrap(),
                 host_definitions,
-                c.boundary,
+                wire.boundary,
             )?;
-            c.require_definitions(&d)?;
-            observer(HydrationStage::Definitions);
-            let wire = wire::parse(&c.bytes)?;
             wire.manifest.require_exact(&d.manifest)?;
-            let components = crate::engine::complete_checkpoint::decode_components(
+            observer(HydrationStage::Definitions);
+            let owners = crate::engine::complete_checkpoint::decode_components(
                 &wire,
                 &d,
                 &meter,
                 &mut |_| {},
             )?;
             check(
-                generation.0 != components.host.scalars().boundary.generation,
+                generation.0 != owners.host.scalars().boundary.generation,
                 "hydration runtime generation reuses saved execution fence",
             )?;
             observer(HydrationStage::TypedOwners);
             let decoded = meter.expanded();
+            let boundary = wire.boundary;
+            let world_identity = wire.world_identity;
             drop(meter);
-            drop(wire);
             drop(d);
-            let boundary = c.boundary;
-            let world_identity = c.world_identity;
+            drop(wire);
             let assets_upper_bytes = owner.preparation.asset_reservation.bytes();
             let cost = HydrationCost {
                 decoded_upper_bytes: decoded,
@@ -194,30 +264,53 @@ impl Admitted<HydrationPreparation> {
                 assets_upper_bytes,
                 retained_upper_bytes: decoded + assets_upper_bytes,
             };
-            let (engine, speech, host, cognition) = crate::engine::hydration::construct(
-                components,
-                owner.assets.take().unwrap(),
+            let result = DecodedHydration {
+                owners,
+                assets: owner.assets.take().unwrap(),
+                boundary,
                 world_identity,
                 generation,
+                cost,
+                asset_reservation: owner.preparation.asset_reservation,
+            };
+            drop(owner.preparation.bytes);
+            observer(HydrationStage::RawDisposal);
+            reservation.resize(decoded.max(1))?;
+            observer(HydrationStage::Retention);
+            Ok(result)
+        })
+    }
+}
+impl Admitted<DecodedHydration> {
+    /// Constant-count exhaustive moves into the non-Send Engine. No typed decode,
+    /// asset loading, raw disposal, ordinary seeding, polling or service submission.
+    pub fn construct(self) -> Admitted<HydratedEngine> {
+        self.construct_observed(&mut |_| {})
+    }
+    pub fn construct_observed(
+        self,
+        observer: &mut impl FnMut(HydrationStage),
+    ) -> Admitted<HydratedEngine> {
+        self.map(|decoded| {
+            let (engine, speech, host, cognition) = crate::engine::hydration::construct(
+                decoded.owners,
+                decoded.assets,
+                decoded.world_identity,
+                decoded.generation,
             );
-            observer(HydrationStage::Construction);
-            // Move directly into the final field-ordered owner before discarding
-            // raw input or notifying arbitrary host observers.
             let result = HydratedEngine {
                 engine,
                 speech,
                 host,
                 cognition,
-                boundary,
-                world_identity,
-                cost,
-                asset_reservation: owner.preparation.asset_reservation,
+                continuation_failed: false,
+                boundary: decoded.boundary,
+                world_identity: decoded.world_identity,
+                cost: decoded.cost,
+                asset_reservation: decoded.asset_reservation,
             };
-            drop(owner.preparation.candidate);
-            observer(HydrationStage::RawDisposal);
-            reservation.resize(decoded.max(1))?;
-            observer(HydrationStage::Retention);
-            Ok(result)
+            observer(HydrationStage::Construction);
+            result
         })
     }
 }
@@ -291,12 +384,18 @@ impl HydratedEngine {
 mod tests {
     use super::*;
     #[test]
+    fn decoded_hydration_is_send_without_engine_services() {
+        fn send<T: Send>() {}
+        send::<Admitted<DecodedHydration>>();
+    }
+    #[test]
     fn hydration_structural_allowance_covers_new_roots_and_speech_index() {
         use std::mem::size_of;
         // Eight active recording identities need at most two BTree nodes;
         // reserve four full nodes conservatively, plus allocator/control space.
         let speech_index = 4 * (11 * size_of::<crate::receipts::CommandId>() + 256);
-        let roots = size_of::<HydratedEngine>()
+        let roots = size_of::<DecodedHydration>()
+            + size_of::<HydratedEngine>()
             + size_of::<Engine>()
             + size_of::<crate::World>()
             + size_of::<HydrationAssets>()

@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "c7c1ccbc7fa080b0069f3cbe70d45a2848e2ebb291f21b3eb3505c4a8d7e5400",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m3b1-service-order-after.log",
+  "raw_sha256": "2de9fc7baa3ab299c4d10c5f2d03fc4ac0558dfeb05711437065aa3dfda953f9",
+  "source_map_sha256": "ea4086cf10fdf5e6d0781f3191e2f73cc9dcd7460889a4d98646a1f993783d80",
+  "sources_unchanged": true,
+  "wall_seconds": 0.9772009921725839
+}

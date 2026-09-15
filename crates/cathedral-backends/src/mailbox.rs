@@ -8,7 +8,10 @@ use std::sync::{
 };
 use std::time::Duration;
 
-use cathedral_sim::{RuntimeEnvelope, RuntimeGeneration};
+use cathedral_sim::{
+    RuntimeEnvelope, RuntimeGeneration,
+    checkpoint::{CheckpointBudget, RetirementLease},
+};
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, TryRecvError, bounded};
 
 use crate::events::BackendEvent;
@@ -33,8 +36,56 @@ struct Shared {
     active: AtomicBool,
     usage: Mutex<MailboxUsage>,
     retirement: tokio::sync::Notify,
+    publication: Mutex<()>,
+    lifetime_pin: Mutex<Option<RetirementLease>>,
     #[cfg(test)]
     chunk_latch: Mutex<Option<(Sender<()>, Receiver<()>)>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RetirementPinError {
+    WrongBudget,
+    AlreadyPinned,
+}
+impl Shared {
+    fn can_pin_retirement(
+        &self,
+        budget: &CheckpointBudget,
+        lease: &RetirementLease,
+    ) -> Result<(), RetirementPinError> {
+        if !budget.owns_retirement_lease(lease) {
+            return Err(RetirementPinError::WrongBudget);
+        }
+        let pin = self.lifetime_pin.lock().unwrap_or_else(|e| e.into_inner());
+        if pin.as_ref().is_some_and(|old| !old.same_owner(lease)) {
+            return Err(RetirementPinError::AlreadyPinned);
+        }
+        Ok(())
+    }
+    fn pin_retirement(
+        &self,
+        budget: &CheckpointBudget,
+        lease: &RetirementLease,
+    ) -> Result<(), RetirementPinError> {
+        if !budget.owns_retirement_lease(lease) {
+            return Err(RetirementPinError::WrongBudget);
+        }
+        let mut pin = self.lifetime_pin.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(old) = pin.as_ref() {
+            return if old.same_owner(lease) {
+                Ok(())
+            } else {
+                Err(RetirementPinError::AlreadyPinned)
+            };
+        }
+        *pin = Some(lease.clone());
+        Ok(())
+    }
+    fn fence(&self) {
+        let _publication = self.publication.lock().unwrap_or_else(|e| e.into_inner());
+        self.active.store(false, Ordering::Release);
+        self.retirement.notify_waiters();
+    }
 }
 
 #[derive(Debug)]
@@ -77,6 +128,11 @@ impl Lease {
         let Some(charge) = self.charge.lock().unwrap_or_else(|e| e.into_inner()).take() else {
             return; // late end, chunk, panic or duplicate: terminal already owned
         };
+        let _publication = self
+            .shared
+            .publication
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         if !self.shared.active.load(Ordering::Acquire) {
             return; // deliberate retirement cancels the whole old generation
         }
@@ -110,6 +166,24 @@ pub struct BackendSender {
 }
 
 impl BackendSender {
+    /// Pins the caller's actual retired generation through every endpoint, job
+    /// lease and queued charge sharing this mailbox. No channel is owned by the
+    /// pin, so a retained callback cannot create an ownership cycle.
+    pub fn can_pin_retirement(
+        &self,
+        budget: &CheckpointBudget,
+        lease: &RetirementLease,
+    ) -> Result<(), RetirementPinError> {
+        self.shared.can_pin_retirement(budget, lease)
+    }
+    pub fn pin_retirement(
+        &self,
+        budget: &CheckpointBudget,
+        lease: &RetirementLease,
+    ) -> Result<(), RetirementPinError> {
+        self.shared.pin_retirement(budget, lease)
+    }
+
     pub fn generation(&self) -> RuntimeGeneration {
         self.shared.generation
     }
@@ -258,6 +332,14 @@ impl BackendSender {
             }
             return false;
         };
+        let _publication = self
+            .shared
+            .publication
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        if !self.is_active() {
+            return false;
+        }
         self.sender
             .try_send(Queued {
                 event,
@@ -283,8 +365,7 @@ impl BackendSender {
 
     /// Immediate admission/callback fence. No runtime join or filesystem work.
     pub fn retire(&self) {
-        self.shared.active.store(false, Ordering::Release);
-        self.shared.retirement.notify_waiters();
+        self.shared.fence();
     }
 }
 
@@ -295,6 +376,25 @@ pub struct BackendReceiver {
 }
 
 impl BackendReceiver {
+    pub fn can_pin_retirement(
+        &self,
+        budget: &CheckpointBudget,
+        lease: &RetirementLease,
+    ) -> Result<(), RetirementPinError> {
+        self.shared.can_pin_retirement(budget, lease)
+    }
+    pub fn pin_retirement(
+        &self,
+        budget: &CheckpointBudget,
+        lease: &RetirementLease,
+    ) -> Result<(), RetirementPinError> {
+        self.shared.pin_retirement(budget, lease)
+    }
+    /// Immediate fence only. Retained payload destruction belongs to the worker.
+    pub fn fence(&self) {
+        self.shared.fence();
+    }
+
     /// Read-only admission inventory; does not drain callbacks or wait for work.
     pub fn usage(&self) -> MailboxUsage {
         *self.shared.usage.lock().unwrap_or_else(|e| e.into_inner())
@@ -331,8 +431,7 @@ impl BackendReceiver {
     }
 
     pub fn retire(&self) {
-        self.shared.active.store(false, Ordering::Release);
-        self.shared.retirement.notify_waiters();
+        self.shared.fence();
         for _ in 0..CALLBACK_CAPACITY {
             if self.receiver.try_recv().is_err() {
                 break;
@@ -346,6 +445,8 @@ pub fn backend_channel_for(generation: RuntimeGeneration) -> (BackendSender, Bac
     let shared = Arc::new(Shared {
         generation,
         active: AtomicBool::new(true),
+        publication: Mutex::new(()),
+        lifetime_pin: Mutex::new(None),
         usage: Mutex::new(MailboxUsage::default()),
         retirement: tokio::sync::Notify::new(),
         #[cfg(test)]

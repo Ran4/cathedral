@@ -1,0 +1,52 @@
+{
+  "binary_copy_preserved": false,
+  "bytes": 381031000,
+  "layout": {
+    "Core": 11696,
+    "DeliveryDisposal": 11384,
+    "Job": 440,
+    "PrepState": 11504,
+    "PreparationPermit": 448,
+    "PreparedDelivery": 11600,
+    "Queue": 11640,
+    "RetiredPayload": 24,
+    "RetirementPermit": 32
+  },
+  "layout_helper_sha256": "d5cf49584ca743799b5c94ba8bbf4fa5897f10d25c6a4a5f4db0c016ffd812f8",
+  "path": "/home/ran/src/rust/cathedralbevy/target/debug/deps/cathedral_backends-22310518b4c01644",
+  "preserved_predecessor": {
+    "bytes": 26730496,
+    "path": "/tmp/alibi-m3a-final-release-image",
+    "sha256": "52f7f4f408a5286194b509d477bf324d9ec44571c8bfdd2bf9dbeaa193bf2246"
+  },
+  "query_command": [
+    "/usr/bin/gdb",
+    "-nx",
+    "-nh",
+    "--batch",
+    "/home/ran/src/rust/cathedralbevy/target/debug/deps/cathedral_backends-22310518b4c01644",
+    "-ex",
+    "set language rust",
+    "-ex",
+    "p sizeof(cathedral_backends::checkpoint_preparation::Core)",
+    "-ex",
+    "p sizeof(cathedral_backends::checkpoint_preparation::Queue)",
+    "-ex",
+    "p sizeof(cathedral_backends::checkpoint_preparation::PrepState)",
+    "-ex",
+    "p sizeof(cathedral_backends::checkpoint_preparation::PreparedDelivery)",
+    "-ex",
+    "p sizeof(cathedral_backends::checkpoint_preparation::DeliveryDisposal)",
+    "-ex",
+    "p sizeof(cathedral_backends::checkpoint_preparation::RetiredPayload)",
+    "-ex",
+    "p sizeof(cathedral_backends::checkpoint_preparation::Job)",
+    "-ex",
+    "p sizeof(cathedral_backends::checkpoint_preparation::PreparationPermit)",
+    "-ex",
+    "p sizeof(cathedral_backends::checkpoint_preparation::RetirementPermit)"
+  ],
+  "sha256": "c6a73440866614dbd11a5d5bede6b85f2d094627b6b71b55b5aa02ab9de7b311",
+  "source_map_sha256": "ea4086cf10fdf5e6d0781f3191e2f73cc9dcd7460889a4d98646a1f993783d80",
+  "target_executed": false
+}

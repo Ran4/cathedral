@@ -1,0 +1,187 @@
+{
+  "auditor_sha256": "b492afee9380307cb0434ef580a7d6c59387edca30d617bd6920686111767d14",
+  "command_name": "final-workspace-03",
+  "fresh_process": "Parent captures and writes actual M3a slot; current_exe child reads that slot and compares all sixteen source owner digests after construction, without a poll or seed.",
+  "preparation_maxima_seconds": {
+    "host_construction": 2.1566e-05,
+    "host_continuation": 1.369e-05,
+    "host_return": 2.4106e-05,
+    "worker_disposal": 0.000125144,
+    "worker_total": 0.019840113
+  },
+  "preparation_samples_seconds": [
+    {
+      "host_construction": 2.1566e-05,
+      "host_continuation": 1.3432e-05,
+      "host_return": 2.4106e-05,
+      "worker_disposal": 0.000125117,
+      "worker_phases": [
+        0.003580386,
+        0.001781571,
+        0.014460693,
+        7.005e-06,
+        4.62e-07
+      ],
+      "worker_total": 0.019840113
+    },
+    {
+      "host_construction": 1.4151e-05,
+      "host_continuation": 9.66e-06,
+      "host_return": 1.4339e-05,
+      "worker_disposal": 0.000125144,
+      "worker_phases": [
+        0.002455169,
+        0.001183459,
+        0.00906357,
+        3.696e-06,
+        3.12e-07
+      ],
+      "worker_total": 0.012711356
+    },
+    {
+      "host_construction": 2.1068e-05,
+      "host_continuation": 1.369e-05,
+      "host_return": 1.9978e-05,
+      "worker_disposal": 7.2777e-05,
+      "worker_phases": [
+        0.002445667,
+        0.001194875,
+        0.008253616,
+        3.647e-06,
+        1.95e-07
+      ],
+      "worker_total": 0.011901786
+    },
+    {
+      "host_construction": 1.9144e-05,
+      "host_continuation": 1.2467e-05,
+      "host_return": 2.0993e-05,
+      "worker_disposal": 9.2627e-05,
+      "worker_phases": [
+        0.001644311,
+        0.00087075,
+        0.006869456,
+        4.165e-06,
+        3.24e-07
+      ],
+      "worker_total": 0.009396186
+    },
+    {
+      "host_construction": 1.4635e-05,
+      "host_continuation": 8.65e-06,
+      "host_return": 1.4797e-05,
+      "worker_disposal": 4.5657e-05,
+      "worker_phases": [
+        0.001578752,
+        0.00082027,
+        0.00569632,
+        1.335e-06,
+        1.06e-07
+      ],
+      "worker_total": 0.008099089
+    },
+    {
+      "host_construction": 7.011e-06,
+      "host_continuation": 5.213e-06,
+      "host_return": 7.135e-06,
+      "worker_disposal": 2.9154e-05,
+      "worker_phases": [
+        0.001094997,
+        0.000553524,
+        0.003937026,
+        1.618e-06,
+        7.3e-08
+      ],
+      "worker_total": 0.005590203
+    },
+    {
+      "host_construction": 7.43e-06,
+      "host_continuation": 4.942e-06,
+      "host_return": 8.798e-06,
+      "worker_disposal": 3.5399e-05,
+      "worker_phases": [
+        0.000710626,
+        0.00037421,
+        0.002939328,
+        1.581e-06,
+        7.3e-08
+      ],
+      "worker_total": 0.004029802
+    },
+    {
+      "host_construction": 7.86e-06,
+      "host_continuation": 4.924e-06,
+      "host_return": 7.973e-06,
+      "worker_disposal": 2.766e-05,
+      "worker_phases": [
+        0.000436351,
+        0.000278533,
+        0.001907379,
+        8.14e-07,
+        7.4e-08
+      ],
+      "worker_total": 0.00262472
+    }
+  ],
+  "raw_log": "/tmp/alibi-m3b1-final-workspace-03.log",
+  "raw_sha256": "8d3e8b9ca34a419953efb828e3f7e1441b1f8c6b3bf70f7fb3b461d2f72cc21e",
+  "required_boundary_tests_passed": [
+    "retirement_review_last_worker_owner_pins_charge_without_the_observer_pinning_it",
+    "retirement_review_recipe_cannot_outlive_its_charge_or_bypass_a_full_shared_budget",
+    "retirement_review_cannot_wrap_a_save_or_load_charge_as_a_retiring_generation",
+    "retirement_review_fence_preserves_payloads_until_worker_drain_and_last_endpoint_release",
+    "retirement_review_pin_refusals_preserve_the_original_live_mailbox_and_lease",
+    "retirement_review_every_terminal_family_is_inert_after_fence_with_live_reused_ids",
+    "preparation_review_shutdown_preserves_every_delivery_stage_behind_blocked_retirement",
+    "preparation_review_admission_failure_returns_a_disposal_only_candidate_without_freeing_it",
+    "store_unlocks_on_owner_disposal_while_a_duplicate_descriptor_survives",
+    "post_lock_startup_sync_failure_unlocks_while_a_duplicate_survives",
+    "storage_review_damaged_active_can_recover_and_save_again_without_losing_previous",
+    "real_local_retirement_drains_queues_flushes_promptlog_and_pins_external_owners",
+    "retirement_generation_refusal_returns_whole_local_bundle_unchanged",
+    "service_factory_refusal_mismatch_unwind_and_repeat_binding_release_all_owners",
+    "retained_service_mismatch_keeps_real_services_charged_until_candidate_disposal"
+  ],
+  "retirement": {
+    "fixture_inventory_and_assumptions": "{\"command_channel_capacity\":128,\"command_payload_upper_bytes\":24576,\"command_rows\":1,\"completions\":{\"admitted_records\":0,\"admitted_terminals\":0,\"queued\":0,\"stream_bytes\":0,\"terminal_bytes\":0},\"event_channel_capacity\":8192,\"event_rows\":10,\"fake_cognition\":{\"prompt_capacity\":4,\"prompts\":1,\"retained_upper_bytes\":20499,\"staged\":1,\"staged_capacity\":4},\"live_service_runtime_and_device_allocations_included\":false,\"publication_payload_bytes\":1201260,\"round_ladder_scratch_bytes\":12368,\"seed_released\":true,\"transcript_retained_upper_bytes\":32,\"transcript_rows\":0} assumptions=authored cast, fake cognition, no provider/device startup, embedded navigation, default weather/knowledge/marks, off TTS; trusted_bound=167772160 is not an independent heap measurement; global writer/runtime closure remains M3b2",
+    "host_detach_seconds": 1.5835e-05,
+    "injected_promptlog_gate_included": true,
+    "worker_disposal_seconds": 0.004063247
+  },
+  "scope": "Eight debug authored fixture observations and one gated real LocalEngine retirement; no whole-App, heap, populated-city or frame/p99 acceptance.",
+  "shutdown_deadlock_guard_seconds": 2,
+  "shutdown_stage_observations": [
+    {
+      "held_bytes": 580433415,
+      "host_return_seconds": 8.297e-06,
+      "retained_save_bytes": 26918,
+      "stage": 0
+    },
+    {
+      "held_bytes": 580433415,
+      "host_return_seconds": 4.38e-06,
+      "retained_save_bytes": 26918,
+      "stage": 1
+    },
+    {
+      "held_bytes": 580564487,
+      "host_return_seconds": 4.984e-06,
+      "retained_save_bytes": 26918,
+      "stage": 2
+    },
+    {
+      "held_bytes": 580630023,
+      "host_return_seconds": 5.65e-06,
+      "retained_save_bytes": 26918,
+      "stage": 3
+    }
+  ],
+  "source_map_sha256": "ea4086cf10fdf5e6d0781f3191e2f73cc9dcd7460889a4d98646a1f993783d80",
+  "worker_phase_order": [
+    "assets",
+    "definitions",
+    "typed_owners",
+    "raw_disposal",
+    "retention"
+  ]
+}

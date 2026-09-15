@@ -3,13 +3,15 @@
 //! A candidate owns one immutable raw envelope; every private component and its
 //! references have been validated against that same envelope before admission.
 mod continuation;
+mod disposal;
+pub use disposal::CandidateDisposal;
 mod hydration;
 pub use continuation::{
     ContinuationReport, ContinuationServices, ContinuationStage, PreparedContinuation,
 };
 pub use hydration::{
-    HydratedEngine, HydrationAssets, HydrationCost, HydrationPreparation, HydrationStage,
-    HydrationWorldAssets,
+    DecodedHydration, HydratedEngine, HydrationAssets, HydrationCost, HydrationPreparation,
+    HydrationStage, HydrationWorldAssets,
 };
 pub(crate) mod manifest;
 pub(crate) mod meter;
