@@ -543,3 +543,30 @@ resolver. Current service capabilities, device handles, transcript artifacts,
 runtime generations and ECS/render construction retain their explicit M2c/M3
 policies. Complete read-only validation is separate from those later adoption
 and publication gates.
+
+## M2d complete future ownership witness — implemented 2026-09-15
+
+The [full future fixture matrix](evidence/m2d/owner-design.md) now exercises the
+complete capture/validation, fresh hydration, pending-work preparation and inert
+service-binding pipeline followed by ordinary Engine polls. All sixteen actual
+owner categories remain compared, together with lineage, manifest and boundary.
+The external CPU Host owns actual decoded records and advances accepted time,
+physical samples and sampled publications; the original quarantined prepared
+Host retains its saved boundary. Admission leases stay with every actual
+prepared Engine through comparisons and disposal.
+
+Required active boundaries include reserved food work with moving residents,
+a serving FIFO market queue, pending road departure, warm conversation, pending
+offer, active custody escort, weather and old-slope bells, live knowledge
+propagation, and queued or accepted Night duty. Controlled service cases prove
+held success/error applies once and unfinished Scheduler/Night retries preserve
+the exact accepted input and semantic obligation. Independent cases preserve a
+spent Identified command across another complete load and preserve nonzero
+accepted wall debt, fixed residual and physical/command watermarks.
+
+Comparison exemptions are exact execution identities plus an explicitly asserted
+unfinished-Night retry pacing delta; no owner category, allocation counter or
+durable identity is removed. This test-only leg adds no persisted DTO or public
+Engine extraction/adoption API, changes no admission ceiling and republishes no
+historical same-image fixture. M3 retains actual Bevy/storage/offload/publication
+and retirement ownership; M0's renderer/full-stress gaps remain explicit.

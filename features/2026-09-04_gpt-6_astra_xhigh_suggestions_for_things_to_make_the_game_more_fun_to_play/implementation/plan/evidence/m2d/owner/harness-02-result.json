@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "835ae68ba9bdac214cbd2e61568b74ab088f362032c5c048831e6ac66ba0117e",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m2d-harness-02.log",
+  "raw_sha256": "c36559f602bf145a3666e872bdbab68caf8fba4650ce8fe820f1966925f5a168",
+  "source_map_sha256": "572d6e7bc7d18ae4a19d27003e23fc83c352b35576f9f55e20b2216703769534",
+  "sources_unchanged": false,
+  "wall_seconds": 206.81849232804962
+}

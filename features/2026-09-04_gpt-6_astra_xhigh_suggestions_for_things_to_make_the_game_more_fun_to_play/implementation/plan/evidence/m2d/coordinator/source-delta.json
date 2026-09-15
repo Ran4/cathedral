@@ -1,0 +1,19 @@
+{
+  "added": [
+    "crates/cathedral-sim/src/engine/continuation/future_harness.rs",
+    "crates/cathedral-sim/src/engine/continuation/future_tests.rs",
+    "crates/cathedral-sim/src/engine/continuation_future_review_tests.rs",
+    "crates/cathedral-sim/src/round/continuation_fixture.rs"
+  ],
+  "changed": [
+    "crates/cathedral-sim/src/engine.rs",
+    "crates/cathedral-sim/src/engine/continuation.rs",
+    "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+    "crates/cathedral-sim/src/round.rs",
+    "crates/cathedral-sim/src/round/tests.rs"
+  ],
+  "frozen_inputs": 987,
+  "predecessor_inputs": 983,
+  "removed": [],
+  "unchanged_predecessor_inputs": 978
+}

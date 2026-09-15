@@ -1,0 +1,748 @@
+{
+  "audit_sha256": "d317c9121840e72ff3606df462146562fff684ae2f62e968768be90f2193e6ba",
+  "audit_utc": "2026-09-15T03:28:06.207121+00:00",
+  "commands": [
+    {
+      "archive_sha256": "7796d2282b6cbcc778d1bb49dcbc00532d20a035409fe1efceb0e94e01f32c82",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "--offline",
+        "-j1",
+        "future_",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 0,
+      "matches_current_sources": true,
+      "name": "focused-final-01",
+      "raw_sha256": "14c5b9492be6d68c15ce17d87a2dc4b35bc6d73707d831d64e5ec8a6bff4758c",
+      "source_count": 987,
+      "source_map_sha256": "28a535a0b232d887c0e2653a308ee0c92eb62c9b04240b7aaa587886c2815188",
+      "sources_unchanged_during_command": true,
+      "test_groups": [
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 16,
+          "status": "ok"
+        }
+      ],
+      "totals": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 16
+      },
+      "utc": "2026-09-15T03:02:28.881421+00:00",
+      "wall_seconds": 162.7478348989971
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-sim/src/engine/continuation/future_harness.rs",
+        "crates/cathedral-sim/src/engine/continuation/future_tests.rs",
+        "crates/cathedral-sim/src/round/continuation_fixture.rs"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 0,
+      "matches_current_sources": false,
+      "name": "format-01",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_count": 987,
+      "source_map_sha256": "c79846ac58d715dfc455d43111288ffb2dd8025925033d4d112917afa1c66470",
+      "sources_unchanged_during_command": false,
+      "test_groups": [],
+      "totals": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "utc": "2026-09-15T02:52:36.139782+00:00",
+      "wall_seconds": 0.02389948908239603
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-sim/src/engine.rs",
+        "crates/cathedral-sim/src/engine/continuation.rs",
+        "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+        "crates/cathedral-sim/src/engine/continuation/future_harness.rs",
+        "crates/cathedral-sim/src/engine/continuation/future_tests.rs",
+        "crates/cathedral-sim/src/engine/continuation_future_review_tests.rs",
+        "crates/cathedral-sim/src/round.rs",
+        "crates/cathedral-sim/src/round/tests.rs",
+        "crates/cathedral-sim/src/round/continuation_fixture.rs"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 0,
+      "matches_current_sources": false,
+      "name": "format-02",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_count": 987,
+      "source_map_sha256": "45678af06464371d19cccc9b09181c19ec089a8abc44fd1110e4dda01220aff1",
+      "sources_unchanged_during_command": false,
+      "test_groups": [],
+      "totals": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "utc": "2026-09-15T03:02:18.155231+00:00",
+      "wall_seconds": 0.1862913710065186
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--check",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-sim/src/engine.rs",
+        "crates/cathedral-sim/src/engine/continuation.rs",
+        "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+        "crates/cathedral-sim/src/engine/continuation/future_harness.rs",
+        "crates/cathedral-sim/src/engine/continuation/future_tests.rs",
+        "crates/cathedral-sim/src/engine/continuation_future_review_tests.rs",
+        "crates/cathedral-sim/src/round.rs",
+        "crates/cathedral-sim/src/round/tests.rs",
+        "crates/cathedral-sim/src/round/continuation_fixture.rs"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 0,
+      "matches_current_sources": true,
+      "name": "format-final-01",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_count": 987,
+      "source_map_sha256": "28a535a0b232d887c0e2653a308ee0c92eb62c9b04240b7aaa587886c2815188",
+      "sources_unchanged_during_command": true,
+      "test_groups": [],
+      "totals": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "utc": "2026-09-15T03:02:41.913958+00:00",
+      "wall_seconds": 0.18499561003409326
+    },
+    {
+      "archive_sha256": "77d5377dbd823242a9b1c63f4d10a7291c1bb4d59983a55c2864cf2bd01b01f7",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "--offline",
+        "-j1",
+        "future_",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 101,
+      "matches_current_sources": false,
+      "name": "future-01",
+      "raw_sha256": "97959e37658440aa30ecbdf0c88b9c680c6c46d32a1e95854b9253ef54c5c44a",
+      "source_count": 987,
+      "source_map_sha256": "4f4440d7157bfb7c63a43d35dfde7281e9230a91858684dffb6c545e449adad1",
+      "sources_unchanged_during_command": true,
+      "test_groups": [],
+      "totals": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "utc": "2026-09-15T02:34:58.265917+00:00",
+      "wall_seconds": 5.67205609800294
+    },
+    {
+      "archive_sha256": "c6ab44ad955fbdf41665ef1cf5296f31d19ffd3d3b6f229f278f830cd30d1d8b",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "--offline",
+        "-j1",
+        "future_",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 101,
+      "matches_current_sources": false,
+      "name": "future-02",
+      "raw_sha256": "43636bafe9ecc43108ab045a9cbf93ff28d2323285fbd286749e2febe3097aad",
+      "source_count": 987,
+      "source_map_sha256": "96358e1d4f617b9f9aed481f0c33d585648d42452934312099b735ede608fcb2",
+      "sources_unchanged_during_command": false,
+      "test_groups": [
+        {
+          "failed": 11,
+          "ignored": 0,
+          "passed": 2,
+          "status": "FAILED"
+        }
+      ],
+      "totals": {
+        "failed": 11,
+        "ignored": 0,
+        "passed": 2
+      },
+      "utc": "2026-09-15T02:36:05.164997+00:00",
+      "wall_seconds": 198.59399632900022
+    },
+    {
+      "archive_sha256": "99a08180b67d913f03f72e8e8c7390a0ea8e0083cce8d958b23bd26c28bf91f0",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "--offline",
+        "-j1",
+        "future_",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 101,
+      "matches_current_sources": false,
+      "name": "future-03",
+      "raw_sha256": "c15547e81659b48e535ef97678d6e49dbf5efa75f9fb95dbc55852f3482c4b06",
+      "source_count": 987,
+      "source_map_sha256": "a2caa545df67ee2642c09d59cb37c8d515201f4d3df6dd2c908a25720a134e71",
+      "sources_unchanged_during_command": false,
+      "test_groups": [
+        {
+          "failed": 8,
+          "ignored": 0,
+          "passed": 7,
+          "status": "FAILED"
+        }
+      ],
+      "totals": {
+        "failed": 8,
+        "ignored": 0,
+        "passed": 7
+      },
+      "utc": "2026-09-15T02:42:02.550578+00:00",
+      "wall_seconds": 186.96080677211285
+    },
+    {
+      "archive_sha256": "b370d586c0efcfbca1936e86aad73e496440de6dcd72ecb08bdd7b083a971843",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "--offline",
+        "-j1",
+        "future_",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 101,
+      "matches_current_sources": false,
+      "name": "future-04",
+      "raw_sha256": "c893fdc46747288131c7b98f8162183fcd1d8499a129915030be4b1074ca058d",
+      "source_count": 987,
+      "source_map_sha256": "67fdd8d392f492f4ef5a1e5bae68a4c911bb04ba5cd528982edceca197f5a4b4",
+      "sources_unchanged_during_command": true,
+      "test_groups": [],
+      "totals": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "utc": "2026-09-15T02:51:05.122468+00:00",
+      "wall_seconds": 3.6941195731051266
+    },
+    {
+      "archive_sha256": "58d6b5f1f4746367aef681d2a3985d820adb065b3753193863048dd86812fabf",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "--offline",
+        "-j1",
+        "future_",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 101,
+      "matches_current_sources": false,
+      "name": "future-05",
+      "raw_sha256": "9b0ae5570c2a2e83ab606665828153cc719893b3408ba99602629a83964eb816",
+      "source_count": 987,
+      "source_map_sha256": "518e14f25f5ec01e50dae55ff811d7b02c546e9a84e993f1b8e531dc55d5dc98",
+      "sources_unchanged_during_command": true,
+      "test_groups": [
+        {
+          "failed": 2,
+          "ignored": 0,
+          "passed": 14,
+          "status": "FAILED"
+        }
+      ],
+      "totals": {
+        "failed": 2,
+        "ignored": 0,
+        "passed": 14
+      },
+      "utc": "2026-09-15T02:52:36.478614+00:00",
+      "wall_seconds": 212.90360440080985
+    },
+    {
+      "archive_sha256": "3242af6d061bbebe5934d11a3e41f51c2790c96e9f578eef68a47fcd1b823d86",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "--offline",
+        "-j1",
+        "complete_future_",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 0,
+      "matches_current_sources": false,
+      "name": "future-06",
+      "raw_sha256": "24032d9d198b92725a02b9d4aef3254de344b687768d83e962088dcb6da885eb",
+      "source_count": 987,
+      "source_map_sha256": "b5fa1367339b81967630d939d142448496d95768d3f5da53f552daed1ad1876b",
+      "sources_unchanged_during_command": true,
+      "test_groups": [
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 12,
+          "status": "ok"
+        }
+      ],
+      "totals": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 12
+      },
+      "utc": "2026-09-15T02:57:42.175861+00:00",
+      "wall_seconds": 190.03823359380476
+    },
+    {
+      "archive_sha256": "e8e1ed6657074aa3eff513f2d8bec04b8bf16a58a8782839055a35317b6df444",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--offline",
+        "-j1",
+        "complete_future_initial",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 101,
+      "matches_current_sources": false,
+      "name": "harness-01",
+      "raw_sha256": "bc3ad1d975961011d3db50998a463587150c35d01f5f7746f5481a4e1f3eb37c",
+      "source_count": 985,
+      "source_map_sha256": "76911a1dd662ae28da527d4a81c9f5d48a758ab3e7b63eb2f99b1ff2001d6f0b",
+      "sources_unchanged_during_command": false,
+      "test_groups": [],
+      "totals": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "utc": "2026-09-15T02:25:45.747544+00:00",
+      "wall_seconds": 226.44805934396572
+    },
+    {
+      "archive_sha256": "835ae68ba9bdac214cbd2e61568b74ab088f362032c5c048831e6ac66ba0117e",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "--offline",
+        "-j1",
+        "complete_future_initial",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 101,
+      "matches_current_sources": false,
+      "name": "harness-02",
+      "raw_sha256": "c36559f602bf145a3666e872bdbab68caf8fba4650ce8fe820f1966925f5a168",
+      "source_count": 986,
+      "source_map_sha256": "572d6e7bc7d18ae4a19d27003e23fc83c352b35576f9f55e20b2216703769534",
+      "sources_unchanged_during_command": false,
+      "test_groups": [
+        {
+          "failed": 1,
+          "ignored": 0,
+          "passed": 0,
+          "status": "FAILED"
+        }
+      ],
+      "totals": {
+        "failed": 1,
+        "ignored": 0,
+        "passed": 0
+      },
+      "utc": "2026-09-15T02:29:56.141778+00:00",
+      "wall_seconds": 206.81849232804962
+    },
+    {
+      "archive_sha256": "2229608f4cea319b1e94e0fad19c092a79b0233b219e9c17e7bcc01768a9887b",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace",
+        "--offline",
+        "-j1",
+        "--",
+        "--test-threads=1"
+      ],
+      "exact_raw_archive_verified": true,
+      "exit_code": 0,
+      "matches_current_sources": true,
+      "name": "workspace-final-01",
+      "raw_sha256": "ed96c16d6d8171e63b54901ad4cc8e4d2056ba9c2113c9a0a825af8d667d5950",
+      "source_count": 987,
+      "source_map_sha256": "28a535a0b232d887c0e2653a308ee0c92eb62c9b04240b7aaa587886c2815188",
+      "sources_unchanged_during_command": true,
+      "test_groups": [
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 158,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 7,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 2,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 2,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 2,
+          "passed": 0,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 1,
+          "passed": 0,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 1,
+          "passed": 15,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 28,
+          "passed": 838,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 16,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 6,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 5,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 4,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 6,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 6,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 5,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 5,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 6,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 6,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 4,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 6,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 6,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 6,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 15,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 26,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 6,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 4,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 84,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 13,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 1,
+          "passed": 2,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 103,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 43,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 9,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 4,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 8,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 30,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 1,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 27,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 7,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 41,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 19,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 47,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 9,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 11,
+          "passed": 602,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 20,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 0,
+          "status": "ok"
+        },
+        {
+          "failed": 0,
+          "ignored": 0,
+          "passed": 0,
+          "status": "ok"
+        }
+      ],
+      "totals": {
+        "failed": 0,
+        "ignored": 44,
+        "passed": 2229
+      },
+      "utc": "2026-09-15T03:05:18.181472+00:00",
+      "wall_seconds": 1335.513650995912
+    }
+  ],
+  "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "helper_sha256": "e0dc9c7016e8c26dc5f0a74bae53f4683a40875897fde777f39b0a4f5d0fa95e",
+  "pending_runs": [],
+  "required_final_runs": [
+    "focused-final-01",
+    "format-final-01",
+    "workspace-final-01"
+  ]
+}

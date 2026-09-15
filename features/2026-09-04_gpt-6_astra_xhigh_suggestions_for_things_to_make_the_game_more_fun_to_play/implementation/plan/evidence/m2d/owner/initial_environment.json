@@ -1,0 +1,12 @@
+{
+  "inherited_removed": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "input_count": 983,
+  "predecessor_map_sha256": "d5c73f9a292414d1e1c2a874ae18974c3d734f240507d61b3ca1f64917a24d2a"
+}

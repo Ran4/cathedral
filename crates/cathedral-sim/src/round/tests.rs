@@ -41,7 +41,7 @@ fn player() -> ActorId {
 }
 
 /// A character at `position` with an optional occupation and significance.
-fn person(
+pub(super) fn person(
     id: &str,
     position: Vec3,
     occupation: Option<&str>,
@@ -101,7 +101,7 @@ fn base_world() -> World {
     world
 }
 
-fn stock(kind: &str, quantity: u32) -> StockSpec {
+pub(super) fn stock(kind: &str, quantity: u32) -> StockSpec {
     StockSpec {
         kind: kind.into(),
         metadata: BTreeMap::new(),

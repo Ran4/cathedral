@@ -1,4 +1,4 @@
-Status: M1 identities/time/generation fences, M2a complete capture/validation and M2b quarantined hydration are implemented and reviewed (2026-09-15). M2c pending-work preparation is implemented and reviewed. M2d continuation and M3 application adoption/storage remain.
+Status: M1 identities/time/generation fences and M2 complete capture, validation, hydration, pending-work preparation and deterministic continuation are implemented and reviewed (2026-09-15). M3 application adoption/storage remains.
 
 # Capturing and resuming one coherent city
 
@@ -275,3 +275,35 @@ HydratedEngine inherits Engine's non-Send service trait objects. M3 still owes
 Send decoded-bundle offload plus bounded host construction/binding, and measured
 frame scheduling. Persisted M2b fixtures are generated after exact image freeze
 and read in fresh same-image processes; other images must explicitly refuse.
+
+## M2d complete future comparison — implemented 2026-09-15
+
+The test-only full-envelope harness continues the actual admitted prepared Engine
+under ordinary bounded polls with controlled external service responses. Its
+external CPU Host starts from decoded Host scalars/records and advances exact
+accepted time, physical samples and sampled publications. The original prepared
+Host/boundary stays fixed. This is behavioral verification of simulation
+continuation, not production host adoption, aggregate heap or frame-cost proof.
+
+Each observation compares deterministic re-encoded bytes for every owner and
+complete future EngineMessage vectors. The ordinary execution exclusion is
+exactly `/host/scalars/boundary/generation`. During one unfinished Scheduler
+obligation, separate full admitted observations enter the common prepared
+representation; only `/scheduler/continuation/load_retries/0/flight/request_id`
+differs. Original flight fields, input text, root and incarnation are pinned
+independently. The exact one replacement LLM Thinking status is asserted, then
+all other messages compare. After its recorded result settles, direct complete
+equality resumes without representation edits.
+
+Unfinished Night has an explicit retry pacing policy: a replacement submission
+starts its pacing at retry time. The test asserts the original and replacement
+values at `/night/night/night/next_attempt_at/at` before adjusting the control
+expectation to that declared delta. While the replacement is active, its two
+external identity paths are `/night/night/night/in_flight/request_id` and
+`/cognition_inputs/night/request_id`; all other input/duty/root authority remains
+compared. This is unfinished-work conservation, not a promise about an unsaved
+live provider future. Queued/recorded Night and held recorded success/error use
+direct full state/event equality. No whole owner or durable identity is ignored.
+The [owner design](evidence/m2d/owner-design.md) specifies fixture witnesses and
+the known ordinary escort endpoint-policy interaction. M3 adoption and the M0
+renderer/full-stress gaps remain separate acceptance gates.

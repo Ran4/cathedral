@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "99a08180b67d913f03f72e8e8c7390a0ea8e0083cce8d958b23bd26c28bf91f0",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m2d-future-03.log",
+  "raw_sha256": "c15547e81659b48e535ef97678d6e49dbf5efa75f9fb95dbc55852f3482c4b06",
+  "source_map_sha256": "a2caa545df67ee2642c09d59cb37c8d515201f4d3df6dd2c908a25720a134e71",
+  "sources_unchanged": false,
+  "wall_seconds": 186.96080677211285
+}

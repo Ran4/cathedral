@@ -6,6 +6,10 @@ use crate::checkpoint::{
 };
 #[cfg(test)]
 mod complete_tests;
+#[cfg(test)]
+pub(crate) mod future_harness;
+#[cfg(test)]
+mod future_tests;
 impl Engine {
     pub(crate) fn preflight_continuation(
         &mut self,

@@ -23,7 +23,7 @@ impl Cognition for Recorded {
         Ok(crate::RequestId(self.0))
     }
 }
-struct Host(ScalarsV1);
+pub(super) struct Host(pub(super) ScalarsV1);
 impl HostCheckpointSource for Host {
     fn scalars(&self) -> checkpoint::Result<ScalarsV1> {
         Ok(self.0)
@@ -86,7 +86,7 @@ impl HostCheckpointSource for Host {
         Ok(())
     }
 }
-fn host(engine: &Engine) -> Host {
+pub(super) fn host(engine: &Engine) -> Host {
     let fixture: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/checkpoint_host/initial-v1.json"
@@ -126,7 +126,7 @@ fn host(engine: &Engine) -> Host {
     s.clock.scale = engine.clock.scale();
     Host(s)
 }
-fn assets(e: &Engine) -> checkpoint::Result<HydrationAssets> {
+pub(super) fn assets(e: &Engine) -> checkpoint::Result<HydrationAssets> {
     let seed = crate::WorldSeed::from_json_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/demo_seed.json"

@@ -9473,4 +9473,6 @@ fn decision_jitter(id: &ActorId, epoch: u64) -> f64 {
 }
 
 #[cfg(test)]
+pub(crate) mod continuation_fixture;
+#[cfg(test)]
 mod tests;

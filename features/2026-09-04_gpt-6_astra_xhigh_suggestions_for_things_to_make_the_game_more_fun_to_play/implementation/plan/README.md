@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16 and M2b–M2c implemented and reviewed (2026-09-15). M2d and M3–M19 remain. M0 renderer/full-stress evidence is pending.
+Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16 and M2b–M2d implemented and reviewed (2026-09-15). M3–M19 remain. M0 renderer/full-stress evidence is pending.
 
 # An Alibi in Stone — systems first, then the full quest
 
@@ -125,5 +125,12 @@ Hydration p99 is 39.981/119.324 ms, so M3 still owes bounded host coordination.
 [M2c’s reviewed continuation preparation](evidence/m2c/README.md) retains exact
 pending obligations, interrupts uncommitted recording once, and preserves
 immediate complete re-save. It passes 2,215 workspace tests, 600 release samples
-and eight fresh-process fixture checks. M2d deterministic future continuation
-is next; M3–M19 remain.
+and eight fresh-process fixture checks.
+
+[M2d’s reviewed continuation suite](evidence/m2d/coordinator/review.md) compares
+complete restored and uninterrupted futures across the required gameplay
+boundaries, including repeated loads and exact pending-work conservation. Its
+fourteen new owner/coordinator tests pass alongside the full workspace: 2,229
+passed, zero failed and 44 intentional ignores. The explicit CPU Host fixture
+does not implement application adoption. M3a durable slot storage is next;
+M3b–M19 and M0’s renderer/full-stress evidence remain.

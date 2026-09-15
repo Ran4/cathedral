@@ -1,4 +1,4 @@
-Status: In progress (2026-09-15). M2a1–M2a16 complete capture/validation and M2b quarantined hydration are implemented and reviewed. M2c pending-work restoration is implemented and reviewed. M2d continuation remains.
+Status: M2a1–M2a16, M2b, M2c and M2d implemented and reviewed (2026-09-15). M3 application storage/adoption and M0 renderer/full-stress evidence remain.
 
 # M2 — Complete simulation checkpoints
 
@@ -134,6 +134,42 @@ Preserve Night Office duty identity, owed day, subject/incarnation and queued/su
 Build fixtures that run to a chosen boundary, capture, hydrate into fresh services, then execute the same subsequent inputs as an uninterrupted control. Compare canonical authoritative state and committed domain events, excluding declared transient presentation counters. Use fake or recorded cognition completions with controlled timing. Exact equality covers retained/recorded completions; resubmission of unfinished work instead proves obligation conservation and exactly-once application, since a live provider need not reproduce the unsaved future.
 
 Test boundaries during a food transformation, market queue, road-party departure, warm conversation, pending offer, custody escort, weather transition, bell sequence, knowledge propagation and night reflection. Later milestones must add their own continuation cases before acceptance.
+
+Implemented, frozen-source verified and independently reviewed (2026-09-15): the cfg(test)
+complete future harness captures all owners, validates against fresh definitions,
+hydrates fresh assets, prepares pending work and binds controlled services. The
+actual admitted PreparedContinuation retains its Engine and all subordinate
+leases through ordinary polls, comparison and disposal. Its saved Host/boundary
+remain untouched; an explicit CPU Host starts from the decoded Host and advances
+accepted time, physical samples and actual sampled publications. No production
+Engine extraction or M3 adoption API is added.
+
+The [owner design](evidence/m2d/owner-design.md) records every fixture's active
+capture precondition, later event/transition, exact comparison paths and phase
+policy. Twelve owner tests and two independent coordinator tests cover the
+required boundaries, cognition unavailable, exact held success/error, unfinished
+Scheduler/Night conservation, repeated complete restore, spent Identified command
+replay and nonzero accepted wall debt/fixed residual. Bounded 50/100 ms polls
+preserve physical work; movement witnesses assert actual body displacement.
+Canonical equality re-encodes every owner as bytes, preserving signed zero.
+Only the explicit execution fence/request identities and independently asserted
+unfinished-Night retry pacing differ. Retained/recorded futures require direct
+full state and message equality. The common prepared representation for an
+unfinished Scheduler is temporary; direct equality resumes after settlement.
+
+The custody case demonstrates continued escort motion. It also records an
+existing ordinary 6 m intent-arrival / 4 m station-arrival / 1.5 m trailing
+interaction: both timelines stop short of commitment at the same measured
+endpoint. This is not a restore divergence or a custody-policy change. M3 still
+owns actual host adoption, offload, storage, publication and retirement; M0's
+renderer/full-stress gaps and the unchanged admission ceilings remain explicit.
+
+Final owner verification passes 2,229 tests with zero failures and 44 intentional
+ignores across 46 workspace groups. Focused future verification passes all 16
+selected cases; all nine Rust files pass formatting at the same frozen 987-input
+map. The [owner handoff](evidence/m2d/OWNER_HANDOFF.md) and
+[verification seal](evidence/m2d/verification.json) retain every command attempt,
+exact source/helper/environment identities and original/matching gzip logs.
 
 ## Time and identity requirements
 

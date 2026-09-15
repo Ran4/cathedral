@@ -24,6 +24,8 @@ mod command_policy;
 pub(crate) mod complete_checkpoint;
 pub(crate) mod continuation;
 #[cfg(test)]
+mod continuation_future_review_tests;
+#[cfg(test)]
 mod continuation_review_tests;
 pub mod continuity_checkpoint;
 pub(crate) mod hydration;
