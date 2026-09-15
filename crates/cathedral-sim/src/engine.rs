@@ -23,6 +23,7 @@ pub mod climate_checkpoint;
 mod command_policy;
 pub(crate) mod complete_checkpoint;
 pub mod continuity_checkpoint;
+pub(crate) mod hydration;
 pub mod knowledge_checkpoint;
 pub mod law_checkpoint;
 pub mod marks_checkpoint;

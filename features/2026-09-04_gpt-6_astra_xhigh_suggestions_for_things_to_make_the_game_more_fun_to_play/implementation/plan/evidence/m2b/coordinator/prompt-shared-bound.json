@@ -1,0 +1,84 @@
+{
+  "all_feature_literal_insert_counts": {
+    "builtin_filters": 49,
+    "builtin_tests": 42,
+    "globals": 4
+  },
+  "assumptions": "See prompt-shared-bound.md; source-specific fixed-cache bound, not arbitrary template/global mutation.",
+  "audited_utc": "2026-09-14T23:21:21.115689+00:00",
+  "compiler": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2\n",
+  "derived_upper_bytes": 712704,
+  "lifetime": "Count within retained hydration assets; persistent static/TLS owners remain covered by coordinated Running/process admission after candidate drop.",
+  "package": {
+    "checksum": "cb3d648e68cea56d9858d535ee28f9538404e2dd8cb08ed0bd05dca379477f39",
+    "dependencies": [
+      "memo-map",
+      "serde"
+    ],
+    "name": "minijinja",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "version": "2.21.0"
+  },
+  "reserved_shared_prompt_upper_bytes": 1048576,
+  "sources": [
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/environment.rs",
+      "sha256": "10aea33d305545ad98af17f078906e6164852b203cd775666b3de861f2ac8a1f"
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/defaults.rs",
+      "sha256": "5211d305f4759fe63d2b4a99a24657e4f122cd8282bda56356fdacd192f0cf93"
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/functions.rs",
+      "sha256": "a3957a0cf4126817f40db93fea91471e6c66baf453d49ae86aa7179ec0752699"
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/value/mod.rs",
+      "sha256": "f61f39c2b7622ac889fddabd1141769abb1fe8144201f01bdf501ce2b9fa67dc"
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/value/type_erase.rs",
+      "sha256": "39fefb4dd981ae3298e47596d4ab3cf9bf2ab6667514543090478f3a86579c0a"
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/compiler/codegen.rs",
+      "sha256": "04f4531a04f8d6d23deb8c9f0a324e6b0dcd05364358196b0a7b33c75ebab9f0"
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/compiler/tokens.rs",
+      "sha256": "afcb90b5f368b625a2fdfafdceb370adb08a0bca6216d9a9e7aaed7cd3ee772e"
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/utils.rs",
+      "sha256": "1f4bffe028025cf6623bcc8d38a13ccfa0a21a5fe772119fb672571362167824"
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/syntax.rs",
+      "sha256": "8c2153235c324e4c6b11cd13a54dea940996157ac386428bc78270c5820f4316"
+    },
+    {
+      "path": "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/minijinja-2.21.0/src/macros.rs",
+      "sha256": "33f11566bfbb0fec478faf5d33c26c6fe7ca4339aa5aea68fb8b88338241ebdc"
+    },
+    {
+      "path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/node.rs",
+      "sha256": "2200ca0a4fe38592c314dc7f5f40bbb160e06b6f9e4abd1eb5bc40701540ab25"
+    },
+    {
+      "path": "/home/ran/src/rust/cathedralbevy/Cargo.lock",
+      "sha256": "50232618883c70eccf6a0ca33738fe17b0be75651378684178bed5b865b04d6b"
+    },
+    {
+      "path": "/home/ran/src/rust/cathedralbevy/features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/audit-prompt-shared.py",
+      "sha256": "024810193b2b866784be1307fe47c53cdcdd19fe07f0ae29a38aff262976e3e9"
+    }
+  ],
+  "upper_components_bytes": {
+    "both_tls_codegen_pools_and_vec_roots": 532480,
+    "default_delimiter_and_callback_roots": 4096,
+    "remaining_empty_tls_and_environment_roots": 8192,
+    "small_integer_string_cache": 16384,
+    "three_builtin_maps_and_function_arcs": 151552
+  }
+}

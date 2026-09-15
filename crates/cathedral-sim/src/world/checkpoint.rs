@@ -536,3 +536,79 @@ impl World {
         } = self;
     }
 }
+
+/// Already validated peripheral owners, consumed only by complete hydration.
+/// No World can escape while any required subsystem is absent.
+pub(crate) struct HydrationOwners {
+    pub ledger: CommandLedger,
+    pub operations: crate::operations::OperationKernel,
+    pub speech_actions: BTreeSet<CommandId>,
+    pub current_weather: Option<crate::weather::WeatherSample>,
+    pub notices: crate::notices::Notices,
+    pub custody: crate::custody::Custody,
+    pub dogs: Vec<crate::dogs::Dog>,
+    pub marks: crate::marks::Marks,
+    pub marks_enabled: bool,
+    pub mark_kinds: crate::marks::MarkKindSwitches,
+    pub ward_moods: BTreeMap<crate::lore::PlanningWard, String>,
+    pub knowledge: crate::knowledge::Knowledge,
+    pub knowledge_enabled: bool,
+    pub area_adjacency: crate::knowledge::AreaAdjacency,
+    pub pollen_no_salience: bool,
+}
+impl BackboneCandidate {
+    pub(crate) fn hydrate(
+        self,
+        assets: crate::checkpoint::complete::HydrationWorldAssets,
+        owners: HydrationOwners,
+    ) -> World {
+        let d = self.data;
+        World {
+            command_ledger: owners.ledger,
+            operations: owners.operations,
+            round_actions: d.round_actions,
+            travel_actions: d.travel_actions,
+            speech_actions: owners.speech_actions,
+            area_map: assets.areas,
+            characters: d.characters,
+            roster: d.roster,
+            items: d.inventory.items,
+            item_catalog: assets.items,
+            offers: d.inventory.offers,
+            legacy_restock_shares: d.inventory.legacy_restock_shares,
+            transform_jobs: d.inventory.transform_jobs,
+            completed_transform_jobs: d.inventory.completed_transform_jobs,
+            world_revision: d.world_revision,
+            event_sequence: d.event_sequence,
+            spatial_sequence: d.spatial_sequence,
+            sounds_enabled: d.sounds_enabled,
+            view_cone_degrees: d.view_cone_degrees,
+            sound_catalog: assets.sounds,
+            current_time: d.current_time,
+            current_weather: owners.current_weather,
+            shelters: assets.shelters,
+            nav: assets.nav,
+            places: d.places,
+            needle_claim: d.needle_claim,
+            notices: owners.notices,
+            custody: owners.custody,
+            dogs: owners.dogs,
+            marks: owners.marks,
+            mark_catalog: assets.marks,
+            marks_enabled: owners.marks_enabled,
+            mark_kinds: owners.mark_kinds,
+            ward_moods: owners.ward_moods,
+            knowledge: owners.knowledge,
+            fact_catalog: assets.facts,
+            salience: assets.salience,
+            knowledge_enabled: owners.knowledge_enabled,
+            // Saved accelerator was checked against installed exact derivation.
+            area_adjacency: Arc::new(owners.area_adjacency),
+            household_doors: Arc::new(d.household_doors),
+            pollen_no_salience: owners.pollen_no_salience,
+            spoke_this_turn: d.spoke_this_turn,
+            // Complete validation requires the ordinary flush boundary.
+            events: Vec::new(),
+        }
+    }
+}

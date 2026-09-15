@@ -44,22 +44,22 @@ pub struct SocialCounts {
 }
 #[derive(Debug, Serialize)]
 pub struct EngineSocialDtoV1 {
-    version: u16,
-    boundary: LogicalTime,
-    player_id: ActorId,
+    pub(super) version: u16,
+    pub(super) boundary: LogicalTime,
+    pub(super) player_id: ActorId,
     #[serde(with = "conversation_owner::records::ConversationV1")]
-    conversation: Conversation,
+    pub(super) conversation: Conversation,
     #[serde(with = "attention_owner::records::WarmExchangesV1")]
-    warm_exchanges: WarmExchanges,
+    pub(super) warm_exchanges: WarmExchanges,
     #[serde(with = "attention_owner::records::NoveltyV1")]
-    novelty: Novelty,
+    pub(super) novelty: Novelty,
     #[serde(with = "records::IdleModeV1")]
-    idle_mode: IdleCognitionMode,
+    pub(super) idle_mode: IdleCognitionMode,
     #[serde(with = "records::StageV1")]
-    stage: StageConfig,
-    idle_requires_news: bool,
+    pub(super) stage: StageConfig,
+    pub(super) idle_requires_news: bool,
     #[serde(with = "records::CuriosityV1")]
-    idle_curiosity: CuriosityConfig,
+    pub(super) idle_curiosity: CuriosityConfig,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -118,7 +118,7 @@ impl<'a> View<'a> {
 }
 #[derive(Debug)]
 pub struct EngineSocialCandidate {
-    data: EngineSocialDtoV1,
+    pub(super) data: EngineSocialDtoV1,
 }
 impl Engine {
     pub fn social_checkpoint_context(&self, now: LogicalTime) -> SocialCheckpointContext<'_> {

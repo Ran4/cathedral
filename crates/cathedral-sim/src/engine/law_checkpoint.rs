@@ -10,13 +10,13 @@ mod records;
 const OWNER: &str = "engine_law";
 #[derive(Debug, Serialize)]
 pub struct EngineLawDtoV1 {
-    version: u16,
-    boundary: LogicalTime,
+    pub(super) version: u16,
+    pub(super) boundary: LogicalTime,
     #[serde(with = "owner::WorldLawV1")]
-    world: WorldLawDtoV1,
-    player_id: ActorId,
+    pub(super) world: WorldLawDtoV1,
+    pub(super) player_id: ActorId,
     #[serde(with = "records::standing::option")]
-    last_law_standing: Option<EngineMessage>,
+    pub(super) last_law_standing: Option<EngineMessage>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -51,7 +51,7 @@ impl<'a, W: Serialize> View<'a, W> {
 }
 #[derive(Debug)]
 pub struct EngineLawCandidate {
-    data: EngineLawDtoV1,
+    pub(super) data: EngineLawDtoV1,
 }
 impl Engine {
     pub fn checkpoint_law_cost(

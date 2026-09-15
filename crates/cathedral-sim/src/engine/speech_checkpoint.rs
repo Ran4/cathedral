@@ -251,3 +251,9 @@ impl Engine {
         crate::checkpoint::complete::write_json(writer, &view)
     }
 }
+
+impl EngineSpeechCandidate {
+    pub(crate) fn complete_write_retained<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
+        crate::checkpoint::complete::write_json(writer, &self.data)
+    }
+}

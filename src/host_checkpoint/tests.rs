@@ -129,6 +129,21 @@ impl ExpectedFixture {
 }
 
 pub(super) fn fixture(city: bool, extra: u32) -> App {
+    fixture_with_config(city, extra, |_| {})
+}
+pub(super) fn fixture_with_config(
+    city: bool,
+    extra: u32,
+    modify: impl FnOnce(&mut smart_actors::SmartActorsConfig),
+) -> App {
+    let mut config = smart_actors::SmartActorsConfig {
+        enabled: true,
+        fake_backend: true,
+        tts_backend: "off".into(),
+        extra_ambient_npcs: extra,
+        ..default()
+    };
+    modify(&mut config);
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
         .init_asset::<Mesh>()
@@ -157,13 +172,7 @@ pub(super) fn fixture(city: bool, extra: u32) -> App {
     app.add_plugins((
         crate::controller::ControllerPlugin,
         crate::soundscape::SoundscapePlugin,
-        smart_actors::SmartActorsPlugin::new(smart_actors::SmartActorsConfig {
-            enabled: true,
-            fake_backend: true,
-            tts_backend: "off".into(),
-            extra_ambient_npcs: extra,
-            ..default()
-        }),
+        smart_actors::SmartActorsPlugin::new(config),
     ));
     app.world_mut()
         .resource_mut::<smart_actors::interaction::MicrophoneInputState>()

@@ -53,21 +53,21 @@ mod doors {
 }
 #[derive(Debug, Serialize)]
 pub struct EngineKnowledgeDtoV1 {
-    version: u16,
-    boundary: LogicalTime,
+    pub(super) version: u16,
+    pub(super) boundary: LogicalTime,
     #[serde(with = "owner::WorldKnowledgeV1")]
-    world: WorldKnowledgeDtoV1,
-    player_id: ActorId,
-    next_stage_hop_at: f64,
-    next_player_pollen_game_days: checkpoint::CalendarAnchorV1,
+    pub(super) world: WorldKnowledgeDtoV1,
+    pub(super) player_id: ActorId,
+    pub(super) next_stage_hop_at: f64,
+    pub(super) next_player_pollen_game_days: checkpoint::CalendarAnchorV1,
     #[serde(with = "doors")]
-    door_shut_until: BTreeMap<(ActorId, ActorId), f64>,
+    pub(super) door_shut_until: BTreeMap<(ActorId, ActorId), f64>,
     #[serde(with = "records::journal::option")]
-    last_journal: Option<EngineMessage>,
-    last_journal_receipts: u64,
-    last_journal_at: checkpoint::LogicalAnchorV1,
+    pub(super) last_journal: Option<EngineMessage>,
+    pub(super) last_journal_receipts: u64,
+    pub(super) last_journal_at: checkpoint::LogicalAnchorV1,
     #[serde(with = "records::ward_heat::option")]
-    last_ward_heat: Option<EngineMessage>,
+    pub(super) last_ward_heat: Option<EngineMessage>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -126,7 +126,7 @@ impl<'a, W: Serialize> View<'a, W> {
 }
 #[derive(Debug)]
 pub struct EngineKnowledgeCandidate {
-    data: EngineKnowledgeDtoV1,
+    pub(super) data: EngineKnowledgeDtoV1,
 }
 impl Engine {
     pub fn checkpoint_knowledge_cost(

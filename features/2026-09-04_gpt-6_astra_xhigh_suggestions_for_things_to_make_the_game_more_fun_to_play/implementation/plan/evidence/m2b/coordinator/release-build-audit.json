@@ -1,0 +1,25 @@
+{
+  "commands": [
+    {
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--offline",
+        "-j1",
+        "--release",
+        "--bin",
+        "cathedralbevy",
+        "--no-run",
+        "--message-format=json"
+      ],
+      "exit_code": 0,
+      "raw_sha256": "15e281d12dde13737c7f150b5160b36432a25af8c73d80d00fd32d0cea301849",
+      "result_sha256": "55350e1328c26194b4e13fc937b7d26f7ffb52dbb405537878f4975d87b7b81e"
+    }
+  ],
+  "debug_binary_sha256": "7ca7c8e3aed207a323a575358f409076e7cb836ffef8afcf89f223d115f15f1d",
+  "helper_sha256": "8d51882de4c4197f408bafcc05c4bfcdd7d5bd3f1bb7075c7310d5ce06f153f3",
+  "release_binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+  "result": "passed",
+  "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b"
+}

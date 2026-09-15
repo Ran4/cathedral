@@ -1,4 +1,4 @@
-Status: M1a host/time boundary, M1b semantic/replay identities and M1c runtime generation fences implemented and reviewed (2026-09-08). Capture/hydration/adoption/storage remain M2–M3 implementation contracts.
+Status: M1 identities/time/generation fences, M2a complete capture/validation and M2b quarantined hydration are implemented and reviewed (2026-09-15). M2c pending-work preparation, M2d continuation and M3 application adoption/storage remain.
 
 # Capturing and resuming one coherent city
 
@@ -193,3 +193,44 @@ proof context. Later hydration must rebind that manifest. No production Engine
 hydration, retry, interruption transformation, external adoption, file replacement
 or new-generation publication occurs in this leg. Runtime-read fixtures are made
 after final image freeze; an incompatible image must explicitly refuse them.
+
+## M2b quarantined complete hydration — accepted 2026-09-15
+
+Hydration consumes an admitted complete LoadCandidate through
+prepare_hydration(asset_upper_bytes) and hydrate(factory, host_definitions,
+RuntimeGeneration). The factory is invoked only after its disjoint subordinate
+LoadCandidate lease is reserved. Actual original parsed WorldSeed, PromptEnv,
+config and separately identified World asset roles must reproduce the exact
+manifest; validation scratch precedes fresh resolver allocation. Shared asset
+owners that outlive their caller remain covered, and caller-retained navigation
+Arcs require coordinated admission for any later interior cache growth.
+
+One fully validated private typed graph moves into exhaustive World and Engine
+literals. There is no seeded temporary Engine, replay, ordinary tick, request,
+provider poll, drain or publication. Saved semantic roots, Scheduler/Night held
+and unfinished work, Floor and speech-action identities remain conserved. Typed
+speech interruption/accepted-recording state, complete exact cognition inputs
+and Host authority remain explicit continuation owners; empty inert transport
+services do not discard them. M2c must prepare those obligations jointly before
+execution; M3 must adopt the complete application bundle.
+
+Saved lineage and all logical/calendar coordinates remain unchanged. The new
+Engine generation is nonzero and differs from the saved Host fence; saved Host
+generation remains historical authority. No host origin is bound during this
+step, and preparation/offline elapsed time creates no wall debt. Omniscient
+session transcript is empty by policy; committed readable Host lines remain
+owned. New service availability is deferred until explicit runtime rebinding.
+
+The result retains actual new owners, without raw checkpoint bytes. Public
+category_digest streams those owners through a same-budget SavePayload lease,
+and refuses an independent budget before staging. No public World borrow is
+provided because immutable World access would expose NavData's interior mutable
+cache. The256 KiB structural hydration allowance joins the unchanged128 MiB
+complete expansion cap; factory and retained assets use their separate admitted
+lease under the unchanged1 GiB aggregate. Charges remain attached through raw
+disposal, errors, observer unwind and final owner destruction.
+
+HydratedEngine inherits Engine's non-Send service trait objects. M3 still owes
+Send decoded-bundle offload plus bounded host construction/binding, and measured
+frame scheduling. Persisted M2b fixtures are generated after exact image freeze
+and read in fresh same-image processes; other images must explicitly refuse.

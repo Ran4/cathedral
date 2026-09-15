@@ -1256,3 +1256,9 @@ impl HostDtoV1 {
         Ok(HostCandidate { dto })
     }
 }
+
+impl HostCandidate {
+    pub(crate) fn complete_write_retained<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
+        super::complete::write_json(writer, &self.dto)
+    }
+}

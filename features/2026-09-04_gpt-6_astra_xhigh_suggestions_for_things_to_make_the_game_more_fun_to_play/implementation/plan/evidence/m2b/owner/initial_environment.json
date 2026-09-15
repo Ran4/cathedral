@@ -1,0 +1,14 @@
+{
+  "PATH": "/home/ran/.local/share/uv/python/cpython-3.13.2-linux-x86_64-gnu/bin:/home/ran/.local/share/fnm/node-versions/v24.18.1/installation/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/ran/.codex/tmp/arg0/codex-arg0Gy3TOu:/home/ran/.opencode/bin:/run/user/1000/fnm_multishells/57449_1788801532904/bin:/home/ran/.local/share/fnm:/home/ran/.bun/bin:/home/ran/.go/bin:/home/ran/.cargo/bin:/home/ran/.local/share/swift-4.1.1-RELEASE-ubuntu16.10/usr/bin/:/home/ran/.yarn/bin/:/usr/local/sbin:/opt/homebrew/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/opt/local/bin:/home/ran/.local/bin:/home/ran/.rocinstallation/roc_nightly-linux_x86_64-2025-02-04-59ff9bd:/home/ran/dotfiles/scripts:/opt/mssql-tools/bin:/usr/local/bin/roc_nightly-macos_apple_silicon-2024-04-29-e424f4bacca/:/snap/bin:/home/ran/.fzf/bin:/home/ran/.rvm/bin:/usr/local/share/dotnet",
+  "CARGO_HOME": null,
+  "RUSTC": null,
+  "RUSTDOC": null,
+  "LDFLAGS": null,
+  "RUSTFLAGS": null,
+  "CARGO_ENCODED_RUSTFLAGS": null,
+  "CARGO_BUILD_RUSTFLAGS": null,
+  "RUSTC_WRAPPER": null,
+  "RUSTC_WORKSPACE_WRAPPER": null,
+  "CATHEDRAL_HEADLESS": null,
+  "CATHEDRAL_FAKE_BACKEND": null
+}

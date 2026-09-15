@@ -443,3 +443,9 @@ impl Round {
                 .sum::<usize>()
     }
 }
+
+impl RoundCandidate {
+    pub(crate) fn into_hydration(self) -> Round {
+        self.data.round
+    }
+}

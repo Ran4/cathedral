@@ -10,14 +10,14 @@ use serde::{Deserialize, Serialize};
 const OWNER: &str = "engine_animals";
 #[derive(Debug, Serialize)]
 pub struct EngineAnimalsDtoV1 {
-    version: u16,
-    boundary: LogicalTime,
+    pub(super) version: u16,
+    pub(super) boundary: LogicalTime,
     #[serde(with = "owner::WorldAnimalsV1")]
-    world: WorldAnimalsDtoV1,
-    player_id: ActorId,
-    config_nav: Option<[u8; 32]>,
-    movement_now: LogicalTime,
-    dogs_published: bool,
+    pub(super) world: WorldAnimalsDtoV1,
+    pub(super) player_id: ActorId,
+    pub(super) config_nav: Option<[u8; 32]>,
+    pub(super) movement_now: LogicalTime,
+    pub(super) dogs_published: bool,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -61,7 +61,7 @@ impl<'a, W: Serialize> View<'a, W> {
 }
 #[derive(Debug)]
 pub struct EngineAnimalsCandidate {
-    data: EngineAnimalsDtoV1,
+    pub(super) data: EngineAnimalsDtoV1,
 }
 impl Engine {
     pub fn checkpoint_animals_cost(

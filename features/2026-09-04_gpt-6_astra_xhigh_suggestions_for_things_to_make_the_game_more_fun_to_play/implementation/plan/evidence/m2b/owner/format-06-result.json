@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m2b-format-06.log",
+  "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "source_map_sha256": "0b95401d8c2e1f980bcec470ee0394b55b9b82f96f1f060d61b31eb6356a9307",
+  "sources_unchanged": true,
+  "wall_seconds": 0.18463774002157152
+}

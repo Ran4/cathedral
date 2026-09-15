@@ -10,18 +10,18 @@ mod records;
 const OWNER: &str = "engine_marks";
 #[derive(Debug, Serialize)]
 pub struct EngineMarksDtoV1 {
-    version: u16,
-    boundary: LogicalTime,
+    pub(super) version: u16,
+    pub(super) boundary: LogicalTime,
     #[serde(with = "owner::WorldMarksV1")]
-    world: WorldMarksDtoV1,
-    player_id: ActorId,
-    config_marks_enabled: bool,
+    pub(super) world: WorldMarksDtoV1,
+    pub(super) player_id: ActorId,
+    pub(super) config_marks_enabled: bool,
     #[serde(with = "owner::records::SwitchesV1")]
-    config_mark_kinds: crate::marks::MarkKindSwitches,
+    pub(super) config_mark_kinds: crate::marks::MarkKindSwitches,
     #[serde(with = "owner::records::float_bits")]
-    config_marks_decay_scale: f64,
+    pub(super) config_marks_decay_scale: f64,
     #[serde(with = "records::standing::option")]
-    last_chalk_standing: Option<EngineMessage>,
+    pub(super) last_chalk_standing: Option<EngineMessage>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -69,7 +69,7 @@ impl<'a, W: Serialize> View<'a, W> {
 }
 #[derive(Debug)]
 pub struct EngineMarksCandidate {
-    data: EngineMarksDtoV1,
+    pub(super) data: EngineMarksDtoV1,
 }
 impl Engine {
     pub fn checkpoint_marks_cost(

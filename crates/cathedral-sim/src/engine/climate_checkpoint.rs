@@ -61,12 +61,12 @@ impl<'a> ClimateCheckpointContext<'a> {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ContextV1 {
+pub(super) struct ContextV1 {
     #[serde(deserialize_with = "required_option")]
-    nav: Option<[u8; 32]>,
-    shelters: [u8; 32],
-    areas: [u8; 32],
-    sounds: [u8; 32],
+    pub(super) nav: Option<[u8; 32]>,
+    pub(super) shelters: [u8; 32],
+    pub(super) areas: [u8; 32],
+    pub(super) sounds: [u8; 32],
 }
 // Stream borrowed definitions, never build a parallel array of owned strings.
 struct Sounds<'a>(&'a SoundCatalog);
@@ -128,16 +128,24 @@ fn digest<T: Serialize>(value: &T) -> Result<[u8; 32]> {
 impl ContextV1 {
     fn new(c: ClimateCheckpointContext<'_>) -> Result<Self> {
         checkpoint::logical(OWNER, c.now.seconds())?;
+        Self::from_definitions(c.nav, c.shelters, c.areas, c.sounds)
+    }
+    fn from_definitions(
+        nav: Option<&NavData>,
+        shelters: &ShelterMap,
+        areas: &AreaMap,
+        sounds: &SoundCatalog,
+    ) -> Result<Self> {
         check(
-            c.sounds.sounds().len() <= 25_000 && c.sounds.ambients().len() <= 25_000,
+            sounds.sounds().len() <= 25_000 && sounds.ambients().len() <= 25_000,
             "sound context count limit",
         )?;
         check(
-            c.sounds
+            sounds
                 .sounds()
                 .iter()
                 .all(|s| s.audible_distance.is_finite() && s.duration_seconds.is_finite())
-                && c.sounds
+                && sounds
                     .ambients()
                     .iter()
                     .all(|s| s.duration_seconds.is_finite()),
@@ -146,8 +154,8 @@ impl ContextV1 {
         // AreaMap is publicly mutable. Refuse nonfinite geometry before JSON
         // could collapse distinct invalid floats into the same null hash. Full
         // geography/reference validation remains with its later owner.
-        check(c.areas.areas.len() <= 4096, "area context count limit")?;
-        for a in &c.areas.areas {
+        check(areas.areas.len() <= 4096, "area context count limit")?;
+        for a in &areas.areas {
             check(a.boxes.len() <= 1024, "area context box limit")?;
             for b in &a.boxes {
                 check(
@@ -161,21 +169,21 @@ impl ContextV1 {
             }
         }
         Ok(Self {
-            nav: c.nav.map(NavData::checkpoint_fingerprint),
-            shelters: digest(&c.shelters.shelters())?,
-            areas: digest(c.areas)?,
-            sounds: digest(&(Sounds(c.sounds), Ambients(c.sounds)))?,
+            nav: nav.map(NavData::checkpoint_fingerprint),
+            shelters: digest(&shelters.shelters())?,
+            areas: digest(areas)?,
+            sounds: digest(&(Sounds(sounds), Ambients(sounds)))?,
         })
     }
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct WorldClimateV1 {
-    sounds_enabled: bool,
+pub(super) struct WorldClimateV1 {
+    pub(super) sounds_enabled: bool,
     #[serde(with = "records::world_time::option")]
-    current_time: Option<WorldTime>,
+    pub(super) current_time: Option<WorldTime>,
     #[serde(with = "weather_wire::sample::option")]
-    current_weather: Option<WeatherSample>,
+    pub(super) current_weather: Option<WeatherSample>,
 }
 impl WorldClimateV1 {
     fn from_world(w: &World) -> Self {
@@ -298,25 +306,25 @@ impl WorldClimateCandidate {
 
 #[derive(Debug, Serialize)]
 pub struct EngineClimateDtoV1 {
-    version: u16,
-    boundary: LogicalTime,
-    context: ContextV1,
-    world: WorldClimateV1,
-    initial_clock: WorldClockDtoV1,
+    pub(super) version: u16,
+    pub(super) boundary: LogicalTime,
+    pub(super) context: ContextV1,
+    pub(super) world: WorldClimateV1,
+    pub(super) initial_clock: WorldClockDtoV1,
     #[serde(with = "ConfigV1")]
-    initial_weather: WeatherConfig,
-    ring_the_offices: bool,
+    pub(super) initial_weather: WeatherConfig,
+    pub(super) ring_the_offices: bool,
     #[serde(with = "records::TextV1")]
-    player_id: String,
-    clock: WorldClockDtoV1,
+    pub(super) player_id: String,
+    pub(super) clock: WorldClockDtoV1,
     #[serde(with = "TimelineV1")]
-    weather: WeatherTimeline,
-    last_weather_days: f64,
+    pub(super) weather: WeatherTimeline,
+    pub(super) last_weather_days: f64,
     #[serde(with = "SampleV1")]
-    last_weather_sample: WeatherSample,
-    last_clock_days: f64,
-    bell_strokes: VecDeque<f64>,
-    bell_seq: u64,
+    pub(super) last_weather_sample: WeatherSample,
+    pub(super) last_clock_days: f64,
+    pub(super) bell_strokes: VecDeque<f64>,
+    pub(super) bell_seq: u64,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -385,7 +393,7 @@ impl<'a> EngineView<'a> {
 }
 #[derive(Debug)]
 pub struct EngineClimateCandidate {
-    data: EngineClimateDtoV1,
+    pub(super) data: EngineClimateDtoV1,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ClimateCounts {
@@ -662,18 +670,6 @@ impl Engine {
     }
 }
 
-impl Engine {
-    pub(crate) fn complete_climate_definition_identity(
-        &self,
-        now: LogicalTime,
-    ) -> Result<[u8; 32]> {
-        digest(&ContextV1::new(ClimateCheckpointContext::from_world(
-            &self.world,
-            now,
-        ))?)
-    }
-}
-
 impl EngineClimateCandidate {
     pub(crate) fn complete_config(&self, config: &EngineConfig, now: LogicalTime) -> Result<()> {
         check(
@@ -685,4 +681,13 @@ impl EngineClimateCandidate {
             "complete climate configuration disagreement",
         )
     }
+}
+
+pub(crate) fn installed_definition_identity(
+    nav: Option<&NavData>,
+    shelters: &ShelterMap,
+    areas: &AreaMap,
+    sounds: &SoundCatalog,
+) -> Result<[u8; 32]> {
+    digest(&ContextV1::from_definitions(nav, shelters, areas, sounds)?)
 }

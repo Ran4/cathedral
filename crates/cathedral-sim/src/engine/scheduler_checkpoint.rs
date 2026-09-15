@@ -37,15 +37,15 @@ impl<'a> EngineSchedulerCheckpointContext<'a> {
 }
 #[derive(Serialize)]
 pub struct EngineSchedulerDtoV1 {
-    version: u16,
-    boundary: LogicalTime,
-    player_id: ActorId,
+    pub(super) version: u16,
+    pub(super) boundary: LogicalTime,
+    pub(super) player_id: ActorId,
     #[serde(with = "owner::records::SchedulerV1")]
-    scheduler: NpcScheduler,
+    pub(super) scheduler: NpcScheduler,
     #[serde(with = "raw_float")]
-    turn_delay_seconds: f64,
+    pub(super) turn_delay_seconds: f64,
     #[serde(with = "raw_float")]
-    maximum_backoff_seconds: f64,
+    pub(super) maximum_backoff_seconds: f64,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -85,7 +85,7 @@ impl<'a> View<'a> {
     }
 }
 pub struct EngineSchedulerCandidate {
-    data: EngineSchedulerDtoV1,
+    pub(super) data: EngineSchedulerDtoV1,
 }
 impl Engine {
     pub fn scheduler_checkpoint_context(

@@ -11,11 +11,76 @@ use crate::checkpoint::{
 };
 use crate::timeline::LogicalTime;
 
+struct InstalledWorldRoles<'a> {
+    items: &'a crate::ItemCatalog,
+    nav: Option<&'a NavData>,
+    shelters: &'a ShelterMap,
+    areas: &'a AreaMap,
+    sounds: &'a SoundCatalog,
+    marks: &'a crate::marks::MarkCatalog,
+    facts: &'a crate::knowledge::FactCatalog,
+    salience: &'a crate::knowledge::SalienceTable,
+    area_adjacency: &'a crate::knowledge::AreaAdjacency,
+}
 impl<'a> InstalledCheckpointDefinitions<'a> {
+    /// Bind actual parsed assets without constructing or seeding a World/Engine.
+    /// Caller retains the factory's admitted asset/scratch ownership throughout.
+    pub fn from_assets(
+        assets: &'a complete::HydrationAssets,
+        host: host::DefinitionsV1,
+        now: LogicalTime,
+    ) -> Result<Self> {
+        let w = &assets.world;
+        Self::from_roles(
+            &assets.config,
+            assets.seed_identity,
+            assets.env.checkpoint_identity(),
+            InstalledWorldRoles {
+                items: &w.items,
+                nav: w.nav.as_deref(),
+                shelters: &w.shelters,
+                areas: &w.areas,
+                sounds: &w.sounds,
+                marks: &w.marks,
+                facts: &w.facts,
+                salience: &w.salience,
+                area_adjacency: &w.area_adjacency,
+            },
+            host,
+            now,
+        )
+    }
+
     pub fn from_engine(e: &'a Engine, host: host::DefinitionsV1, now: LogicalTime) -> Result<Self> {
         e.complete_field_inventory();
         e.world.complete_field_inventory();
-        let c = &e.config;
+        Self::from_roles(
+            &e.config,
+            e.checkpoint_seed_identity,
+            e.env.checkpoint_identity(),
+            InstalledWorldRoles {
+                items: &e.world.item_catalog,
+                nav: e.world.nav.as_deref(),
+                shelters: &e.world.shelters,
+                areas: &e.world.area_map,
+                sounds: &e.world.sound_catalog,
+                marks: &e.world.mark_catalog,
+                facts: &e.world.fact_catalog,
+                salience: &e.world.salience,
+                area_adjacency: &e.world.area_adjacency,
+            },
+            host,
+            now,
+        )
+    }
+    fn from_roles(
+        c: &'a EngineConfig,
+        seed_identity: [u8; 32],
+        prompt_identity: [u8; 32],
+        roles: InstalledWorldRoles<'a>,
+        host: host::DefinitionsV1,
+        now: LogicalTime,
+    ) -> Result<Self> {
         let configuration = hash(&(
             (
                 &c.player_id,
@@ -82,19 +147,22 @@ impl<'a> InstalledCheckpointDefinitions<'a> {
             target: BoundedText::new("").map_err(complete::error)?,
             procedural_hasher: BoundedText::new("").map_err(complete::error)?,
             default_hasher_witness: [0; 4],
-            ordered_seed: e.checkpoint_seed_identity,
-            prompts: e.env.checkpoint_identity(),
-            world_items: e.world.item_catalog.checkpoint_fingerprint(),
-            world_climate_definitions: e.complete_climate_definition_identity(now)?,
+            ordered_seed: seed_identity,
+            prompts: prompt_identity,
+            world_items: roles.items.checkpoint_fingerprint(),
+            world_climate_definitions: climate_checkpoint::installed_definition_identity(
+                roles.nav,
+                roles.shelters,
+                roles.areas,
+                roles.sounds,
+            )?,
             world_area_adjacency:
                 crate::knowledge::pollen::checkpoint::complete_adjacency_identity(
-                    &e.world.area_adjacency,
+                    roles.area_adjacency,
                 )?,
-            world_marks: crate::marks::checkpoint::complete_catalog_identity(
-                &e.world.mark_catalog,
-            )?,
-            world_facts: crate::knowledge::catalog::checkpoint::fingerprint(&e.world.fact_catalog)?,
-            world_salience: crate::knowledge::salience::checkpoint::fingerprint(&e.world.salience)?,
+            world_marks: crate::marks::checkpoint::complete_catalog_identity(roles.marks)?,
+            world_facts: crate::knowledge::catalog::checkpoint::fingerprint(roles.facts)?,
+            world_salience: crate::knowledge::salience::checkpoint::fingerprint(roles.salience)?,
             engine_nav: host::Nullable(c.nav.as_deref().map(NavData::checkpoint_fingerprint)),
             engine_shelters: hash(&c.shelters.shelters())?,
             engine_configuration: configuration,
@@ -104,14 +172,14 @@ impl<'a> InstalledCheckpointDefinitions<'a> {
         Ok(Self {
             manifest,
             player: &c.player_id,
-            items: &e.world.item_catalog,
-            world_nav: e.world.nav.as_deref(),
-            world_shelters: &e.world.shelters,
-            areas: &e.world.area_map,
-            sounds: &e.world.sound_catalog,
-            marks: &e.world.mark_catalog,
-            facts: &e.world.fact_catalog,
-            salience: &e.world.salience,
+            items: roles.items,
+            world_nav: roles.nav,
+            world_shelters: roles.shelters,
+            areas: roles.areas,
+            sounds: roles.sounds,
+            marks: roles.marks,
+            facts: roles.facts,
+            salience: roles.salience,
             engine_nav: c.nav.as_deref(),
             operations: &c.operations,
             engine_config: c,
@@ -171,12 +239,41 @@ impl Engine {
     }
 }
 
+pub(crate) struct ValidatedOwners {
+    pub ledger: crate::receipts::CommandLedger,
+    pub operations: crate::operations::OperationKernel,
+    pub backbone: crate::world::checkpoint::BackboneCandidate,
+    pub round: crate::round::checkpoint::RoundCandidate,
+    pub climate: climate_checkpoint::EngineClimateCandidate,
+    pub knowledge: knowledge_checkpoint::EngineKnowledgeCandidate,
+    pub law: law_checkpoint::EngineLawCandidate,
+    pub marks: marks_checkpoint::EngineMarksCandidate,
+    pub animals: animals_checkpoint::EngineAnimalsCandidate,
+    pub social: social_checkpoint::EngineSocialCandidate,
+    pub continuity: continuity_checkpoint::EngineContinuityCandidate,
+    pub scheduler: scheduler_checkpoint::EngineSchedulerCandidate,
+    pub night: night_checkpoint::EngineNightCandidate,
+    pub speech: speech_checkpoint::EngineSpeechCandidate,
+    pub cognition: cognition_inputs_checkpoint::EngineCognitionInputsCandidate,
+    pub host: host::HostCandidate,
+}
+
 pub(crate) fn validate_components(
     w: &Envelope<'_>,
     d: &InstalledCheckpointDefinitions<'_>,
     m: &DecodeMeter<'_>,
     observer: &mut impl FnMut(complete::CompleteCheckpointStage),
 ) -> Result<usize> {
+    let owners = decode_components(w, d, m, observer)?;
+    Ok(owners.backbone.references().characters.len())
+}
+
+pub(crate) fn decode_components(
+    w: &Envelope<'_>,
+    d: &InstalledCheckpointDefinitions<'_>,
+    m: &DecodeMeter<'_>,
+    observer: &mut impl FnMut(complete::CompleteCheckpointStage),
+) -> Result<ValidatedOwners> {
     use super::{
         animals_checkpoint::EngineAnimalsDtoV1,
         climate_checkpoint::{ClimateCheckpointContext, EngineClimateDtoV1},
@@ -357,9 +454,25 @@ pub(crate) fn validate_components(
         d,
         now,
     )?;
-    let _ = &cognition;
     observer(complete::CompleteCheckpointStage::TypedValidation);
-    Ok(refs.characters.len())
+    Ok(ValidatedOwners {
+        ledger: ledger_index,
+        operations,
+        backbone,
+        round,
+        climate,
+        knowledge,
+        law,
+        marks,
+        animals,
+        social,
+        continuity,
+        scheduler,
+        night,
+        speech,
+        cognition,
+        host,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]

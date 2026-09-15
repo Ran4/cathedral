@@ -1,6 +1,12 @@
-//! Complete closed checkpoint validation, without Engine hydration or adoption.
+//! Complete closed checkpoint validation and quarantined Engine hydration.
+//! Application adoption and external-service continuation remain separate.
 //! A candidate owns one immutable raw envelope; every private component and its
 //! references have been validated against that same envelope before admission.
+mod hydration;
+pub use hydration::{
+    HydratedEngine, HydrationAssets, HydrationCost, HydrationPreparation, HydrationStage,
+    HydrationWorldAssets,
+};
 pub(crate) mod manifest;
 pub(crate) mod meter;
 pub(crate) mod wire;

@@ -1,0 +1,7 @@
+{
+  "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+  "dataset": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/performance",
+  "identity_sha256": "fefc5902d43b7d354d8588fd96725fff450000832201881b7e5e3bc3c3dd06b2",
+  "results_sha256": "d2c3683326528b049c1ab322954ea0ebfe06fcf8ea42bcc513310f3b61dedab7",
+  "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b"
+}

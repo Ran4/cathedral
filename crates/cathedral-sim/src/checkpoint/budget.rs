@@ -140,6 +140,15 @@ impl Reservation {
             bytes,
         })
     }
+    pub(crate) fn require_shared(&self, other: &Self) -> Result<()> {
+        if !Arc::ptr_eq(&self.usage, &other.usage) {
+            return Err(CheckpointError::new(
+                "admission",
+                "complete owners require the same shared budget",
+            ));
+        }
+        Ok(())
+    }
     pub(crate) fn require_running(&self, bytes: usize) -> Result<()> {
         let usage = self
             .usage
@@ -203,6 +212,15 @@ impl<T> Admitted<T> {
     }
     pub(crate) fn new(value: T, reservation: Reservation) -> Self {
         Self { value, reservation }
+    }
+    pub(crate) fn try_map_mut<U>(
+        mut self,
+        f: impl FnOnce(T, &mut Reservation) -> Result<U>,
+    ) -> Result<Admitted<U>> {
+        // The moved value and all closure-local allocations are disposed before
+        // the still-owned reservation, on success, error and unwind.
+        let value = f(self.value, &mut self.reservation)?;
+        Ok(Admitted::new(value, self.reservation))
     }
     pub(crate) fn try_map<U>(
         self,

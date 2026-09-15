@@ -1,0 +1,975 @@
+[
+  {
+    "binary": "/tmp/alibi-m2b-host-reference-binary-1",
+    "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+    "command": [
+      "/tmp/alibi-m2b-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_write",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T00:02:59.522439+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.8339148319792002,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_WORLD_ID": "4d32622d666978747572652d30303031",
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-initial-write-1.json",
+      "ALIBI_HYDRATION_INITIAL": "1",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-initial-write-1.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "fixture": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/initial-write-1.json.gz",
+      "archive_sha256": "c826384bf9ac86e1fb4c676f1a32cb177b0aff2db79e71f63ed5659c6e2bf478",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-1.json",
+      "original_bytes": 3255765,
+      "original_sha256": "428402a2bf380c8189f07d40242c86494d9b16bd75b7f0c8d4cfe0943598ffee"
+    },
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-write-1.log.gz",
+      "archive_sha256": "27e8faadc83e02d05d98ea6e676e62708512742164c5ee78b346b958d46f5178",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-1.stdout-stderr.log",
+      "original_bytes": 6368,
+      "original_sha256": "171f4bb77855a4873dbeeb71902e51999e774ae3e7ac125e0b1eea09216fa81b"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/initial-write-1.report.json.gz",
+      "archive_sha256": "0668551b0deb137ab4da5089b1544a08f1c952969a99ea9bc247e3e5df917f76",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-1.report.json",
+      "original_bytes": 7589,
+      "original_sha256": "76ffee560d8625166e55748f6d52d4b1d5afac18b585055ba2e1ea16ac366e6a"
+    },
+    "operation": "write",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 1,
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:02:58.611600+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-write-1.time.gz",
+      "archive_sha256": "dbad19cb3eb92d6584614fb4ed9f0f6536627dde1eeb96a2aba24d6f6657ca53",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-1.time",
+      "original_bytes": 878,
+      "original_sha256": "d8cf04ed2aa8e544a78bd0bf65a7437a3a46663d843a3474a39a1e2d996fee09"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2b-host-reference-binary-1",
+    "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+    "command": [
+      "/tmp/alibi-m2b-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_write",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T00:03:00.868702+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.8347146750893444,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_WORLD_ID": "4d32622d666978747572652d30303031",
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-initial-write-2.json",
+      "ALIBI_HYDRATION_INITIAL": "1",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-initial-write-2.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "fixture": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/initial-write-2.json.gz",
+      "archive_sha256": "c826384bf9ac86e1fb4c676f1a32cb177b0aff2db79e71f63ed5659c6e2bf478",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-2.json",
+      "original_bytes": 3255765,
+      "original_sha256": "428402a2bf380c8189f07d40242c86494d9b16bd75b7f0c8d4cfe0943598ffee"
+    },
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-write-2.log.gz",
+      "archive_sha256": "96a2ed9c6d34c7d27fd9a3c8ca066993edabbe90e98fc98568e6f6edc09d1b7e",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-2.stdout-stderr.log",
+      "original_bytes": 6368,
+      "original_sha256": "b3a51829a31f472cac83811003a8b31bfeba618e5ac2ae9b3d443c734cf80b09"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/initial-write-2.report.json.gz",
+      "archive_sha256": "c5a0532527e97e6e67d39e08f063259de6ffd5a2eeea416d0d36894d1753b063",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-2.report.json",
+      "original_bytes": 7589,
+      "original_sha256": "888dfbd441cf1539dc80d3fa4fe794ca00ffab6fbbe9cb82bbf6d438dd680317"
+    },
+    "operation": "write",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 2,
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:02:59.957690+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-write-2.time.gz",
+      "archive_sha256": "e5c5bb7fa7d64608fd50ade986d9efe25b908eae13f5a3f58f2fccd8dfaee3d1",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-2.time",
+      "original_bytes": 877,
+      "original_sha256": "a7341ad4043b7fa6b0eeb6b71398a27d8b1370e87de2c9eafba09a58eb875be6"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2b-host-reference-binary-1",
+    "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+    "command": [
+      "/tmp/alibi-m2b-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_write",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T00:03:02.212875+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.8283535668160766,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_WORLD_ID": "4d32622d666978747572652d30303031",
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-initial-write-3.json",
+      "ALIBI_HYDRATION_INITIAL": "1",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-initial-write-3.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "fixture": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/initial-write-3.json.gz",
+      "archive_sha256": "c826384bf9ac86e1fb4c676f1a32cb177b0aff2db79e71f63ed5659c6e2bf478",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-3.json",
+      "original_bytes": 3255765,
+      "original_sha256": "428402a2bf380c8189f07d40242c86494d9b16bd75b7f0c8d4cfe0943598ffee"
+    },
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-write-3.log.gz",
+      "archive_sha256": "f793c4e4341a82e3ca4cb6baf23fd4bfee0218e2702fb85445c61abb5a9e6a29",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-3.stdout-stderr.log",
+      "original_bytes": 6368,
+      "original_sha256": "5bdc579a6b78ea1a73ab2123863181059b3a35355a54edb600e62ec07b86ce98"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/initial-write-3.report.json.gz",
+      "archive_sha256": "c5a0532527e97e6e67d39e08f063259de6ffd5a2eeea416d0d36894d1753b063",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-3.report.json",
+      "original_bytes": 7589,
+      "original_sha256": "888dfbd441cf1539dc80d3fa4fe794ca00ffab6fbbe9cb82bbf6d438dd680317"
+    },
+    "operation": "write",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 3,
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:03:01.307559+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-write-3.time.gz",
+      "archive_sha256": "6ff9f2a7c0941e07395525439b2fc7ce8318ba73d3ec3ef78f21684c5958c66c",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-3.time",
+      "original_bytes": 877,
+      "original_sha256": "9954d9a27b21191e19ff6a4c351756ac3c4c44792e09bb95f8a486c5d5ea6a8e"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2b-host-reference-binary-1",
+    "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+    "command": [
+      "/tmp/alibi-m2b-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_read",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "compatibility": "compatible",
+    "completed_utc": "2026-09-15T00:03:03.474806+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.7540545710362494,
+    "environment_overrides": {
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-initial-write-1.json",
+      "ALIBI_HYDRATION_INITIAL": "1",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-initial-read-compatible.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "input": "/tmp/alibi-m2b-fixtures-1-initial-write-1.json",
+    "input_sha256": "428402a2bf380c8189f07d40242c86494d9b16bd75b7f0c8d4cfe0943598ffee",
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-read-compatible.log.gz",
+      "archive_sha256": "06419716d644cb24947b44959fe0de446173fe7e826e4fc3026d6f51b1c8bc2b",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-read-compatible.stdout-stderr.log",
+      "original_bytes": 6368,
+      "original_sha256": "57be050f6b489669a65ee45be9feebd6b2e416e5d7c5da9822a85041df0776dc"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/initial-read-compatible.report.json.gz",
+      "archive_sha256": "1382c59bd4e513d6dbe63a0f5ca046a54e321d7dba8d32e91fabaa96163dc1de",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-read-compatible.report.json",
+      "original_bytes": 7590,
+      "original_sha256": "c11a28f39211f4974c851f49d29dc0b037396c0afdef57b75f82868a25729ca1"
+    },
+    "operation": "read",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:03:02.644426+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-read-compatible.time.gz",
+      "archive_sha256": "d79a0bbcee85f30cdfbd8d6c428f6a87fd3d58203c253e19ff5ac4b7f705a614",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-read-compatible.time",
+      "original_bytes": 874,
+      "original_sha256": "6d6260c39115511dae0d4fb923730ab799108e3e1ecf96b74f1c3e6c816f3b23"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2b-debug-reference-binary-1",
+    "binary_sha256": "7ca7c8e3aed207a323a575358f409076e7cb836ffef8afcf89f223d115f15f1d",
+    "command": [
+      "/tmp/alibi-m2b-debug-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_read",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "compatibility": "incompatible",
+    "completed_utc": "2026-09-15T00:03:06.622895+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 1.8287613119464368,
+    "environment_overrides": {
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": "1",
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-initial-write-1.json",
+      "ALIBI_HYDRATION_INITIAL": "1",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-initial-read-incompatible.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "input": "/tmp/alibi-m2b-fixtures-1-initial-write-1.json",
+    "input_sha256": "428402a2bf380c8189f07d40242c86494d9b16bd75b7f0c8d4cfe0943598ffee",
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-read-incompatible.log.gz",
+      "archive_sha256": "82205bfc7f0b747c97db1cdca6150019584d038e90c8d9294e2a062207c2d323",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-read-incompatible.stdout-stderr.log",
+      "original_bytes": 3283,
+      "original_sha256": "3b7ec8c61832134ea3ad2829769839135028e67b3554db96a52b3e1214803f1d"
+    },
+    "operation": "read",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:03:03.691037+00:00",
+    "state": "initial",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-initial-read-incompatible.time.gz",
+      "archive_sha256": "fb28ad09fbe1c26295cd0df7cdfca1ff32801108a5ef2f4118ce84698873177d",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-read-incompatible.time",
+      "original_bytes": 875,
+      "original_sha256": "a795b4e2472a272139281d1b6d295cc3902a92896f6d75fb660ae4da6b1bd81f"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2b-host-reference-binary-1",
+    "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+    "command": [
+      "/tmp/alibi-m2b-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_write",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T00:03:08.782138+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.8481176451314241,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_WORLD_ID": "4d32622d666978747572652d30303031",
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-active-write-1.json",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-active-write-1.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "fixture": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/active-write-1.json.gz",
+      "archive_sha256": "241996fda9c8f3272b99b8c5bbf789e96525e831aeec9cf5246251eaf2d53d50",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-1.json",
+      "original_bytes": 3309071,
+      "original_sha256": "1b7ab0d5f607a9540898863c381c4bf14051c1eed001c8a0408e4f8077381760"
+    },
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-write-1.log.gz",
+      "archive_sha256": "d6a97a284c0d68e5d0896c673d3bd32874ea07d7aea6d92fcae5693245e2e9d2",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-1.stdout-stderr.log",
+      "original_bytes": 6762,
+      "original_sha256": "d73a2c4fc6726f8f3de2bf669777b446c22a67be70c89af48dfc0d7d54c5c84f"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/active-write-1.report.json.gz",
+      "archive_sha256": "8896f47984dd45f6959ed23ba4f8e61fc238a964e6e573eac649ade15bb98ee1",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-1.report.json",
+      "original_bytes": 7579,
+      "original_sha256": "3a8bd2abe243fc11a342487c682a8d5f90f479cd2a279b1a6558cb13e63c9483"
+    },
+    "operation": "write",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 1,
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:03:07.857636+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-write-1.time.gz",
+      "archive_sha256": "e8d887463f2f2ea3e9dc7836db382ae190ee49b5f5bc01598fe26ff9ed957a16",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-1.time",
+      "original_bytes": 878,
+      "original_sha256": "4138ab9867f63b097262c92e01d11ea5b97f38e4d43e610d52cf0cb195753d17"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2b-host-reference-binary-1",
+    "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+    "command": [
+      "/tmp/alibi-m2b-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_write",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T00:03:10.140169+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.8455997181590647,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_WORLD_ID": "4d32622d666978747572652d30303031",
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-active-write-2.json",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-active-write-2.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "fixture": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/active-write-2.json.gz",
+      "archive_sha256": "241996fda9c8f3272b99b8c5bbf789e96525e831aeec9cf5246251eaf2d53d50",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-2.json",
+      "original_bytes": 3309071,
+      "original_sha256": "1b7ab0d5f607a9540898863c381c4bf14051c1eed001c8a0408e4f8077381760"
+    },
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-write-2.log.gz",
+      "archive_sha256": "d6a97a284c0d68e5d0896c673d3bd32874ea07d7aea6d92fcae5693245e2e9d2",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-2.stdout-stderr.log",
+      "original_bytes": 6762,
+      "original_sha256": "d73a2c4fc6726f8f3de2bf669777b446c22a67be70c89af48dfc0d7d54c5c84f"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/active-write-2.report.json.gz",
+      "archive_sha256": "8896f47984dd45f6959ed23ba4f8e61fc238a964e6e573eac649ade15bb98ee1",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-2.report.json",
+      "original_bytes": 7579,
+      "original_sha256": "3a8bd2abe243fc11a342487c682a8d5f90f479cd2a279b1a6558cb13e63c9483"
+    },
+    "operation": "write",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 2,
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:03:09.217950+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-write-2.time.gz",
+      "archive_sha256": "8beee1580edfaa1d7dbe9951bc2c992a6cb3b08f0a9cf0d4e942487cbad4189a",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-2.time",
+      "original_bytes": 878,
+      "original_sha256": "7f7cc9a293191b22d835a129e7cbafc4d7d8c6ec7e0f989d7337f6ced9a6d9bb"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2b-host-reference-binary-1",
+    "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+    "command": [
+      "/tmp/alibi-m2b-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_write",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "completed_utc": "2026-09-15T00:03:11.502587+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.8557101138867438,
+    "environment_overrides": {
+      "ALIBI_COMPLETE_WORLD_ID": "4d32622d666978747572652d30303031",
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-active-write-3.json",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-active-write-3.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "fixture": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/active-write-3.json.gz",
+      "archive_sha256": "241996fda9c8f3272b99b8c5bbf789e96525e831aeec9cf5246251eaf2d53d50",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-3.json",
+      "original_bytes": 3309071,
+      "original_sha256": "1b7ab0d5f607a9540898863c381c4bf14051c1eed001c8a0408e4f8077381760"
+    },
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-write-3.log.gz",
+      "archive_sha256": "7b7a88c13d549fdd719cb6a111845032880313463b0fab85927815388052991c",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-3.stdout-stderr.log",
+      "original_bytes": 6762,
+      "original_sha256": "049610cfb0b82dca44aed822b928a197d30c7f2890c26bbe2f4b1664be7f6b77"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/active-write-3.report.json.gz",
+      "archive_sha256": "77b214ade29caa756f41eaf2b85cf07f15ffeadf3f00f5aaf330361a8844b042",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-3.report.json",
+      "original_bytes": 7579,
+      "original_sha256": "cf5565fafd60b058e2747ad236299b12db2a4a2d8608ec68551dca2b180c36be"
+    },
+    "operation": "write",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "repetition": 3,
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:03:10.570596+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-write-3.time.gz",
+      "archive_sha256": "8153750b567823a2e0fe9340b58afb63c9a06aa6321c4f69b81b052aaf183553",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-3.time",
+      "original_bytes": 878,
+      "original_sha256": "b3d32214379c2c6f915782b10113024558576a7253a96e8e3f3e5241dedd38ca"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2b-host-reference-binary-1",
+    "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+    "command": [
+      "/tmp/alibi-m2b-host-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_read",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "compatibility": "compatible",
+    "completed_utc": "2026-09-15T00:03:12.776173+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 0.7675825417973101,
+    "environment_overrides": {
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-active-write-1.json",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-active-read-compatible.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "input": "/tmp/alibi-m2b-fixtures-1-active-write-1.json",
+    "input_sha256": "1b7ab0d5f607a9540898863c381c4bf14051c1eed001c8a0408e4f8077381760",
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-read-compatible.log.gz",
+      "archive_sha256": "abb76f94a6fd9c9ebc6fd4fbd4b6d936aea8fbfe7e787d2d72df8afb3bb58753",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-read-compatible.stdout-stderr.log",
+      "original_bytes": 6762,
+      "original_sha256": "126afc807dbec72680a162b120d0802043efedeb2f273912fbe6eb9f9f74ab54"
+    },
+    "metrics": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/active-read-compatible.report.json.gz",
+      "archive_sha256": "d867ec4245ffb3398d7ecb8cd51ba4e508f1e1adac51ca9a539d232386caa92a",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-read-compatible.report.json",
+      "original_bytes": 7580,
+      "original_sha256": "558f9977c9949a0874a66847a5ff29e176caaeca08a0e8385a23a6d9be131260"
+    },
+    "operation": "read",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:03:11.931992+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-read-compatible.time.gz",
+      "archive_sha256": "efbf2d9c3352b4c9dab2c4c486e117021c10f70349a2424198fa0d2c32ba401d",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-read-compatible.time",
+      "original_bytes": 875,
+      "original_sha256": "7d2445e83856074637373a8c0ed537530fe3c41ffae7378025c220440ec73b8b"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  },
+  {
+    "binary": "/tmp/alibi-m2b-debug-reference-binary-1",
+    "binary_sha256": "7ca7c8e3aed207a323a575358f409076e7cb836ffef8afcf89f223d115f15f1d",
+    "command": [
+      "/tmp/alibi-m2b-debug-reference-binary-1",
+      "--ignored",
+      "--exact",
+      "host_checkpoint::tests_hydration_owner::m2b_hydration_fixture_read",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "compatibility": "incompatible",
+    "completed_utc": "2026-09-15T00:03:15.927903+00:00",
+    "cwd": "/home/ran/src/rust/cathedralbevy",
+    "elapsed_seconds": 1.8422529390081763,
+    "environment_overrides": {
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": "1",
+      "ALIBI_HYDRATION_FIXTURE": "/tmp/alibi-m2b-fixtures-1-active-write-1.json",
+      "ALIBI_HYDRATION_REPORT": "/tmp/alibi-m2b-fixtures-1-active-read-incompatible.report.json",
+      "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+      "CATHEDRAL_FAKE_BACKEND": "1",
+      "CATHEDRAL_HEADLESS": "1",
+      "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+      "RUSTC": "/home/ran/.cargo/bin/rustc",
+      "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+    },
+    "exit_code": 0,
+    "helper_sha256": {
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03",
+      "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/run-release-fixtures.py": "4e7b814a83414b3e94ad7c9f1bd7af8090f54eec602900f950612e9052883d05"
+    },
+    "inherited_build_environment": {
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_TARGET_DIR": null,
+      "LDFLAGS": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTFLAGS": null
+    },
+    "input": "/tmp/alibi-m2b-fixtures-1-active-write-1.json",
+    "input_sha256": "1b7ab0d5f607a9540898863c381c4bf14051c1eed001c8a0408e4f8077381760",
+    "log": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-read-incompatible.log.gz",
+      "archive_sha256": "594f2e79a3b99046432a7b42c2a160f4e261618c0b5ef91cb10221061b772534",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-read-incompatible.stdout-stderr.log",
+      "original_bytes": 3687,
+      "original_sha256": "6dc11e5744a2a79652a5a6a11274cfc33cf7d15287ba666f42ba2242bea5f5f8"
+    },
+    "operation": "read",
+    "removed_build_environment": [
+      "LDFLAGS",
+      "RUSTFLAGS",
+      "CARGO_ENCODED_RUSTFLAGS",
+      "CARGO_BUILD_RUSTFLAGS",
+      "RUSTC_WRAPPER",
+      "RUSTC_WORKSPACE_WRAPPER"
+    ],
+    "removed_probe_environment": {
+      "ALIBI_COMPLETE_WORLD_ID": null,
+      "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+      "ALIBI_HYDRATION_FIXTURE": null,
+      "ALIBI_HYDRATION_INITIAL": null,
+      "ALIBI_HYDRATION_MODE": null,
+      "ALIBI_HYDRATION_REPORT": null,
+      "ALIBI_HYDRATION_SAMPLES": null
+    },
+    "source_count": 967,
+    "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+    "source_scope": "component-inputs-v2",
+    "started_utc": "2026-09-15T00:03:12.988677+00:00",
+    "state": "active",
+    "time": {
+      "archive": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/fixtures-1-active-read-incompatible.time.gz",
+      "archive_sha256": "8ec9958902944bbc1da1f46dd87ceebae0c919d6244ed801c08651ba431a3980",
+      "normalization": "none; exact original bytes",
+      "original": "/tmp/alibi-m2b-fixtures-1-active-read-incompatible.time",
+      "original_bytes": 876,
+      "original_sha256": "deca15e4710153ad4602af852721a63e0d4e84709bac94aa7a339b189aec8dc3"
+    },
+    "unchanged_binary": true,
+    "unchanged_helpers": true,
+    "unchanged_source": true
+  }
+]

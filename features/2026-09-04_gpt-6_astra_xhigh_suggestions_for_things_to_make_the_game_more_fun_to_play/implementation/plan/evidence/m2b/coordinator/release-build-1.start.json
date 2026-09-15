@@ -1,0 +1,60 @@
+{
+  "binary": null,
+  "binary_sha256": null,
+  "command": [
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "--offline",
+    "-j1",
+    "--release",
+    "--bin",
+    "cathedralbevy",
+    "--no-run",
+    "--message-format=json"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "environment_overrides": {
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc"
+  },
+  "helper_sha256": {
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/component_input_sources.py": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release-build.py": "9440877ebd4cf6100c6e4a6f069bc0a0676aca4df649a22afebdeb828e3309b1",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/coordinator/release_common.py": "81e7caa736751fdbb1cb26ce8e5691ef0b6339744d3a71ac5027be8f40171c03"
+  },
+  "inherited_build_environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_TARGET_DIR": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "removed_build_environment": [
+    "LDFLAGS",
+    "RUSTFLAGS",
+    "CARGO_ENCODED_RUSTFLAGS",
+    "CARGO_BUILD_RUSTFLAGS",
+    "RUSTC_WRAPPER",
+    "RUSTC_WORKSPACE_WRAPPER"
+  ],
+  "removed_probe_environment": {
+    "ALIBI_COMPLETE_WORLD_ID": null,
+    "ALIBI_HYDRATION_EXPECT_INCOMPATIBLE": null,
+    "ALIBI_HYDRATION_FIXTURE": null,
+    "ALIBI_HYDRATION_INITIAL": null,
+    "ALIBI_HYDRATION_MODE": null,
+    "ALIBI_HYDRATION_REPORT": null,
+    "ALIBI_HYDRATION_SAMPLES": null
+  },
+  "source_count": 967,
+  "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+  "source_scope": "component-inputs-v2",
+  "started_utc": "2026-09-14T23:51:46.859047+00:00"
+}

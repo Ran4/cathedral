@@ -1,0 +1,28 @@
+{
+  "added_paths": [
+    "src/host_checkpoint/fixtures/hydration-v1/README.md",
+    "src/host_checkpoint/fixtures/hydration-v1/active.json",
+    "src/host_checkpoint/fixtures/hydration-v1/initial.json"
+  ],
+  "after_source_manifest_sha256": "4519679b5866452b4fcd6c2096ad9522479d9f4a81a91690843916e26745d3f9",
+  "before_source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+  "fixtures": [
+    {
+      "bytes": 3309071,
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-1.json",
+      "repository": "src/host_checkpoint/fixtures/hydration-v1/active.json",
+      "sha256": "1b7ab0d5f607a9540898863c381c4bf14051c1eed001c8a0408e4f8077381760"
+    },
+    {
+      "bytes": 3255765,
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-1.json",
+      "repository": "src/host_checkpoint/fixtures/hydration-v1/initial.json",
+      "sha256": "428402a2bf380c8189f07d40242c86494d9b16bd75b7f0c8d4cfe0943598ffee"
+    }
+  ],
+  "helper_sha256": "e5af91d13c10a68ed3671dd242df023fed84868de68e1d57e8029308f41f9071",
+  "modified_paths": [],
+  "removed_paths": [],
+  "result": "passed",
+  "scope": "Two exact verified outputs and their README only; all prior source inputs remain byte-identical."
+}

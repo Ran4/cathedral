@@ -1,0 +1,164 @@
+[
+  {
+    "above_30ms": true,
+    "microseconds": 39065.33,
+    "mode": "authored",
+    "phase": "hydrate_with_asset_factory",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "end_to_end"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 7071.848,
+    "mode": "authored",
+    "phase": "Assets",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 2579.407,
+    "mode": "authored",
+    "phase": "Definitions",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 29408.484,
+    "mode": "authored",
+    "phase": "TypedOwners",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": true,
+    "microseconds": 38424.842000000004,
+    "mode": "authored",
+    "phase": "hydrate_with_asset_factory",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "end_to_end"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 7008.121,
+    "mode": "authored",
+    "phase": "Assets",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 2600.125,
+    "mode": "authored",
+    "phase": "Definitions",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 28811.584000000003,
+    "mode": "authored",
+    "phase": "TypedOwners",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": true,
+    "microseconds": 116449.481,
+    "mode": "populated",
+    "phase": "hydrate_with_asset_factory",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "end_to_end"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 3653.2819999999997,
+    "mode": "populated",
+    "phase": "hydrated_owner_disposal",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "end_to_end"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 24301.881,
+    "mode": "populated",
+    "phase": "Assets",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 9138.208,
+    "mode": "populated",
+    "phase": "Definitions",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": true,
+    "microseconds": 83002.925,
+    "mode": "populated",
+    "phase": "TypedOwners",
+    "repetition": 1,
+    "sample": 0,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": true,
+    "microseconds": 116198.553,
+    "mode": "populated",
+    "phase": "hydrate_with_asset_factory",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "end_to_end"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 3694.7400000000002,
+    "mode": "populated",
+    "phase": "hydrated_owner_disposal",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "end_to_end"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 23991.828,
+    "mode": "populated",
+    "phase": "Assets",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": false,
+    "microseconds": 9047.958,
+    "mode": "populated",
+    "phase": "Definitions",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "stage"
+  },
+  {
+    "above_30ms": true,
+    "microseconds": 83152.65,
+    "mode": "populated",
+    "phase": "TypedOwners",
+    "repetition": 1,
+    "sample": 1,
+    "scope": "stage"
+  }
+]

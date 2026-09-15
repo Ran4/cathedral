@@ -1,0 +1,589 @@
+{
+  "above_2ms": 2700,
+  "above_30ms": 904,
+  "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+  "cold_first_samples": [
+    {
+      "microseconds": 38795.0,
+      "mode": "authored",
+      "phase": "hydrate_with_asset_factory",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 930.3729999999999,
+      "mode": "authored",
+      "phase": "hydrated_owner_disposal",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 7057.365000000001,
+      "mode": "authored",
+      "phase": "Assets",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 2716.464,
+      "mode": "authored",
+      "phase": "Definitions",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 29016.111,
+      "mode": "authored",
+      "phase": "TypedOwners",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 3.256,
+      "mode": "authored",
+      "phase": "Construction",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.052,
+      "mode": "authored",
+      "phase": "RawDisposal",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.047,
+      "mode": "authored",
+      "phase": "Retention",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 38622.84,
+      "mode": "authored",
+      "phase": "hydrate_with_asset_factory",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 935.717,
+      "mode": "authored",
+      "phase": "hydrated_owner_disposal",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 7005.348,
+      "mode": "authored",
+      "phase": "Assets",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 2559.189,
+      "mode": "authored",
+      "phase": "Definitions",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 29052.74,
+      "mode": "authored",
+      "phase": "TypedOwners",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 3.626,
+      "mode": "authored",
+      "phase": "Construction",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.0359999999999998,
+      "mode": "authored",
+      "phase": "RawDisposal",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.047,
+      "mode": "authored",
+      "phase": "Retention",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 39829.524,
+      "mode": "authored",
+      "phase": "hydrate_with_asset_factory",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 932.9639999999999,
+      "mode": "authored",
+      "phase": "hydrated_owner_disposal",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 7019.201,
+      "mode": "authored",
+      "phase": "Assets",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 2539.762,
+      "mode": "authored",
+      "phase": "Definitions",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 30265.055,
+      "mode": "authored",
+      "phase": "TypedOwners",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 3.382,
+      "mode": "authored",
+      "phase": "Construction",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.27,
+      "mode": "authored",
+      "phase": "RawDisposal",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.06,
+      "mode": "authored",
+      "phase": "Retention",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 116945.511,
+      "mode": "populated",
+      "phase": "hydrate_with_asset_factory",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 3719.484,
+      "mode": "populated",
+      "phase": "hydrated_owner_disposal",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 24020.883,
+      "mode": "populated",
+      "phase": "Assets",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 9111.875,
+      "mode": "populated",
+      "phase": "Definitions",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 83806.934,
+      "mode": "populated",
+      "phase": "TypedOwners",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 3.81,
+      "mode": "populated",
+      "phase": "Construction",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.272,
+      "mode": "populated",
+      "phase": "RawDisposal",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.048,
+      "mode": "populated",
+      "phase": "Retention",
+      "repetition": 1,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 116032.198,
+      "mode": "populated",
+      "phase": "hydrate_with_asset_factory",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 3720.656,
+      "mode": "populated",
+      "phase": "hydrated_owner_disposal",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 23843.551,
+      "mode": "populated",
+      "phase": "Assets",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 9325.785,
+      "mode": "populated",
+      "phase": "Definitions",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 82856.58,
+      "mode": "populated",
+      "phase": "TypedOwners",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 3.8179999999999996,
+      "mode": "populated",
+      "phase": "Construction",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.625,
+      "mode": "populated",
+      "phase": "RawDisposal",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.058,
+      "mode": "populated",
+      "phase": "Retention",
+      "repetition": 2,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 116192.73300000001,
+      "mode": "populated",
+      "phase": "hydrate_with_asset_factory",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 3793.075,
+      "mode": "populated",
+      "phase": "hydrated_owner_disposal",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "end_to_end"
+    },
+    {
+      "microseconds": 23974.748,
+      "mode": "populated",
+      "phase": "Assets",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 9118.474,
+      "mode": "populated",
+      "phase": "Definitions",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 83093.58,
+      "mode": "populated",
+      "phase": "TypedOwners",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 3.787,
+      "mode": "populated",
+      "phase": "Construction",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 1.199,
+      "mode": "populated",
+      "phase": "RawDisposal",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    },
+    {
+      "microseconds": 0.06,
+      "mode": "populated",
+      "phase": "Retention",
+      "repetition": 3,
+      "sample": 0,
+      "scope": "stage"
+    }
+  ],
+  "cost_ranges_bytes": {
+    "authored": {
+      "assets_upper_bytes": {
+        "maximum": 67108864,
+        "minimum": 67108864
+      },
+      "decoded_upper_bytes": {
+        "maximum": 38308507,
+        "minimum": 38308507
+      },
+      "retained_upper_bytes": {
+        "maximum": 105417371,
+        "minimum": 105417371
+      },
+      "structural_upper_bytes": {
+        "maximum": 262144,
+        "minimum": 262144
+      }
+    },
+    "populated": {
+      "assets_upper_bytes": {
+        "maximum": 67108864,
+        "minimum": 67108864
+      },
+      "decoded_upper_bytes": {
+        "maximum": 133613327,
+        "minimum": 133613327
+      },
+      "retained_upper_bytes": {
+        "maximum": 200722191,
+        "minimum": 200722191
+      },
+      "structural_upper_bytes": {
+        "maximum": 262144,
+        "minimum": 262144
+      }
+    }
+  },
+  "dataset": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/performance",
+  "end_to_end_samples": 1200,
+  "maximum_full_asset_bound_bytes": {
+    "authored": 13022860,
+    "populated": 22998242
+  },
+  "maximum_rss_kib": {
+    "authored": 382512,
+    "populated": 479556
+  },
+  "maximum_shared_budget_bytes": {
+    "authored": 726174363,
+    "populated": 843676620
+  },
+  "normalization": "none; every process and sample retained, nearest-rank quantiles",
+  "phases": {
+    "authored": {
+      "hydrate_with_asset_factory": {
+        "maximum_us": 44903.028,
+        "minimum_us": 38088.754,
+        "p50_us": 38734.132999999994,
+        "p95_us": 39240.67,
+        "p99_us": 39980.948000000004,
+        "samples": 300
+      },
+      "hydrated_owner_disposal": {
+        "maximum_us": 1490.718,
+        "minimum_us": 618.071,
+        "p50_us": 976.598,
+        "p95_us": 1249.576,
+        "p99_us": 1417.835,
+        "samples": 300
+      }
+    },
+    "populated": {
+      "hydrate_with_asset_factory": {
+        "maximum_us": 121201.732,
+        "minimum_us": 115417.433,
+        "p50_us": 116615.84599999999,
+        "p95_us": 117688.257,
+        "p99_us": 119323.85900000001,
+        "samples": 300
+      },
+      "hydrated_owner_disposal": {
+        "maximum_us": 4619.7390000000005,
+        "minimum_us": 3579.039,
+        "p50_us": 3781.882,
+        "p95_us": 4128.5779999999995,
+        "p99_us": 4345.615,
+        "samples": 300
+      }
+    }
+  },
+  "result": "passed",
+  "results_sha256": "d2c3683326528b049c1ab322954ea0ebfe06fcf8ea42bcc513310f3b61dedab7",
+  "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b",
+  "stage_samples": 3600,
+  "stages": {
+    "authored": {
+      "Assets": {
+        "maximum_us": 7862.595,
+        "minimum_us": 6933.722,
+        "p50_us": 7006.965,
+        "p95_us": 7147.698,
+        "p99_us": 7216.453,
+        "samples": 300
+      },
+      "Construction": {
+        "maximum_us": 4.507000000000001,
+        "minimum_us": 2.88,
+        "p50_us": 3.411,
+        "p95_us": 4.066,
+        "p99_us": 4.411,
+        "samples": 300
+      },
+      "Definitions": {
+        "maximum_us": 2895.801,
+        "minimum_us": 2491.451,
+        "p50_us": 2544.147,
+        "p95_us": 2625.966,
+        "p99_us": 2720.114,
+        "samples": 300
+      },
+      "RawDisposal": {
+        "maximum_us": 1.776,
+        "minimum_us": 0.913,
+        "p50_us": 1.141,
+        "p95_us": 1.452,
+        "p99_us": 1.596,
+        "samples": 300
+      },
+      "Retention": {
+        "maximum_us": 0.145,
+        "minimum_us": 0.043000000000000003,
+        "p50_us": 0.049999999999999996,
+        "p95_us": 0.071,
+        "p99_us": 0.091,
+        "samples": 300
+      },
+      "TypedOwners": {
+        "maximum_us": 35370.793999999994,
+        "minimum_us": 28564.094,
+        "p50_us": 29155.522,
+        "p95_us": 29573.583,
+        "p99_us": 30265.055,
+        "samples": 300
+      }
+    },
+    "populated": {
+      "Assets": {
+        "maximum_us": 25881.93,
+        "minimum_us": 23790.942,
+        "p50_us": 23949.784,
+        "p95_us": 24397.236,
+        "p99_us": 24699.182,
+        "samples": 300
+      },
+      "Construction": {
+        "maximum_us": 6.92,
+        "minimum_us": 3.585,
+        "p50_us": 4.05,
+        "p95_us": 4.5009999999999994,
+        "p99_us": 4.962,
+        "samples": 300
+      },
+      "Definitions": {
+        "maximum_us": 9986.735,
+        "minimum_us": 8980.898,
+        "p50_us": 9116.908,
+        "p95_us": 9556.759,
+        "p99_us": 9826.238,
+        "samples": 300
+      },
+      "RawDisposal": {
+        "maximum_us": 1.826,
+        "minimum_us": 0.989,
+        "p50_us": 1.327,
+        "p95_us": 1.605,
+        "p99_us": 1.744,
+        "samples": 300
+      },
+      "Retention": {
+        "maximum_us": 0.129,
+        "minimum_us": 0.043000000000000003,
+        "p50_us": 0.052000000000000005,
+        "p95_us": 0.06899999999999999,
+        "p99_us": 0.081,
+        "samples": 300
+      },
+      "TypedOwners": {
+        "maximum_us": 87946.847,
+        "minimum_us": 82525.921,
+        "p50_us": 83467.46100000001,
+        "p95_us": 84325.68699999999,
+        "p99_us": 85118.156,
+        "samples": 300
+      }
+    }
+  },
+  "timing_scope": "hydrate includes admitted asset factory; checkpoint-file IO and prior input validation excluded"
+}

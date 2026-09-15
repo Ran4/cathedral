@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d and M2a1–M2a16 implemented and reviewed (2026-09-15). M2b–M2d and M3–M19 remain. Sequential implementation continues. M0 renderer/full-stress evidence is pending.
+Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16 and M2b implemented and reviewed (2026-09-15). M2c–M2d and M3–M19 remain. M0 renderer/full-stress evidence is pending.
 
 # An Alibi in Stone — systems first, then the full quest
 
@@ -114,3 +114,12 @@ M2a10 [tail review](evidence/m2a10/coordinator/tail_latency_audit.json) retains 
 [M2a13’s reviewed speech handoff](evidence/m2a13/README.md) adds exact interrupted input drafts and accepted recording obligations. The frozen workspace passes 2,113; all 3,600 release phase samples pass independent review. authored export pooled p99 0.009243 ms, observed maximum 0.010273 ms; populated export pooled p99 0.008516 ms, observed maximum 0.009428 ms. Complete assembly, interruption adoption and actual save/load/host acceptance remain pending.
 
 [M2a14’s reviewed handoff](evidence/m2a14/README.md) retains exact accepted scheduler/Night request inputs. The frozen workspace passes 2,129 tests; all 7,200 release phase samples pass independent review. Complete assembly, retry/adoption and host restoration remain pending.
+
+
+[M2b’s reviewed hydration handoff](evidence/m2b/README.md) reconstructs actual
+World/Engine owners from the admitted complete checkpoint with fresh bound assets,
+exact saved lineage/time and protected pending authority. The final workspace
+passes 2,191 tests. All 600 release hydrations preserve all sixteen owner hashes;
+fresh-process fixtures reproduce exact bytes and reject incompatible images.
+Hydration p99 is 39.981/119.324 ms, so M3 still owes bounded host coordination.
+M2c pending-work preparation is next; M2d continuation and M3–M19 remain.

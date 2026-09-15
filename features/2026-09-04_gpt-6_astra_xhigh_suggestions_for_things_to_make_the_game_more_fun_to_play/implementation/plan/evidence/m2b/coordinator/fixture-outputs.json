@@ -1,0 +1,20 @@
+{
+  "attempt": 1,
+  "debug_binary_sha256": "7ca7c8e3aed207a323a575358f409076e7cb836ffef8afcf89f223d115f15f1d",
+  "lineage_hex": "4d32622d666978747572652d30303031",
+  "outputs": {
+    "active": {
+      "bytes": 3309071,
+      "original": "/tmp/alibi-m2b-fixtures-1-active-write-1.json",
+      "sha256": "1b7ab0d5f607a9540898863c381c4bf14051c1eed001c8a0408e4f8077381760"
+    },
+    "initial": {
+      "bytes": 3255765,
+      "original": "/tmp/alibi-m2b-fixtures-1-initial-write-1.json",
+      "sha256": "428402a2bf380c8189f07d40242c86494d9b16bd75b7f0c8d4cfe0943598ffee"
+    }
+  },
+  "release_binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+  "results": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/fixtures-attempt-1/RESULTS.json",
+  "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b"
+}

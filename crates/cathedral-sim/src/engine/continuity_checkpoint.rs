@@ -119,21 +119,21 @@ mod last_sound {
 }
 #[derive(Debug, Serialize)]
 pub struct EngineContinuityDtoV1 {
-    version: u16,
-    boundary: LogicalTime,
-    player_id: ActorId,
+    pub(super) version: u16,
+    pub(super) boundary: LogicalTime,
+    pub(super) player_id: ActorId,
     #[serde(with = "owner::records::FloorV1")]
-    floor: ConversationFloor,
-    last_snapshot_revision: i64,
+    pub(super) floor: ConversationFloor,
+    pub(super) last_snapshot_revision: i64,
     #[serde(with = "last_sound")]
-    last_player_sound_at: f64,
+    pub(super) last_player_sound_at: f64,
     #[serde(with = "future")]
-    next_round_tick_at: f64,
-    lamp_revision_sent: u64,
+    pub(super) next_round_tick_at: f64,
+    pub(super) lamp_revision_sent: u64,
     #[serde(with = "text::vec")]
-    startup_diagnostics: Vec<String>,
-    ready_emitted: bool,
-    tts_selected: TtsBackendKind,
+    pub(super) startup_diagnostics: Vec<String>,
+    pub(super) ready_emitted: bool,
+    pub(super) tts_selected: TtsBackendKind,
     config: Config,
 }
 #[derive(Deserialize)]
@@ -255,7 +255,7 @@ fn validate_config(
 }
 #[derive(Debug)]
 pub struct EngineContinuityCandidate {
-    data: EngineContinuityDtoV1,
+    pub(super) data: EngineContinuityDtoV1,
 }
 impl Engine {
     pub fn continuity_checkpoint_context(

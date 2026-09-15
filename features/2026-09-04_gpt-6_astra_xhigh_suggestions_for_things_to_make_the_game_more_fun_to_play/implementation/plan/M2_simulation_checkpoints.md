@@ -1,4 +1,4 @@
-Status: In progress (2026-09-15). M2a1–M2a16 complete read-only composition is implemented and reviewed. M2b hydration, M2c pending-work restoration and M2d continuation remain.
+Status: In progress (2026-09-15). M2a1–M2a16 complete capture/validation and M2b quarantined hydration are implemented and reviewed. M2c pending-work restoration and M2d continuation remain.
 
 # M2 — Complete simulation checkpoints
 
@@ -87,6 +87,22 @@ Capture after the ordinary complete simulation transaction/poll boundary, with a
 Construct the restored engine through a dedicated hydration path. `Engine::new` currently seeds rounds, knowledge, inmates and other authored state; running normal seeding over a checkpoint would duplicate or reset the city. Rebind immutable assets and services without replaying world creation.
 
 Validate all IDs, item ownership/quantities, reservations, references, state variants, numerical values and time relationships before making the candidate usable. A corrupt reference must identify the failing subsystem and leave the current engine untouched.
+
+Implemented and reviewed (2026-09-15): an admitted complete
+LoadCandidate prepares a separate same-budget asset lease before its host factory
+and decodes one fully checked private owner graph. Exhaustive World/Engine
+literals move those actual owners without ordinary creation. The public
+HydratedEngine remains quarantined, retaining typed speech interruption,
+accepted cognition input and complete host continuation owners. It exposes narrow
+observations and same-budget streamed hashes of the16 actual new owner categories;
+no raw envelope remains and no Engine/World mutation, extraction or poll is public.
+Original parsed WorldSeed, fresh PromptEnv and distinct config/World asset roles
+bind through a fresh resolver. Saved lineage and logical/calendar state remain
+exact; a supplied nonzero execution generation must differ from the saved fence.
+The [owner design](evidence/m2b/owner-design.md) records construction, admission,
+disposal, immutable-cache and same-image fixture contracts. Full M2c/M2d and M3
+adoption/offload remain separate gates; synchronous hydration and the existing
+non-Send Engine do not establish host-frame acceptance.
 
 ### M2c — Pending cognition and speech
 
@@ -684,3 +700,24 @@ Running remain669,365,203/793,082,795 bytes; populated expansion has only 866,54
 bytes headroom. Capture p99 is 76.099/225.320 ms, so synchronous host placement
 remains unaccepted. M2b dedicated hydration is next; M2c external obligations,
 M2d continuation and M3 file/ECS/service publication remain mandatory.
+
+
+#### M2b coordinator acceptance — 2026-09-15
+
+Dedicated admitted hydration is accepted. It reconstructs actual World/Engine
+owners without normal seeding or a save-only poll, rebinds fresh immutable asset
+roles, and preserves lineage, time and pending authority in a protected wrapper.
+[Independent review](evidence/m2b/coordinator/review.md) records 2,191 workspace
+passes, six public cases, ordinary nonempty pending/root witnesses, exact memory
+and failure lifetimes, and all original failed/development command records.
+
+[Release measurements](evidence/m2b/performance/README.md) retain 600 hydrations
+with all sixteen owner hashes equal, across actual 520/2,520-character hosts.
+Hydration p99 is 39.981/119.324 ms; shared peaks including Running are
+726,174,363/843,676,620 bytes. The populated expansion retains 604,401 bytes of
+headroom under the unchanged cap. Three fresh writers agree for each supported
+fixture, compatible readers hydrate exact bytes, and different images refuse.
+
+M2c joint retry/held/interruption preparation is next. M2d full continuation and
+M3 file/ECS/service adoption, worker coordination and actual retiring lifetimes
+remain mandatory. Synchronous host-frame acceptance is not claimed.

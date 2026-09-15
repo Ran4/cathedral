@@ -1,0 +1,7 @@
+{
+  "binary_sha256": "60831ac78fc0e6b18314f9ec8d85332d10dbaa28bd4826561b7cb80fda41b281",
+  "dataset": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m2b/smoke",
+  "identity_sha256": "59887845b648dc5e864a0ec2bc2f1fb0d410b3986e1ec864245c3f92cea0378c",
+  "results_sha256": "aff16d2fa8d22471e60340a0e55b1276e2dedb68fae117601a6611ee24066fb3",
+  "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b"
+}

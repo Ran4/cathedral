@@ -1,0 +1,9 @@
+{
+  "binary": "/tmp/alibi-m2b-debug-reference-binary-1",
+  "bytes": 2291439072,
+  "copied_utc": "2026-09-14T23:51:43.278425+00:00",
+  "helper_sha256": "801ee79100250e31466b302b34fd455da093e99490808e14ece65306c048c79d",
+  "original": "/home/ran/src/rust/cathedralbevy/target/debug/deps/cathedralbevy-eafe86af140beaa1",
+  "sha256": "7ca7c8e3aed207a323a575358f409076e7cb836ffef8afcf89f223d115f15f1d",
+  "source_manifest_sha256": "be5312aa3547f660396f61d39014354446f765211ca0ea2c10314bc5b54eb57b"
+}

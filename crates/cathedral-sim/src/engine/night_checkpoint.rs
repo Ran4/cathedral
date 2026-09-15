@@ -12,14 +12,14 @@ use serde::{Deserialize, Serialize};
 const OWNER: &str = "engine_night";
 #[derive(Debug, Serialize)]
 pub struct EngineNightDtoV1 {
-    version: u16,
-    boundary: LogicalTime,
+    pub(super) version: u16,
+    pub(super) boundary: LogicalTime,
     #[serde(with = "owner::WorldNightV1")]
-    world: WorldNightDtoV1,
+    pub(super) world: WorldNightDtoV1,
     #[serde(with = "owner::NightOfficeV1")]
-    night: NightOfficeDtoV1,
+    pub(super) night: NightOfficeDtoV1,
     #[serde(with = "owner::records::ConfigV1")]
-    config_night_office: NightOfficeConfig,
+    pub(super) config_night_office: NightOfficeConfig,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -44,7 +44,7 @@ struct View<'a, W: Serialize, N: Serialize> {
 }
 #[derive(Debug)]
 pub struct EngineNightCandidate {
-    data: EngineNightDtoV1,
+    pub(super) data: EngineNightDtoV1,
 }
 impl Engine {
     pub fn night_checkpoint_context(&self, now: LogicalTime) -> NightCheckpointContext<'_> {
