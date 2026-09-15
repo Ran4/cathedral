@@ -42,6 +42,18 @@ pub struct CheckpointBudget {
     usage: Arc<Mutex<Usage>>,
 }
 impl CheckpointBudget {
+    /// Observe admission identity without cloning a lease or exposing its value.
+    /// IO coordinators use this before accepting a worker-owned complete save.
+    pub fn owns_admitted<T>(&self, owner: &Admitted<T>, cohort: Cohort) -> bool {
+        Arc::ptr_eq(&self.usage, &owner.reservation.usage) && owner.reservation.cohort == cohort
+    }
+
+    /// Disjoint service/worker overhead in an already admitted Running cohort.
+    /// The subordinate owner pins its slot even if the original owner retires.
+    pub fn reserve_running_overhead(&self, bytes: usize) -> Result<Reservation> {
+        reserve_subordinate(&self.usage, Cohort::Running, bytes)
+    }
+
     pub fn reserve(&self, cohort: Cohort, bytes: usize) -> Result<Reservation> {
         let mut usage = self
             .usage
@@ -118,27 +130,7 @@ impl Reservation {
     /// cloned charge: its bytes join the shared total before its owner allocates.
     /// Dropping the coordinator cannot release a surviving child's cohort slot.
     pub(crate) fn sublease(&self, bytes: usize) -> Result<Self> {
-        let mut usage = self
-            .usage
-            .lock()
-            .expect("checkpoint admission lock poisoned");
-        if bytes == 0 || bytes > MAX_RESIDENT_BYTES.saturating_sub(usage.total()) {
-            return Err(CheckpointError::new(
-                "admission",
-                "shared resident byte budget exceeded",
-            ));
-        }
-        let slot = usage.cohorts[self.cohort.index()]
-            .as_mut()
-            .expect("retained checkpoint cohort missing");
-        slot.bytes += bytes;
-        slot.owners += 1;
-        usage.record_peak();
-        Ok(Self {
-            usage: self.usage.clone(),
-            cohort: self.cohort,
-            bytes,
-        })
+        reserve_subordinate(&self.usage, self.cohort, bytes)
     }
     pub(crate) fn require_shared(&self, other: &Self) -> Result<()> {
         if !Arc::ptr_eq(&self.usage, &other.usage) {
@@ -175,6 +167,31 @@ impl Reservation {
             Ok(())
         }
     }
+}
+
+fn reserve_subordinate(
+    shared: &Arc<Mutex<Usage>>,
+    cohort: Cohort,
+    bytes: usize,
+) -> Result<Reservation> {
+    let mut usage = shared.lock().expect("checkpoint admission lock poisoned");
+    if bytes == 0 || bytes > MAX_RESIDENT_BYTES.saturating_sub(usage.total()) {
+        return Err(CheckpointError::new(
+            "admission",
+            "shared resident byte budget exceeded",
+        ));
+    }
+    let slot = usage.cohorts[cohort.index()].as_mut().ok_or_else(|| {
+        CheckpointError::new("admission", "subordinate owner requires retained cohort")
+    })?;
+    slot.bytes += bytes;
+    slot.owners += 1;
+    usage.record_peak();
+    Ok(Reservation {
+        usage: shared.clone(),
+        cohort,
+        bytes,
+    })
 }
 impl Drop for Reservation {
     fn drop(&mut self) {

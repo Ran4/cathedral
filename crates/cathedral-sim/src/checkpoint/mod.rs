@@ -15,6 +15,8 @@ pub(crate) mod records;
 pub(crate) mod serde_support;
 pub mod social;
 #[cfg(test)]
+mod storage_review_tests;
+#[cfg(test)]
 mod tests;
 mod time;
 mod wire;

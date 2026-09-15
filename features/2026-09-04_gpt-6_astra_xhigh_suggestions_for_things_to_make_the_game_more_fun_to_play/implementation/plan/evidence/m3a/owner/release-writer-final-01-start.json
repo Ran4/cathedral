@@ -1,0 +1,54 @@
+{
+  "command": [
+    "/usr/bin/env",
+    "ALIBI_M3A_PROBE_DIR=/tmp/alibi-m3a-release-slot-final",
+    "ALIBI_M3A_REPORT=/tmp/alibi-m3a-release-writer-final-report.json",
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "-p",
+    "cathedral-backends",
+    "--lib",
+    "--release",
+    "--offline",
+    "-j1",
+    "checkpoint_storage::tests::storage_release_probe",
+    "--",
+    "--exact",
+    "--ignored",
+    "--test-threads=1",
+    "--nocapture"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "LDFLAGS": null,
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "RUSTFLAGS": null
+  },
+  "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+  "inherited_removed_environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "inherited_target_environment": {
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_TARGET_DIR": null
+  },
+  "raw_log": "/tmp/alibi-m3a-release-writer-final-01.log",
+  "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+  "utc": "2026-09-15T04:17:32.972841+00:00"
+}

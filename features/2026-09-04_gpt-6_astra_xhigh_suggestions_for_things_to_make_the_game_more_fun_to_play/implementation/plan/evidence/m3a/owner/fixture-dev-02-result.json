@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "03dad3f9d58e2cadd3e9503911d94946c7ed6264e1ed52b741e17f07c198e744",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m3a-fixture-dev-02.log",
+  "raw_sha256": "a38440e139b447ff90ea710eb1eb5a47f1b4ea02841e6820959737c633c90d1c",
+  "source_map_sha256": "6aba51d774e83e63fe512a487557a3b4ae91ec7f0438c750be8e27a16081d255",
+  "sources_unchanged": true,
+  "wall_seconds": 67.38784019695595
+}

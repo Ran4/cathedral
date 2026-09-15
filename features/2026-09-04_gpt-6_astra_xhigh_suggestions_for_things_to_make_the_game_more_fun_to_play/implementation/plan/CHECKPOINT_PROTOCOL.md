@@ -1,4 +1,4 @@
-Status: M1 identities/time/generation fences and M2 complete capture, validation, hydration, pending-work preparation and deterministic continuation are implemented and reviewed (2026-09-15). M3 application adoption/storage remains.
+Status: M1 identities/time/generation fences, M2 complete capture/continuation and M3a backend slot storage are implemented and reviewed (2026-09-15). M3b application adoption, M3c controls and M3d host-frame acceptance remain.
 
 # Capturing and resuming one coherent city
 
@@ -131,6 +131,19 @@ Use immutable generation payloads plus a small slot reference as the initial pub
 4. Retain the previous acknowledged generation for recovery. Collect older unreferenced generations only after the new reference is durable and no active load/save depends on them. Keep at most two acknowledged generations plus one admitted in-progress candidate per slot; user-created separate slots remain deliberate storage choices.
 
 Fault recovery validates references and payloads without hydrating the world. If publication failed after replacement but before durability was confirmed, report the phase and offer the preserved acknowledged generation; do not claim the newly visible file was durably saved. Recovery must not guess that an arbitrary unreferenced temporary payload is the latest successful save. Test process death after each publication step as well as returned IO errors. Platform-specific atomic replacement/durability behavior must be verified by M3 before promising crash safety on that platform.
+
+[M3a](evidence/m3a/owner-design.md) implements this boundary with a durable pending
+journal before candidate creation and retains that journal through known-old
+cleanup. Its initial platform is Linux ext-family, tested on ext4. The caller
+must durably create the selected store root and its ancestor entries; M3a opens
+an existing directory and syncs its own entries. Eight operations include unread
+terminals. Save metadata binds at capture attachment, and attached operations
+survive world replacement. An uncaptured intent still requires the host's
+source-world policy. Load bytes retain their shared lease through delivery;
+inspection memory pressure reports Admission/WouldBlock, while full installed
+M2 validation remains mandatory before adoption. Process-death evidence does
+not establish physical power-loss behavior or prove a former UI observed its
+last acknowledgement.
 
 ## 7. Required adversarial continuation evidence
 

@@ -1,0 +1,41 @@
+{
+  "added": {
+    "crates/cathedral-backends/src/checkpoint_storage/disk.rs": "dca76b6a364d812b0a5cf2402fef069bbc5dc03f5cea484a97a34b6e300903d7",
+    "crates/cathedral-backends/src/checkpoint_storage/mod.rs": "bc7e1ea72ce089481d61de5aff88a1d892ae17392f214569796201788318194c",
+    "crates/cathedral-backends/src/checkpoint_storage/review_tests.rs": "80740cdee1f9693a37f5958d88bba8403d52054c6731adf2367ed0a75592fd32",
+    "crates/cathedral-backends/src/checkpoint_storage/service.rs": "93d6bc4148ede45acf37849421b10b6184a1ecec89c90e2c2e8ba6cb2d39fd08",
+    "crates/cathedral-backends/src/checkpoint_storage/tests.rs": "468326c691b2290492afaba507bb59056054035cfc305611ef04d0d4ca5025d7",
+    "crates/cathedral-sim/src/checkpoint/storage_review_tests.rs": "bede5ce4cb12774744024737467a3eda8a087993493955569b0801ea4ba14e80"
+  },
+  "changed": {
+    "Cargo.lock": {
+      "after": "dfc9adaa2a056903ec83cfe964a2ed1382048bbc9f95df04cb322a02c41e90ef",
+      "before": "50232618883c70eccf6a0ca33738fe17b0be75651378684178bed5b865b04d6b"
+    },
+    "crates/cathedral-backends/Cargo.toml": {
+      "after": "9c3877f095c0e1d1fa9ceef5a9334385d216b1311a9207812e66774a62be5f56",
+      "before": "80a00a47a665423b3224fe706d09c9da5964f443d58d4fd9d87a8d90f3d20133"
+    },
+    "crates/cathedral-backends/src/lib.rs": {
+      "after": "ec01fb68885af5397200025694ae3cf4c47f1b5c2f3479fcdc87491c611a7289",
+      "before": "d6ed1dc05a22538866742e35fcbfd12a12c7e61d3fcef85f0d3c5bc58165212d"
+    },
+    "crates/cathedral-sim/src/checkpoint/budget.rs": {
+      "after": "b3008f92e5ee07efe0bda4b98682a2165d75849aa448613a0e0e1358d4cb8e77",
+      "before": "c4f9da4cacfc661e35e25f5b6fdd2b61e59a10d68c3c590b37cb7253765cc9e5"
+    },
+    "crates/cathedral-sim/src/checkpoint/complete/mod.rs": {
+      "after": "d6615888aadceeb59f3ba6bb22e571c69c6748bfd4fec0390d128dfe2ec90714",
+      "before": "4de216a300388b0400b2907da3a5495e523f7db77444f569bd87b190b2087b16"
+    },
+    "crates/cathedral-sim/src/checkpoint/mod.rs": {
+      "after": "0ad29f0cce3223e2bff8c1578905162d04edd84cacaf100391af0f63b540a8a7",
+      "before": "bc3d48f66f5e3962037815a29532010725984836c1c95648635137f3907136b7"
+    }
+  },
+  "current_count": 993,
+  "prior_count": 987,
+  "removed": [],
+  "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+  "unchanged_predecessor_inputs": 981
+}

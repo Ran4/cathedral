@@ -21,6 +21,9 @@
 //!
 //! [`LocalEngine`]: https://github.com/ (game crate, P5)
 
+/// Durable checkpoint storage currently supports Linux local filesystems only.
+#[cfg(target_os = "linux")]
+pub mod checkpoint_storage;
 pub mod config;
 pub mod events;
 pub mod fake;

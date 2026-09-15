@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "548e1c61d5918cf239d75f8eb495f019a6d219c8339e335f6877a7151d96e210",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m3a-sim-focused-final-01.log",
+  "raw_sha256": "6fd1e925921dbbb031337742ad82d28d8a25b9a416917812e9a66b8c4b7276b6",
+  "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+  "sources_unchanged": true,
+  "wall_seconds": 199.6025695099961
+}

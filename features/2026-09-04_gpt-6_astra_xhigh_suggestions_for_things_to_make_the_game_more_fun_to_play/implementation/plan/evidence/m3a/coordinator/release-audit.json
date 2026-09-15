@@ -1,0 +1,70 @@
+{
+  "auditor_sha256": "ddd5ba74ff5d778735244c8cef9fe82ae780376f2a454bba88f29067525146af",
+  "fixture_files": {
+    "slot-manual-1.active": {
+      "bytes": 579,
+      "original": "/tmp/alibi-m3a-release-slot-final-02/slot-manual-1.active",
+      "sha256": "d60d3fbb83072f228175c7e0f1680cd5c00243eaea97dc9260b3fc19bd415108"
+    },
+    "slot-manual-1.gen-727d7fb13cda0af00cbdcfe0e7d1e143-000000000000001f.json": {
+      "bytes": 25298,
+      "original": "/tmp/alibi-m3a-release-slot-final-02/slot-manual-1.gen-727d7fb13cda0af00cbdcfe0e7d1e143-000000000000001f.json",
+      "sha256": "70eb84dc01962adc1db56d659a5c18291921be1f01b92a48d1ccb75a532eb083"
+    },
+    "slot-manual-1.gen-727d7fb13cda0af00cbdcfe0e7d1e143-0000000000000020.json": {
+      "bytes": 25298,
+      "original": "/tmp/alibi-m3a-release-slot-final-02/slot-manual-1.gen-727d7fb13cda0af00cbdcfe0e7d1e143-0000000000000020.json",
+      "sha256": "70eb84dc01962adc1db56d659a5c18291921be1f01b92a48d1ccb75a532eb083"
+    },
+    "slot-manual-1.previous": {
+      "bytes": 580,
+      "original": "/tmp/alibi-m3a-release-slot-final-02/slot-manual-1.previous",
+      "sha256": "2510485ebe681e84a65eaa286f4ddef3dcb4d6f0feae17b16f38cc9bba0a88b7"
+    }
+  },
+  "image": "/tmp/alibi-m3a-final-release-image",
+  "image_bytes": 26730496,
+  "image_sha256": "52f7f4f408a5286194b509d477bf324d9ec44571c8bfdd2bf9dbeaa193bf2246",
+  "microseconds_nearest_rank": {
+    "attach": {
+      "max": 3.938,
+      "p50": 2.678,
+      "p95": 3.706,
+      "p99": 3.938,
+      "samples": 32
+    },
+    "durable_from_attach": {
+      "max": 13616.802000000001,
+      "p50": 10127.171,
+      "p95": 13425.632,
+      "p99": 13616.802000000001,
+      "samples": 32
+    },
+    "submit": {
+      "max": 4.5249999999999995,
+      "p50": 1.088,
+      "p95": 2.124,
+      "p99": 4.5249999999999995,
+      "samples": 32
+    },
+    "terminal_take": {
+      "max": 8.552999999999999,
+      "p50": 3.259,
+      "p95": 7.431,
+      "p99": 8.552999999999999,
+      "samples": 32
+    }
+  },
+  "mode": "final",
+  "reader": {
+    "complete_m2_validation": true,
+    "path": "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3a/owner/release-reader-final-report.json",
+    "same_image_and_slot": true,
+    "sha256": "a57a03c961949f0f67331e2aaaab851a0612c7c1964b99cbf039744921a631b2"
+  },
+  "scope": "32 serial storage API cycles using a complete demo checkpoint; capture, host frames, populated city, full heap and physical power loss excluded",
+  "shared_peak_bytes": 626302647,
+  "shutdown_signal_us": 1.676,
+  "startup_us": 39.257,
+  "writer_report_sha256": "5b5c25b5548cffcf6edc8b90db8733a5d9707a9b04d1ae71580aa9adf5a18550"
+}

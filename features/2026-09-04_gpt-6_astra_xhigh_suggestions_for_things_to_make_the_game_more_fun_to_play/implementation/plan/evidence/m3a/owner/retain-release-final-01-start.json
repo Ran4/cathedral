@@ -1,0 +1,47 @@
+{
+  "command": [
+    "/usr/bin/env",
+    "ALIBI_M3A_HELPER_SHA256=e8b66b8ae863273f8a6297e9fa9b0cf4354f9570907ddaaf33720cb484f381e5",
+    "/home/ran/.local/bin/uv",
+    "run",
+    "--offline",
+    "--cache-dir",
+    "/tmp/alibi-uv",
+    "python",
+    "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3a/owner/retain_release.py",
+    "final"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "LDFLAGS": null,
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "RUSTC": "/home/ran/.cargo/bin/rustc",
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+    "RUSTFLAGS": null
+  },
+  "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+  "inherited_removed_environment": {
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "LDFLAGS": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTFLAGS": null
+  },
+  "inherited_target_environment": {
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_TARGET_DIR": null
+  },
+  "raw_log": "/tmp/alibi-m3a-retain-release-final-01.log",
+  "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+  "utc": "2026-09-15T04:35:50.578271+00:00"
+}

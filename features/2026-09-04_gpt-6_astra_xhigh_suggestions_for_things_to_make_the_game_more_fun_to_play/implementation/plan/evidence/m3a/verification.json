@@ -1,0 +1,2430 @@
+{
+  "commands": [
+    {
+      "archive": "owner/focused-dev-01.log.gz",
+      "name": "focused-dev-01",
+      "result": {
+        "archive_sha256": "a60a4714d059bce2687c088790b1385284205bcce17a8e7d4b6228f84aa50886",
+        "exit_code": 101,
+        "raw_log": "/tmp/alibi-m3a-focused-dev-01.log",
+        "raw_sha256": "d5cf039b14bab3276f3d281cc2c0f399b351d8924a70a985f38e34b7a950d0d9",
+        "source_map_sha256": "4fcf89b8fb33f8d600e02975c6c58f21afe0caa4c70e906bfd53cf431a325bfd",
+        "sources_unchanged": false,
+        "wall_seconds": 255.80116844689474
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-backends",
+          "--lib",
+          "storage_",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-focused-dev-01.log",
+        "source_map_sha256": "4fcf89b8fb33f8d600e02975c6c58f21afe0caa4c70e906bfd53cf431a325bfd",
+        "utc": "2026-09-15T03:52:33.899462+00:00"
+      },
+      "test_counts": {
+        "failed": 7,
+        "ignored": 1,
+        "passed": 1
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/fixture-dev-02.log.gz",
+      "name": "fixture-dev-02",
+      "result": {
+        "archive_sha256": "03dad3f9d58e2cadd3e9503911d94946c7ed6264e1ed52b741e17f07c198e744",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-fixture-dev-02.log",
+        "raw_sha256": "a38440e139b447ff90ea710eb1eb5a47f1b4ea02841e6820959737c633c90d1c",
+        "source_map_sha256": "6aba51d774e83e63fe512a487557a3b4ae91ec7f0438c750be8e27a16081d255",
+        "sources_unchanged": true,
+        "wall_seconds": 67.38784019695595
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-backends",
+          "--lib",
+          "storage_real_complete",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-fixture-dev-02.log",
+        "source_map_sha256": "6aba51d774e83e63fe512a487557a3b4ae91ec7f0438c750be8e27a16081d255",
+        "utc": "2026-09-15T03:58:02.982224+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 1
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/focused-dev-03.log.gz",
+      "name": "focused-dev-03",
+      "result": {
+        "archive_sha256": "34cba87fbaba0567611b221fcf5c09bcce14e2e0e67eef9911d69cb713870ab1",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-focused-dev-03.log",
+        "raw_sha256": "65639cde17a301de00eb9f68cf58be6611469ca20c542d9cedd5bfe16182a9e5",
+        "source_map_sha256": "ad1f6024b09187599cc93deaa5c6af299382a8066c54562eb3c6a7aa8fe7dd0d",
+        "sources_unchanged": false,
+        "wall_seconds": 135.57484908099286
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-backends",
+          "--lib",
+          "storage_",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-focused-dev-03.log",
+        "source_map_sha256": "ad1f6024b09187599cc93deaa5c6af299382a8066c54562eb3c6a7aa8fe7dd0d",
+        "utc": "2026-09-15T04:01:50.225662+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 1,
+        "passed": 11
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/format-dev-01.log.gz",
+      "name": "format-dev-01",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-format-dev-01.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "1df87578a70176864293bd7aeb81dd4a202f2cbcfe3e3a52303c91975aabc10e",
+        "sources_unchanged": false,
+        "wall_seconds": 0.07561517599970102
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "crates/cathedral-backends/src/lib.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/mod.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/disk.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/service.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/tests.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/review_tests.rs",
+          "crates/cathedral-sim/src/checkpoint/budget.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/storage_review_tests.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-format-dev-01.log",
+        "source_map_sha256": "1df87578a70176864293bd7aeb81dd4a202f2cbcfe3e3a52303c91975aabc10e",
+        "utc": "2026-09-15T04:06:00.801030+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/format-dev-02.log.gz",
+      "name": "format-dev-02",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-format-dev-02.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "c2ac7eb9dacf0aef9bd847760da0e3f169b2d6351a9d7c95b78d969f9693c327",
+        "sources_unchanged": false,
+        "wall_seconds": 0.03211032412946224
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "crates/cathedral-backends/src/lib.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/mod.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/disk.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/service.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/tests.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/review_tests.rs",
+          "crates/cathedral-sim/src/checkpoint/budget.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/storage_review_tests.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-format-dev-02.log",
+        "source_map_sha256": "c2ac7eb9dacf0aef9bd847760da0e3f169b2d6351a9d7c95b78d969f9693c327",
+        "utc": "2026-09-15T04:07:07.537505+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/focused-final-01.log.gz",
+      "name": "focused-final-01",
+      "result": {
+        "archive_sha256": "85ab2dd14b54ef0e1b40571055c0b1c6faaa9573555f3ea06bb47629c098cc2a",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-focused-final-01.log",
+        "raw_sha256": "ef463fbc14eeddd0d455387ec717efd332a53860dfa3586e78e3a322310faeca",
+        "source_map_sha256": "87969cd56d36ca37302d8a82f8e7e2d2bf41ee1261570001f21b3a6468e60294",
+        "sources_unchanged": false,
+        "wall_seconds": 259.6617813128978
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-backends",
+          "--lib",
+          "storage_",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-focused-final-01.log",
+        "source_map_sha256": "87969cd56d36ca37302d8a82f8e7e2d2bf41ee1261570001f21b3a6468e60294",
+        "utc": "2026-09-15T04:07:24.771529+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 2,
+        "passed": 15
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/environment-01.log.gz",
+      "name": "environment-01",
+      "result": {
+        "archive_sha256": "014f86b2996bf9bb4f26d3ef3f33d4d69e9c77d38db61a43ca31d7bca4a1c6b0",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-environment-01.log",
+        "raw_sha256": "d03bd234c07b6dd894e172dcfe8a5d1843484116c69d02ea6bca920405e045b0",
+        "source_map_sha256": "3089a6fd7d86ac10a4654a565a5c011883e2fabd6a5279c0d73070803132a4b3",
+        "sources_unchanged": true,
+        "wall_seconds": 0.05292112799361348
+      },
+      "start": {
+        "command": [
+          "/home/ran/.local/bin/uv",
+          "run",
+          "--offline",
+          "--cache-dir",
+          "/tmp/alibi-uv",
+          "python",
+          "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3a/owner/environment.py"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-environment-01.log",
+        "source_map_sha256": "3089a6fd7d86ac10a4654a565a5c011883e2fabd6a5279c0d73070803132a4b3",
+        "utc": "2026-09-15T04:10:44.967850+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/environment-final-01.log.gz",
+      "name": "environment-final-01",
+      "result": {
+        "archive_sha256": "23510ddee9fdffd4977b2882b4485e91a2311047b9bf881691707857c215ac06",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-environment-final-01.log",
+        "raw_sha256": "b7e4b9d040b330ee095b8ac132fadbc22c9e625fca0d58ad4607fc242daf3486",
+        "source_map_sha256": "3089a6fd7d86ac10a4654a565a5c011883e2fabd6a5279c0d73070803132a4b3",
+        "sources_unchanged": true,
+        "wall_seconds": 0.06950746895745397
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_M3A_HELPER_SHA256=a931e43b45c8b60aff0faec219e69aeee9135fb5fd869be9a6ad5b9da133719c",
+          "/home/ran/.local/bin/uv",
+          "run",
+          "--offline",
+          "--cache-dir",
+          "/tmp/alibi-uv",
+          "python",
+          "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3a/owner/environment.py"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-environment-final-01.log",
+        "source_map_sha256": "3089a6fd7d86ac10a4654a565a5c011883e2fabd6a5279c0d73070803132a4b3",
+        "utc": "2026-09-15T04:12:19.531735+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/format-dev-03.log.gz",
+      "name": "format-dev-03",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-format-dev-03.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "3089a6fd7d86ac10a4654a565a5c011883e2fabd6a5279c0d73070803132a4b3",
+        "sources_unchanged": false,
+        "wall_seconds": 0.018763473955914378
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "crates/cathedral-backends/src/checkpoint_storage/tests.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-format-dev-03.log",
+        "source_map_sha256": "3089a6fd7d86ac10a4654a565a5c011883e2fabd6a5279c0d73070803132a4b3",
+        "utc": "2026-09-15T04:12:35.061040+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/format-final-01.log.gz",
+      "name": "format-final-01",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-format-final-01.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+        "sources_unchanged": true,
+        "wall_seconds": 0.03579786093905568
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "--check",
+          "crates/cathedral-backends/src/lib.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/mod.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/disk.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/service.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/tests.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/review_tests.rs",
+          "crates/cathedral-sim/src/checkpoint/budget.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/storage_review_tests.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-format-final-01.log",
+        "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+        "utc": "2026-09-15T04:12:35.392317+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/focused-final-02.log.gz",
+      "name": "focused-final-02",
+      "result": {
+        "archive_sha256": "bf85ac2a0388a0420b29d55ed7225fa5799be3843e606896b8154ee47e3fcdbe",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-focused-final-02.log",
+        "raw_sha256": "3aeff76428ad07216ed422e114ede7d5e49e1609e13e0497bead1684967a4063",
+        "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+        "sources_unchanged": true,
+        "wall_seconds": 45.448312195017934
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-backends",
+          "--lib",
+          "storage_",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-focused-final-02.log",
+        "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+        "utc": "2026-09-15T04:12:44.904893+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 2,
+        "passed": 15
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/sim-focused-final-01.log.gz",
+      "name": "sim-focused-final-01",
+      "result": {
+        "archive_sha256": "548e1c61d5918cf239d75f8eb495f019a6d219c8339e335f6877a7151d96e210",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-sim-focused-final-01.log",
+        "raw_sha256": "6fd1e925921dbbb031337742ad82d28d8a25b9a416917812e9a66b8c4b7276b6",
+        "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+        "sources_unchanged": true,
+        "wall_seconds": 199.6025695099961
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-sim",
+          "--lib",
+          "storage_review_tests",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-sim-focused-final-01.log",
+        "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+        "utc": "2026-09-15T04:13:57.635332+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 4
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/release-writer-final-01.log.gz",
+      "name": "release-writer-final-01",
+      "result": {
+        "archive_sha256": "cec6fdc317bb53dd954bc17805532399191a56ed4ab2961745257b9fff93fa09",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-release-writer-final-01.log",
+        "raw_sha256": "8e5fa3f210df3ade2236a323b47163e8adc8d6df5b509e4671c2cf87dc100b92",
+        "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+        "sources_unchanged": false,
+        "wall_seconds": 284.5590918371454
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_M3A_PROBE_DIR=/tmp/alibi-m3a-release-slot-final",
+          "ALIBI_M3A_REPORT=/tmp/alibi-m3a-release-writer-final-report.json",
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-backends",
+          "--lib",
+          "--release",
+          "--offline",
+          "-j1",
+          "checkpoint_storage::tests::storage_release_probe",
+          "--",
+          "--exact",
+          "--ignored",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-release-writer-final-01.log",
+        "source_map_sha256": "b4b7bc33596cc809cde7bad5bf65f301d92ef9ac12719404e222977e21510972",
+        "utc": "2026-09-15T04:17:32.972841+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 1
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/format-dev-04.log.gz",
+      "name": "format-dev-04",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-format-dev-04.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "def0ca9877da4423d323eb4c61531330878fc9f5d0fa2989acbfb642baee2da1",
+        "sources_unchanged": false,
+        "wall_seconds": 0.029764844104647636
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "crates/cathedral-backends/src/checkpoint_storage/mod.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/disk.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/service.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/tests.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-format-dev-04.log",
+        "source_map_sha256": "def0ca9877da4423d323eb4c61531330878fc9f5d0fa2989acbfb642baee2da1",
+        "utc": "2026-09-15T04:20:24.205910+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/format-final-02.log.gz",
+      "name": "format-final-02",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-format-final-02.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "9de70e2bcdd31fc92ba98e6415beec217352d1f1fe2706fa269710812181d2bc",
+        "sources_unchanged": true,
+        "wall_seconds": 0.032744447933509946
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "--check",
+          "crates/cathedral-backends/src/lib.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/mod.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/disk.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/service.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/tests.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/review_tests.rs",
+          "crates/cathedral-sim/src/checkpoint/budget.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/storage_review_tests.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-format-final-02.log",
+        "source_map_sha256": "9de70e2bcdd31fc92ba98e6415beec217352d1f1fe2706fa269710812181d2bc",
+        "utc": "2026-09-15T04:21:21.172564+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/retain-release-pre-fix-01.log.gz",
+      "name": "retain-release-pre-fix-01",
+      "result": {
+        "archive_sha256": "2d9f6b49679ff5cebecb2ff7d67af5eeb408d7838e55ba948fe06bafc83d06c4",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-retain-release-pre-fix-01.log",
+        "raw_sha256": "e6ad2beba4cdbcc2dd2ae5d3598ecd35b0ccc1ebbf8e299d333ff20e1ca216b9",
+        "source_map_sha256": "9de70e2bcdd31fc92ba98e6415beec217352d1f1fe2706fa269710812181d2bc",
+        "sources_unchanged": true,
+        "wall_seconds": 0.08110545994713902
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_M3A_HELPER_SHA256=e8b66b8ae863273f8a6297e9fa9b0cf4354f9570907ddaaf33720cb484f381e5",
+          "/home/ran/.local/bin/uv",
+          "run",
+          "--offline",
+          "--cache-dir",
+          "/tmp/alibi-uv",
+          "python",
+          "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3a/owner/retain_release.py",
+          "pre-fix"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-retain-release-pre-fix-01.log",
+        "source_map_sha256": "9de70e2bcdd31fc92ba98e6415beec217352d1f1fe2706fa269710812181d2bc",
+        "utc": "2026-09-15T04:22:45.563211+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/focused-final-03.log.gz",
+      "name": "focused-final-03",
+      "result": {
+        "archive_sha256": "e0f260c1337357ce3255c518ceb8679b370faf2aa556577ac366f5b3f4cab06f",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-focused-final-03.log",
+        "raw_sha256": "e584ba928796fd6fe56be7a713cad0d0a7c669e0cada4177b59c9cce25a051f1",
+        "source_map_sha256": "9de70e2bcdd31fc92ba98e6415beec217352d1f1fe2706fa269710812181d2bc",
+        "sources_unchanged": true,
+        "wall_seconds": 116.39859636197798
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-backends",
+          "--lib",
+          "storage_",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-focused-final-03.log",
+        "source_map_sha256": "9de70e2bcdd31fc92ba98e6415beec217352d1f1fe2706fa269710812181d2bc",
+        "utc": "2026-09-15T04:22:45.959811+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 2,
+        "passed": 16
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/format-dev-05.log.gz",
+      "name": "format-dev-05",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-format-dev-05.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "sources_unchanged": true,
+        "wall_seconds": 0.01979759195819497
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "crates/cathedral-backends/src/checkpoint_storage/tests.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-format-dev-05.log",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "utc": "2026-09-15T04:29:20.845462+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/format-final-03.log.gz",
+      "name": "format-final-03",
+      "result": {
+        "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-format-final-03.log",
+        "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "sources_unchanged": true,
+        "wall_seconds": 0.0334847851190716
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/rustfmt",
+          "--edition",
+          "2024",
+          "--config",
+          "skip_children=true",
+          "--check",
+          "crates/cathedral-backends/src/lib.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/mod.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/disk.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/service.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/tests.rs",
+          "crates/cathedral-backends/src/checkpoint_storage/review_tests.rs",
+          "crates/cathedral-sim/src/checkpoint/budget.rs",
+          "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/mod.rs",
+          "crates/cathedral-sim/src/checkpoint/storage_review_tests.rs"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-format-final-03.log",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "utc": "2026-09-15T04:29:41.723742+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/focused-final-04.log.gz",
+      "name": "focused-final-04",
+      "result": {
+        "archive_sha256": "6c572ab28bc1f1f592496f59919fb67b61bd022c4d0dfe53cd7498f3017f2081",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-focused-final-04.log",
+        "raw_sha256": "a54a4299c2b178d77cd8beba119bd50dec9f6aa002da1839de7f1ed3f684334d",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "sources_unchanged": true,
+        "wall_seconds": 48.306549194967374
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-backends",
+          "--lib",
+          "--offline",
+          "-j1",
+          "checkpoint_storage",
+          "--",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-focused-final-04.log",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "utc": "2026-09-15T04:29:42.084256+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 2,
+        "passed": 16
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/release-writer-final-02.log.gz",
+      "name": "release-writer-final-02",
+      "result": {
+        "archive_sha256": "181bb948b6d74cab84aa4d1aa0fa7e4c345cc462a4234e2d8fe536c60b674024",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-release-writer-final-02.log",
+        "raw_sha256": "0aac5e7967944db3e958013e8b00df7caa99ffe66e6caf341fe0b4542bd5a8b6",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "sources_unchanged": true,
+        "wall_seconds": 217.28677814104594
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_M3A_PROBE_DIR=/tmp/alibi-m3a-release-slot-final-02",
+          "ALIBI_M3A_REPORT=/tmp/alibi-m3a-release-writer-final-02-report.json",
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "-p",
+          "cathedral-backends",
+          "--lib",
+          "--release",
+          "--offline",
+          "-j1",
+          "checkpoint_storage::tests::storage_release_probe",
+          "--",
+          "--exact",
+          "--ignored",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-release-writer-final-02.log",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "utc": "2026-09-15T04:30:43.317250+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 1
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/retain-release-final-01.log.gz",
+      "name": "retain-release-final-01",
+      "result": {
+        "archive_sha256": "adcc41505f98086727498db38359853c4a5306f1020feb019eedf20d9e4e95d6",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-retain-release-final-01.log",
+        "raw_sha256": "8fd44efcb7f4390fe41d884c6baef3fde17e6e824593d9547648fb23ccc493de",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "sources_unchanged": true,
+        "wall_seconds": 0.07736462797038257
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_M3A_HELPER_SHA256=e8b66b8ae863273f8a6297e9fa9b0cf4354f9570907ddaaf33720cb484f381e5",
+          "/home/ran/.local/bin/uv",
+          "run",
+          "--offline",
+          "--cache-dir",
+          "/tmp/alibi-uv",
+          "python",
+          "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3a/owner/retain_release.py",
+          "final"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-retain-release-final-01.log",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "utc": "2026-09-15T04:35:50.578271+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    },
+    {
+      "archive": "owner/release-reader-final-01.log.gz",
+      "name": "release-reader-final-01",
+      "result": {
+        "archive_sha256": "22b07868623f40530bdc29020e4ab094417c2458c3f6ad9ddc8c5baaba2a679a",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-release-reader-final-01.log",
+        "raw_sha256": "0a4177a13511bcc466a73eadae9d77b59afde31eeda17a7cb105210811352dfa",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "sources_unchanged": true,
+        "wall_seconds": 0.06153377494774759
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_M3A_PROBE_DIR=/tmp/alibi-m3a-release-slot-final-02",
+          "ALIBI_M3A_REPORT=/tmp/alibi-m3a-release-reader-final-report.json",
+          "ALIBI_M3A_PROFILE_READ=1",
+          "/tmp/alibi-m3a-final-release-image",
+          "--exact",
+          "checkpoint_storage::tests::storage_release_probe",
+          "--ignored",
+          "--test-threads=1",
+          "--nocapture"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-release-reader-final-01.log",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "utc": "2026-09-15T04:35:50.986916+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 1
+      },
+      "test_groups": 1
+    },
+    {
+      "archive": "owner/workspace-final-01.log.gz",
+      "name": "workspace-final-01",
+      "result": {
+        "archive_sha256": "1834b401c5a116603d0e48c5df673f3325c3eee32580917c8d4c90b594f29edd",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-workspace-final-01.log",
+        "raw_sha256": "78418ee6ed38de0a3f2fed25c1c42f9b9d4dedc8d33b55e3df3f639b17b0998e",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "sources_unchanged": true,
+        "wall_seconds": 1570.946141058812
+      },
+      "start": {
+        "command": [
+          "/home/ran/.cargo/bin/cargo",
+          "test",
+          "--workspace",
+          "--offline",
+          "-j1",
+          "--",
+          "--test-threads=1"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-workspace-final-01.log",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "utc": "2026-09-15T04:36:02.841360+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 46,
+        "passed": 2249
+      },
+      "test_groups": 46
+    },
+    {
+      "archive": "owner/build-progress-01.log.gz",
+      "name": "build-progress-01",
+      "result": {
+        "archive_sha256": "4cb50a5de4666e1fe9426238dd70ef077d4308e3e1fff1232de48c214c9496fc",
+        "exit_code": 0,
+        "raw_log": "/tmp/alibi-m3a-build-progress-01.log",
+        "raw_sha256": "29a111c7b5cbc0337e773a0e2a8c671ebfc553423ecbe37ab1b25d751b5846e3",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "sources_unchanged": true,
+        "wall_seconds": 2.102471057092771
+      },
+      "start": {
+        "command": [
+          "/usr/bin/env",
+          "ALIBI_M3A_HELPER_SHA256=6d837681c32a5a3c715217d3349e696c030132718108018b4e8b3948c7eff2b3",
+          "/home/ran/.local/bin/uv",
+          "run",
+          "--offline",
+          "--cache-dir",
+          "/tmp/alibi-uv",
+          "python",
+          "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3a/owner/build_progress.py"
+        ],
+        "cwd": "/home/ran/src/rust/cathedralbevy",
+        "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+        "environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "CARGO_HOME": "/tmp/alibi-m1b-cargo",
+          "CATHEDRAL_FAKE_BACKEND": "1",
+          "CATHEDRAL_HEADLESS": "1",
+          "LDFLAGS": null,
+          "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "RUSTC": "/home/ran/.cargo/bin/rustc",
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTDOC": "/home/ran/.cargo/bin/rustdoc",
+          "RUSTFLAGS": null
+        },
+        "helper_sha256": "089b1dc3a0aefb558b916906db2520a398882d67cfbbee4541fb7f20d5e25f05",
+        "inherited_removed_environment": {
+          "CARGO_BUILD_RUSTFLAGS": null,
+          "CARGO_ENCODED_RUSTFLAGS": null,
+          "LDFLAGS": null,
+          "RUSTC_WORKSPACE_WRAPPER": null,
+          "RUSTC_WRAPPER": null,
+          "RUSTFLAGS": null
+        },
+        "inherited_target_environment": {
+          "CARGO_BUILD_TARGET": null,
+          "CARGO_TARGET_DIR": null
+        },
+        "raw_log": "/tmp/alibi-m3a-build-progress-01.log",
+        "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+        "utc": "2026-09-15T04:55:40.892170+00:00"
+      },
+      "test_counts": {
+        "failed": 0,
+        "ignored": 0,
+        "passed": 0
+      },
+      "test_groups": 0
+    }
+  ],
+  "failed_development_commands": [
+    "focused-dev-01"
+  ],
+  "final_runs": [
+    "format-final-03",
+    "focused-final-04",
+    "release-writer-final-02",
+    "retain-release-final-01",
+    "release-reader-final-01",
+    "workspace-final-01"
+  ],
+  "formatted_rust_files": [
+    "crates/cathedral-backends/src/lib.rs",
+    "crates/cathedral-backends/src/checkpoint_storage/mod.rs",
+    "crates/cathedral-backends/src/checkpoint_storage/disk.rs",
+    "crates/cathedral-backends/src/checkpoint_storage/service.rs",
+    "crates/cathedral-backends/src/checkpoint_storage/tests.rs",
+    "crates/cathedral-backends/src/checkpoint_storage/review_tests.rs",
+    "crates/cathedral-sim/src/checkpoint/budget.rs",
+    "crates/cathedral-sim/src/checkpoint/complete/mod.rs",
+    "crates/cathedral-sim/src/checkpoint/mod.rs",
+    "crates/cathedral-sim/src/checkpoint/storage_review_tests.rs"
+  ],
+  "fresh_process_readers": 37,
+  "historical_mixed_source_release_retention": {
+    "fixture_files": {
+      "slot-manual-1.active": {
+        "bytes": 589,
+        "original": "/tmp/alibi-m3a-release-slot-final/slot-manual-1.active",
+        "sha256": "11e962581dd730b13fca67e05f3f11907e126fe5b54ec30749db866bd9bcb1d4"
+      },
+      "slot-manual-1.gen-937cd40991653fbb96b9ccef76c5f420-000000000000001f.json": {
+        "bytes": 25301,
+        "original": "/tmp/alibi-m3a-release-slot-final/slot-manual-1.gen-937cd40991653fbb96b9ccef76c5f420-000000000000001f.json",
+        "sha256": "ebf9eef076a65efdb492aff6ee0f53323a959fb6a7910769f72af5b16508b2ca"
+      },
+      "slot-manual-1.gen-937cd40991653fbb96b9ccef76c5f420-0000000000000020.json": {
+        "bytes": 25301,
+        "original": "/tmp/alibi-m3a-release-slot-final/slot-manual-1.gen-937cd40991653fbb96b9ccef76c5f420-0000000000000020.json",
+        "sha256": "ebf9eef076a65efdb492aff6ee0f53323a959fb6a7910769f72af5b16508b2ca"
+      },
+      "slot-manual-1.previous": {
+        "bytes": 586,
+        "original": "/tmp/alibi-m3a-release-slot-final/slot-manual-1.previous",
+        "sha256": "3d22fd2913c4b4cd8efb9fbfa110093d14d50e5adc4fd5ea72df02cbd980bdcd"
+      }
+    },
+    "helper_sha256": "e8b66b8ae863273f8a6297e9fa9b0cf4354f9570907ddaaf33720cb484f381e5",
+    "image_bytes": 26753632,
+    "image_sha256": "1ad3a194a43f9ed7bca6cd6d3172237996b647d4afeb258c05dcb27c437b3414",
+    "mode": "pre-fix",
+    "original_image": "/home/ran/src/rust/cathedralbevy/target/release/deps/cathedral_backends-a73f1efb8eea68ae",
+    "original_report": "/tmp/alibi-m3a-release-writer-final-report.json",
+    "preserved_image": "/tmp/alibi-m3a-pre-fix-release-image",
+    "report_sha256": "d2cce1ef9d30f583a836a477fb7e2176602f9dafd4a4e83ccf87a029019ee506"
+  },
+  "owner_command_count": 25,
+  "pre_final_pure_sim_focused": {
+    "byte_identical_final_crate_inputs": 318,
+    "command": "sim-focused-final-01"
+  },
+  "predecessor_commit": "b0cc0f27c11f596839a53bd69a64ac9269757667",
+  "process_death_cases": 37,
+  "release": {
+    "microseconds": {
+      "attach": {
+        "max": 3.938,
+        "min": 1.807,
+        "p50": 2.678,
+        "p95": 3.706,
+        "p99": 3.938,
+        "samples": 32
+      },
+      "durable_from_attach": {
+        "max": 13616.802000000001,
+        "min": 8431.569,
+        "p50": 10127.171,
+        "p95": 13425.632,
+        "p99": 13616.802000000001,
+        "samples": 32
+      },
+      "shutdown_signal": 1.676,
+      "startup": 39.257,
+      "submit": {
+        "max": 4.5249999999999995,
+        "min": 0.456,
+        "p50": 1.088,
+        "p95": 2.124,
+        "p99": 4.5249999999999995,
+        "samples": 32
+      },
+      "terminal_take": {
+        "max": 8.552999999999999,
+        "min": 1.4100000000000001,
+        "p50": 3.259,
+        "p95": 7.431,
+        "p99": 8.552999999999999,
+        "samples": 32
+      }
+    },
+    "reader_report_sha256": "a57a03c961949f0f67331e2aaaab851a0612c7c1964b99cbf039744921a631b2",
+    "retention": {
+      "fixture_files": {
+        "slot-manual-1.active": {
+          "bytes": 579,
+          "original": "/tmp/alibi-m3a-release-slot-final-02/slot-manual-1.active",
+          "sha256": "d60d3fbb83072f228175c7e0f1680cd5c00243eaea97dc9260b3fc19bd415108"
+        },
+        "slot-manual-1.gen-727d7fb13cda0af00cbdcfe0e7d1e143-000000000000001f.json": {
+          "bytes": 25298,
+          "original": "/tmp/alibi-m3a-release-slot-final-02/slot-manual-1.gen-727d7fb13cda0af00cbdcfe0e7d1e143-000000000000001f.json",
+          "sha256": "70eb84dc01962adc1db56d659a5c18291921be1f01b92a48d1ccb75a532eb083"
+        },
+        "slot-manual-1.gen-727d7fb13cda0af00cbdcfe0e7d1e143-0000000000000020.json": {
+          "bytes": 25298,
+          "original": "/tmp/alibi-m3a-release-slot-final-02/slot-manual-1.gen-727d7fb13cda0af00cbdcfe0e7d1e143-0000000000000020.json",
+          "sha256": "70eb84dc01962adc1db56d659a5c18291921be1f01b92a48d1ccb75a532eb083"
+        },
+        "slot-manual-1.previous": {
+          "bytes": 580,
+          "original": "/tmp/alibi-m3a-release-slot-final-02/slot-manual-1.previous",
+          "sha256": "2510485ebe681e84a65eaa286f4ddef3dcb4d6f0feae17b16f38cc9bba0a88b7"
+        }
+      },
+      "helper_sha256": "e8b66b8ae863273f8a6297e9fa9b0cf4354f9570907ddaaf33720cb484f381e5",
+      "image_bytes": 26730496,
+      "image_sha256": "52f7f4f408a5286194b509d477bf324d9ec44571c8bfdd2bf9dbeaa193bf2246",
+      "mode": "final",
+      "original_image": "/home/ran/src/rust/cathedralbevy/target/release/deps/cathedral_backends-a73f1efb8eea68ae",
+      "original_report": "/tmp/alibi-m3a-release-writer-final-02-report.json",
+      "preserved_image": "/tmp/alibi-m3a-final-release-image",
+      "report_sha256": "5b5c25b5548cffcf6edc8b90db8733a5d9707a9b04d1ae71580aa9adf5a18550"
+    }
+  },
+  "returned_fault_cases": 42,
+  "scope": "Backend durability, bounded ownership and small-fixture service measurements only; no M3b adoption, real host-frame, full-city disk-latency, renderer or power-loss acceptance.",
+  "seal_helper_sha256": "77ddbb83d2e019808511cb4add869d2d5c287d23bad3f858fb5cf73a07364b3b",
+  "source_count": 993,
+  "source_map_matches_current": true,
+  "source_map_sha256": "97936f28124b1c9876b8f1de1c91a7e5e271f00eef982f38ee6126c3a5c52f23",
+  "source_scope": "component-inputs-v2",
+  "status": "owner frozen verification complete; coordinator acceptance pending",
+  "subprocess_records": [
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "JournalWrite",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "JournalFlush",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "JournalReplace",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "JournalSync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.21s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "PayloadWrite",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.27s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "PayloadValidate",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.22s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "PayloadFlush",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.22s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "PayloadPublish",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.23s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "PayloadSync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.21s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "RecoveryWrite",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.23s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "RecoveryFlush",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.23s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "RecoveryReplace",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.21s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "RecoverySync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "ActiveWrite",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.22s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "ActiveFlush",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "ActiveReplace",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "ActiveSync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "Cleanup",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.21s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "CleanupSync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "PendingRemove",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "publish",
+      "phase": "PendingSync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "JournalWrite",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "JournalFlush",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "JournalReplace",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "JournalSync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "RecoveryWrite",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "RecoveryFlush",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "RecoveryReplace",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "RecoverySync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "ActiveWrite",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "ActiveFlush",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "ActiveReplace",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.21s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "ActiveSync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "Cleanup",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.20s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "CleanupSync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "PendingRemove",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 86,
+      "mode": "recover",
+      "phase": "PendingSync",
+      "stderr": "",
+      "stdout": "\nrunning 1 test\n",
+      "subprocess": "m3a-storage"
+    },
+    {
+      "exit_code": 0,
+      "mode": "read",
+      "phase": null,
+      "stderr": "",
+      "stdout": "\nrunning 1 test\nfresh same-image M2 validation passed\ntest checkpoint_storage::tests::storage_process_child ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 175 filtered out; finished in 0.19s\n\n",
+      "subprocess": "m3a-storage"
+    }
+  ],
+  "workspace": {
+    "groups": 46,
+    "test_counts": {
+      "failed": 0,
+      "ignored": 46,
+      "passed": 2249
+    }
+  }
+}

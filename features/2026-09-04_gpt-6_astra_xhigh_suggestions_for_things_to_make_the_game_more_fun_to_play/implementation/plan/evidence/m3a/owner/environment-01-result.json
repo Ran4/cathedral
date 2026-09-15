@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "014f86b2996bf9bb4f26d3ef3f33d4d69e9c77d38db61a43ca31d7bca4a1c6b0",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m3a-environment-01.log",
+  "raw_sha256": "d03bd234c07b6dd894e172dcfe8a5d1843484116c69d02ea6bca920405e045b0",
+  "source_map_sha256": "3089a6fd7d86ac10a4654a565a5c011883e2fabd6a5279c0d73070803132a4b3",
+  "sources_unchanged": true,
+  "wall_seconds": 0.05292112799361348
+}

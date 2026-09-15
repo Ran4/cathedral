@@ -158,11 +158,40 @@ pub struct CompleteCheckpointCost {
     pub characters: usize,
     pub categories: usize,
 }
+#[derive(Debug)]
 pub struct CompleteCheckpointInput {
     pub(crate) bytes: Vec<u8>,
     pub(crate) reservation: Reservation,
 }
 impl CompleteCheckpointInput {
+    /// Inspect only closed envelope framing, supported version/profile, bounded
+    /// metadata and category-object shape. This grants no component validity or
+    /// installed-manifest compatibility; `validate` is still mandatory.
+    ///
+    /// The existing wire parser bounds keys to 4 KiB and each metadata value to
+    /// 64 KiB. Its three manifest texts total at most 4,480 decoded bytes. The
+    /// 4 MiB scratch covers even a malformed 64 KiB typed metadata diagnostic
+    /// expanded 32 times, parser escape storage, manifest and fixed stack owners.
+    /// It is admitted before parsing and dropped before shrinking. Earlier
+    /// definition-resolution scratch remains charged on success and refusal.
+    pub fn inspect_envelope(&mut self) -> Result<CompleteEnvelopeSummary> {
+        let prior = self.reservation.bytes();
+        let wanted = self.bytes.capacity().saturating_add(4 * 1024 * 1024);
+        if prior < wanted {
+            self.reservation.resize(wanted)?;
+        }
+        let result = wire::parse(&self.bytes).map(|wire| CompleteEnvelopeSummary {
+            version: wire.version,
+            profile: wire.profile,
+            world_identity: wire.world_identity,
+            boundary: wire.boundary,
+        });
+        // The parsed manifest and intermediate serde diagnostics are gone here.
+        if prior < wanted {
+            self.reservation.resize(prior)?;
+        }
+        result
+    }
     /// Reserve before constructing installed definition metadata in the host.
     /// The resolver streams borrowed definitions and allocates only bounded
     /// manifest text/config scalars; it shares the complete scratch allowance.
@@ -212,6 +241,13 @@ impl CompleteCheckpointInput {
         owned.extend_from_slice(bytes);
         Self::from_owned(owned, reservation)
     }
+}
+#[derive(Debug, Clone, Copy)]
+pub struct CompleteEnvelopeSummary {
+    pub version: u16,
+    pub profile: CheckpointProfile,
+    pub world_identity: WorldIdentity,
+    pub boundary: LogicalTime,
 }
 #[derive(Debug)]
 pub struct CompleteCheckpointCandidate {

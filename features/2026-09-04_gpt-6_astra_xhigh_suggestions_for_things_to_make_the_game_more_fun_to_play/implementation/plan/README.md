@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16 and M2b–M2d implemented and reviewed (2026-09-15). M3–M19 remain. M0 renderer/full-stress evidence is pending.
+Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16, M2b–M2d and M3a implemented and reviewed (2026-09-15). M3b–M19 remain. M0 renderer/full-stress evidence is pending.
 
 # An Alibi in Stone — systems first, then the full quest
 
@@ -132,5 +132,12 @@ complete restored and uninterrupted futures across the required gameplay
 boundaries, including repeated loads and exact pending-work conservation. Its
 fourteen new owner/coordinator tests pass alongside the full workspace: 2,229
 passed, zero failed and 44 intentional ignores. The explicit CPU Host fixture
-does not implement application adoption. M3a durable slot storage is next;
-M3b–M19 and M0’s renderer/full-stress evidence remain.
+does not implement application adoption.
+
+[M3a’s reviewed backend storage](evidence/m3a/coordinator/review.md) adds bounded
+serial save/load operations, durable generation/reference publication and
+explicit predecessor recovery. The final workspace passes 2,249 tests with zero
+failures and 46 intentional ignores. Fault and process-death tests preserve the
+previous save; a fresh process validates the final release fixture. M3b–M19 and
+M0’s renderer/full-stress evidence remain. The small storage probe does not
+establish whole-city capture, adoption or frame-time acceptance.

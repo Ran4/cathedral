@@ -1,8 +1,46 @@
-Status: Planned (2026-09-05).
+Status: M3a backend storage implemented and independently reviewed (2026-09-15). M3b application adoption, M3c controls and M3d host-frame acceptance remain pending.
 
 # M3 — Save-anywhere in the application
 
 Make the M2 checkpoint usable during ordinary play. A save is complete only after durable file publication; a load is complete only after both simulation and host state agree.
+
+## M3a implemented backend boundary — 2026-09-15
+
+`cathedral_backends::checkpoint_storage` provides a separate serial service with
+world-independent operation IDs, eight total retained intents/results, one
+same-budget save payload and one admitted load input. Capture metadata binds at
+payload attachment, so a delayed intent cannot publish its earlier request-time
+date/location. Refusals return both the actual payload owner and metadata.
+The service adds a disjoint 3 MiB Running lease including its explicit 2 MiB
+worker stack. Slow IO, unread results and shutdown keep their actual owners
+charged; no destructor joins a disk worker.
+
+Immutable payloads and checksummed small active/previous references publish
+through a durable journal. The journal precedes candidate creation, retains the
+original acknowledged reference through all recovery attempts, and stays until
+known-old cleanup and final directory sync complete. The previous generation
+survives failed writes and remains explicitly selectable. Damaged active files
+can be repaired by explicitly selecting a validated previous reference.
+Unknown/orphan payloads are quarantined, never inferred as acknowledged saves.
+
+The initial platform is Linux ext-family filesystems (validated on `/tmp` ext4).
+Other filesystem types are refused. Directory-relative pinned-FD operations and
+an exclusive flock cover cooperating writers; malicious external edits and
+network filesystem durability are unsupported. Fresh-process death tests do
+not constitute a physical power-loss test. A reopened active reference proves
+validated publication, not that an external UI observed its former acknowledgement.
+M3b startup owns durable creation of the selected root and its ancestor entries;
+the service only creates and syncs files inside an already durable directory.
+
+The read path validates reference identity/checksums, exact bounded payload
+length/hash and closed envelope framing. It returns `CompleteCheckpointInput`
+with its original LoadCandidate lease; M2's full installed-definition and owner
+validation remains mandatory before M3b adoption. No running world is modified.
+See [M3a design and evidence](evidence/m3a/owner-design.md) for ordering,
+cancellation, worker lifetime and verification details.
+The [owner handoff](evidence/m3a/OWNER_HANDOFF.md) records final focused tests,
+42 returned-fault cases, 37 process-death cases/fresh M2 readers, a retained
+same-image release fixture and the final 2,249-passed workspace run.
 
 ## Entry
 

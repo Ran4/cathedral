@@ -1,0 +1,32 @@
+{
+  "fixture_files": {
+    "slot-manual-1.active": {
+      "bytes": 589,
+      "original": "/tmp/alibi-m3a-release-slot-final/slot-manual-1.active",
+      "sha256": "11e962581dd730b13fca67e05f3f11907e126fe5b54ec30749db866bd9bcb1d4"
+    },
+    "slot-manual-1.gen-937cd40991653fbb96b9ccef76c5f420-000000000000001f.json": {
+      "bytes": 25301,
+      "original": "/tmp/alibi-m3a-release-slot-final/slot-manual-1.gen-937cd40991653fbb96b9ccef76c5f420-000000000000001f.json",
+      "sha256": "ebf9eef076a65efdb492aff6ee0f53323a959fb6a7910769f72af5b16508b2ca"
+    },
+    "slot-manual-1.gen-937cd40991653fbb96b9ccef76c5f420-0000000000000020.json": {
+      "bytes": 25301,
+      "original": "/tmp/alibi-m3a-release-slot-final/slot-manual-1.gen-937cd40991653fbb96b9ccef76c5f420-0000000000000020.json",
+      "sha256": "ebf9eef076a65efdb492aff6ee0f53323a959fb6a7910769f72af5b16508b2ca"
+    },
+    "slot-manual-1.previous": {
+      "bytes": 586,
+      "original": "/tmp/alibi-m3a-release-slot-final/slot-manual-1.previous",
+      "sha256": "3d22fd2913c4b4cd8efb9fbfa110093d14d50e5adc4fd5ea72df02cbd980bdcd"
+    }
+  },
+  "helper_sha256": "e8b66b8ae863273f8a6297e9fa9b0cf4354f9570907ddaaf33720cb484f381e5",
+  "image_bytes": 26753632,
+  "image_sha256": "1ad3a194a43f9ed7bca6cd6d3172237996b647d4afeb258c05dcb27c437b3414",
+  "mode": "pre-fix",
+  "original_image": "/home/ran/src/rust/cathedralbevy/target/release/deps/cathedral_backends-a73f1efb8eea68ae",
+  "original_report": "/tmp/alibi-m3a-release-writer-final-report.json",
+  "preserved_image": "/tmp/alibi-m3a-pre-fix-release-image",
+  "report_sha256": "d2cce1ef9d30f583a836a477fb7e2176602f9dafd4a4e83ccf87a029019ee506"
+}
