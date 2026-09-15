@@ -182,6 +182,8 @@ pub(crate) struct NightV1 {
     #[serde(with = "flight::option")]
     in_flight: Option<Flight>,
     #[serde(skip)]
+    archive: Option<crate::prompt_archive::PromptArchivePermit>,
+    #[serde(skip)]
     load_retry_pending: bool,
     #[serde(with = "crate::traits::checkpoint::completion::option")]
     held_result: Option<Completion>,

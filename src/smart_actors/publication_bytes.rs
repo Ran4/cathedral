@@ -167,20 +167,16 @@ pub(super) fn message(message: &EngineMessage) -> usize {
             }
             TtsStreamEnd { event_id, .. } => text(&event_id.0),
             TtsFailed { event_id, reason } => text(&event_id.0) + text(reason),
-            PromptExchange {
-                actor_id,
-                actor_name,
-                prompt,
-                answer,
-                error,
-                ..
-            } => {
-                actor_id.allocated_bytes()
-                    + text(actor_name)
-                    + text(prompt)
-                    + optional(answer)
-                    + optional(error)
+            PromptExchange { exchange } => {
+                std::mem::size_of_val(exchange.as_ref())
+                    + 2 * std::mem::size_of::<usize>()
+                    + exchange.actor_id.allocated_bytes()
+                    + text(&exchange.actor_name)
+                    + text(&exchange.prompt)
+                    + optional(&exchange.answer)
+                    + optional(&exchange.error)
             }
+
             LawStanding { notices, custody } => {
                 vec(notices, |n| text(&n.line) + text(&n.clears_when))
                     + custody.as_ref().map_or(0, |c| {

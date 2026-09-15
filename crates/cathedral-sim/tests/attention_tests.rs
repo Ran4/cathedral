@@ -138,8 +138,8 @@ impl Harness {
         let steps = (seconds / 0.1).round() as u32;
         for _ in 0..steps {
             for message in self.send_all(Vec::new()) {
-                if let EngineMessage::PromptExchange { actor_id, .. } = message {
-                    prompts.push(actor_id);
+                if let EngineMessage::PromptExchange { exchange } = message {
+                    prompts.push(exchange.actor_id.clone());
                 }
             }
             self.now += 0.1;
@@ -521,8 +521,16 @@ fn warm_exchanges_hold_both_parties_and_lapse_on_silence() {
 
     // A later line refreshes the pair; silence after it lapses the hold.
     exchanges.note(&a, &b, 20.0);
-    assert!(!exchanges.warm_actors(20.0 + STAGE_PARTNER_MEMORY_SECONDS - 1.0).is_empty());
-    assert!(exchanges.warm_actors(20.0 + STAGE_PARTNER_MEMORY_SECONDS).is_empty());
+    assert!(
+        !exchanges
+            .warm_actors(20.0 + STAGE_PARTNER_MEMORY_SECONDS - 1.0)
+            .is_empty()
+    );
+    assert!(
+        exchanges
+            .warm_actors(20.0 + STAGE_PARTNER_MEMORY_SECONDS)
+            .is_empty()
+    );
 
     // Talking to yourself is not a conversation.
     exchanges.note(&a, &a, 100.0);

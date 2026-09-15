@@ -78,6 +78,39 @@ impl Engine {
             services_bound: false,
         })
     }
+    /// Both saved held exchanges are admitted before either is installed.
+    /// A second-lane refusal drops the first temporary permit and mutates none
+    /// of the saved scheduler/night authority or service bindings.
+    pub(crate) fn prepare_prompt_archives(
+        &mut self,
+        cognition: &mut dyn Cognition,
+    ) -> crate::checkpoint::Result<()> {
+        let scheduler = self
+            .scheduler
+            .held_archive_requirements(&self.world)
+            .map(|(prompt, labels)| cognition.reserve_prompt_archive(prompt, labels))
+            .transpose()
+            .map_err(|_| {
+                crate::checkpoint::CheckpointError::new(
+                    "archive",
+                    "held foreground archive capacity unavailable",
+                )
+            })?;
+        let night = self
+            .night
+            .held_archive_requirements(&self.world)
+            .map(|(prompt, labels)| cognition.reserve_prompt_archive(prompt, labels))
+            .transpose()
+            .map_err(|_| {
+                crate::checkpoint::CheckpointError::new(
+                    "archive",
+                    "held night archive capacity unavailable",
+                )
+            })?;
+        self.scheduler.bind_held_archive(scheduler);
+        self.night.bind_held_archive(night);
+        Ok(())
+    }
     pub(crate) fn bind_continuation_services(&mut self, s: ContinuationServices) {
         self.cognition = s.cognition;
         self.transcription = s.transcription;

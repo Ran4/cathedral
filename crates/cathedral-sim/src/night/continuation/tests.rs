@@ -22,6 +22,163 @@ fn pending() -> (NightOffice, World, WorldClock, Recorded) {
 }
 
 #[test]
+fn archive_night_refusal_preserves_queued_and_resumed_semantics() {
+    use crate::prompt_archive::test_support::Probe;
+    let mut world = world_with_cast();
+    let clock = clock();
+    let mut night = NightOffice::new(all_tiers(), 0.0, &clock);
+    night.seed(&world, &Round::new());
+    night.enqueue(Subject::Person(ActorId::from_raw("mjr01")), 0);
+    let mut service = Probe::new(0);
+    night.poll(
+        1.0,
+        &mut world,
+        &clock,
+        &mut vec![],
+        open(),
+        &mut service,
+        &env(),
+    );
+    assert!(service.calls.lock().unwrap().requests.is_empty());
+    assert_eq!(night.queue.len(), 1);
+    let semantic = night.queue[0].semantic.unwrap();
+    assert_eq!(service.calls.lock().unwrap().attempts, 0);
+    service.limit = 1;
+    service.calls.lock().unwrap().refused = true;
+    let now = night.next_attempt_at;
+    night.poll(
+        now,
+        &mut world,
+        &clock,
+        &mut vec![],
+        open(),
+        &mut service,
+        &env(),
+    );
+    assert_eq!(
+        service.retained(),
+        0,
+        "provider refusal releases the temporary archive permit"
+    );
+    assert_eq!(night.queue[0].semantic, Some(semantic));
+    assert!(service.calls.lock().unwrap().requests.is_empty());
+    assert_eq!(service.calls.lock().unwrap().attempts, 1);
+    service.calls.lock().unwrap().refused = false;
+    let now = night.next_attempt_at;
+    night.poll(
+        now,
+        &mut world,
+        &clock,
+        &mut vec![],
+        open(),
+        &mut service,
+        &env(),
+    );
+    assert_eq!(night.in_flight.as_ref().unwrap().semantic, semantic);
+    assert_eq!(service.retained(), 1);
+    let original = night.in_flight.clone().unwrap();
+    night.prepare_continuation(&mut world);
+    // Reconstructed candidates have no execution archive permit. Here we
+    // dispose that prior-generation entitlement explicitly to model the codec.
+    night.archive = None;
+    service.limit = 0;
+    let now = night.next_attempt_at;
+    night.poll(
+        now,
+        &mut world,
+        &clock,
+        &mut vec![],
+        open(),
+        &mut service,
+        &env(),
+    );
+    assert_eq!(night.in_flight.as_ref(), Some(&original));
+    assert!(night.load_retry_pending);
+    assert_eq!(service.calls.lock().unwrap().requests.len(), 1);
+    assert_eq!(service.calls.lock().unwrap().attempts, 2);
+    service.limit = 1;
+    service.calls.lock().unwrap().refused = true;
+    let now = night.next_attempt_at;
+    night.poll(
+        now,
+        &mut world,
+        &clock,
+        &mut vec![],
+        open(),
+        &mut service,
+        &env(),
+    );
+    assert_eq!(service.retained(), 0);
+    assert_eq!(night.in_flight.as_ref(), Some(&original));
+    assert!(night.load_retry_pending);
+    assert_eq!(service.calls.lock().unwrap().requests.len(), 1);
+    assert_eq!(service.calls.lock().unwrap().attempts, 3);
+    service.calls.lock().unwrap().refused = false;
+    let now = night.next_attempt_at;
+    night.poll(
+        now,
+        &mut world,
+        &clock,
+        &mut vec![],
+        open(),
+        &mut service,
+        &env(),
+    );
+    let calls = service.calls.lock().unwrap();
+    assert_eq!(calls.requests.len(), 2);
+    assert!(
+        calls
+            .requests
+            .iter()
+            .all(|(night, prompt)| *night && prompt == &original.prompt)
+    );
+    assert_eq!(night.in_flight.as_ref().unwrap().semantic, semantic);
+}
+
+#[test]
+fn archive_night_held_result_owns_its_permit_until_the_actual_exchange_dies() {
+    use crate::prompt_archive::test_support::Probe;
+    let (mut night, mut world, clock, _) = pending();
+    let mut service = Probe::new(1);
+    let id = night.in_flight.as_ref().unwrap().request_id;
+    night.held_result = Some(Completion {
+        request_id: id,
+        result: Err(crate::CognitionError::detailed("saved", "saved detail")),
+        duration_seconds: 0.5,
+    });
+    let (prompt, labels) = night.held_archive_requirements(&world).unwrap();
+    night.bind_held_archive(Some(
+        service.reserve_prompt_archive(prompt, labels).unwrap(),
+    ));
+    let events = night.poll(
+        2.0,
+        &mut world,
+        &clock,
+        &mut vec![],
+        open(),
+        &mut service,
+        &env(),
+    );
+    assert!(
+        service.calls.lock().unwrap().requests.is_empty(),
+        "held restoration cannot submit a provider request"
+    );
+    let exchange = events
+        .iter()
+        .find_map(|e| match e {
+            SchedulerEvent::PromptExchange { exchange } => Some(exchange.clone()),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(exchange.error.as_deref(), Some("saved detail"));
+    assert_eq!(service.retained(), 1);
+    drop(events);
+    assert_eq!(service.retained(), 1);
+    drop(exchange);
+    assert_eq!(service.retained(), 0);
+}
+
+#[test]
 fn continuation_night_exact_busy_retry_yields_and_does_not_harvest_another_lanes_reused_id() {
     let (mut night, mut world, clock, mut recorded) = pending();
     let old = night.in_flight.clone().unwrap();

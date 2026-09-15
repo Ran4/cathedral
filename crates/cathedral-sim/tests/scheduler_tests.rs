@@ -350,13 +350,9 @@ fn repeated_provider_failures_keep_the_inbox_bounded() {
     );
     // Seed Sven's inbox right at the bound, so any off-by-one overflows it.
     let sven = actor("sv3n1");
-    harness
-        .world
-        .characters
-        .get_mut(&sven)
-        .unwrap()
-        .state
-        .inbox = (0..INBOX_MAX_ENTRIES).map(|i| format!("percept {i}")).collect();
+    harness.world.characters.get_mut(&sven).unwrap().state.inbox = (0..INBOX_MAX_ENTRIES)
+        .map(|i| format!("percept {i}"))
+        .collect();
 
     harness.start();
     // Enough polls to submit and fail Sven several times over.
@@ -879,7 +875,7 @@ fn a_failed_turn_prints_the_kind_and_archives_the_detail() {
         .events
         .iter()
         .find_map(|event| match event {
-            SchedulerEvent::PromptExchange { error, .. } => error.as_deref(),
+            SchedulerEvent::PromptExchange { exchange } => exchange.error.as_deref(),
             _ => None,
         })
         .expect("a failed exchange is still archived");
@@ -1018,14 +1014,12 @@ fn every_harvested_exchange_is_archived() {
         .events
         .iter()
         .filter_map(|event| match event {
-            SchedulerEvent::PromptExchange {
-                actor_name,
-                answer,
-                error,
-                prompt,
-                duration_seconds,
-                ..
-            } => {
+            SchedulerEvent::PromptExchange { exchange } => {
+                let actor_name = &exchange.actor_name;
+                let answer = &exchange.answer;
+                let error = &exchange.error;
+                let prompt = &exchange.prompt;
+                let duration_seconds = &exchange.duration_seconds;
                 assert!(
                     prompt.contains("**since_your_last_turn**"),
                     "the archive keeps the prompt"
@@ -1067,7 +1061,9 @@ fn an_oversized_reply_is_a_provider_failure() {
         .events
         .iter()
         .find_map(|event| match event {
-            SchedulerEvent::PromptExchange { error, answer, .. } => Some((error, answer)),
+            SchedulerEvent::PromptExchange { exchange } => {
+                Some((&exchange.error, &exchange.answer))
+            }
             _ => None,
         })
         .expect("the oversized exchange is still archived");

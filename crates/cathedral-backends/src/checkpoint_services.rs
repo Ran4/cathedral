@@ -35,6 +35,18 @@ impl<T: ?Sized> Shared<T> {
     }
 }
 impl Cognition for Shared<dyn Cognition + Send> {
+    fn reserve_prompt_archive(
+        &mut self,
+        prompt: usize,
+        labels: usize,
+    ) -> Result<cathedral_sim::prompt_archive::PromptArchivePermit, CognitionBusy> {
+        self.0
+            .borrow_mut()
+            .as_mut()
+            .ok_or(CognitionBusy)?
+            .reserve_prompt_archive(prompt, labels)
+    }
+
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
         self.0
             .borrow_mut()

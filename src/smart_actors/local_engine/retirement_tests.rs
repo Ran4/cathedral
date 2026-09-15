@@ -90,14 +90,17 @@ fn real_local_retirement_drains_queues_flushes_promptlog_and_pins_external_owner
             }
         }),
     );
-    engine.prompt_log.record(PromptExchange {
-        actor_id: "probe".into(),
-        actor_name: "Retirement".into(),
-        prompt: "retired prompt must flush".into(),
-        answer: Some("wait {}".into()),
-        duration_seconds: 0.0,
-        error: None,
-    });
+    engine
+        .prompt_log
+        .record(PromptExchange {
+            actor_id: "probe".into(),
+            actor_name: "Retirement".into(),
+            prompt: "retired prompt must flush".into(),
+            answer: Some("wait {}".into()),
+            duration_seconds: 0.0,
+            error: None,
+        })
+        .unwrap();
     println!(
         "retirement fixture inventory={} assumptions=authored cast, fake cognition, no provider/device startup, embedded navigation, default weather/knowledge/marks, off TTS; trusted_bound={} is not an independent heap measurement; global writer/runtime closure remains M3b2",
         engine.checkpoint_storage_inventory(),

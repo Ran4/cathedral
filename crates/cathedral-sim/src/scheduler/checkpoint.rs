@@ -221,6 +221,7 @@ pub(crate) fn validate(n: &NpcScheduler, c: SchedulerCheckpointContext<'_>) -> R
 }
 pub(crate) fn copy(n: &NpcScheduler) -> NpcScheduler {
     NpcScheduler {
+        archive: None,
         order: n.order.clone(),
         minimum_delay_seconds: n.minimum_delay_seconds,
         maximum_backoff_seconds: n.maximum_backoff_seconds,

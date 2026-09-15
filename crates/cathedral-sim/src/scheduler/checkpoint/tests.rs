@@ -57,6 +57,7 @@ fn restored(n: &NpcScheduler, w: &World, t: f64) -> NpcScheduler {
         priority_handoffs: VecDeque::from([actor("scramble_h")]),
         player_reactions: VecDeque::from([actor("scramble_p")]),
         in_flight: None,
+        archive: None,
         load_retries: VecDeque::new(),
         resumed_context: None,
         retry_work: BTreeMap::new(),

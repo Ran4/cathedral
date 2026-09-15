@@ -233,6 +233,7 @@ fn incarnation(s: &Subject, e: Option<u64>) -> Result<()> {
 }
 pub(crate) fn copy(n: &NightOffice) -> NightOffice {
     NightOffice {
+        archive: None,
         config: n.config,
         queue: n.queue.clone(),
         in_flight: n.in_flight.clone().map(|mut f| {

@@ -1,0 +1,871 @@
+{
+  "auditor_sha256": "7688b190ff1205bb11587e88fda48b0bec5a456854903e1767693d68582486f7",
+  "commands": [
+    {
+      "archive_sha256": "443a599508acb48f4deb6dc2d57ef1d6767ecfdc0a6e2c7b737a7717eae81484",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "prompt_",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 101,
+      "matches_final_map": false,
+      "name": "development-backend-tests-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 3175,
+      "raw_log": "/tmp/alibi-m3b2b1-development-backend-tests-01.log",
+      "raw_sha256": "8b5d77f03f513723ddebea0400a2dd36a0651dcf6be8cfc66d994a1b1f4a7af7",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "b878819f7d1d777c33163580c18fa898022ab9f4b8b8166356ee2bf7f8e8ea7c",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 214.78395530302078
+    },
+    {
+      "archive_sha256": "937d8873472a1bb3b74e14045e47d3ca567d856e200399090cbf4b094fb2f69e",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "prompt_",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 101,
+      "matches_final_map": false,
+      "name": "development-backend-tests-02",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 1247,
+      "raw_log": "/tmp/alibi-m3b2b1-development-backend-tests-02.log",
+      "raw_sha256": "a956a954c13cc91268b0eea11cf4b4d98f17ccadd5ca1fc7b04df9c085b0dcea",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "aa3ae7b79680543014bdf12fe943fd68d68dc148e272c44efad9035c48a33c24",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 151.6824624661822
+    },
+    {
+      "archive_sha256": "6c14afd32c0ede71a90b983a75da2c659c773f934ae92ac28b4f84c90297ffc2",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "check",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 101,
+      "matches_final_map": false,
+      "name": "development-check-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 690,
+      "raw_log": "/tmp/alibi-m3b2b1-development-check-01.log",
+      "raw_sha256": "6bd89ab702081023626a47ad9cb7daa438e2ab63face341271daaa1ae6517120",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1004,
+      "source_map_sha256": "366dbadee937c70fe64571d1092971582dad9df7e604c107d19a4bd8ee46a71a",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 7.402887881034985
+    },
+    {
+      "archive_sha256": "4f31728a47c41f1920122d192ed12e327cc302781e2b0c5858838a6ff22b5e27",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "check",
+        "-p",
+        "cathedral-sim",
+        "--tests",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 101,
+      "matches_final_map": false,
+      "name": "development-sim-check-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 803,
+      "raw_log": "/tmp/alibi-m3b2b1-development-sim-check-01.log",
+      "raw_sha256": "c47bc1dd216b545f754fc0aa0632cf83fbc58a4a7ae7dd59de8091ef1c8b75e5",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "26efb3913536311dc6617c13c5a5399e11945c37e01ddc893df369b4fc1f9663",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 21.205910150893033
+    },
+    {
+      "archive_sha256": "ea7f347bdbde05fc746084ac0da20438a381078fe97a58b72f6b44204cc339f8",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "check",
+        "--workspace",
+        "--tests",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "development-workspace-check-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 8004,
+      "raw_log": "/tmp/alibi-m3b2b1-development-workspace-check-01.log",
+      "raw_sha256": "233cb38ba0018234c98ba51874aefa99d45de423b3ee813db317e2f4f498a623",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "89d0507ad396d2608f0fa024fafc2a1843c3cf185e760288e9001ac839f9d459",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 30.609882140997797
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/usr/bin/git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-diff-check",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b1-final-diff-check.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "8f246541e779e999382526d0a730eb95accb60965b1ff37df4b175f54c2ba0ca",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.060011810855939984
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/src/bin/cathedral_headless.rs",
+        "crates/cathedral-backends/src/checkpoint_services.rs",
+        "crates/cathedral-backends/src/lib.rs",
+        "crates/cathedral-backends/src/prompt_archive_review_tests.rs",
+        "crates/cathedral-backends/src/prompt_log.rs",
+        "crates/cathedral-backends/tests/curiosity_walk.rs",
+        "crates/cathedral-sim/src/checkpoint/complete/continuation.rs",
+        "crates/cathedral-sim/src/engine.rs",
+        "crates/cathedral-sim/src/engine/continuation.rs",
+        "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+        "crates/cathedral-sim/src/engine/continuation_review_tests.rs",
+        "crates/cathedral-sim/src/lib.rs",
+        "crates/cathedral-sim/src/night.rs",
+        "crates/cathedral-sim/src/night/checkpoint.rs",
+        "crates/cathedral-sim/src/night/checkpoint/records.rs",
+        "crates/cathedral-sim/src/night/checkpoint/tests.rs",
+        "crates/cathedral-sim/src/night/continuation.rs",
+        "crates/cathedral-sim/src/night/continuation/tests.rs",
+        "crates/cathedral-sim/src/prompt_archive.rs",
+        "crates/cathedral-sim/src/scheduler.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+        "crates/cathedral-sim/src/scheduler/continuation.rs",
+        "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+        "crates/cathedral-sim/src/traits.rs",
+        "crates/cathedral-sim/tests/attention_tests.rs",
+        "crates/cathedral-sim/tests/scheduler_tests.rs",
+        "src/smart_actors/local_engine.rs",
+        "src/smart_actors/local_engine/retirement_tests.rs",
+        "src/smart_actors/publication_bytes.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-format-02",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b1-final-format-02.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "8f246541e779e999382526d0a730eb95accb60965b1ff37df4b175f54c2ba0ca",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.1637621959671378
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "--check",
+        "crates/cathedral-backends/src/bin/cathedral_headless.rs",
+        "crates/cathedral-backends/src/checkpoint_services.rs",
+        "crates/cathedral-backends/src/lib.rs",
+        "crates/cathedral-backends/src/prompt_archive_review_tests.rs",
+        "crates/cathedral-backends/src/prompt_log.rs",
+        "crates/cathedral-backends/tests/curiosity_walk.rs",
+        "crates/cathedral-sim/src/checkpoint/complete/continuation.rs",
+        "crates/cathedral-sim/src/engine.rs",
+        "crates/cathedral-sim/src/engine/continuation.rs",
+        "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+        "crates/cathedral-sim/src/engine/continuation_review_tests.rs",
+        "crates/cathedral-sim/src/lib.rs",
+        "crates/cathedral-sim/src/night.rs",
+        "crates/cathedral-sim/src/night/checkpoint.rs",
+        "crates/cathedral-sim/src/night/checkpoint/records.rs",
+        "crates/cathedral-sim/src/night/checkpoint/tests.rs",
+        "crates/cathedral-sim/src/night/continuation.rs",
+        "crates/cathedral-sim/src/night/continuation/tests.rs",
+        "crates/cathedral-sim/src/prompt_archive.rs",
+        "crates/cathedral-sim/src/scheduler.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+        "crates/cathedral-sim/src/scheduler/continuation.rs",
+        "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+        "crates/cathedral-sim/src/traits.rs",
+        "crates/cathedral-sim/tests/attention_tests.rs",
+        "crates/cathedral-sim/tests/scheduler_tests.rs",
+        "src/smart_actors/local_engine.rs",
+        "src/smart_actors/local_engine/retirement_tests.rs",
+        "src/smart_actors/publication_bytes.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "final-format",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b1-final-format.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "5ab3cf5b7f1b7c02976df03b9ff7a07473ccc024abad21b891c4569c179fc550",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.1998355770483613
+    },
+    {
+      "archive_sha256": "cd06c19e8c0b78df8f1fb8f5fbc3e74c04c5b07c84b0a72fc0797e7e751438a3",
+      "command": [
+        "/home/ran/.local/bin/uv",
+        "run",
+        "--no-project",
+        "--cache-dir",
+        "/tmp/alibi-uv",
+        "python",
+        "features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3b2b1/owner/layout.py",
+        "final-workspace"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-layout",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 4816,
+      "raw_log": "/tmp/alibi-m3b2b1-final-layout.log",
+      "raw_sha256": "f10108359da70d88c8f579ec8762920223407ed927e8de67d2ca251dbccf07c1",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "8f246541e779e999382526d0a730eb95accb60965b1ff37df4b175f54c2ba0ca",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 5.319630607962608
+    },
+    {
+      "archive_sha256": "1a916af612e7a494730d85a5d4b19d2b876b239faea177c143defd59ae5f48ea",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "--workspace",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "final-workspace",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 521674,
+      "raw_log": "/tmp/alibi-m3b2b1-final-workspace.log",
+      "raw_sha256": "3079fe2c46bc8c3e52564c82a43da7fc6dac17264626d47b3a4a95a3e61c376c",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "8f246541e779e999382526d0a730eb95accb60965b1ff37df4b175f54c2ba0ca",
+      "sources_unchanged": true,
+      "test_groups": 46,
+      "test_totals": [
+        2292,
+        0,
+        47
+      ],
+      "wall_seconds": 1481.2825584649108
+    },
+    {
+      "archive_sha256": "2c85ba6216cd7f6a7d891aa35f771cdf63a59ed751a245748365c362ebdd62c4",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-backends",
+        "--lib",
+        "prompt_",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "focused-backend-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 2228,
+      "raw_log": "/tmp/alibi-m3b2b1-focused-backend-01.log",
+      "raw_sha256": "f41726bf2278ca4428434882bbdb8948b0c2765c48242767b2234b13c607721a",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "5ab3cf5b7f1b7c02976df03b9ff7a07473ccc024abad21b891c4569c179fc550",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        20,
+        0,
+        0
+      ],
+      "wall_seconds": 100.1242753311526
+    },
+    {
+      "archive_sha256": "3ebdd0a4a3df44dc6be581621cbb28d518744060d2ef1a8ba8a98d819aaae022",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "continuation::",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "focused-continuation-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 4911,
+      "raw_log": "/tmp/alibi-m3b2b1-focused-continuation-01.log",
+      "raw_sha256": "6a0fdf0906a2c282e76cc9c08b26ded9b69b7099605a544f315b000b6430c1de",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "5ab3cf5b7f1b7c02976df03b9ff7a07473ccc024abad21b891c4569c179fc550",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        37,
+        0,
+        1
+      ],
+      "wall_seconds": 199.65374362003058
+    },
+    {
+      "archive_sha256": "af6c44707ab5a04fc84e5e20f8d45b9ccf349dbce790ab411595af36935ea022",
+      "command": [
+        "/home/ran/.cargo/bin/cargo",
+        "test",
+        "-p",
+        "cathedral-sim",
+        "--lib",
+        "archive_",
+        "--offline",
+        "-j1"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "focused-sim-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 1078,
+      "raw_log": "/tmp/alibi-m3b2b1-focused-sim-01.log",
+      "raw_sha256": "b4e9bb653aa4a86650f27792880e97b58f8b8dc416fd4059519face18066c458",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "619166924d3220d9ae882646450fee678e67e56484c7031b7647327c24262eba",
+      "sources_unchanged": true,
+      "test_groups": 1,
+      "test_totals": [
+        6,
+        0,
+        0
+      ],
+      "wall_seconds": 247.75981801887974
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/bin/cathedral_headless.rs",
+        "crates/cathedral-backends/src/checkpoint_services.rs",
+        "crates/cathedral-backends/src/lib.rs",
+        "crates/cathedral-backends/src/prompt_log.rs",
+        "crates/cathedral-backends/tests/curiosity_walk.rs",
+        "crates/cathedral-sim/src/checkpoint/complete/continuation.rs",
+        "crates/cathedral-sim/src/engine.rs",
+        "crates/cathedral-sim/src/engine/continuation.rs",
+        "crates/cathedral-sim/src/engine/continuation_review_tests.rs",
+        "crates/cathedral-sim/src/lib.rs",
+        "crates/cathedral-sim/src/night.rs",
+        "crates/cathedral-sim/src/night/checkpoint.rs",
+        "crates/cathedral-sim/src/night/checkpoint/records.rs",
+        "crates/cathedral-sim/src/night/continuation.rs",
+        "crates/cathedral-sim/src/scheduler.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+        "crates/cathedral-sim/src/scheduler/continuation.rs",
+        "crates/cathedral-sim/src/traits.rs",
+        "crates/cathedral-sim/tests/attention_tests.rs",
+        "crates/cathedral-sim/tests/scheduler_tests.rs",
+        "src/smart_actors/local_engine.rs",
+        "src/smart_actors/publication_bytes.rs",
+        "crates/cathedral-sim/src/prompt_archive.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "format-01",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b1-format-01.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1004,
+      "source_map_sha256": "25d989c5017c44f88c7ed6ff8e1cc14f594f8bcf770f54cce584cd26b4643e25",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.2127028580289334
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/bin/cathedral_headless.rs",
+        "crates/cathedral-backends/src/checkpoint_services.rs",
+        "crates/cathedral-backends/src/lib.rs",
+        "crates/cathedral-backends/src/prompt_log.rs",
+        "crates/cathedral-backends/tests/curiosity_walk.rs",
+        "crates/cathedral-sim/src/checkpoint/complete/continuation.rs",
+        "crates/cathedral-sim/src/engine.rs",
+        "crates/cathedral-sim/src/engine/continuation.rs",
+        "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+        "crates/cathedral-sim/src/engine/continuation_review_tests.rs",
+        "crates/cathedral-sim/src/lib.rs",
+        "crates/cathedral-sim/src/night.rs",
+        "crates/cathedral-sim/src/night/checkpoint.rs",
+        "crates/cathedral-sim/src/night/checkpoint/records.rs",
+        "crates/cathedral-sim/src/night/continuation.rs",
+        "crates/cathedral-sim/src/night/continuation/tests.rs",
+        "crates/cathedral-sim/src/scheduler.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+        "crates/cathedral-sim/src/scheduler/continuation.rs",
+        "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+        "crates/cathedral-sim/src/traits.rs",
+        "crates/cathedral-sim/tests/attention_tests.rs",
+        "crates/cathedral-sim/tests/scheduler_tests.rs",
+        "src/smart_actors/local_engine.rs",
+        "src/smart_actors/publication_bytes.rs",
+        "crates/cathedral-sim/src/prompt_archive.rs",
+        "crates/cathedral-backends/src/prompt_archive_review_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "format-02",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b1-format-02.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "d2de23c3d7f3539e422daae34af2913ff74ffe814870a877ea40e106c7e19f43",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.1682246490381658
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/bin/cathedral_headless.rs",
+        "crates/cathedral-backends/src/checkpoint_services.rs",
+        "crates/cathedral-backends/src/lib.rs",
+        "crates/cathedral-backends/src/prompt_log.rs",
+        "crates/cathedral-backends/tests/curiosity_walk.rs",
+        "crates/cathedral-sim/src/checkpoint/complete/continuation.rs",
+        "crates/cathedral-sim/src/engine.rs",
+        "crates/cathedral-sim/src/engine/continuation.rs",
+        "crates/cathedral-sim/src/engine/continuation/complete_tests.rs",
+        "crates/cathedral-sim/src/engine/continuation_review_tests.rs",
+        "crates/cathedral-sim/src/lib.rs",
+        "crates/cathedral-sim/src/night.rs",
+        "crates/cathedral-sim/src/night/checkpoint.rs",
+        "crates/cathedral-sim/src/night/checkpoint/records.rs",
+        "crates/cathedral-sim/src/night/continuation.rs",
+        "crates/cathedral-sim/src/night/continuation/tests.rs",
+        "crates/cathedral-sim/src/scheduler.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/records.rs",
+        "crates/cathedral-sim/src/scheduler/checkpoint/tests.rs",
+        "crates/cathedral-sim/src/scheduler/continuation.rs",
+        "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+        "crates/cathedral-sim/src/traits.rs",
+        "crates/cathedral-sim/tests/attention_tests.rs",
+        "crates/cathedral-sim/tests/scheduler_tests.rs",
+        "src/smart_actors/local_engine.rs",
+        "src/smart_actors/publication_bytes.rs",
+        "crates/cathedral-sim/src/prompt_archive.rs",
+        "crates/cathedral-backends/src/prompt_archive_review_tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "format-03",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b1-format-03.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "950eec2d9072f4bc70240c917808d505af1450fb5ca30a4b7fac6671b2c42179",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.15472037508152425
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-backends/src/prompt_log.rs",
+        "src/smart_actors/local_engine/retirement_tests.rs",
+        "src/smart_actors/publication_bytes.rs",
+        "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+        "crates/cathedral-sim/src/night/continuation/tests.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "format-04",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b1-format-04.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "b1ffae110d3581dabd03ed6a33f4ecfdb10f406cd959432f0a6f1561272b36fe",
+      "sources_unchanged": false,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.02754913386888802
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-sim/src/prompt_archive.rs",
+        "crates/cathedral-sim/src/scheduler/continuation/tests.rs",
+        "crates/cathedral-sim/src/night/continuation/tests.rs",
+        "crates/cathedral-backends/src/prompt_log.rs",
+        "src/smart_actors/local_engine.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": false,
+      "name": "format-05",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b1-format-05.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "5ab3cf5b7f1b7c02976df03b9ff7a07473ccc024abad21b891c4569c179fc550",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.06768584507517517
+    },
+    {
+      "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "command": [
+        "/home/ran/.cargo/bin/rustfmt",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/cathedral-sim/src/night.rs"
+      ],
+      "exit_code": 0,
+      "matches_final_map": true,
+      "name": "format-06",
+      "preserved_runner_paths": [
+        "run.py"
+      ],
+      "printed_child_groups": 0,
+      "printed_child_totals": [
+        0,
+        0,
+        0
+      ],
+      "raw_bytes": 0,
+      "raw_log": "/tmp/alibi-m3b2b1-format-06.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runner_sha256": "739867fe859b69dd27c09a4e4194ae0260c3d7c04a435463555ebbf36f551982",
+      "source_count": 1005,
+      "source_map_sha256": "8f246541e779e999382526d0a730eb95accb60965b1ff37df4b175f54c2ba0ca",
+      "sources_unchanged": true,
+      "test_groups": 0,
+      "test_totals": [
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.02906864695250988
+    }
+  ],
+  "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "maps_without_started_command": [],
+  "pending": []
+}

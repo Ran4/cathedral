@@ -9,85 +9,214 @@
 //! wall clock (D24). The scheduler emits `SchedulerEvent::PromptExchange`; the
 //! host hands it here.
 
+use cathedral_sim::prompt_archive::{PromptArchivePermit, PromptArchiveRetention};
+use cathedral_sim::{Cognition, CognitionBusy, RequestId, SchedulerEvent, py_round};
+use serde::Serialize;
 use std::{
     fs,
+    io::{BufWriter, Write},
     path::{Path, PathBuf},
-    sync::OnceLock,
+    sync::{Arc, Condvar, Mutex, OnceLock},
     thread,
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use cathedral_sim::{SchedulerEvent, py_round};
-use serde::Serialize;
+type SharedExchange = Arc<cathedral_sim::prompt_archive::PromptExchange>;
+/// Eight outstanding exchanges, including reserved/held and active work.
+pub const ARCHIVE_SLOTS: usize = 8;
+pub const ARCHIVE_PAYLOAD_BYTES: usize = 16 * 1024 * 1024;
+/// Payload plus explicit 2 MiB thread stack and 2 MiB fixed controls/IO/TLS.
+pub const ARCHIVE_ALLOWANCE_BYTES: usize = ARCHIVE_PAYLOAD_BYTES + 4 * 1024 * 1024;
+const COMPLETION_UPPER_BYTES: usize = 401_024;
 
-/// The archive's work rides one shared writer thread: `record` is called from
-/// the engine pump on the game's main thread, and neither a slow disk nor the
-/// rendering of a 15 KB document may lengthen a frame. The channel's FIFO
-/// preserves the filename contract's ordering; failures still print, from the
-/// writer.
-///
-/// The job carries the *exchange*, not the rendered pair, so the two copies of
-/// the prompt that `markdown` builds and the third that `serde_json`'s escaping
-/// makes are all built over there. Only the stamp and the index stay on the
-/// caller: they are what makes the filename contract ordered, and a name picked
-/// on a background thread would race the next turn's.
-enum WriteJob {
-    Pair {
-        directory: PathBuf,
-        base: String,
-        exchange: PromptExchange,
-        /// `meta.model` and `meta.timestamp` — the two fields that are the
-        /// log's rather than the exchange's.
-        model: Option<String>,
-        timestamp: String,
-    },
-    /// Replies when every job queued before it has been written.
-    Flush(crossbeam_channel::Sender<()>),
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ArchiveUsage {
+    pub slots: usize,
+    pub bytes: usize,
+    pub active: usize,
+    pub pending_writes: usize,
+}
+struct Core {
+    usage: Mutex<ArchiveUsage>,
+    slots: usize,
+    bytes: usize,
+    // Actual writer, queue and permits retain this through final destruction.
+    _lease: Option<cathedral_sim::checkpoint::Reservation>,
+}
+impl std::fmt::Debug for Core {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ArchiveCore")
+            .field("usage", &self.usage.lock().unwrap())
+            .finish()
+    }
+}
+#[derive(Debug)]
+struct PayloadCharge {
+    core: Arc<Core>,
+    bytes: usize,
+}
+impl Drop for PayloadCharge {
+    fn drop(&mut self) {
+        let mut usage = self.core.usage.lock().unwrap();
+        usage.slots -= 1;
+        usage.bytes -= self.bytes;
+    }
+}
+#[derive(Debug)]
+struct Receipt {
+    session: Arc<Session>,
+    queued: Mutex<bool>,
+    // Session metadata dies before its final payload charge is returned.
+    charge: PayloadCharge,
+}
+impl PromptArchiveRetention for Receipt {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+#[derive(Debug, Default)]
+struct Order {
+    last_stamp: String,
+    next_index: u64,
+    accepted: u64,
+    completed: u64,
+}
+#[derive(Debug)]
+struct Progress {
+    order: Mutex<Order>,
+    done: Condvar,
+}
+#[derive(Debug)]
+struct Session {
+    directory: PathBuf,
+    model: Option<String>,
+    progress: Arc<Progress>,
+}
+struct WriteJob {
+    session: Arc<Session>,
+    base: String,
+    timestamp: String,
+    sequence: u64,
+    // All charged job metadata drops before the exchange's final receipt.
+    exchange: SharedExchange,
 }
 
-fn writer() -> &'static crossbeam_channel::Sender<WriteJob> {
-    static WRITER: OnceLock<crossbeam_channel::Sender<WriteJob>> = OnceLock::new();
-    WRITER.get_or_init(|| {
-        let (sender, receiver) = crossbeam_channel::unbounded::<WriteJob>();
-        thread::Builder::new()
+/// An isolated writer can be retained by a session and its forks. There is no
+/// process-wide map of directories and no unbounded barrier/job queue.
+/// Startup and final destruction are off-frame, like PromptLog::flush/Drop.
+struct WriterOwner {
+    worker: Option<thread::JoinHandle<()>>,
+    _core: Arc<Core>,
+}
+impl Drop for WriterOwner {
+    fn drop(&mut self) {
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
+    }
+}
+#[derive(Clone)]
+pub struct ArchiveWriter {
+    // Each clone drops its sender before its owner. The last owner therefore
+    // joins after the channel closes, retaining the native stack allowance
+    // through actual thread termination, including spawn/payload panic paths.
+    sender: crossbeam_channel::Sender<WriteJob>,
+    _owner: Arc<WriterOwner>,
+    core: Arc<Core>,
+}
+impl ArchiveWriter {
+    pub fn start_admitted(
+        budget: &cathedral_sim::checkpoint::CheckpointBudget,
+    ) -> cathedral_sim::checkpoint::Result<Self> {
+        let lease = budget.reserve_running_overhead(ARCHIVE_ALLOWANCE_BYTES)?;
+        Self::start(Some(lease), ARCHIVE_SLOTS, ARCHIVE_PAYLOAD_BYTES, None).map_err(|_| {
+            cathedral_sim::checkpoint::CheckpointError {
+                owner: "archive",
+                reason: "writer startup failed".into(),
+            }
+        })
+    }
+    fn start(
+        lease: Option<cathedral_sim::checkpoint::Reservation>,
+        slots: usize,
+        bytes: usize,
+        before_write: Option<Arc<dyn Fn() + Send + Sync>>,
+    ) -> std::io::Result<Self> {
+        let core = Arc::new(Core {
+            usage: Mutex::new(ArchiveUsage::default()),
+            slots,
+            bytes,
+            _lease: lease,
+        });
+        let (sender, receiver) = crossbeam_channel::bounded::<WriteJob>(slots);
+        let worker_core = Arc::clone(&core);
+        let worker = thread::Builder::new()
             .name("cathedral-prompt-log".into())
+            .stack_size(2 * 1024 * 1024)
             .spawn(move || {
                 for job in receiver {
-                    match job {
-                        WriteJob::Pair {
-                            directory,
-                            base,
-                            exchange,
-                            model,
-                            timestamp,
-                        } => render_and_write(
-                            &directory,
-                            &base,
-                            &exchange,
-                            model.as_deref(),
-                            timestamp,
-                        ),
-                        WriteJob::Flush(done) => {
-                            let _ = done.send(());
-                        }
+                    worker_core.usage.lock().unwrap().active += 1;
+                    if let Some(hook) = &before_write {
+                        hook();
                     }
+                    render_and_write(
+                        &job.session.directory,
+                        &job.base,
+                        &job.exchange,
+                        job.session.model.as_deref(),
+                        job.timestamp.clone(),
+                    );
+                    worker_core.usage.lock().unwrap().active -= 1;
+                    // Completion controls are fixed and covered by Core's
+                    // worker allowance. No directory/model string survives
+                    // payload disposal through this observer.
+                    let progress = Arc::clone(&job.session.progress);
+                    let sequence = job.sequence;
+                    // The strings and receipt die before flush observes completion.
+                    drop(job);
+                    worker_core.usage.lock().unwrap().pending_writes -= 1;
+                    progress.order.lock().unwrap().completed = sequence;
+                    progress.done.notify_all();
                 }
-            })
+            })?;
+        Ok(Self {
+            sender,
+            _owner: Arc::new(WriterOwner {
+                worker: Some(worker),
+                _core: Arc::clone(&core),
+            }),
+            core,
+        })
+    }
+    pub fn usage(&self) -> ArchiveUsage {
+        *self.core.usage.lock().unwrap()
+    }
+    #[cfg(test)]
+    pub(crate) fn isolated(
+        slots: usize,
+        bytes: usize,
+        before_write: Arc<dyn Fn() + Send + Sync>,
+    ) -> Self {
+        Self::start(None, slots, bytes, Some(before_write)).unwrap()
+    }
+}
+fn writer() -> &'static ArchiveWriter {
+    static WRITER: OnceLock<ArchiveWriter> = OnceLock::new();
+    WRITER.get_or_init(|| {
+        let writer = ArchiveWriter::start(None, ARCHIVE_SLOTS, ARCHIVE_PAYLOAD_BYTES, None)
             .expect("the prompt-log writer thread spawns");
-        // `Drop` covers a normal teardown, but the drive watchdog exits via
-        // `std::process::exit` (no destructors); atexit still runs there, so
-        // the archive stays complete for everything short of a hard abort.
         unsafe {
             libc::atexit(flush_at_exit);
         }
-        sender
+        writer
     })
 }
-
 extern "C" fn flush_at_exit() {
-    let (done, wait) = crossbeam_channel::bounded(1);
-    if writer().send(WriteJob::Flush(done)).is_ok() {
-        let _ = wait.recv_timeout(std::time::Duration::from_secs(5));
+    // A bounded global writer has no unbounded flush message. At exit only,
+    // wait for already accepted queue/active owners, not unsubmitted permits.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while writer().usage().pending_writes != 0 && std::time::Instant::now() < deadline {
+        std::thread::sleep(std::time::Duration::from_millis(1));
     }
 }
 
@@ -101,30 +230,6 @@ pub struct PromptExchange {
     pub answer: Option<String>,
     pub duration_seconds: f64,
     pub error: Option<String>,
-}
-
-impl PromptExchange {
-    /// The scheduler's event, if it is one — anything else is not an exchange.
-    pub fn from_scheduler_event(event: &SchedulerEvent) -> Option<Self> {
-        match event {
-            SchedulerEvent::PromptExchange {
-                actor_id,
-                actor_name,
-                prompt,
-                answer,
-                duration_seconds,
-                error,
-            } => Some(Self {
-                actor_id: actor_id.as_str().to_string(),
-                actor_name: actor_name.clone(),
-                prompt: prompt.clone(),
-                answer: answer.clone(),
-                duration_seconds: *duration_seconds,
-                error: error.clone(),
-            }),
-            _ => None,
-        }
-    }
 }
 
 /// The `.json` twin: `{prompt, answer, meta}`, in that order.
@@ -156,199 +261,454 @@ struct Meta<'a> {
 /// `record` is a silent no-op (terminal prototype, tests, a sidecar launched
 /// outside the game).
 pub struct PromptLog {
-    directory: Option<PathBuf>,
-    model: Option<String>,
+    session: Option<Arc<Session>>,
     clock: Box<dyn FnMut() -> LocalTime + Send>,
-    last_stamp: String,
-    next_index: u32,
+    writer: Option<ArchiveWriter>,
 }
-
 impl std::fmt::Debug for PromptLog {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("PromptLog")
-            .field("directory", &self.directory)
-            .field("model", &self.model)
-            .finish_non_exhaustive()
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PromptLog")
+            .field("session", &self.session)
+            .finish()
     }
 }
-
 impl Drop for PromptLog {
     fn drop(&mut self) {
-        // The archive is a contract with outside tooling: whatever was queued
-        // must be on disk before the log's owner (and then the process) ends.
-        if self.directory.is_some() {
-            self.flush();
-        }
+        self.flush();
     }
 }
-
 impl PromptLog {
-    /// `model` is the prompt log's `meta.model`: the provider's model name, or
-    /// `"fake"` / `"injected"` (`server.py:534-543`).
     pub fn new(directory: Option<PathBuf>, model: Option<String>) -> Self {
         Self::with_clock(directory, model, Box::new(LocalTime::now))
     }
-
-    /// The injectable-clock constructor the tests use.
     pub fn with_clock(
         directory: Option<PathBuf>,
         model: Option<String>,
         clock: Box<dyn FnMut() -> LocalTime + Send>,
     ) -> Self {
-        Self {
-            directory,
-            model,
-            clock,
-            last_stamp: String::new(),
-            next_index: 0,
+        if directory.is_none() {
+            Self {
+                session: None,
+                clock,
+                writer: None,
+            }
+        } else {
+            Self::with_writer(directory, model, clock, writer().clone())
         }
     }
-
+    pub fn with_writer(
+        directory: Option<PathBuf>,
+        model: Option<String>,
+        clock: Box<dyn FnMut() -> LocalTime + Send>,
+        writer: ArchiveWriter,
+    ) -> Self {
+        Self {
+            session: directory.map(|directory| {
+                Arc::new(Session {
+                    directory,
+                    model,
+                    progress: Arc::new(Progress {
+                        order: Mutex::new(Order::default()),
+                        done: Condvar::new(),
+                    }),
+                })
+            }),
+            writer: Some(writer),
+            clock,
+        }
+    }
+    /// Load successors retain this session's exact same-second filename order.
+    pub fn fork(&self) -> Self {
+        self.fork_with_clock(Box::new(LocalTime::now))
+    }
+    pub fn fork_with_clock(&self, clock: Box<dyn FnMut() -> LocalTime + Send>) -> Self {
+        Self {
+            session: self.session.clone(),
+            writer: self.writer.clone(),
+            clock,
+        }
+    }
     pub fn enabled(&self) -> bool {
-        self.directory.is_some()
+        self.session.is_some()
     }
-
     pub fn directory(&self) -> Option<&Path> {
-        self.directory.as_deref()
+        self.session.as_ref().map(|s| s.directory.as_path())
     }
-
-    /// Archive one exchange. Write failures are swallowed (after a stderr line):
-    /// a logging problem must never break the turn loop (`prompt_log.py:96-100`).
-    ///
-    /// Takes the exchange by value: it is ~15 KB of prompt and answer that only
-    /// the writer thread reads, and the caller is the engine pump.
-    pub fn record(&mut self, exchange: PromptExchange) {
-        let Some(directory) = self.directory.clone() else {
-            return;
+    pub fn usage(&self) -> ArchiveUsage {
+        self.writer
+            .as_ref()
+            .map_or_else(ArchiveUsage::default, ArchiveWriter::usage)
+    }
+    /// Decorate both real and fake cognition. The scheduler requests its permit
+    /// before provider acceptance and carries it through held result delivery.
+    pub fn cognition(&self, inner: Box<dyn Cognition + Send>) -> Box<dyn Cognition + Send> {
+        Box::new(ArchivedCognition {
+            inner,
+            session: self.session.clone(),
+            writer: self.writer.clone(),
+        })
+    }
+    fn reserve(
+        &self,
+        prompt: usize,
+        labels: usize,
+        completion: usize,
+    ) -> Result<PromptArchivePermit, CognitionBusy> {
+        reserve(
+            self.writer.as_ref(),
+            self.session.as_ref(),
+            prompt,
+            labels,
+            completion,
+        )
+    }
+    /// Standalone acceptance is fallible and returns the unchanged allocation.
+    pub fn record(&mut self, exchange: PromptExchange) -> Result<(), PromptExchange> {
+        if !self.enabled() {
+            return Ok(());
+        }
+        let completion = exchange
+            .answer
+            .as_ref()
+            .map_or(0, String::capacity)
+            .saturating_add(exchange.error.as_ref().map_or(0, String::capacity));
+        let permit = match self.reserve(
+            exchange.prompt.capacity(),
+            exchange
+                .actor_id
+                .capacity()
+                .saturating_add(exchange.actor_name.capacity()),
+            completion,
+        ) {
+            Ok(permit) => permit,
+            Err(_) => return Err(exchange),
         };
+        let exchange = cathedral_sim::prompt_archive::PromptExchange::new(
+            cathedral_sim::prompt_archive::PromptExchangeData {
+                actor_id: cathedral_sim::ActorId::from_raw(exchange.actor_id),
+                actor_name: exchange.actor_name,
+                prompt: exchange.prompt,
+                answer: exchange.answer,
+                duration_seconds: exchange.duration_seconds,
+                error: exchange.error,
+            },
+            permit,
+        );
+        self.record_shared(exchange)
+            .expect("fresh standalone archive admission");
+        Ok(())
+    }
+    /// Shared events never copy their strings. A foreign/previously queued
+    /// receipt is refused while returning that exact Arc to the caller.
+    pub fn record_shared(&mut self, exchange: SharedExchange) -> Result<(), SharedExchange> {
+        let Some(session) = self.session.as_ref() else {
+            return if exchange.admission().enabled() {
+                Err(exchange)
+            } else {
+                Ok(())
+            };
+        };
+        // Shared values require their original unique admission. A new permit
+        // only on a queue job would leave an external Arc clone uncharged.
+        let permit = exchange.admission();
+        let Some(receipt) = permit.owner::<Receipt>() else {
+            return Err(exchange);
+        };
+        if !Arc::ptr_eq(&receipt.session, session)
+            || !Arc::ptr_eq(&receipt.charge.core, &self.writer.as_ref().unwrap().core)
+        {
+            return Err(exchange);
+        }
+        let completion = exchange
+            .answer
+            .as_ref()
+            .map_or(0, String::capacity)
+            .saturating_add(exchange.error.as_ref().map_or(0, String::capacity));
+        let required = allocation_bytes(
+            session,
+            exchange.prompt.capacity(),
+            exchange
+                .actor_name
+                .capacity()
+                .saturating_add(exchange.actor_id.allocated_bytes()),
+            completion,
+        );
+        if required.is_none_or(|bytes| bytes > receipt.charge.bytes) {
+            return Err(exchange);
+        }
+        let mut queued = receipt.queued.lock().unwrap();
+        if *queued {
+            drop(queued);
+            return Err(exchange);
+        }
         let moment = (self.clock)();
         let stamp = moment.file_stamp();
-        if stamp != self.last_stamp {
-            self.last_stamp = stamp.clone();
-            self.next_index = 0;
-        }
-        let index = self.next_index;
-        self.next_index += 1;
-
+        let mut order = session.progress.order.lock().unwrap();
+        let index = if stamp == order.last_stamp {
+            order.next_index
+        } else {
+            0
+        };
+        let Some(next_index) = index.checked_add(1) else {
+            drop(queued);
+            return Err(exchange);
+        };
+        let Some(sequence) = order.accepted.checked_add(1) else {
+            drop(queued);
+            return Err(exchange);
+        };
         let base = format!(
             "{stamp}__{index:02}__{}__{}_prompt",
-            safe(&exchange.actor_id),
-            safe(&exchange.actor_name),
+            safe(exchange.actor_id.as_str()),
+            safe(&exchange.actor_name)
         );
-
-        let _ = writer().send(WriteJob::Pair {
-            directory,
-            base,
-            model: self.model.clone(),
-            timestamp: moment.iso_seconds(),
-            exchange,
-        });
+        // A reserved slot includes an active job: at most slots-1 other jobs
+        // can occupy this slots-sized channel. No disk or capacity wait here.
+        *queued = true;
+        drop(queued);
+        self.writer
+            .as_ref()
+            .unwrap()
+            .core
+            .usage
+            .lock()
+            .unwrap()
+            .pending_writes += 1;
+        self.writer
+            .as_ref()
+            .unwrap()
+            .sender
+            .try_send(WriteJob {
+                exchange,
+                session: Arc::clone(session),
+                base,
+                timestamp: moment.iso_seconds(),
+                sequence,
+            })
+            .unwrap_or_else(|_| panic!("admitted prompt writer unavailable"));
+        order.last_stamp = stamp;
+        order.next_index = next_index;
+        order.accepted = sequence;
+        Ok(())
     }
-
-    /// Blocks until every exchange recorded so far is on disk. The archive is
-    /// a filesystem contract read by outside tooling; call this before the
-    /// process ends (`Drop` does) or before a test inspects the directory.
     pub fn flush(&self) {
-        let (done, wait) = crossbeam_channel::bounded(1);
-        if writer().send(WriteJob::Flush(done)).is_ok() {
-            let _ = wait.recv();
+        let Some(session) = &self.session else {
+            return;
+        };
+        let mut order = session.progress.order.lock().unwrap();
+        let target = order.accepted;
+        while order.completed < target {
+            order = session.progress.done.wait(order).unwrap();
         }
     }
-
-    /// Convenience for the host's `SchedulerEvent`/`EngineMessage` drain loop:
-    /// non-exchange events are ignored.
-    pub fn record_scheduler_event(&mut self, event: &SchedulerEvent) {
-        if let Some(exchange) = PromptExchange::from_scheduler_event(event) {
-            self.record(exchange);
+    pub fn record_scheduler_event(&mut self, event: &SchedulerEvent) -> Result<(), SharedExchange> {
+        if !self.enabled() {
+            return Ok(());
         }
+        let SchedulerEvent::PromptExchange { exchange } = event else {
+            return Ok(());
+        };
+        if exchange.admission().enabled() {
+            return self.record_shared(Arc::clone(exchange));
+        }
+        // Legacy convenience ingress copies only after obtaining its own
+        // admission; caller-owned unadmitted event clones remain caller-owned.
+        let completion = exchange
+            .answer
+            .as_ref()
+            .map_or(0, String::capacity)
+            .saturating_add(exchange.error.as_ref().map_or(0, String::capacity));
+        let permit = self
+            .reserve(
+                exchange.prompt.capacity(),
+                exchange
+                    .actor_name
+                    .capacity()
+                    .saturating_add(exchange.actor_id.allocated_bytes()),
+                completion,
+            )
+            .map_err(|_| Arc::clone(exchange))?;
+        let owned = cathedral_sim::prompt_archive::PromptExchange::new(
+            cathedral_sim::prompt_archive::PromptExchangeData {
+                actor_id: exchange.actor_id.clone(),
+                actor_name: exchange.actor_name.clone(),
+                prompt: exchange.prompt.clone(),
+                answer: exchange.answer.clone(),
+                duration_seconds: exchange.duration_seconds,
+                error: exchange.error.clone(),
+            },
+            permit,
+        );
+        self.record_shared(owned)
+            .expect("fresh convenience archive admission");
+        Ok(())
+    }
+}
+fn reserve(
+    writer: Option<&ArchiveWriter>,
+    session: Option<&Arc<Session>>,
+    prompt: usize,
+    labels: usize,
+    completion: usize,
+) -> Result<PromptArchivePermit, CognitionBusy> {
+    let Some(session) = session else {
+        return Ok(Default::default());
+    };
+    let writer = writer.expect("enabled archive retains its writer");
+    let bytes = allocation_bytes(session, prompt, labels, completion).ok_or(CognitionBusy)?;
+    {
+        let order = session.progress.order.lock().unwrap();
+        if order.accepted > u64::MAX - ARCHIVE_SLOTS as u64
+            || order.next_index > u64::MAX - ARCHIVE_SLOTS as u64
+        {
+            return Err(CognitionBusy);
+        }
+    }
+    let mut usage = writer.core.usage.lock().unwrap();
+    if usage.slots == writer.core.slots || bytes > writer.core.bytes.saturating_sub(usage.bytes) {
+        return Err(CognitionBusy);
+    }
+    usage.slots += 1;
+    usage.bytes += bytes;
+    drop(usage);
+    Ok(PromptArchivePermit::new(Arc::new(Receipt {
+        session: Arc::clone(session),
+        queued: Mutex::new(false),
+        charge: PayloadCharge {
+            core: Arc::clone(&writer.core),
+            bytes,
+        },
+    })))
+}
+fn allocation_bytes(
+    session: &Session,
+    prompt: usize,
+    labels: usize,
+    completion: usize,
+) -> Option<usize> {
+    // Prompt/answer/error capacities; cloned metadata, filename sanitizing and
+    // joined paths (old/new growth), record roots and fixed formatting scratch.
+    prompt
+        .checked_add(completion)
+        .and_then(|n| labels.checked_mul(8).and_then(|m| n.checked_add(m)))
+        .and_then(|n| {
+            session
+                .directory
+                .capacity()
+                .checked_mul(4)
+                .and_then(|m| n.checked_add(m))
+        })
+        .and_then(|n| {
+            session
+                .model
+                .as_ref()
+                .map_or(0, String::capacity)
+                .checked_mul(2)
+                .and_then(|m| n.checked_add(m))
+        })
+        .and_then(|n| n.checked_add(8192))
+}
+struct ArchivedCognition {
+    inner: Box<dyn Cognition + Send>,
+    session: Option<Arc<Session>>,
+    writer: Option<ArchiveWriter>,
+}
+impl Cognition for ArchivedCognition {
+    fn reserve_prompt_archive(
+        &mut self,
+        prompt: usize,
+        labels: usize,
+    ) -> Result<PromptArchivePermit, CognitionBusy> {
+        reserve(
+            self.writer.as_ref(),
+            self.session.as_ref(),
+            prompt,
+            labels,
+            COMPLETION_UPPER_BYTES,
+        )
+    }
+    fn request(&mut self, p: String) -> Result<RequestId, CognitionBusy> {
+        self.inner.request(p)
+    }
+    fn request_with_budget(
+        &mut self,
+        p: String,
+        b: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        self.inner.request_with_budget(p, b)
+    }
+    fn request_night(&mut self, p: String, b: Option<u32>) -> Result<RequestId, CognitionBusy> {
+        self.inner.request_night(p, b)
     }
 }
 
 /// Render the pair and put it on disk — all of it on the writer thread.
 ///
-/// A serialization failure writes *neither* file, exactly as it did when this
-/// ran on the caller: half an archived turn is worse than none, and the `.json`
-/// is what outside tooling reads.
+/// Stream JSON before Markdown. A filesystem or serialization error stops this
+/// attempt and is reported as a diagnostic; already-written bytes may remain.
+/// Disk failures retain the existing best-effort policy outside admission.
 fn render_and_write(
     directory: &Path,
     base: &str,
-    exchange: &PromptExchange,
+    exchange: &cathedral_sim::prompt_archive::PromptExchange,
     model: Option<&str>,
     timestamp: String,
 ) {
     let meta = Meta {
-        actor_id: &exchange.actor_id,
+        actor_id: exchange.actor_id.as_str(),
         actor_name: &exchange.actor_name,
         model,
         duration_seconds: py_round(exchange.duration_seconds, 3),
         timestamp,
         error: exchange.error.as_deref(),
     };
-    let markdown = markdown(exchange, &meta);
-    let record = Record {
-        prompt: &exchange.prompt,
-        answer: exchange.answer.as_deref(),
-        meta,
-    };
-    // `ensure_ascii=False, indent=2` + a trailing newline: raw UTF-8, like the
-    // markdown character sheet inside the prompt itself.
-    let mut json = match serde_json::to_string_pretty(&record) {
-        Ok(json) => json,
-        Err(error) => {
-            eprintln!("[smart actors] prompt log write failed: {error}");
-            return;
+    let write = || -> std::io::Result<()> {
+        fs::create_dir_all(directory)?;
+        let mut json = BufWriter::with_capacity(
+            16 * 1024,
+            fs::File::create(directory.join(format!("{base}.json")))?,
+        );
+        serde_json::to_writer_pretty(
+            &mut json,
+            &Record {
+                prompt: &exchange.prompt,
+                answer: exchange.answer.as_deref(),
+                meta: Meta {
+                    timestamp: meta.timestamp.clone(),
+                    ..meta
+                },
+            },
+        )?;
+        json.write_all(b"\n")?;
+        json.flush()?;
+        drop(json);
+        let mut md = BufWriter::with_capacity(
+            16 * 1024,
+            fs::File::create(directory.join(format!("{base}.md")))?,
+        );
+        write!(
+            md,
+            "# Prompt\n\n{}\n\n# Answer\n\n{}\n\n# Meta\n\n- actor_id: {}\n- actor_name: {}\n- model: {}\n- duration_seconds: {:?}\n- timestamp: {}\n",
+            exchange.prompt.trim_end_matches('\n'),
+            exchange
+                .answer
+                .as_deref()
+                .map(|s| s.trim_end_matches('\n'))
+                .unwrap_or("*(no answer)*"),
+            meta.actor_id,
+            meta.actor_name,
+            meta.model.unwrap_or("None"),
+            meta.duration_seconds,
+            meta.timestamp
+        )?;
+        if let Some(error) = meta.error {
+            writeln!(md, "- error: {error}")?;
         }
+        md.flush()
     };
-    json.push('\n');
-    if let Err(error) = write_pair_files(directory, base, json, markdown) {
+    if let Err(error) = write() {
         eprintln!("[smart actors] prompt log write failed: {error}");
     }
-}
-
-fn write_pair_files(
-    directory: &Path,
-    base: &str,
-    json: String,
-    markdown: String,
-) -> std::io::Result<()> {
-    fs::create_dir_all(directory)?;
-    fs::write(directory.join(format!("{base}.json")), json)?;
-    fs::write(directory.join(format!("{base}.md")), markdown)?;
-    Ok(())
-}
-
-/// `# Prompt` / `# Answer` / `# Meta`, with Python's `str()` stringification of
-/// the meta values (`prompt_log.py:103-109`).
-fn markdown(exchange: &PromptExchange, meta: &Meta<'_>) -> String {
-    let mut lines: Vec<String> = vec![
-        "# Prompt".to_string(),
-        String::new(),
-        // `rstrip("\n")` strips newlines only, not spaces.
-        exchange.prompt.trim_end_matches('\n').to_string(),
-        String::new(),
-        "# Answer".to_string(),
-        String::new(),
-    ];
-    lines.push(match exchange.answer.as_deref() {
-        Some(answer) => answer.trim_end_matches('\n').to_string(),
-        None => "*(no answer)*".to_string(),
-    });
-    lines.extend(["".to_string(), "# Meta".to_string(), String::new()]);
-
-    lines.push(format!("- actor_id: {}", meta.actor_id));
-    lines.push(format!("- actor_name: {}", meta.actor_name));
-    // Python's `str(None)`.
-    lines.push(format!("- model: {}", meta.model.unwrap_or("None")));
-    // Python's `str(float)` keeps the `.0` on whole numbers; Rust's `{}` would
-    // print `2`, so this must be the `{:?}` (shortest round-trip) form.
-    lines.push(format!("- duration_seconds: {:?}", meta.duration_seconds));
-    lines.push(format!("- timestamp: {}", meta.timestamp));
-    if let Some(error) = meta.error {
-        lines.push(format!("- error: {error}"));
-    }
-    lines.push(String::new());
-    lines.join("\n")
 }
 
 /// Filename-safe id/name components (`prompt_log.py:13-16`).
@@ -517,10 +877,11 @@ mod tests {
                 second: 30,
             }));
             let clock = Arc::clone(&moment);
-            let log = PromptLog::with_clock(
+            let log = PromptLog::with_writer(
                 Some(directory.clone()),
                 Some("kimi-k2.5".to_string()),
                 Box::new(move || *clock.lock().expect("clock")),
+                ArchiveWriter::isolated(ARCHIVE_SLOTS, ARCHIVE_PAYLOAD_BYTES, Arc::new(|| {})),
             );
             Self {
                 directory,
@@ -531,7 +892,7 @@ mod tests {
 
         /// `PromptLogTests.record` with its default arguments.
         fn record(&mut self) {
-            self.log.record(exchange());
+            self.log.record(exchange()).unwrap();
             self.log.flush();
         }
 
@@ -609,10 +970,13 @@ mod tests {
     #[test]
     fn the_json_keeps_python_key_order_and_raw_utf8() {
         let mut fixture = Fixture::new("key-order");
-        fixture.log.record(PromptExchange {
-            prompt: "Ilse sa: \"Hej då\"".to_string(),
-            ..exchange()
-        });
+        fixture
+            .log
+            .record(PromptExchange {
+                prompt: "Ilse sa: \"Hej då\"".to_string(),
+                ..exchange()
+            })
+            .unwrap();
         fixture.log.flush();
 
         let raw = fixture.read("2026-07-13_09_52_30__00__k0fb1__Ilse_prompt.json");
@@ -663,11 +1027,14 @@ mod tests {
     #[test]
     fn a_failed_exchange_keeps_the_prompt_and_records_the_error() {
         let mut fixture = Fixture::new("failed");
-        fixture.log.record(PromptExchange {
-            answer: None,
-            error: Some("TimeoutError('provider')".to_string()),
-            ..exchange()
-        });
+        fixture
+            .log
+            .record(PromptExchange {
+                answer: None,
+                error: Some("TimeoutError('provider')".to_string()),
+                ..exchange()
+            })
+            .unwrap();
         fixture.log.flush();
 
         let base = "2026-07-13_09_52_30__00__k0fb1__Ilse_prompt";
@@ -691,11 +1058,14 @@ mod tests {
     #[test]
     fn hostile_name_components_are_sanitized() {
         let mut fixture = Fixture::new("hostile");
-        fixture.log.record(PromptExchange {
-            actor_id: "../evil".to_string(),
-            actor_name: "Olof Skötkonung".to_string(),
-            ..exchange()
-        });
+        fixture
+            .log
+            .record(PromptExchange {
+                actor_id: "../evil".to_string(),
+                actor_name: "Olof Skötkonung".to_string(),
+                ..exchange()
+            })
+            .unwrap();
         fixture.log.flush();
 
         assert_eq!(
@@ -709,7 +1079,7 @@ mod tests {
     fn without_a_directory_the_log_is_disabled() {
         let mut log = PromptLog::new(None, None);
         assert!(!log.enabled());
-        log.record(exchange()); // must not panic, must not write anywhere
+        log.record(exchange()).unwrap(); // must not panic, must not write anywhere
     }
 
     #[test]
@@ -723,7 +1093,7 @@ mod tests {
         fs::write(&blocker, "not a directory").expect("blocker file");
 
         let mut log = PromptLog::new(Some(blocker.join("prompts")), Some("m".to_string()));
-        log.record(exchange()); // swallowed
+        log.record(exchange()).unwrap(); // swallowed
 
         fs::remove_file(&blocker).ok();
     }
@@ -731,7 +1101,9 @@ mod tests {
     #[test]
     fn a_missing_model_prints_pythons_none() {
         let mut fixture = Fixture::new("no-model");
-        fixture.log.model = None;
+        Arc::get_mut(fixture.log.session.as_mut().unwrap())
+            .unwrap()
+            .model = None;
         fixture.record();
 
         let markdown = fixture.read("2026-07-13_09_52_30__00__k0fb1__Ilse_prompt.md");
@@ -745,10 +1117,13 @@ mod tests {
     #[test]
     fn a_whole_duration_keeps_its_decimal_point() {
         let mut fixture = Fixture::new("whole-duration");
-        fixture.log.record(PromptExchange {
-            duration_seconds: 2.0,
-            ..exchange()
-        });
+        fixture
+            .log
+            .record(PromptExchange {
+                duration_seconds: 2.0,
+                ..exchange()
+            })
+            .unwrap();
         fixture.log.flush();
         let markdown = fixture.read("2026-07-13_09_52_30__00__k0fb1__Ilse_prompt.md");
         assert!(
@@ -774,19 +1149,26 @@ mod tests {
         let mut fixture = Fixture::new("scheduler-event");
         fixture
             .log
-            .record_scheduler_event(&SchedulerEvent::Diagnostic("noise".to_string()));
+            .record_scheduler_event(&SchedulerEvent::Diagnostic("noise".to_string()))
+            .unwrap();
         assert!(!fixture.directory.exists(), "no exchange, no directory");
 
         fixture
             .log
             .record_scheduler_event(&SchedulerEvent::PromptExchange {
-                actor_id: cathedral_sim::ActorId::new("k0fb1").expect("id"),
-                actor_name: "Ilse".to_string(),
-                prompt: "the prompt".to_string(),
-                answer: Some("wait {}".to_string()),
-                duration_seconds: 0.5,
-                error: None,
-            });
+                exchange: cathedral_sim::prompt_archive::PromptExchange::new(
+                    cathedral_sim::prompt_archive::PromptExchangeData {
+                        actor_id: cathedral_sim::ActorId::new("k0fb1").expect("id"),
+                        actor_name: "Ilse".to_string(),
+                        prompt: "the prompt".to_string(),
+                        answer: Some("wait {}".to_string()),
+                        duration_seconds: 0.5,
+                        error: None,
+                    },
+                    Default::default(),
+                ),
+            })
+            .unwrap();
         assert_eq!(
             fixture.names(".md"),
             ["2026-07-13_09_52_30__00__k0fb1__Ilse_prompt.md"]
@@ -800,10 +1182,13 @@ mod tests {
     #[test]
     fn the_archive_is_byte_identical_to_python() {
         let mut fixture = Fixture::new("golden");
-        fixture.log.record(PromptExchange {
-            prompt: "Ilse sa: \"Hej då\"".to_string(),
-            ..exchange()
-        });
+        fixture
+            .log
+            .record(PromptExchange {
+                prompt: "Ilse sa: \"Hej då\"".to_string(),
+                ..exchange()
+            })
+            .unwrap();
         fixture.log.flush();
 
         assert_eq!(
@@ -850,14 +1235,17 @@ mod tests {
                 second: 31,
             }),
         );
-        failed.record(PromptExchange {
-            actor_id: "../evil".to_string(),
-            actor_name: "Olof Skötkonung".to_string(),
-            prompt: "p\n\n".to_string(),
-            answer: None,
-            duration_seconds: 2.0,
-            error: Some("TimeoutError('provider')".to_string()),
-        });
+        failed
+            .record(PromptExchange {
+                actor_id: "../evil".to_string(),
+                actor_name: "Olof Skötkonung".to_string(),
+                prompt: "p\n\n".to_string(),
+                answer: None,
+                duration_seconds: 2.0,
+                error: Some("TimeoutError('provider')".to_string()),
+            })
+            .unwrap();
+        failed.flush();
 
         assert_eq!(
             fixture.read("2026-07-13_09_52_31__00__evil__Olof-Sk-tkonung_prompt.json"),

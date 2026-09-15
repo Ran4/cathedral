@@ -88,12 +88,7 @@ pub enum SchedulerEvent {
     /// One archived LLM exchange, successes and failures alike (D24: the file
     /// writing lives in cathedral-backends).
     PromptExchange {
-        actor_id: ActorId,
-        actor_name: String,
-        prompt: String,
-        answer: Option<String>,
-        duration_seconds: f64,
-        error: Option<String>,
+        exchange: std::sync::Arc<crate::prompt_archive::PromptExchange>,
     },
 }
 
@@ -170,6 +165,7 @@ pub struct NpcScheduler {
     /// two pops would spend two provider calls on the one turn's worth of news.
     player_reactions: VecDeque<ActorId>,
     in_flight: Option<InFlight>,
+    archive: Option<crate::prompt_archive::PromptArchivePermit>,
     /// Accepted exact work whose old external execution was retired by loading.
     /// Separate from actor-deduplicated intents and ordinary failure retries.
     load_retries: VecDeque<continuation::LoadRetry>,
@@ -214,6 +210,7 @@ impl NpcScheduler {
             priority_handoffs: VecDeque::new(),
             player_reactions: VecDeque::new(),
             in_flight: None,
+            archive: None,
             load_retries: VecDeque::new(),
             resumed_context: None,
             retry_work: BTreeMap::new(),
@@ -539,6 +536,9 @@ impl NpcScheduler {
         } else {
             self.apply_result_inner(now, world, transcript, completion, events, false);
         }
+        if self.in_flight.is_none() {
+            self.archive = None;
+        }
     }
 
     fn apply_result_inner(
@@ -691,19 +691,24 @@ impl NpcScheduler {
         // (`scheduler.py:205-213`). A *held* result is not archived: it has not
         // been harvested yet.
         events.push(SchedulerEvent::PromptExchange {
-            actor_id: flight.actor_id.clone(),
-            actor_name: actor_name.clone(),
-            prompt,
-            answer: result.as_ref().ok().cloned(),
-            duration_seconds: completion.duration_seconds,
-            // The archive gets the *detail* (`repr(error)`), not the kind: a
-            // bare "LlmHttpError" cannot tell a bad key from a rate limit
-            // (`scheduler.py:205-213`, prompt.md §5.2). The diagnostic below
-            // keeps printing the kind, exactly as Python did.
-            error: result
-                .as_ref()
-                .err()
-                .map(|error| error.detail().to_string()),
+            exchange: crate::prompt_archive::PromptExchange::new(
+                crate::prompt_archive::PromptExchangeData {
+                    actor_id: flight.actor_id.clone(),
+                    actor_name: actor_name.clone(),
+                    prompt,
+                    answer: result.as_ref().ok().cloned(),
+                    duration_seconds: completion.duration_seconds,
+                    // The archive gets the *detail* (`repr(error)`), not the kind: a
+                    // bare "LlmHttpError" cannot tell a bad key from a rate limit
+                    // (`scheduler.py:205-213`, prompt.md §5.2). The diagnostic below
+                    // keeps printing the kind, exactly as Python did.
+                    error: result
+                        .as_ref()
+                        .err()
+                        .map(|error| error.detail().to_string()),
+                },
+                self.archive.take().unwrap_or_default(),
+            ),
         });
 
         // The request id already matched, so Python's actor-echo check is
@@ -1061,8 +1066,22 @@ impl NpcScheduler {
             }
         };
 
-        match cognition.request_with_budget(prompt.clone(), output_token_budget) {
-            Ok(request_id) => {
+        let submission = cognition
+            .reserve_prompt_archive(
+                prompt.capacity(),
+                actor_name
+                    .len()
+                    .max(actor_id.as_str().len())
+                    .saturating_add(actor_id.as_str().len()),
+            )
+            .and_then(|archive| {
+                cognition
+                    .request_with_budget(prompt.clone(), output_token_budget)
+                    .map(|id| (id, archive))
+            });
+        match submission {
+            Ok((request_id, archive)) => {
+                self.archive = Some(archive);
                 // Every lane lands here, and every lane clears news: an actor who
                 // has just answered the player has been shown the same world an
                 // idle turn would have shown them.
@@ -1634,11 +1653,8 @@ mod tests {
 
         assert!(events.iter().any(|event| matches!(
             event,
-            SchedulerEvent::PromptExchange {
-                actor_id,
-                answer: Some(answer),
-                ..
-            } if actor_id == &road && answer.contains("Poison")
+            SchedulerEvent::PromptExchange { exchange }
+                if exchange.actor_id == road && exchange.answer.as_ref().is_some_and(|answer| answer.contains("Poison"))
         )));
         assert!(events.iter().any(|event| matches!(
             event,

@@ -4,6 +4,48 @@ use crate::checkpoint::{CheckpointError, Result};
 #[cfg(test)]
 mod tests;
 impl NightOffice {
+    #[cfg(test)]
+    pub(crate) fn archive_test_hold_person(
+        &mut self,
+        actor: ActorId,
+        world: &mut World,
+        clock: &WorldClock,
+        cognition: &mut dyn Cognition,
+        env: &PromptEnv,
+    ) {
+        assert!(self.in_flight.is_none());
+        self.enqueue(Subject::Person(actor), clock.at(0.0).day);
+        self.poll(
+            0.0,
+            world,
+            clock,
+            &mut vec![],
+            checkpoint::tests::open(),
+            cognition,
+            env,
+        );
+        let request_id = self.in_flight.as_ref().unwrap().request_id;
+        self.held_result = Some(Completion {
+            request_id,
+            result: Err(crate::CognitionError::detailed(
+                "saved",
+                "held night archive",
+            )),
+            duration_seconds: 0.25,
+        });
+    }
+    pub(crate) fn held_archive_requirements(&self, world: &World) -> Option<(usize, usize)> {
+        self.held_result.as_ref()?;
+        let f = self.in_flight.as_ref()?;
+        Some((f.prompt.capacity(), f.subject.archive_label_bytes(world)))
+    }
+    pub(crate) fn bind_held_archive(
+        &mut self,
+        archive: Option<crate::prompt_archive::PromptArchivePermit>,
+    ) {
+        self.archive = archive;
+    }
+
     pub(crate) fn has_held_completion(&self) -> bool {
         self.held_result.is_some()
     }
@@ -137,8 +179,17 @@ impl NightOffice {
         let crate::traits::AcceptedOutputBudget::Accepted(budget) = f.output_token_budget else {
             unreachable!("complete accepted Night input")
         };
-        match cognition.request_night(f.prompt.clone(), budget) {
-            Ok(request_id) => {
+        let label_bytes = f.subject.archive_label_bytes(world);
+        let submission = cognition
+            .reserve_prompt_archive(f.prompt.capacity(), label_bytes)
+            .and_then(|archive| {
+                cognition
+                    .request_night(f.prompt.clone(), budget)
+                    .map(|id| (id, archive))
+            });
+        match submission {
+            Ok((request_id, archive)) => {
+                self.archive = Some(archive);
                 self.in_flight.as_mut().unwrap().request_id = request_id;
                 self.load_retry_pending = false;
                 self.next_attempt_at = now + pace_seconds(clock);

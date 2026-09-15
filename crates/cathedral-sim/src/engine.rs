@@ -905,12 +905,7 @@ pub enum EngineMessage {
     },
     /// One archived LLM exchange; the host writes the files (D24).
     PromptExchange {
-        actor_id: ActorId,
-        actor_name: String,
-        prompt: String,
-        answer: Option<String>,
-        duration_seconds: f64,
-        error: Option<String>,
+        exchange: std::sync::Arc<crate::prompt_archive::PromptExchange>,
     },
     /// Where the player stands with the law (`law_and_order.md` M4), on the
     /// **hot** channel — like [`Self::Clock`] and [`Self::Movement`], and never
@@ -5578,21 +5573,7 @@ fn scheduler_message(event: SchedulerEvent) -> EngineMessage {
         },
         SchedulerEvent::Status(status) => EngineMessage::Status(status),
         SchedulerEvent::Diagnostic(line) => EngineMessage::Diagnostic(line),
-        SchedulerEvent::PromptExchange {
-            actor_id,
-            actor_name,
-            prompt,
-            answer,
-            duration_seconds,
-            error,
-        } => EngineMessage::PromptExchange {
-            actor_id,
-            actor_name,
-            prompt,
-            answer,
-            duration_seconds,
-            error,
-        },
+        SchedulerEvent::PromptExchange { exchange } => EngineMessage::PromptExchange { exchange },
     }
 }
 

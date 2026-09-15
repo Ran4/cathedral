@@ -1025,13 +1025,11 @@ impl Runner {
     fn report(&mut self, message: EngineMessage) {
         match message {
             EngineMessage::Diagnostic(line) => eprintln!("{line}"),
-            EngineMessage::PromptExchange {
-                actor_name,
-                prompt,
-                answer,
-                error,
-                ..
-            } => {
+            EngineMessage::PromptExchange { exchange } => {
+                let actor_name = &exchange.actor_name;
+                let prompt = &exchange.prompt;
+                let answer = &exchange.answer;
+                let error = &exchange.error;
                 if error.is_some() {
                     self.provider_failed = true;
                 }
@@ -1459,6 +1457,14 @@ impl<T> Clone for Shared<T> {
 }
 
 impl<T: Cognition> Cognition for Shared<T> {
+    fn reserve_prompt_archive(
+        &mut self,
+        prompt: usize,
+        labels: usize,
+    ) -> Result<cathedral_sim::prompt_archive::PromptArchivePermit, CognitionBusy> {
+        self.0.borrow_mut().reserve_prompt_archive(prompt, labels)
+    }
+
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
         self.0.borrow_mut().request(prompt)
     }

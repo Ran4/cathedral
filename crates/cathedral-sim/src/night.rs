@@ -113,6 +113,18 @@ enum Subject {
 }
 
 impl Subject {
+    fn archive_label_bytes(&self, world: &World) -> usize {
+        match self {
+            Self::Person(id) => world
+                .characters
+                .get(id)
+                .map_or(id.as_str().len(), |a| a.name().len())
+                .max(id.as_str().len())
+                .saturating_add(id.as_str().len()),
+            Self::Ward(ward) => ward.as_str().len().saturating_mul(2).saturating_add(10),
+        }
+    }
+
     /// How the diagnostics name it.
     fn label(&self, world: &World) -> String {
         match self {
@@ -238,6 +250,7 @@ pub struct NightOffice {
     config: NightOfficeConfig,
     queue: VecDeque<Due>,
     in_flight: Option<Flight>,
+    archive: Option<crate::prompt_archive::PromptArchivePermit>,
     /// The saved external execution is gone; the exact flight remains owed.
     load_retry_pending: bool,
     /// Exact completion retained when the complete receipt batch cannot fit.
@@ -272,6 +285,7 @@ impl NightOffice {
             config,
             queue: VecDeque::new(),
             in_flight: None,
+            archive: None,
             load_retry_pending: false,
             held_result: None,
             last_reflected: BTreeMap::new(),
@@ -634,8 +648,17 @@ impl NightOffice {
         };
         let presence_epoch = due.presence_epoch;
         let output_token_budget = due.subject.output_token_budget(world);
-        match cognition.request_night(prompt.clone(), output_token_budget) {
-            Ok(request_id) => {
+        let label_bytes = due.subject.archive_label_bytes(world);
+        let submission = cognition
+            .reserve_prompt_archive(prompt.capacity(), label_bytes)
+            .and_then(|archive| {
+                cognition
+                    .request_night(prompt.clone(), output_token_budget)
+                    .map(|id| (id, archive))
+            });
+        match submission {
+            Ok((request_id, archive)) => {
+                self.archive = Some(archive);
                 // Trickle rather than burst: the next reflection waits out a
                 // slice of the game day, so a night is a night and not
                 // thirty-eight requests at the same second of it.
@@ -669,6 +692,18 @@ impl NightOffice {
     }
 
     fn apply(
+        &mut self,
+        now: f64,
+        world: &mut World,
+        completion: Completion,
+        events: &mut Vec<SchedulerEvent>,
+    ) {
+        self.apply_inner(now, world, completion, events);
+        if self.in_flight.is_none() {
+            self.archive = None;
+        }
+    }
+    fn apply_inner(
         &mut self,
         now: f64,
         world: &mut World,
@@ -793,22 +828,34 @@ impl NightOffice {
             // A ward is not an actor, so the archive files it under a handle
             // that cannot collide with one: ids are five characters, wards
             // are words.
-            Subject::Ward(ward) => (ActorId::from_raw(format!("ward:{}", ward.as_str())), label),
+            Subject::Ward(ward) => {
+                // Match the pre-admitted label storage instead of depending on
+                // format!'s spare-capacity estimate for this synthetic ID.
+                let mut id = String::with_capacity(5 + ward.as_str().len());
+                id.push_str("ward:");
+                id.push_str(ward.as_str());
+                (ActorId::from_raw(id), label)
+            }
         };
 
         // The archive is unconditional and first, exactly as the scheduler's is:
         // a failed reflection is precisely what you want in the log.
         events.push(SchedulerEvent::PromptExchange {
-            actor_id,
-            actor_name: actor_name.clone(),
-            prompt: flight.prompt,
-            answer: completion.result.as_ref().ok().cloned(),
-            duration_seconds: completion.duration_seconds,
-            error: completion
-                .result
-                .as_ref()
-                .err()
-                .map(|error| error.detail().to_string()),
+            exchange: crate::prompt_archive::PromptExchange::new(
+                crate::prompt_archive::PromptExchangeData {
+                    actor_id,
+                    actor_name: actor_name.clone(),
+                    prompt: flight.prompt,
+                    answer: completion.result.as_ref().ok().cloned(),
+                    duration_seconds: completion.duration_seconds,
+                    error: completion
+                        .result
+                        .as_ref()
+                        .err()
+                        .map(|error| error.detail().to_string()),
+                },
+                self.archive.take().unwrap_or_default(),
+            ),
         });
 
         let reply = match &completion.result {

@@ -133,6 +133,16 @@ pub struct Completion {
 }
 
 pub trait Cognition {
+    /// Reserve the archive before copying/submitting an external request.
+    /// The host bounds the future completion independently. A disabled archive
+    /// returns an empty permit; refusal follows ordinary cognition backpressure.
+    fn reserve_prompt_archive(
+        &mut self,
+        _prompt_bytes: usize,
+        _label_bytes: usize,
+    ) -> Result<crate::prompt_archive::PromptArchivePermit, CognitionBusy> {
+        Ok(Default::default())
+    }
     /// Non-blocking submit. The backend measures the duration and later pushes
     /// a [`Completion`] carrying this [`RequestId`]; the host feeds it back
     /// into [`NpcScheduler::poll`](crate::scheduler::NpcScheduler::poll).

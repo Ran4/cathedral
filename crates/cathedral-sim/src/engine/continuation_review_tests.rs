@@ -583,13 +583,10 @@ fn held_success_failure_and_oversized_replies_apply_once_without_a_new_submissio
         assert!(!engine.scheduler.has_held_result());
         assert!(engine.scheduler.in_flight_actor_id().is_none());
         assert_eq!(calls.borrow().accepted.len(), 1);
-        if let SchedulerEvent::PromptExchange {
-            answer,
-            error,
-            duration_seconds,
-            ..
-        } = exchanges[0]
-        {
+        if let SchedulerEvent::PromptExchange { exchange } = exchanges[0] {
+            let answer = &exchange.answer;
+            let error = &exchange.error;
+            let duration_seconds = &exchange.duration_seconds;
             assert_eq!(*duration_seconds, 2.125);
             if mode == 0 {
                 assert_eq!(answer.as_ref(), completion.result.as_ref().ok());

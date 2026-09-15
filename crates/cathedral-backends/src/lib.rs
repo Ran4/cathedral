@@ -34,6 +34,8 @@ pub mod llm;
 pub mod mailbox;
 #[cfg(test)]
 mod mailbox_retirement_review_tests;
+#[cfg(test)]
+mod prompt_archive_review_tests;
 pub mod prompt_log;
 pub mod runtime;
 pub mod session_dir;

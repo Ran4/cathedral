@@ -211,8 +211,8 @@ fn walk(curiosity: CuriosityConfig) -> Vec<Passer> {
             });
 
             for message in engine.poll(now, commands) {
-                if let EngineMessage::PromptExchange { actor_id, .. } = message {
-                    spoke.insert(actor_id);
+                if let EngineMessage::PromptExchange { exchange } = message {
+                    spoke.insert(exchange.actor_id.clone());
                 }
             }
 

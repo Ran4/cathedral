@@ -22,6 +22,159 @@ impl Cognition for Recorded {
         self.0 += 1;
         Ok(crate::RequestId(self.0))
     }
+    fn request_night(
+        &mut self,
+        prompt: String,
+        _: Option<u32>,
+    ) -> std::result::Result<crate::RequestId, crate::CognitionBusy> {
+        self.request(prompt)
+    }
+}
+
+#[test]
+fn archive_complete_held_service_binding_reserves_both_or_preserves_the_candidate() {
+    use crate::prompt_archive::test_support::Probe;
+    use std::sync::{Arc, atomic::Ordering};
+    for limit in [1, 2] {
+        let actor = ActorId::from_raw("sv3n1");
+        let mut engine = demo_engine(
+            EngineConfig {
+                fake_mode: true,
+                turn_delay_seconds: 0.0,
+                checkpoint_host_image: Some([7; 32]),
+                checkpoint_world_identity: Some(WorldIdentity::from_bytes([9; 16]).unwrap()),
+                ..Default::default()
+            },
+            Box::new(Recorded(0)),
+        );
+        engine.scheduler.close();
+        let position = engine.world.characters[&engine.config.player_id].position_m();
+        engine.poll(
+            0.0,
+            vec![EngineCommand::SpatialUpdate {
+                spatial_seq: 1,
+                updates: vec![crate::SpatialActorUpdate::new(
+                    engine.config.player_id.clone(),
+                    Vec3::new(
+                        f64::from(position.x as f32),
+                        f64::from(position.y as f32),
+                        f64::from(position.z as f32),
+                    ),
+                    Some(0.0),
+                )],
+            }],
+        );
+        engine.scheduler = NpcScheduler::new(vec![actor.clone()], 0.0, 60.0, 0.0);
+        engine.scheduler.start(0.0);
+        engine.scheduler.poll(
+            0.0,
+            &mut engine.world,
+            &mut engine.transcript,
+            &mut vec![],
+            false,
+            crate::attention::IdleGate::All,
+            engine.cognition.as_mut(),
+            &engine.env,
+        );
+        engine.scheduler.take_submitted();
+        engine.scheduler.poll(
+            0.0,
+            &mut engine.world,
+            &mut engine.transcript,
+            &mut vec![Completion {
+                request_id: crate::RequestId(1),
+                result: Err(crate::CognitionError::new("held foreground archive")),
+                duration_seconds: 0.5,
+            }],
+            true,
+            crate::attention::IdleGate::All,
+            engine.cognition.as_mut(),
+            &engine.env,
+        );
+        engine.config.night_office = crate::night::checkpoint::tests::all_tiers();
+        engine.night = NightOffice::new(engine.config.night_office, 0.0, &engine.clock);
+        engine.night.seed(&engine.world, &engine.round);
+        engine.night.archive_test_hold_person(
+            actor,
+            &mut engine.world,
+            &engine.clock,
+            engine.cognition.as_mut(),
+            &engine.env,
+        );
+        engine.world.command_ledger.drain_updates();
+        let host = host(&engine);
+        let budget = CheckpointBudget::default();
+        let _running = budget
+            .reserve(Cohort::Running, complete::RUNNING_AUTHORITY_ALLOWANCE_BYTES)
+            .unwrap();
+        let saved = complete::capture(
+            &engine,
+            &host,
+            Profile::Authored,
+            budget.reserve(Cohort::SavePayload, 4096).unwrap(),
+        )
+        .unwrap();
+        let prepared = reload(saved, &engine, &host, &budget, 2);
+        assert!(prepared.value().report.scheduler_held && prepared.value().report.night_held);
+        let before = prepared
+            .value()
+            .capture(
+                Profile::Authored,
+                budget.reserve(Cohort::SavePayload, 4096).unwrap(),
+            )
+            .unwrap();
+        let before_bytes = before.value().bytes().to_vec();
+        drop(before);
+        let probe = Probe::new(limit);
+        let retained = Arc::clone(&probe.retained);
+        let calls = Arc::clone(&probe.calls);
+        let result = prepared.bind_services_retained(64 * 1024, |generation| {
+            Ok(ContinuationServices {
+                generation,
+                cognition: Box::new(probe),
+                transcription: Box::new(crate::NullTranscription),
+                tts: Box::new(crate::NullTts),
+                sight: Box::new(crate::NullSight),
+                capabilities: Default::default(),
+                runtime_dir: Default::default(),
+            })
+        });
+        assert!(
+            calls.lock().unwrap().requests.is_empty(),
+            "binding held archives must not call the provider"
+        );
+        let prepared = if limit == 1 {
+            let (error, prepared) = result.err().expect("second permit must refuse");
+            assert!(error.reason.contains("night archive capacity"));
+            assert!(!prepared.value().report.services_bound);
+            assert_eq!(
+                retained.load(Ordering::SeqCst),
+                0,
+                "first temporary permit rolls back"
+            );
+            prepared
+        } else {
+            let prepared = result.ok().expect("both permits fit");
+            assert!(prepared.value().report.services_bound);
+            assert_eq!(retained.load(Ordering::SeqCst), 2);
+            prepared
+        };
+        let after = prepared
+            .value()
+            .capture(
+                Profile::Authored,
+                budget.reserve(Cohort::SavePayload, 4096).unwrap(),
+            )
+            .unwrap();
+        assert_eq!(
+            after.value().bytes(),
+            before_bytes,
+            "archive retention is not saved semantic state"
+        );
+        drop(after);
+        drop(prepared);
+        assert_eq!(retained.load(Ordering::SeqCst), 0);
+    }
 }
 pub(super) struct Host(pub(super) ScalarsV1);
 impl HostCheckpointSource for Host {

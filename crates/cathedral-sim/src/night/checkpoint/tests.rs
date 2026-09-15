@@ -370,7 +370,7 @@ fn checkpoint_night_exact_error_kind_detail_and_stale_incarnation_finish_once() 
         assert_eq!(a.dropped, 1);
         assert_eq!(a.reflected, 0);
         if !stale {
-            assert!(x.iter().any(|e|matches!(e,SchedulerEvent::PromptExchange{error:Some(s),..} if s=="429: retry after midnight\nprovider says wait")));
+            assert!(x.iter().any(|e|matches!(e,SchedulerEvent::PromptExchange { exchange } if exchange.error.as_deref() == Some("429: retry after midnight\nprovider says wait"))));
         }
         assert_ne!(
             wa.characters[&ActorId::from_raw("mjr01")].goal(),

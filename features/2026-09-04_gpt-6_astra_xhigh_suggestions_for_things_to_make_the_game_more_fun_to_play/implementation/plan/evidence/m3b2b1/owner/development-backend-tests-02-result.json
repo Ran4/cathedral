@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "937d8873472a1bb3b74e14045e47d3ca567d856e200399090cbf4b094fb2f69e",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m3b2b1-development-backend-tests-02.log",
+  "raw_sha256": "a956a954c13cc91268b0eea11cf4b4d98f17ccadd5ca1fc7b04df9c085b0dcea",
+  "source_map_sha256": "aa3ae7b79680543014bdf12fe943fd68d68dc148e272c44efad9035c48a33c24",
+  "sources_unchanged": false,
+  "wall_seconds": 151.6824624661822
+}

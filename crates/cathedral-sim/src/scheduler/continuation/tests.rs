@@ -36,6 +36,203 @@ fn prepared() -> (NpcScheduler, World, Recorded) {
     n.prepare_continuation(&mut world);
     (n, world, service)
 }
+
+#[test]
+fn archive_scheduler_backpressure_retains_held_and_same_poll_exchange_until_last_clone() {
+    use crate::prompt_archive::test_support::Probe;
+    let mut world = world_with_cast();
+    let actor = ActorId::from_raw("mjr01");
+    let mut scheduler = NpcScheduler::new(vec![actor.clone()], 0.0, 60.0, 0.0);
+    scheduler.start(0.0);
+    let mut service = Probe::new(1);
+    scheduler.poll(
+        0.0,
+        &mut world,
+        &mut vec![],
+        &mut vec![],
+        false,
+        IdleGate::All,
+        &mut service,
+        &env(),
+    );
+    assert_eq!(service.calls.lock().unwrap().requests.len(), 1);
+    let id = scheduler.in_flight.as_ref().unwrap().request_id;
+    let semantic = scheduler.in_flight.as_ref().unwrap().semantic;
+    let done = Completion {
+        request_id: id,
+        result: Ok("wait {}".into()),
+        duration_seconds: 0.25,
+    };
+    let held = scheduler.poll(
+        0.1,
+        &mut world,
+        &mut vec![],
+        &mut vec![done],
+        true,
+        IdleGate::All,
+        &mut service,
+        &env(),
+    );
+    assert!(
+        !held
+            .iter()
+            .any(|e| matches!(e, SchedulerEvent::PromptExchange { .. }))
+    );
+    assert_eq!(service.retained(), 1);
+    assert!(scheduler.held_result.is_some());
+    assert!(world.command_ledger.is_protected(semantic));
+    let events = scheduler.poll(
+        0.2,
+        &mut world,
+        &mut vec![],
+        &mut vec![],
+        false,
+        IdleGate::All,
+        &mut service,
+        &env(),
+    );
+    let exchange = events
+        .iter()
+        .find_map(|e| match e {
+            SchedulerEvent::PromptExchange { exchange } => Some(exchange.clone()),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(exchange.answer.as_deref(), Some("wait {}"));
+    assert_eq!(
+        service.calls.lock().unwrap().requests.len(),
+        1,
+        "same-poll next request must wait for the archive"
+    );
+    assert!(scheduler.in_flight.is_none());
+    assert_eq!(service.retained(), 1);
+    drop(events);
+    assert_eq!(
+        service.retained(),
+        1,
+        "the last event clone owns the actual strings"
+    );
+    drop(exchange);
+    assert_eq!(service.retained(), 0);
+    scheduler.poll(
+        2.0,
+        &mut world,
+        &mut vec![],
+        &mut vec![],
+        false,
+        IdleGate::All,
+        &mut service,
+        &env(),
+    );
+    assert_eq!(service.calls.lock().unwrap().requests.len(), 2);
+    assert_eq!(service.retained(), 1);
+    drop(scheduler);
+    assert_eq!(service.retained(), 0);
+}
+
+#[test]
+fn archive_scheduler_refused_resumed_request_preserves_exact_obligation_and_inputs() {
+    use crate::prompt_archive::test_support::Probe;
+    let (mut scheduler, mut world, _) = prepared();
+    let original = scheduler.load_retries[0].clone();
+    let mut service = Probe::new(0);
+    assert!(scheduler.submit_load_retry(1.0, &mut world, IdleGate::All, &mut service, &mut vec![]));
+    assert!(service.calls.lock().unwrap().requests.is_empty());
+    assert_eq!(scheduler.load_retries[0].flight, original.flight);
+    assert!(world.command_ledger.is_protected(original.flight.semantic));
+    assert_eq!(service.calls.lock().unwrap().attempts, 0);
+    service.limit = 1;
+    service.calls.lock().unwrap().refused = true;
+    scheduler.submit_load_retry(1.5, &mut world, IdleGate::All, &mut service, &mut vec![]);
+    assert_eq!(
+        service.retained(),
+        0,
+        "provider refusal releases the temporary archive permit"
+    );
+    assert!(service.calls.lock().unwrap().requests.is_empty());
+    assert_eq!(scheduler.load_retries[0].flight, original.flight);
+    assert!(world.command_ledger.is_protected(original.flight.semantic));
+    assert_eq!(service.calls.lock().unwrap().attempts, 1);
+    service.calls.lock().unwrap().refused = false;
+    scheduler.submit_load_retry(2.0, &mut world, IdleGate::All, &mut service, &mut vec![]);
+    assert_eq!(
+        service.calls.lock().unwrap().requests[0].1,
+        original.flight.prompt
+    );
+    assert_eq!(
+        scheduler.in_flight.as_ref().unwrap().semantic,
+        original.flight.semantic
+    );
+    assert_eq!(service.retained(), 1);
+}
+
+#[test]
+fn archive_scheduler_stale_actor_and_failed_results_keep_their_admitted_archive() {
+    use crate::prompt_archive::test_support::Probe;
+    for fail in [false, true] {
+        let mut world = world_with_cast();
+        let actor = ActorId::from_raw("mjr01");
+        let mut scheduler = NpcScheduler::new(vec![actor.clone()], 0.0, 60.0, 0.0);
+        scheduler.start(0.0);
+        let mut service = Probe::new(1);
+        scheduler.poll(
+            0.0,
+            &mut world,
+            &mut vec![],
+            &mut vec![],
+            false,
+            IdleGate::All,
+            &mut service,
+            &env(),
+        );
+        let id = scheduler.in_flight.as_ref().unwrap().request_id;
+        if !fail {
+            world
+                .characters
+                .get_mut(&actor)
+                .unwrap()
+                .state
+                .presence_epoch += 1;
+        }
+        let result = if fail {
+            Err(crate::CognitionError::detailed(
+                "offline",
+                "exact archive detail",
+            ))
+        } else {
+            Ok("wait {}".into())
+        };
+        let events = scheduler.poll(
+            0.1,
+            &mut world,
+            &mut vec![],
+            &mut vec![Completion {
+                request_id: id,
+                result,
+                duration_seconds: 0.5,
+            }],
+            false,
+            IdleGate::Suppressed,
+            &mut service,
+            &env(),
+        );
+        let exchange = events
+            .iter()
+            .find_map(|e| match e {
+                SchedulerEvent::PromptExchange { exchange } => Some(exchange),
+                _ => None,
+            })
+            .unwrap();
+        assert!(exchange.admission().enabled());
+        assert_eq!(
+            exchange.error.as_deref(),
+            fail.then_some("exact archive detail")
+        );
+        assert_eq!(service.retained(), 1);
+        drop(events);
+        assert_eq!(service.retained(), 0);
+    }
+}
 #[test]
 fn continuation_retry_capacity_preserves_every_root_and_backpressures_new_protected_work() {
     let (mut n, mut world, mut service) = prepared();

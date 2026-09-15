@@ -24,6 +24,26 @@ pub(crate) struct LoadRetry {
 }
 
 impl NpcScheduler {
+    pub(crate) fn held_archive_requirements(&self, world: &World) -> Option<(usize, usize)> {
+        self.held_result.as_ref()?;
+        let f = self.in_flight.as_ref()?;
+        Some((
+            f.prompt.capacity(),
+            world
+                .characters
+                .get(&f.actor_id)
+                .map_or(0, |a| a.name().len())
+                .max(f.actor_id.as_str().len())
+                .saturating_add(f.actor_id.as_str().len()),
+        ))
+    }
+    pub(crate) fn bind_held_archive(
+        &mut self,
+        archive: Option<crate::prompt_archive::PromptArchivePermit>,
+    ) {
+        self.archive = archive;
+    }
+
     pub(crate) fn validate_context_knowledge(
         &self,
         knowledge: &crate::knowledge::Knowledge,
@@ -171,7 +191,7 @@ impl NpcScheduler {
     pub(super) fn submit_load_retry(
         &mut self,
         now: f64,
-        _world: &mut World,
+        world: &mut World,
         idle: IdleGate<'_>,
         cognition: &mut dyn Cognition,
         events: &mut Vec<SchedulerEvent>,
@@ -205,8 +225,22 @@ impl NpcScheduler {
         else {
             unreachable!("complete preparation checked exact input authority")
         };
-        match cognition.request_with_budget(retry.flight.prompt.clone(), budget) {
-            Ok(request_id) => {
+        let label_bytes = world
+            .characters
+            .get(&retry.flight.actor_id)
+            .map_or(0, |a| a.name().len())
+            .max(retry.flight.actor_id.as_str().len())
+            .saturating_add(retry.flight.actor_id.as_str().len());
+        let submission = cognition
+            .reserve_prompt_archive(retry.flight.prompt.capacity(), label_bytes)
+            .and_then(|archive| {
+                cognition
+                    .request_with_budget(retry.flight.prompt.clone(), budget)
+                    .map(|id| (id, archive))
+            });
+        match submission {
+            Ok((request_id, archive)) => {
+                self.archive = Some(archive);
                 let mut retry = self.load_retries.remove(index).expect("selected retry");
                 retry.flight.request_id = request_id;
                 events.push(SchedulerEvent::Status(StatusEvent::llm(

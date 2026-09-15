@@ -118,6 +118,17 @@ pub struct EngineGuard {
 struct SharedCognition(Arc<Mutex<FakeCognition>>, cathedral_sim::RuntimeGeneration);
 
 impl Cognition for SharedCognition {
+    fn reserve_prompt_archive(
+        &mut self,
+        prompt: usize,
+        labels: usize,
+    ) -> Result<cathedral_sim::prompt_archive::PromptArchivePermit, CognitionBusy> {
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .reserve_prompt_archive(prompt, labels)
+    }
+
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
         self.0
             .lock()
@@ -702,6 +713,7 @@ fn build(
         ..EngineConfig::default()
     };
 
+    let cognition = prompt_log.cognition(cognition);
     let services = cathedral_backends::checkpoint_services::ForwardingServices::new(
         cathedral_backends::checkpoint_services::SendContinuationServices {
             generation,
@@ -1088,21 +1100,11 @@ impl LocalEngine {
     /// travels.
     fn emit(&mut self, message: EngineMessage) {
         match message {
-            EngineMessage::PromptExchange {
-                actor_id,
-                actor_name,
-                prompt,
-                answer,
-                duration_seconds,
-                error,
-            } => self.prompt_log.record(PromptExchange {
-                actor_id: actor_id.as_str().to_string(),
-                actor_name,
-                prompt,
-                answer,
-                duration_seconds,
-                error,
-            }),
+            EngineMessage::PromptExchange { exchange } => {
+                self.prompt_log
+                    .record_shared(exchange)
+                    .expect("admitted production prompt exchange");
+            }
             EngineMessage::Diagnostic(line) => {
                 // The sim already bakes `[smart actors] ` into the payload, so
                 // stderr prints the line as-is — prefixing again would both

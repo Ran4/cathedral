@@ -43,6 +43,7 @@ pub mod operations;
 pub mod perception;
 pub mod places;
 pub mod prompt;
+pub mod prompt_archive;
 /// CPython text semantics (`str.strip`, `float.__repr__`, `repr`) — internal,
 /// but shared by the action validators, the reply parser and the scheduler.
 mod pyfmt;

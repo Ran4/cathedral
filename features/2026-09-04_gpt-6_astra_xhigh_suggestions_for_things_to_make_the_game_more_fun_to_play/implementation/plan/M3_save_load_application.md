@@ -1,4 +1,4 @@
-Status: M3a storage, M3b1 worker preparation/retirement transport and M3b2a atomic allocation promotion implemented and independently reviewed (2026-09-15). M3b2b allocation/runtime accounting, M3b2c whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
+Status: M3a storage, M3b1 worker preparation/retirement transport, M3b2a atomic allocation promotion and M3b2b1 prompt archive admission implemented and independently reviewed (2026-09-15). Remaining allocation/runtime accounting, M3b2c whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
 
 # M3 — Save-anywhere in the application
 
@@ -64,14 +64,29 @@ adoption barrier. Source review divided it into three sequential review units:
   The [M3b2a evidence](evidence/m3b2a/README.md) includes eight new witnesses,
   2,280 passing workspace tests and independently audited fixed metadata bounds.
 - M3b2b: actual live/candidate/retired/persistent allocation accounting and
-  bounded log/runtime ownership. Cohort renaming alone cannot fit two 512 MiB
-  Running minima plus service overhead under the 1 GiB cap.
+  bounded log/runtime ownership. Two independent 512 MiB world roots plus
+  service overhead cannot fit the 1 GiB cap; the existing 512 MiB minimum
+  applies to the aggregate Running cohort.
 - M3b2c: complete application staging and adoption using those accepted
   contracts, including clocks, physical state, all host records and projections.
 
 Each unit has a fresh sequential owner and its own reviewed commit. M3b remains
 incomplete until all these boundaries work together. M3c supplies player
 controls, and M3d measures the complete host path.
+
+The coherent **M3b2b1 prompt archive** production cut is
+[accepted](evidence/m3b2b1/README.md), with 2,292 passing workspace tests. It
+pre-admits archive retention before cognition acceptance and carries that
+ownership through held results, immutable exchange publication, queued writes
+and rendering. Restored held results need admission before service activation;
+their archive identity cannot depend on a fresh backend reusing saved request
+numbers. Refusals preserve caller input and simulation retry obligations.
+Native/detached worker lifetimes, diagnostic sinks, the immutable installed
+recipe and actual disjoint application allocation bounds remain subsequent
+M3b2b work. A bounded archive queue alone cannot close that complete budget.
+The default production writer is finite; its tested shared-budget constructor
+still needs the complete startup recipe. Idle session configuration and native
+runtime ownership are not inferred from the accepted archive payload bound.
 
 ## Entry
 

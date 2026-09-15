@@ -193,6 +193,8 @@ pub(crate) struct SchedulerV1 {
     player_reactions: VecDeque<ActorId>,
     #[serde(with = "flight::option")]
     in_flight: Option<InFlight>,
+    #[serde(skip)]
+    archive: Option<crate::prompt_archive::PromptArchivePermit>,
     // Explicit V1 conversion has no load-created obligations. V1 exports
     // refuse such states; complete V2 restores its mandatory extension below.
     #[serde(skip)]

@@ -186,7 +186,7 @@ impl Admitted<PreparedContinuation> {
             } else {
                 Ok(factory(prepared.runtime_generation()))
             };
-            let services = match factory_result {
+            let mut services = match factory_result {
                 Ok(Ok(value)) => value,
                 Ok(Err(error)) => {
                     prepared.binding_failed = true;
@@ -201,6 +201,14 @@ impl Admitted<PreparedContinuation> {
                 prepared.failed_services = Some(services);
                 prepared.binding_failed = true;
                 return Err((error("continuation service generation mismatch"), prepared));
+            }
+            if let Err(error) = prepared
+                .engine
+                .prepare_prompt_archives(&mut *services.cognition)
+            {
+                prepared.failed_services = Some(services);
+                prepared.binding_failed = true;
+                return Err((error, prepared));
             }
             prepared.engine.bind_continuation_services(services);
             prepared.report.services_bound = true;
