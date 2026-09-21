@@ -575,7 +575,7 @@ fn handle_map_teleport_click(
     // top-left corner, (0.5, 0.5) the bottom-right. Shift to [0, 1] for the map.
     let uv = normalized + Vec2::splat(0.5);
     let (x, z) = uv_to_world(uv);
-    let Some(target) = resolve_teleport_target(&navigation.0, x as f64, z as f64) else {
+    let Some(target) = resolve_teleport_target(&navigation.data, x as f64, z as f64) else {
         return; // Clicked off any reachable ground.
     };
 

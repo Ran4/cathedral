@@ -66,6 +66,9 @@ use crate::controller::{PhysicalPosition, PlayerController};
 #[cfg(all(test, target_os = "linux"))]
 #[path = "local_engine/retirement_tests.rs"]
 mod retirement_tests;
+#[cfg(test)]
+#[path = "local_engine/startup_tests.rs"]
+mod startup_tests;
 
 /// Complete ordinary pump boundary, suitable for capture without an extra poll.
 /// M2 persists the watermark and matching physical identity with host dynamics.
@@ -107,6 +110,7 @@ pub struct EngineGuard {
     /// `None` only when the backends could not start; the game then runs with
     /// the cast offline, which the HUD already knows how to say.
     _backends: Option<BackendsHandle>,
+    _installed: Option<crate::installed_recipe::CommittedStartup>,
 }
 
 /// A [`FakeCognition`] the engine can own while the pump keeps draining it.
@@ -202,6 +206,9 @@ pub struct LocalEngine {
     dead: bool,
     input_watermark: u64,
     pub(crate) accepted_boundary: Option<AcceptedHostBoundary>,
+    // The immutable definitions/config/runtime owner outlives every local
+    // domain/service field, including failed startup and retirement transport.
+    installed: Option<crate::installed_recipe::CommittedStartup>,
 }
 
 impl LocalEngine {
@@ -283,6 +290,7 @@ impl LocalEngine {
             dead,
             input_watermark,
             accepted_boundary,
+            installed,
         } = self;
         let services = services.unwrap().into_send();
         let (domain, adapters) = engine.unwrap().into_retirement();
@@ -312,6 +320,7 @@ impl LocalEngine {
             _guard: guard,
             _publication_bytes: publication_bytes,
             _publication_lifetime: publication_lifetime,
+            _installed: installed,
         });
         Ok(id)
     }
@@ -412,6 +421,7 @@ struct RetiredLocalEngine {
     _guard: EngineGuard,
     _publication_bytes: Arc<AtomicUsize>,
     _publication_lifetime: super::bridge::RetirementPin,
+    _installed: Option<crate::installed_recipe::CommittedStartup>,
 }
 impl Drop for RetiredLocalEngine {
     fn drop(&mut self) {
@@ -429,9 +439,21 @@ impl Drop for RetiredLocalEngine {
 /// Nothing here can fail loudly: a missing asset, an unusable temp directory or
 /// a seed without a player all become a [`BridgeEvent::Disconnected`], which the
 /// HUD already knows how to render as an offline cast.
+#[allow(
+    dead_code,
+    reason = "isolated host tests and embedders without committed startup"
+)]
 pub fn spawn(
     config: &SmartActorsConfig,
     weather: &WeatherSettings,
+) -> (BridgeHandle, BridgeInbox, EngineGuard, LocalEngine) {
+    spawn_installed(config, weather, None)
+}
+
+pub(crate) fn spawn_installed(
+    config: &SmartActorsConfig,
+    weather: &WeatherSettings,
+    installed: Option<crate::installed_recipe::CommittedStartup>,
 ) -> (BridgeHandle, BridgeInbox, EngineGuard, LocalEngine) {
     let allocated =
         NEXT_RUNTIME_GENERATION
@@ -464,11 +486,21 @@ pub fn spawn(
         input_watermark: 0,
         issued_at_boundary: None,
         accepted_boundary: None,
+        installed,
     };
-    let mut guard = EngineGuard { _backends: None };
+    let mut guard = EngineGuard {
+        _backends: None,
+        _installed: engine.installed.clone(),
+    };
 
     let built = if allocated.is_ok() {
-        build(config, weather, session, generation)
+        build_installed(
+            config,
+            weather,
+            session,
+            generation,
+            engine.installed.as_ref(),
+        )
     } else {
         Err("runtime generation identities exhausted".to_owned())
     };
@@ -560,11 +592,22 @@ fn with_extra_ambient(
 /// voice, and nothing else — cognition, the local Canary worker and the local
 /// Pocket voice each stand or fall on their own. `fake_backend` replaces every
 /// provider with an offline stand-in and therefore reports everything available.
+#[cfg(test)]
 fn build(
     config: &SmartActorsConfig,
     weather: &WeatherSettings,
     session: Option<SessionDir>,
     generation: cathedral_sim::RuntimeGeneration,
+) -> Result<Built, String> {
+    build_installed(config, weather, session, generation, None)
+}
+
+fn build_installed(
+    config: &SmartActorsConfig,
+    weather: &WeatherSettings,
+    session: Option<SessionDir>,
+    generation: cathedral_sim::RuntimeGeneration,
+    installed: Option<&crate::installed_recipe::CommittedStartup>,
 ) -> Result<Built, String> {
     let assets = assets_dir();
     let lore = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lore");
@@ -580,11 +623,15 @@ fn build(
     //
     // Loaded before the seed because the generated crowd is placed *on* it: a
     // citizen with nowhere walkable to stand is a citizen inside a wall.
-    let nav = match NavData::from_parts(NAV_JSON, NAV_BIN) {
-        Ok(nav) => Some(Arc::new(nav)),
-        Err(error) => {
-            warn!("navigation graph did not load; NPCs will not walk: {error}");
-            None
+    let nav = if let Some(installed) = installed {
+        Some(installed.nav().clone())
+    } else {
+        match NavData::from_parts(NAV_JSON, NAV_BIN) {
+            Ok(nav) => Some(Arc::new(nav)),
+            Err(error) => {
+                warn!("navigation graph did not load; NPCs will not walk: {error}");
+                None
+            }
         }
     };
     let seed = load_world_seed(&assets, &lore)?;
@@ -600,15 +647,19 @@ fn build(
     )
     .map_err(|error| format!("invalid prompt assets: {error}"))?;
 
-    let options = BackendsOptions {
-        uv_binary: config.uv_binary.clone(),
-        fake_mode: config.fake_backend,
-        ..BackendsOptions::default()
+    let backends = if let Some(installed) = installed {
+        installed.backends(session, generation)
+    } else {
+        let options = BackendsOptions {
+            uv_binary: config.uv_binary.clone(),
+            fake_mode: config.fake_backend,
+            ..BackendsOptions::default()
+        };
+        let backends_config = BackendsConfig::load(&options);
+        BackendsHandle::start_for_generation(backends_config, session, generation)
+            .map_err(|error| format!("could not start the actor backends: {error}"))?
     };
-    let backends_config = BackendsConfig::load(&options);
-    let turn_delay_seconds = backends_config.npc_turn_delay_seconds;
-    let backends = BackendsHandle::start_for_generation(backends_config, session, generation)
-        .map_err(|error| format!("could not start the actor backends: {error}"))?;
+    let turn_delay_seconds = backends.config().npc_turn_delay_seconds;
 
     let (cognition, fake_cognition): (Box<dyn Cognition + Send>, Option<SharedCognition>) =
         if config.fake_backend {
@@ -624,8 +675,12 @@ fn build(
     let (capabilities, tts_startup_message) =
         engine_capabilities(backends.capabilities(), &config.tts_backend);
 
-    let prompt_log = backends
-        .prompt_log(crate::session_log::paths().map(|session| session.root.join("prompts")));
+    let prompts_dir = crate::session_log::paths().map(|session| session.root.join("prompts"));
+    let prompt_log = if let Some(installed) = installed {
+        installed.prompt_log()
+    } else {
+        backends.prompt_log(prompts_dir)
+    };
 
     let shelters = Arc::new(
         ShelterMap::from_json_str(SHELTERS_JSON)

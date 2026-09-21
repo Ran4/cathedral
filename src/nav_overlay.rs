@@ -13,6 +13,7 @@
 
 use bevy::prelude::*;
 use cathedral_sim::{NavData, WALK_Y};
+use std::sync::Arc;
 
 const NAV_JSON: &str = include_str!("../assets/world/navigation.json");
 const NAV_BIN: &[u8] = include_bytes!("../assets/world/navigation.bin");
@@ -20,7 +21,10 @@ const NAV_BIN: &[u8] = include_bytes!("../assets/world/navigation.bin");
 /// The loaded navigation graph, available to the whole game (the overlay now,
 /// the mover in M2). Absent if the committed artifact failed to parse.
 #[derive(Resource)]
-pub struct Navigation(pub NavData);
+pub struct Navigation {
+    pub data: Arc<NavData>,
+    _installed: Option<crate::installed_recipe::CommittedStartup>,
+}
 
 #[derive(Resource, Default)]
 struct NavOverlay {
@@ -32,13 +36,27 @@ pub struct NavDebugPlugin;
 
 impl Plugin for NavDebugPlugin {
     fn build(&self, app: &mut App) {
-        match NavData::from_parts(NAV_JSON, NAV_BIN) {
-            Ok(nav) => {
-                app.insert_resource(Navigation(nav));
-            }
-            Err(error) => {
-                error!("navigation graph did not load, F7 overlay disabled: {error}");
-                return;
+        if let Some(startup) = app
+            .world()
+            .get_resource::<crate::installed_recipe::CommittedStartup>()
+            .cloned()
+        {
+            app.insert_resource(Navigation {
+                data: startup.nav().clone(),
+                _installed: Some(startup),
+            });
+        } else {
+            match NavData::from_parts(NAV_JSON, NAV_BIN) {
+                Ok(nav) => {
+                    app.insert_resource(Navigation {
+                        data: Arc::new(nav),
+                        _installed: None,
+                    });
+                }
+                Err(error) => {
+                    error!("navigation graph did not load, F7 overlay disabled: {error}");
+                    return;
+                }
             }
         }
         app.init_resource::<NavOverlay>()
@@ -49,7 +67,10 @@ impl Plugin for NavDebugPlugin {
 fn toggle_overlay(keyboard: Res<ButtonInput<KeyCode>>, mut overlay: ResMut<NavOverlay>) {
     if keyboard.just_pressed(KeyCode::F7) {
         overlay.enabled = !overlay.enabled;
-        info!("navigation overlay {}", if overlay.enabled { "on" } else { "off" });
+        info!(
+            "navigation overlay {}",
+            if overlay.enabled { "on" } else { "off" }
+        );
     }
 }
 
@@ -64,7 +85,7 @@ fn draw_navigation_graph(
     let Some(navigation) = navigation else {
         return;
     };
-    let nav = &navigation.0;
+    let nav = &navigation.data;
     // Just above the walk plane so the lines read against the cobbles.
     let y = WALK_Y as f32 + 0.05;
     let edge_color = Color::srgb(0.25, 0.75, 1.0);

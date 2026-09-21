@@ -40,8 +40,26 @@ clone retained identical Vec capacities; Rust compacts those copies. Corrected
 test bills the clone's actual graph capacity, preserving the shared-cache check.
 Original raw log and archive remain intact.
 
-Final stable focused result: pending command completion when this draft was
-written; update below before final handoff.
+`focused-02`: exit 0, **29 passed / 0 failed / 0 ignored**, 602 filtered,
+`sources_unchanged=true`. One Cargo invocation selected the installed recipe,
+session_log and config test families, using `--bin cathedralbevy`; this includes
+the six new owner tests and existing diagnostic/public/config regressions.
+Only the historical perf::Probe dead-code warning remains in the test build.
+Elapsed command time 195.579 seconds; test execution 0.29 seconds. Scoped
+rustfmt and git diff --check also passed before this final command.
+
+- Exact final source map: `focused-02-sources.json`, SHA-256
+  `0c4ea86662fe07ae06f1fcc10b7dbffec43c7a8f618921df135a63b23f75ff21`.
+- Raw: `/tmp/alibi-m3b2b4-focused-02.log`, SHA-256
+  `e8cb43e7fb91727fce65a46d574d84911d92cf29c02e7152e27833d333757eed`.
+- Archive: `focused-02.log.gz`, SHA-256
+  `c0327927cbc8de923525917395e7eddf771ca2cbd4dc6284624f9d1e111336a5`.
+- Source/Cargo/executable ownership explicitly ceded to coordinator after
+  session3272 exited successfully. No owner commands remain active. No source
+  edits after that result; only this documentation was finalized.
+
+No full workspace, release performance or whole-App acceptance was run by this
+owner; those remain coordinator work after independent review.
 
 Actual city inventory: 10,026 nodes; 6,366,037 graph/index/Arc bytes;
 402,644,224 maximum cache bytes; 409,010,261 combined bytes. Inventory leaves

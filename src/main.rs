@@ -100,6 +100,19 @@ fn main() -> AppExit {
             ),
         }
     }
+    let staged = match installed_recipe::StagedStartup::prepare(installed, config) {
+        Ok(staged) => staged,
+        Err(error) => {
+            session_log::log_line(
+                "session",
+                "ERROR",
+                &format!("startup staging failed: {error:?}"),
+            );
+            return AppExit::error();
+        }
+    };
+    let startup = staged.recipe().clone();
+    let config = startup.config();
     let smart_actors = config.smart_actors.clone();
     let weather = config.weather.clone();
     let vermin = config.vermin.clone();
@@ -129,6 +142,10 @@ fn main() -> AppExit {
         )
     };
     let mut app = App::new();
+    if staged.install(&mut app).is_err() {
+        session_log::log_line("session", "ERROR", "startup recipe was already installed");
+        return AppExit::error();
+    }
     let mut plugins = DefaultPlugins
         .set(compute_thread_pool())
         .set(LogPlugin {
@@ -140,7 +157,7 @@ fn main() -> AppExit {
         })
         .set(WindowPlugin {
             primary_window: Some(Window {
-                title: std::mem::take(&mut config.title),
+                title: config.title.clone(),
                 resolution,
                 // A drive window should keep the size it asked for:
                 // screenshots get compared frame to frame, and a tiling WM will

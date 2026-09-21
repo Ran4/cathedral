@@ -605,7 +605,12 @@ impl Plugin for SmartActorsPlugin {
             return;
         }
 
-        let (handle, inbox, worker, engine) = local_engine::spawn(&self.config, &self.weather);
+        let installed = app
+            .world()
+            .get_resource::<crate::installed_recipe::CommittedStartup>()
+            .cloned();
+        let (handle, inbox, worker, engine) =
+            local_engine::spawn_installed(&self.config, &self.weather, installed);
         app.insert_non_send(engine);
 
         app.insert_resource(handle)

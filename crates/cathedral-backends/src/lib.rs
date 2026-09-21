@@ -95,7 +95,7 @@ pub struct BackendsHandle {
     runtime: Arc<BackendRuntime>,
     sender: BackendSender,
     events: BackendReceiver,
-    config: BackendsConfig,
+    config: Arc<BackendsConfig>,
     session_dir: Option<SessionDir>,
 }
 
@@ -118,14 +118,31 @@ impl BackendsHandle {
         generation: cathedral_sim::RuntimeGeneration,
     ) -> std::io::Result<Self> {
         let runtime = BackendRuntime::new()?;
+        Ok(Self::with_shared_runtime(
+            runtime,
+            Arc::new(config),
+            session_dir,
+            generation,
+        ))
+    }
+
+    /// Bind fresh generation endpoints to already installed immutable settings
+    /// and a shared runtime. This does not start a second runtime or re-read
+    /// environment/configuration. The host retains their admission owners.
+    pub fn with_shared_runtime(
+        runtime: Arc<BackendRuntime>,
+        config: Arc<BackendsConfig>,
+        session_dir: Option<SessionDir>,
+        generation: cathedral_sim::RuntimeGeneration,
+    ) -> Self {
         let (sender, events) = backend_channel_for(generation);
-        Ok(Self {
+        Self {
             runtime,
             sender,
             events,
             config,
             session_dir,
-        })
+        }
     }
 
     /// Load the environment, probe capabilities, and start (the normal path).
@@ -169,7 +186,7 @@ impl BackendsHandle {
             runtime: Arc::clone(&self.runtime),
             sender,
             events,
-            config: self.config.clone(),
+            config: Arc::clone(&self.config),
             session_dir,
         })
     }

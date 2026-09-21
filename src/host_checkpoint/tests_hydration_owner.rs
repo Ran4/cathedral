@@ -44,7 +44,7 @@ unsafe impl std::alloc::GlobalAlloc for FactoryAllocator {
 }
 #[global_allocator]
 static ALLOCATOR: FactoryAllocator = FactoryAllocator;
-fn factory_allocations<T>(f: impl FnOnce() -> T) -> (T, usize) {
+pub(super) fn factory_allocations<T>(f: impl FnOnce() -> T) -> (T, usize) {
     struct Reset;
     impl Drop for Reset {
         fn drop(&mut self) {

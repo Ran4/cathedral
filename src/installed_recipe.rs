@@ -192,3 +192,6 @@ impl RecipeSources {
 
 #[cfg(test)]
 mod tests;
+
+mod startup;
+pub(crate) use startup::{CommittedStartup, StagedStartup, StartupRefusal};

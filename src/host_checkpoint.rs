@@ -556,6 +556,10 @@ mod tests_complete_owner;
 #[path = "host_checkpoint/tests_hydration_owner.rs"]
 mod tests_hydration_owner;
 #[cfg(test)]
+pub(crate) fn measure_installed_allocations<T>(f: impl FnOnce() -> T) -> (T, usize) {
+    tests_hydration_owner::factory_allocations(f)
+}
+#[cfg(test)]
 #[path = "host_checkpoint/tests_hydration_public.rs"]
 mod tests_hydration_public;
 
