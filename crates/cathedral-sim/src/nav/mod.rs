@@ -32,6 +32,7 @@ use crate::math::Vec3;
 
 mod checkpoint_storage;
 mod local;
+pub mod query;
 pub use checkpoint_storage::NavStorageInventory;
 #[cfg(test)]
 pub(crate) mod local_tests;
@@ -584,14 +585,26 @@ impl NavData {
         goal: usize,
         avoid: Option<usize>,
     ) -> Option<Route> {
+        self.route_nodes_filtered(start, goal, avoid, None, |_, _| true)
+            .ok()
+    }
+
+    fn route_nodes_filtered(
+        &self,
+        start: usize,
+        goal: usize,
+        avoid: Option<usize>,
+        expansion_limit: Option<usize>,
+        mut edge_allowed: impl FnMut(usize, usize) -> bool,
+    ) -> Result<Route, query::QueryError> {
         if start >= self.nodes.len() || goal >= self.nodes.len() {
-            return None;
+            return Err(query::QueryError::InvalidPoint);
         }
         if avoid == Some(goal) || avoid == Some(start) {
-            return None;
+            return Err(query::QueryError::Unavailable);
         }
         if start == goal {
-            return Some(self.route_from_nodes(vec![start]));
+            return Ok(self.route_from_nodes(vec![start]));
         }
         let goal_xz = self.nodes[goal];
         let heuristic = |node: usize| distance(self.nodes[node], goal_xz);
@@ -611,7 +624,12 @@ impl NavData {
                 cost: heuristic(start),
                 node: start,
             });
+            let mut expanded = 0;
             while let Some(HeapEntry { node, .. }) = scratch.heap.pop() {
+                if expansion_limit.is_some_and(|limit| expanded >= limit) {
+                    return Err(query::QueryError::Capacity);
+                }
+                expanded += 1;
                 if node == goal {
                     let mut path = vec![goal];
                     let mut cur = goal;
@@ -620,11 +638,15 @@ impl NavData {
                         path.push(cur);
                     }
                     path.reverse();
-                    return Some(self.route_from_nodes(path));
+                    return Ok(self.route_from_nodes(path));
                 }
                 let base = scratch.g[node];
                 for edge in &self.adjacency[node] {
-                    if avoid == Some(edge.to) {
+                    if expansion_limit.is_some_and(|limit| expanded >= limit) {
+                        return Err(query::QueryError::Capacity);
+                    }
+                    expanded += 1;
+                    if avoid == Some(edge.to) || !edge_allowed(node, edge.to) {
                         continue;
                     }
                     let tentative = base + edge.cost;
@@ -644,7 +666,7 @@ impl NavData {
                     }
                 }
             }
-            None
+            Err(query::QueryError::Unavailable)
         })
     }
 

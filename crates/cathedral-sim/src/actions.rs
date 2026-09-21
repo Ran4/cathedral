@@ -2813,14 +2813,23 @@ fn route_budget(
     target: Vec3,
     no_route_message: String,
 ) -> Result<f64, ActionError> {
-    let route = world
-        .nav
-        .as_deref()
-        .and_then(|nav| nav.route_between(world.characters[actor_id].position_m(), target));
-    let Some(route) = route else {
+    let length = world.nav.as_deref().and_then(|nav| {
+        let query = crate::nav::query::StreetQuery::new(nav, &[], 0).ok()?;
+        // World intents still own legacy XZ anchors (including custody's
+        // height-zero fixtures). Price their graph leg exactly as before;
+        // floor-qualified endpoint/support adoption belongs to the mover.
+        let from = world.characters[actor_id].position_m();
+        let start = nav.nearest_node(from.x, from.z)?;
+        let goal = nav.nearest_node(target.x, target.z)?;
+        let ticket = query
+            .route_nodes(crate::nav::query::Surface::Street, start, goal)
+            .ok()?;
+        Some(ticket.route(&query).ok()?.length_m)
+    });
+    let Some(length) = length else {
         return Err(ActionError::new(ActionErrorCode::NoRoute, no_route_message));
     };
-    Ok((GO_TO_BUDGET_FACTOR * route.length_m / WALK_SPEED_MPS).max(GO_TO_MIN_BUDGET_SECONDS))
+    Ok((GO_TO_BUDGET_FACTOR * length / WALK_SPEED_MPS).max(GO_TO_MIN_BUDGET_SECONDS))
 }
 
 /// [`route_budget`] for an errand the *sim* laid rather than the model — the

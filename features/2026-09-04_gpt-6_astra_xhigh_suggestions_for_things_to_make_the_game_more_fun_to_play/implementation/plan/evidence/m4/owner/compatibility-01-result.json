@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "33d55284e9fbb3bfed3b6b2f17a38d0598792affa8821fb82d096ecb2b3dd46c",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m4-compatibility-01.log",
+  "raw_sha256": "152ed3dfc4ae62f7ecca161efb8d6039665f08abd58db539fe44a34d0e4c8e46",
+  "source_map_sha256": "618bd7ad8684f9ecf9843d8cac71dda05ce817dcba730b45ec1f5ed0c383a610",
+  "sources_unchanged": true,
+  "wall_seconds": 329.4500413960777
+}

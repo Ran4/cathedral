@@ -552,6 +552,11 @@ fn handle_map_teleport_click(
     player: Option<Single<&PlayerController>>,
     mut map_state: ResMut<MapState>,
     mut teleports: MessageWriter<TeleportPlayer>,
+    barriers: Query<(
+        &crate::controller::DynamicBarrier,
+        &Transform,
+        Option<&crate::city::gates::GateBarrier>,
+    )>,
 ) {
     if !map_state.fullscreen_open || !mouse.just_pressed(MouseButton::Left) {
         return;
@@ -578,6 +583,20 @@ fn handle_map_teleport_click(
     let Some(target) = resolve_teleport_target(&navigation.data, x as f64, z as f64) else {
         return; // Clicked off any reachable ground.
     };
+    let Ok((closures, count)) = map_closures(&navigation.data, barriers.iter()) else {
+        return;
+    };
+    let Ok(query) =
+        cathedral_sim::nav::query::StreetQuery::new(&navigation.data, &closures[..count], 0)
+    else {
+        return;
+    };
+    if query
+        .position_available(cathedral_sim::nav::query::Surface::Street, target)
+        .is_err()
+    {
+        return; // Preserve the clicked destination; never silently retarget around a closed gate.
+    }
 
     teleports.write(TeleportPlayer {
         position: Vec3::new(target.x as f32, target.y as f32, target.z as f32),
@@ -599,6 +618,9 @@ fn resolve_teleport_target(
     x: f64,
     z: f64,
 ) -> Option<cathedral_sim::Vec3> {
+    if !x.is_finite() || !z.is_finite() {
+        return None;
+    }
     let mut nearest_place: Option<(f64, usize)> = None;
     for place in nav.places() {
         let [px, pz] = nav.node_xz(place.node);
@@ -625,6 +647,66 @@ fn resolve_teleport_target(
     } else {
         None
     }
+}
+
+/// A borrowed projection of current collision owners, not another door state.
+/// Unknown/duplicate active authorities refuse rather than being ignored.
+fn map_closures<'a>(
+    nav: &cathedral_sim::NavData,
+    barriers: impl IntoIterator<
+        Item = (
+            &'a crate::controller::DynamicBarrier,
+            &'a Transform,
+            Option<&'a crate::city::gates::GateBarrier>,
+        ),
+    >,
+) -> Result<([cathedral_sim::nav::query::Closure; 32], usize), cathedral_sim::nav::query::QueryError>
+{
+    use crate::city::gates::GateKind;
+    use cathedral_sim::nav::query::{Closure, QueryError};
+    let mut closures = [Closure {
+        id: 0,
+        min: [0.; 2],
+        max: [0.; 2],
+    }; 32];
+    let mut count = 0;
+    for (barrier, transform, owner) in barriers {
+        if !barrier.active {
+            continue;
+        }
+        if !barrier.half_size.is_finite()
+            || !barrier.half_size.cmpgt(Vec3::ZERO).all()
+            || !transform.translation.is_finite()
+        {
+            return Err(QueryError::InvalidClosures);
+        }
+        let min = transform.translation - barrier.half_size;
+        let max = transform.translation + barrier.half_size;
+        if min.y > crate::controller::WALK_BAND_HI || max.y < crate::controller::WALK_BAND_LO {
+            continue;
+        }
+        let id = match owner.ok_or(QueryError::InvalidClosures)?.0 {
+            GateKind::Stone => 1,
+            GateKind::River => 2,
+        };
+        if count == closures.len() {
+            return Err(QueryError::Capacity);
+        }
+        // The baked standing radius plus a conservative centimetre guard.
+        // This is destination refusal, not a new collision/motion authority.
+        let margin = nav.grid().agent_radius_m + 0.01;
+        closures[count] = Closure {
+            id,
+            min: [f64::from(min.x) - margin, f64::from(min.z) - margin],
+            max: [f64::from(max.x) + margin, f64::from(max.z) + margin],
+        };
+        count += 1;
+    }
+    closures[..count].sort_unstable_by_key(|c| c.id);
+    if closures[..count].windows(2).any(|w| w[0].id == w[1].id) {
+        return Err(QueryError::InvalidClosures);
+    }
+    Ok((closures, count))
 }
 
 #[cfg(test)]
@@ -713,6 +795,105 @@ mod tests {
 
     fn nav() -> cathedral_sim::NavData {
         cathedral_sim::NavData::from_parts(NAV_JSON, NAV_BIN).expect("baked nav graph loads")
+    }
+
+    #[test]
+    fn map_click_refuses_closed_gate_then_emits_original_destination_when_open() {
+        use crate::city::gates::{GateBarrier, GateKind};
+        use crate::controller::DynamicBarrier;
+        use bevy::ecs::system::RunSystemOnce;
+
+        let mut app = App::new();
+        // Install the real immutable graph, without running renderer/gizmo systems.
+        app.add_plugins(crate::nav_overlay::NavDebugPlugin);
+        app.insert_resource(AreaDebugState::enabled_for_test())
+            .insert_resource(MapState {
+                fullscreen_open: true,
+            })
+            .init_resource::<ButtonInput<MouseButton>>()
+            .add_message::<TeleportPlayer>();
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        let target = {
+            let nav = &app.world().resource::<Navigation>().data;
+            nav.node_point(nav.places()[0].node)
+        };
+        let uv = world_to_uv(target.x as f32, target.z as f32);
+        app.world_mut().spawn((
+            MapClickArea,
+            RelativeCursorPosition {
+                normalized: Some(uv - Vec2::splat(0.5)),
+                cursor_over: true,
+            },
+        ));
+        app.world_mut().spawn(PlayerController::default());
+        let barrier = app
+            .world_mut()
+            .spawn((
+                DynamicBarrier {
+                    half_size: Vec3::new(1.0, 2.0, 1.0),
+                    active: true,
+                },
+                Transform::from_xyz(target.x as f32, 1.0, target.z as f32),
+                GateBarrier(GateKind::Stone),
+            ))
+            .id();
+
+        app.world_mut()
+            .run_system_once(handle_map_teleport_click)
+            .unwrap();
+        assert!(app.world().resource::<MapState>().fullscreen_open);
+        assert!(
+            app.world()
+                .resource::<Messages<TeleportPlayer>>()
+                .is_empty()
+        );
+        app.world_mut()
+            .get_mut::<DynamicBarrier>(barrier)
+            .unwrap()
+            .active = false;
+        app.world_mut()
+            .run_system_once(handle_map_teleport_click)
+            .unwrap();
+        assert!(!app.world().resource::<MapState>().fullscreen_open);
+        let events: Vec<_> = app
+            .world_mut()
+            .resource_mut::<Messages<TeleportPlayer>>()
+            .drain()
+            .collect();
+        assert_eq!(events.len(), 1);
+        assert_eq!(
+            events[0].position,
+            Vec3::new(target.x as f32, WALK_Y as f32, target.z as f32)
+        );
+        assert!(!events[0].fly);
+    }
+
+    #[test]
+    fn barrier_projection_refuses_unknown_duplicate_and_malformed_owners() {
+        use crate::city::gates::{GateBarrier, GateKind};
+        use crate::controller::DynamicBarrier;
+        let nav = nav();
+        let barrier = DynamicBarrier {
+            half_size: Vec3::ONE,
+            active: true,
+        };
+        let transform = Transform::default();
+        let owner = GateBarrier(GateKind::River);
+        assert!(map_closures(&nav, [(&barrier, &transform, None)]).is_err());
+        assert!(map_closures(&nav, [(&barrier, &transform, Some(&owner)); 2]).is_err());
+        let malformed = DynamicBarrier {
+            half_size: Vec3::splat(f32::NAN),
+            active: true,
+        };
+        assert!(map_closures(&nav, [(&malformed, &transform, Some(&owner))]).is_err());
+        let elevated = Transform::from_xyz(0.0, 10.0, 0.0);
+        assert_eq!(
+            map_closures(&nav, [(&barrier, &elevated, None)]).unwrap().1,
+            0
+        );
+        assert!(resolve_teleport_target(&nav, f64::NAN, 0.0).is_none());
     }
 
     fn round_trip(x: f32, z: f32) {
