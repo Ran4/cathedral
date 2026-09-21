@@ -1,4 +1,4 @@
-Status: M3a storage, M3b1 worker preparation/retirement transport, M3b2a atomic allocation promotion, M3b2b1 prompt archive admission and M3b2b2 native worker retention implemented and independently reviewed (2026-09-15). M3b2b3 diagnostic sinks, remaining allocation accounting, M3b2c whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
+Status: M3a storage, M3b1 worker preparation/retirement transport, M3b2a atomic allocation promotion, M3b2b1 prompt archive admission and M3b2b2 native worker retention implemented and independently reviewed (2026-09-15). M3b2b3 diagnostic sinks are in progress; remaining allocation accounting, M3b2c whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
 
 # M3 — Save-anywhere in the application
 

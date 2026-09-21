@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "591b1706bece1001616289eb182f66e96ef5526c175eead3ebc27ac6a46733da",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m3b2b3-focused-01.log",
+  "raw_sha256": "f11ac86125503480528eb85dc25dc494db557d505a153fa691d72a6098853b45",
+  "source_map_sha256": "abc0a765b488215d8b927940ae7ee61a67122ce7ae78bbc6588a12dd48eb0ea0",
+  "sources_unchanged": true,
+  "wall_seconds": 77.26603184081614
+}

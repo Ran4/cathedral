@@ -1,411 +1,250 @@
-//! Per-run session logging: every game start creates
-//! `logs/session_<n>_<start time>/` (symlinked as `logs/latest_session`)
-//! holding that run's `screenshots/`, the LLM `prompts/` archive, and a
-//! structured `logs.jsonl` that merges Bevy log events, the actor engine's
-//! diagnostics, the speech workers' stderr, and drive-script evidence lines so
-//! an agent can parse a whole session later.
-//!
-//! The session counter lives in `cathedral_meta.json` at the repository root
-//! and increments once per game start. `init()` runs before the Bevy app is
-//! built — the tracing layer, the screenshot systems, and the actor engine all
-//! read the resulting process-wide state instead of threading it through
-//! plugins that are constructed in different orders.
-
+//! Per-run session paths and bounded diagnostic JSONL/console output.
+//! Required cognition prompt archives remain a separate admitted service.
+use bevy::app::App;
+use bevy::log::{BoxedFmtLayer, BoxedLayer, tracing, tracing_subscriber};
+use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
     io::{self, Write},
     path::{Path, PathBuf},
-    sync::{Mutex, OnceLock},
-    time::{SystemTime, UNIX_EPOCH},
+    sync::{
+        Mutex, OnceLock,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
-use bevy::app::App;
-use bevy::log::{BoxedLayer, tracing, tracing_subscriber};
-use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded, unbounded};
-use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+mod bounded;
+mod format;
+#[cfg(test)]
+mod tests_bounded;
+#[cfg(test)]
+mod tests_public;
+use bounded::{BoundedSink, Refusal, SinkSender};
 
 const META_PATH: &str = "cathedral_meta.json";
 const LOGS_DIRECTORY: &str = "logs";
 const LATEST_LINK_NAME: &str = "latest_session";
-
+const EVIDENCE_TIMEOUT: Duration = Duration::from_secs(1);
 static SESSION: OnceLock<SessionPaths> = OnceLock::new();
-static WRITER: OnceLock<Sink> = OnceLock::new();
+static SENDERS: OnceLock<Mutex<Option<Senders>>> = OnceLock::new();
+static EVIDENCE_FAILED: AtomicBool = AtomicBool::new(false);
 
-/// `logs.jsonl`, split so that no producer ever holds a lock across a write
-/// syscall.
-///
-/// Records are appended to `staging` by whoever emitted them — the game's main
-/// thread through the tracing layer, the engine pump, the perf recorder, the
-/// speech workers' stderr forwarders — and appending to a `Vec<u8>` cannot
-/// block on a disk. A flusher then takes `out`, swaps the staged bytes out from
-/// under the *shorter* lock, and writes them while still holding `out`: that is
-/// what keeps the file in the order the records were staged, which
-/// `.claude/rules/LOGS_FOLDER.md` promises is chronological.
-struct Sink {
-    staging: Mutex<Vec<u8>>,
-    out: Mutex<Out>,
-    /// Wakes the flusher ahead of its interval. Capacity one: a nudge that
-    /// finds one already pending has nothing to add.
-    nudge: Sender<()>,
+#[derive(Clone)]
+struct Senders {
+    jsonl: Option<SinkSender>,
+    stderr: Option<SinkSender>,
 }
-
-struct Out {
-    file: File,
-    /// The buffer the previous flush emptied, swapped back in so the staging
-    /// area's allocation is not rebuilt every interval.
-    scratch: Vec<u8>,
+/// Normal destruction is off-frame and joins actual native workers. The global
+/// producers cannot own this join guard. Atexit only performs a bounded fence.
+pub(crate) struct SessionLogGuard {
+    jsonl: Option<BoundedSink>,
+    stderr: Option<BoundedSink>,
 }
-
+impl Drop for SessionLogGuard {
+    fn drop(&mut self) {
+        if let Some(global) = SENDERS.get() {
+            global.lock().unwrap().take();
+        }
+        // Close both before joining either; no producer can keep accepting.
+        if let Some(sink) = &self.jsonl {
+            sink.sender().close();
+        }
+        if let Some(sink) = &self.stderr {
+            sink.sender().close();
+        }
+    }
+}
 #[derive(Debug)]
 pub struct SessionPaths {
     pub number: u64,
-    /// Absolute: the prompt archive under `<root>/prompts` is written from
-    /// several places and none of them can rely on the working directory.
     pub root: PathBuf,
     pub screenshots: PathBuf,
 }
-
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 struct CathedralMeta {
     session: u64,
 }
 
-/// Creates this run's session directory tree and opens `logs.jsonl`. Failures
-/// are reported to stderr and leave `paths()` empty: the game must still run
-/// on a read-only checkout, it just loses captures and file logs.
-pub fn init() {
+/// Startup filesystem work and warnings happen before the app. The default
+/// sinks are finite. The later installed recipe must use start_admitted with
+/// its existing shared budget; this default does not invent a private budget.
+pub(crate) fn init() -> SessionLogGuard {
+    let stderr = BoundedSink::start_default(io::stderr()).ok();
     let number = begin_session(Path::new(META_PATH));
     let directory_name = session_directory_name(number, current_timestamp());
     let logs_root = PathBuf::from(LOGS_DIRECTORY);
     let root = logs_root.join(&directory_name);
-
-    for subdirectory in ["screenshots", "prompts"] {
-        if let Err(error) = fs::create_dir_all(root.join(subdirectory)) {
+    let mut jsonl = None;
+    let directory = ["screenshots", "prompts"]
+        .into_iter()
+        .try_for_each(|subdirectory| fs::create_dir_all(root.join(subdirectory)));
+    if let Err(error) = directory {
+        eprintln!("[session] could not create {}: {error}", root.display());
+    } else {
+        let root = root.canonicalize().unwrap_or(root);
+        if let Err(error) = update_latest_symlink(&logs_root, &directory_name) {
             eprintln!(
-                "[session] could not create {}: {error}",
-                root.join(subdirectory).display()
+                "[session] could not update {}/{LATEST_LINK_NAME}: {error}",
+                logs_root.display()
             );
-            return;
         }
-    }
-    let root = root.canonicalize().unwrap_or(root);
-
-    if let Err(error) = update_latest_symlink(&logs_root, &directory_name) {
-        eprintln!(
-            "[session] could not update {}/{LATEST_LINK_NAME}: {error}",
-            logs_root.display()
-        );
-    }
-
-    match File::options()
-        .create(true)
-        .append(true)
-        .open(root.join("logs.jsonl"))
-    {
-        Ok(file) => {
-            let (nudge, wake) = bounded(1);
-            let _ = WRITER.set(Sink {
-                staging: Mutex::new(Vec::new()),
-                out: Mutex::new(Out {
-                    file,
-                    scratch: Vec::new(),
-                }),
-                nudge,
-            });
-            spawn_flusher(wake);
+        match File::options()
+            .create(true)
+            .append(true)
+            .open(root.join("logs.jsonl"))
+        {
+            Ok(file) => match BoundedSink::start_default(file) {
+                Ok(sink) => jsonl = Some(sink),
+                Err(error) => eprintln!("[session] could not start log worker: {error}"),
+            },
+            Err(error) => eprintln!("[session] could not open logs.jsonl: {error}"),
         }
-        Err(error) => eprintln!("[session] could not open logs.jsonl: {error}"),
-    }
-
-    let _ = SESSION.set(SessionPaths {
-        number,
-        screenshots: root.join("screenshots"),
-        root,
-    });
-    log_line("session", "INFO", &format!("session {number} started"));
-}
-
-pub fn paths() -> Option<&'static SessionPaths> {
-    SESSION.get()
-}
-
-/// `LogPlugin::custom_layer` hook: mirrors every (already filtered) tracing
-/// event into `logs.jsonl` alongside the normal console output.
-pub fn custom_layer(_app: &mut App) -> Option<BoxedLayer> {
-    WRITER.get().map(|_| Box::new(JsonlLayer) as BoxedLayer)
-}
-
-/// Appends one record for a non-tracing line (drive evidence, the actor
-/// engine, a speech worker's stderr). A no-op before `init()` or when the
-/// session could not be created.
-pub fn log_line(source: &str, level: &str, message: &str) {
-    write_record(source, level, None, message, Map::new());
-}
-
-fn write_record(
-    source: &str,
-    level: &str,
-    target: Option<&str>,
-    message: &str,
-    extra: Map<String, Value>,
-) {
-    let Some(sink) = WRITER.get() else { return };
-    let epoch_ms = now_epoch_milliseconds();
-    let stamp = timestamp_from_unix_seconds(epoch_ms / 1_000);
-
-    let mut record = Map::new();
-    record.insert(
-        "ts".into(),
-        Value::String(format!("{}.{:03}", stamp.human(), epoch_ms % 1_000)),
-    );
-    record.insert("ts_ms".into(), Value::from(epoch_ms));
-    record.insert("source".into(), source.into());
-    record.insert("level".into(), level.into());
-    if let Some(target) = target {
-        record.insert("target".into(), target.into());
-    }
-    record.insert("message".into(), message.into());
-    if !extra.is_empty() {
-        record.insert("fields".into(), Value::Object(extra));
-    }
-
-    let staged = {
-        let Ok(mut staging) = sink.staging.lock() else {
-            return;
-        };
-        // Serializing into the staging buffer cannot touch the disk, so the
-        // lock is held for a memcpy and nothing else. A half-serialized record
-        // is rolled back rather than left in the file: `logs.jsonl` is parsed a
-        // line at a time.
-        let whole_records = staging.len();
-        if serde_json::to_writer(&mut *staging, &Value::Object(record)).is_ok() {
-            staging.push(b'\n');
-        } else {
-            staging.truncate(whole_records);
-            return;
-        }
-        staging.len()
-    };
-    // The rare-but-load-bearing sources — drive evidence, the session marker —
-    // keep the old line-durability contract (a parsed logs.jsonl is complete
-    // on its own) and pay for it on the spot. Everything else, WARN and ERROR
-    // included, wakes the flusher instead: it writes within microseconds, so an
-    // abort has to land inside *that* window to lose anything, and no frame
-    // ever waits on the disk to say something went wrong.
-    if source == "drive" || source == "session" {
-        flush_now();
-    } else if staged >= STAGING_HIGH_WATER {
-        // Never reached while the flusher is alive — it drains within an
-        // interval, and a whole megabyte of records in one interval is not a
-        // run anybody is playing. It is reached when the flusher's thread
-        // failed to spawn, and it is what the `BufWriter` used to do for free:
-        // a full buffer wrote itself out. Without a ceiling, staging would hold
-        // the entire session's log in memory and `logs.jsonl` would stay empty
-        // until exit.
-        flush_now();
-    } else if level != "INFO" {
-        let _ = sink.nudge.try_send(());
-    }
-}
-
-/// The staging buffer's ceiling: past this, whoever is logging writes it out
-/// itself rather than let the backlog grow unbounded.
-const STAGING_HIGH_WATER: usize = 1024 * 1024;
-
-/// Flush cadence for staged INFO lines. Short enough that tailing
-/// `logs.jsonl` still feels live; long enough that logging bursts cost the
-/// main thread no syscalls.
-const FLUSH_INTERVAL: std::time::Duration = std::time::Duration::from_millis(250);
-
-fn flush_now() {
-    if let Some(sink) = WRITER.get() {
-        flush_sink(sink);
-    }
-}
-
-fn flush_sink(sink: &Sink) {
-    // `out` first, and held across the write: two flushers that each swapped
-    // the staging buffer and then raced to the file would interleave their
-    // halves. Producers never take this lock, so they never wait on the write.
-    let Ok(mut out) = sink.out.lock() else { return };
-    let Out { file, scratch } = &mut *out;
-    scratch.clear();
-    {
-        let Ok(mut staging) = sink.staging.lock() else {
-            return;
-        };
-        if staging.is_empty() {
-            return;
-        }
-        std::mem::swap(&mut *staging, scratch);
-    }
-    let _ = file.write_all(scratch.as_slice());
-}
-
-extern "C" fn flush_at_exit() {
-    flush_now();
-}
-
-fn spawn_flusher(wake: Receiver<()>) {
-    let _ = std::thread::Builder::new()
-        .name("cathedral-log-flush".into())
-        .spawn(move || {
-            loop {
-                // A nudge (a WARN or an ERROR) writes it out at once; otherwise
-                // the interval does. The sender lives in a static, so the
-                // disconnected arm is unreachable — but it would busy-loop.
-                if matches!(
-                    wake.recv_timeout(FLUSH_INTERVAL),
-                    Err(RecvTimeoutError::Disconnected)
-                ) {
-                    return;
-                }
-                flush_now();
-            }
+        let _ = SESSION.set(SessionPaths {
+            number,
+            screenshots: root.join("screenshots"),
+            root,
         });
-    // A normal `main` return and `std::process::exit` both run atexit
-    // handlers; only a hard abort can now lose staged lines.
+    }
+    *SENDERS.get_or_init(|| Mutex::new(None)).lock().unwrap() = Some(Senders {
+        jsonl: jsonl.as_ref().map(BoundedSink::sender),
+        stderr: stderr.as_ref().map(BoundedSink::sender),
+    });
     unsafe {
         libc::atexit(flush_at_exit);
     }
+    log_line("session", "INFO", &format!("session {number} started"));
+    SessionLogGuard { jsonl, stderr }
+}
+pub fn paths() -> Option<&'static SessionPaths> {
+    SESSION.get()
+}
+fn senders() -> Option<Senders> {
+    SENDERS.get()?.lock().unwrap().clone()
 }
 
-// ------------------------------------------------------------------- stderr
-
-/// Diagnostic lines that reach stderr without their author paying for the
-/// syscall.
-///
-/// `std::io::Stderr` is unbuffered, and the actor engine's diagnostics are
-/// emitted from the engine pump — on the game's main thread, in the middle of a
-/// frame — where a terminal that is slow to drain (a tmux pane with a long
-/// scrollback, a pipe whose reader has stalled) can block the write for as long
-/// as it likes. The bytes and their order are unchanged; only the thread that
-/// writes them is, and it does nothing else, so a line still lands within
-/// microseconds of being handed over.
-enum StderrJob {
-    Line(String),
-    /// Replies when every line queued before it has been written.
-    Barrier(Sender<()>),
+/// Both sinks consume bounded event fields. The ordinary Bevy formatter is
+/// replaced because its internal String and synchronous stderr writer bypass
+/// any queue added only to the JSONL custom layer.
+pub fn custom_layer(_app: &mut App) -> Option<BoxedLayer> {
+    Some(Box::new(DiagnosticLayer))
 }
-
-fn stderr_writer() -> &'static Sender<StderrJob> {
-    static STDERR: OnceLock<Sender<StderrJob>> = OnceLock::new();
-    STDERR.get_or_init(|| {
-        let (sender, lines) = unbounded::<StderrJob>();
-        let spawned = std::thread::Builder::new()
-            .name("cathedral-stderr".into())
-            .spawn(move || {
-                let mut stderr = io::stderr();
-                for job in lines {
-                    match job {
-                        StderrJob::Line(line) => {
-                            // One `write_all` for the whole line: `eprintln!`
-                            // splits the newline into a second syscall.
-                            let mut bytes = line.into_bytes();
-                            bytes.push(b'\n');
-                            let _ = stderr.write_all(&bytes);
-                        }
-                        StderrJob::Barrier(done) => {
-                            let _ = done.send(());
-                        }
-                    }
-                }
-            });
-        if spawned.is_ok() {
-            // A `OnceLock` static never drops, and the drive watchdog leaves
-            // via `std::process::exit`; atexit covers both, so only a hard
-            // abort can lose a queued line.
-            unsafe {
-                libc::atexit(drain_stderr_at_exit);
-            }
-        }
-        sender
-    })
+pub fn fmt_layer(_app: &mut App) -> Option<BoxedFmtLayer> {
+    Some(Box::new(tracing_subscriber::layer::Identity::new()))
 }
-
-/// Print one line to stderr, from a thread that can afford to wait for it.
-pub fn print_line(line: String) {
-    if let Err(undelivered) = stderr_writer().send(StderrJob::Line(line))
-        && let StderrJob::Line(line) = undelivered.into_inner()
-    {
-        // No writer thread to hand it to: a blocked frame beats a lost
-        // diagnostic.
-        eprintln!("{line}");
-    }
-}
-
-extern "C" fn drain_stderr_at_exit() {
-    let (done, wait) = bounded(1);
-    if stderr_writer().send(StderrJob::Barrier(done)).is_ok() {
-        let _ = wait.recv_timeout(std::time::Duration::from_secs(5));
-    }
-}
-
-struct JsonlLayer;
-
-impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for JsonlLayer {
+struct DiagnosticLayer;
+impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for DiagnosticLayer {
     fn on_event(
         &self,
         event: &tracing::Event<'_>,
         _ctx: tracing_subscriber::layer::Context<'_, S>,
     ) {
-        let mut fields = FieldCollector::default();
-        event.record(&mut fields);
-        let metadata = event.metadata();
-        write_record(
-            "rust",
-            &metadata.level().to_string(),
-            Some(metadata.target()),
-            &fields.message,
-            fields.extra,
-        );
-    }
-}
-
-#[derive(Default)]
-struct FieldCollector {
-    message: String,
-    extra: Map<String, Value>,
-}
-
-impl FieldCollector {
-    fn insert(&mut self, name: &str, value: Value) {
-        if name == "message" {
-            self.message = match value {
-                Value::String(text) => text,
-                other => other.to_string(),
-            };
-        } else {
-            self.extra.insert(name.into(), value);
+        let Some(senders) = senders() else { return };
+        if let Some(sink) = &senders.jsonl {
+            let _ = format::event(sink, event, true);
+            report_losses(sink, true);
+        }
+        if let Some(sink) = &senders.stderr {
+            let _ = format::event(sink, event, false);
+            report_losses(sink, false);
         }
     }
 }
 
-impl tracing::field::Visit for FieldCollector {
-    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-        self.insert(field.name(), Value::String(format!("{value:?}")));
+/// Diagnostics may be refused whole; counters and recovery summaries expose
+/// loss. Drive/session use reserved storage and a bounded prefix durability wait.
+/// Their failure is sticky and makes a drive run's normal exit unsuccessful.
+pub fn log_line(source: &str, level: &str, message: &str) {
+    let Some(senders) = senders() else { return };
+    let evidence = matches!(source, "drive" | "session");
+    let Some(sink) = &senders.jsonl else {
+        if evidence {
+            EVIDENCE_FAILED.store(true, Ordering::Release);
+        }
+        return;
+    };
+    let deadline = evidence.then(|| Instant::now() + EVIDENCE_TIMEOUT);
+    let result =
+        format::line(sink, source, level, message, evidence, deadline).and_then(|ticket| {
+            if let Some(deadline) = deadline {
+                sink.fence(Some(ticket), deadline)
+            } else {
+                Ok(())
+            }
+        });
+    if evidence && result.is_err() {
+        EVIDENCE_FAILED.store(true, Ordering::Release);
     }
+    report_losses(sink, true);
+}
+pub(crate) fn evidence_failed() -> bool {
+    EVIDENCE_FAILED.load(Ordering::Acquire)
+}
 
-    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
-        self.insert(field.name(), Value::String(value.into()));
+/// The input is already caller-owned. Admission refuses excessive capacity and
+/// returns it intact at the isolated seam; this diagnostic convenience drops a
+/// refused input after recording its bounded loss counter.
+pub fn print_line(line: String) {
+    if let Some(sink) = senders().and_then(|s| s.stderr) {
+        let _ = sink.line_owned(line);
+        report_losses(&sink, false);
     }
-
-    fn record_i64(&mut self, field: &tracing::field::Field, value: i64) {
-        self.insert(field.name(), Value::from(value));
+}
+pub(crate) fn print_args(args: std::fmt::Arguments<'_>) {
+    if let Some(sink) = senders().and_then(|s| s.stderr) {
+        let _ = print_to(&sink, args);
+        report_losses(&sink, false);
     }
-
-    fn record_u64(&mut self, field: &tracing::field::Field, value: u64) {
-        self.insert(field.name(), Value::from(value));
+}
+fn print_to(sink: &SinkSender, args: std::fmt::Arguments<'_>) -> Result<bounded::Ticket, Refusal> {
+    let mut draft = sink.begin(false, None)?;
+    let (_, output) = draft.parts();
+    let mut out = bounded::SliceWriter::new(output);
+    if out.write_fmt(args).is_err() {
+        sink.refuse(Refusal::Oversized);
+        return Err(Refusal::Oversized);
     }
-
-    fn record_f64(&mut self, field: &tracing::field::Field, value: f64) {
-        self.insert(field.name(), Value::from(value));
+    let len = out.len;
+    draft.set_body_len(len);
+    draft.console_body();
+    sink.commit(draft, false)
+}
+fn report_losses(sink: &SinkSender, json: bool) {
+    let Some(losses) = sink.unreported_losses() else {
+        return;
+    };
+    let mut storage = [0; 256];
+    let mut out = bounded::SliceWriter::new(&mut storage);
+    let _ = write!(
+        out,
+        "diagnostic records refused: full={} oversized={} closed={}",
+        losses.0, losses.1, losses.2
+    );
+    let len = out.len;
+    let message = std::str::from_utf8(&storage[..len]).unwrap();
+    let result = if json {
+        format::line(sink, "diagnostics", "WARN", message, false, None)
+    } else {
+        print_to(sink, format_args!("[diagnostics] {message}"))
+    };
+    if result.is_ok() {
+        sink.mark_reported(losses);
     }
-
-    fn record_bool(&mut self, field: &tracing::field::Field, value: bool) {
-        self.insert(field.name(), Value::from(value));
+}
+extern "C" fn flush_at_exit() {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    if let Some(senders) = senders() {
+        if let Some(sink) = &senders.jsonl {
+            report_losses(sink, true);
+            if sink.fence(None, deadline).is_err() {
+                EVIDENCE_FAILED.store(true, Ordering::Release);
+            }
+        }
+        if let Some(sink) = &senders.stderr {
+            report_losses(sink, false);
+            let _ = sink.fence(None, deadline);
+        }
     }
 }
 
@@ -729,45 +568,27 @@ mod tests {
         fs::remove_dir_all(logs_root).expect("temporary logs root should be removable");
     }
 
-    /// The staged bytes reach the file once, in order, and the recycled scratch
-    /// buffer does not re-emit the previous flush — `logs.jsonl` is documented
-    /// as one record per line, chronological.
     #[test]
     fn flushing_writes_each_staged_record_exactly_once_and_in_order() {
         let path = temporary_meta_path("staging").with_extension("jsonl");
-        let (nudge, _wake) = bounded(1);
-        let sink = Sink {
-            staging: Mutex::new(Vec::new()),
-            out: Mutex::new(Out {
-                file: File::options()
-                    .create(true)
-                    .append(true)
-                    .open(&path)
-                    .expect("a log file"),
-                scratch: Vec::new(),
-            }),
-            nudge,
-        };
-        let stage = |line: &str| {
-            sink.staging
-                .lock()
-                .expect("staging")
-                .extend_from_slice(line.as_bytes());
-        };
-
-        stage("one\n");
-        stage("two\n");
-        flush_sink(&sink);
-        // Nothing staged since: a flush is a no-op, not a repeat of the last.
-        flush_sink(&sink);
-        stage("three\n");
-        flush_sink(&sink);
-
-        assert_eq!(
-            fs::read_to_string(&path).expect("the log is readable"),
-            "one\ntwo\nthree\n"
-        );
-        fs::remove_file(path).expect("temporary log should be removable");
+        let sink = BoundedSink::start_default(File::create(&path).unwrap()).unwrap();
+        let sender = sink.sender();
+        sender.line_owned("one".into()).unwrap();
+        let prefix = sender.line_owned("two".into()).unwrap();
+        sender
+            .fence(Some(prefix), Instant::now() + Duration::from_secs(2))
+            .unwrap();
+        sender
+            .fence(Some(prefix), Instant::now() + Duration::from_secs(2))
+            .unwrap();
+        let last = sender.line_owned("three".into()).unwrap();
+        sender
+            .fence(Some(last), Instant::now() + Duration::from_secs(2))
+            .unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "one\ntwo\nthree\n");
+        drop(sink);
+        drop(sender);
+        fs::remove_file(path).unwrap();
     }
 
     #[test]

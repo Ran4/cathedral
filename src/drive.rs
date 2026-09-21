@@ -176,7 +176,7 @@ fn spawn_watchdog(timeout: Duration) {
             "[drive] watchdog: run exceeded {}s; aborting",
             timeout.as_secs_f64()
         );
-        eprintln!("{message}");
+        session_log::print_args(format_args!("{message}"));
         session_log::log_line("drive", "ERROR", &message);
         std::process::exit(124);
     });
@@ -1484,7 +1484,11 @@ fn run_drive_script(
             }
         }
         Some(Directive::Quit) => {
-            exit.write(AppExit::Success);
+            exit.write(if session_log::evidence_failed() {
+                AppExit::error()
+            } else {
+                AppExit::Success
+            });
         }
     }
 }

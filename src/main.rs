@@ -36,15 +36,15 @@ use soundscape::SoundscapePlugin;
 use ui::HudPlugin;
 use weather::WeatherPlugin;
 
-fn main() {
+fn main() -> AppExit {
     // The session directory must exist before anything logs, screenshots, or
     // starts the actor engine; all three consume this process-wide state.
-    session_log::init();
+    let _session_log = session_log::init();
     // The speech workers are subprocesses and write to their own stderr. Route
     // it into `logs.jsonl` under the worker's own source name (`stt` / `tts`),
     // so a session log still accounts for every line the run produced.
     cathedral_backends::set_log_sink(std::sync::Arc::new(|source: &str, line: &str| {
-        eprintln!("[smart actors/{source}] {line}");
+        session_log::print_args(format_args!("[smart actors/{source}] {line}"));
         session_log::log_line(source, "INFO", line);
     }));
     let mut config = load_config();
@@ -117,6 +117,7 @@ fn main() {
             // Mirror the console log stream into the session's
             // `logs.jsonl` (see `session_log`).
             custom_layer: session_log::custom_layer,
+            fmt_layer: session_log::fmt_layer,
             ..default()
         })
         .set(WindowPlugin {
@@ -202,7 +203,7 @@ fn main() {
     if let Some(drive) = drive {
         app.add_plugins(drive);
     }
-    app.run();
+    app.run()
 }
 
 /// How many threads the ECS scheduler gets.
