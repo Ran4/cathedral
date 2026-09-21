@@ -49,6 +49,7 @@ struct Committed {
 pub(crate) struct StagedStartup {
     recipe: CommittedStartup,
     controls: crate::checkpoint_controls::CheckpointControls,
+    captures: crate::screenshot::requests::Requests,
     #[cfg(target_os = "linux")]
     preparation: cathedral_backends::checkpoint_preparation::CheckpointPreparation,
 }
@@ -96,6 +97,8 @@ impl StagedStartup {
             return Err(StartupRefusal::Admission);
         }
         let controls = crate::checkpoint_controls::CheckpointControls::admitted(installed.budget())
+            .map_err(|_| StartupRefusal::Admission)?;
+        let captures = crate::screenshot::requests::Requests::admitted(installed.budget())
             .map_err(|_| StartupRefusal::Admission)?;
         let nodes: NavNodes =
             serde_json::from_str(NAV_JSON).map_err(|_| StartupRefusal::Navigation)?;
@@ -152,6 +155,7 @@ impl StagedStartup {
         .map_err(|_| StartupRefusal::Services)?;
         Ok(Self {
             controls,
+            captures,
             recipe: CommittedStartup(Arc::new(Committed {
                 config,
                 nav,
@@ -171,7 +175,10 @@ impl StagedStartup {
     /// Startup-only publication. Duplicate installation refuses before any
     /// resource is changed. This does not replace a running world.
     pub fn install(self, app: &mut App) -> Result<(), (StartupRefusal, Self)> {
-        if app.world().contains_resource::<CommittedStartup>()
+        if app
+            .world()
+            .contains_resource::<crate::screenshot::requests::Requests>()
+            || app.world().contains_resource::<CommittedStartup>()
             || app
                 .world()
                 .contains_resource::<crate::checkpoint_controls::CheckpointControls>()
@@ -182,6 +189,7 @@ impl StagedStartup {
         }
         app.insert_resource(self.recipe);
         app.insert_resource(self.controls);
+        app.insert_resource(self.captures);
         #[cfg(target_os = "linux")]
         app.insert_resource(InstalledPreparation {
             _worker: self.preparation,

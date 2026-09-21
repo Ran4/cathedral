@@ -12,8 +12,6 @@
 //! env var the plugin is never added and there is zero behavior change.
 
 use std::fs;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use bevy::input::keyboard::{Key, KeyboardInput};
@@ -21,9 +19,7 @@ use bevy::input::{ButtonState, InputSystems};
 use bevy::prelude::*;
 use bevy::reflect::enums::{DynamicEnum, DynamicVariant};
 use bevy::reflect::{TypeInfo, Typed};
-use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk};
 use bevy::ui::UiSystems;
-use bevy::window::PrimaryWindow;
 use cathedral_sim::{StatusKind, WeatherKind};
 
 use crate::controller::{EYE_OFFSET, PlayerController, TeleportPlayer};
@@ -148,6 +144,7 @@ impl Plugin for DrivePlugin {
             last_framed: None,
             scheduler: Scheduler::new(self.actions.clone()),
             shot_saved: None,
+            shot_failed: false,
             pressed_key: None,
             held_key: None,
         })
@@ -966,10 +963,9 @@ impl Scheduler {
 struct DriveState {
     last_framed: Option<String>,
     scheduler: Scheduler,
-    /// Set by the screenshot-captured observer once `save_to_disk` can no
-    /// longer be outrun: both observers fire in the same trigger flush, a
-    /// frame before the scheduler reads this.
-    shot_saved: Option<Arc<AtomicBool>>,
+    /// A receipt becomes successful only after the actual PNG write returns.
+    shot_saved: Option<crate::screenshot::requests::Receipt>,
+    shot_failed: bool,
     /// Key injected last frame, released on the next so handlers see a full
     /// press/release cycle.
     pressed_key: Option<KeyCode>,
@@ -1084,7 +1080,7 @@ fn run_drive_script(
     mut state: ResMut<DriveState>,
     mut keys: ResMut<ButtonInput<KeyCode>>,
     mut keyboard_events: MessageWriter<KeyboardInput>,
-    windows: Query<Entity, With<PrimaryWindow>>,
+    capture: crate::screenshot::requests::CaptureContext,
     runtime: (Option<Res<SmartActorRuntime>>, Option<Res<WorldClockState>>),
     engine: Option<NonSend<LocalEngine>>,
     bridge: Option<Res<BridgeHandle>>,
@@ -1117,10 +1113,24 @@ fn run_drive_script(
         .0
         .as_ref()
         .map(|runtime| runtime.interactions_enabled());
-    let shot_saved = state
-        .shot_saved
-        .as_ref()
-        .is_none_or(|saved| saved.load(Ordering::Acquire));
+    let shot_saved = match state.shot_saved.as_ref().map(|receipt| receipt.outcome()) {
+        None => true,
+        Some(
+            crate::screenshot::requests::Outcome::Pending
+            | crate::screenshot::requests::Outcome::Encoding,
+        ) => false,
+        Some(crate::screenshot::requests::Outcome::Saved) => {
+            drive_log(&format!("[drive] {now:.1}s screenshot saved"));
+            state.shot_saved = None;
+            true
+        }
+        Some(failure) => {
+            drive_log(&format!("[drive] {now:.1}s screenshot failed: {failure:?}"));
+            state.shot_failed = true;
+            state.shot_saved = None;
+            true
+        }
+    };
 
     let directive =
         state
@@ -1143,12 +1153,12 @@ fn run_drive_script(
             keys.press(key);
             state.held_key = Some((key, until));
         }
-        Some(Directive::Type(text)) => match windows.single() {
+        Some(Directive::Type(text)) => match capture.window() {
             // One raw keyboard message carrying the whole string: the chat box
             // inserts `text` verbatim, exactly as a real keypress would arrive.
             // F35 exists on no keybinding, so the ButtonInput echo Bevy's input
             // system produces from this message next frame stays inert.
-            Ok(window) => {
+            Some(window) => {
                 for state in [ButtonState::Pressed, ButtonState::Released] {
                     keyboard_events.write(KeyboardInput {
                         key_code: KeyCode::F35,
@@ -1160,7 +1170,7 @@ fn run_drive_script(
                     });
                 }
             }
-            Err(_) => drive_log(&format!(
+            None => drive_log(&format!(
                 "[drive] {now:.1}s warning: no primary window; `type` skipped"
             )),
         },
@@ -1179,11 +1189,15 @@ fn run_drive_script(
             }
         }
         Some(Directive::Shot(name)) => match session_log::paths() {
-            None => drive_log(&format!(
-                "[drive] {now:.1}s warning: no session directory; screenshot `{name}` skipped"
-            )),
+            None => {
+                state.shot_failed = true;
+                drive_log(&format!(
+                    "[drive] {now:.1}s screenshot `{name}` failed: no session directory"
+                ));
+            }
             Some(session) => {
                 if let Err(error) = fs::create_dir_all(&session.screenshots) {
+                    state.shot_failed = true;
                     drive_log(&format!(
                         "[drive] {now:.1}s warning: could not create {}: {error}",
                         session.screenshots.display()
@@ -1205,17 +1219,19 @@ fn run_drive_script(
                     }
                     if let Err(error) = fs::write(path.with_extension("json"), evidence.to_string())
                     {
+                        state.shot_failed = true;
                         drive_log(&format!(
                             "[drive] {now:.1}s resident evidence failed: {error}"
                         ));
                     }
                 }
-                let saved = Arc::new(AtomicBool::new(false));
-                state.shot_saved = Some(saved.clone());
-                commands
-                    .spawn(Screenshot::primary_window())
-                    .observe(save_to_disk(path))
-                    .observe(move |_: On<ScreenshotCaptured>| saved.store(true, Ordering::Release));
+                match capture.submit(&mut commands, path) {
+                    Ok(receipt) => state.shot_saved = Some(receipt),
+                    Err(reason) => {
+                        state.shot_failed = true;
+                        drive_log(&format!("[drive] {now:.1}s screenshot refused: {reason:?}"));
+                    }
+                }
             }
         },
         Some(Directive::Sound(sound_id)) => {
@@ -1484,7 +1500,7 @@ fn run_drive_script(
             }
         }
         Some(Directive::Quit) => {
-            exit.write(if session_log::evidence_failed() {
+            exit.write(if session_log::evidence_failed() || state.shot_failed {
                 AppExit::error()
             } else {
                 AppExit::Success

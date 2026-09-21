@@ -58,6 +58,11 @@ pub(crate) struct CheckpointControls {
 }
 
 impl CheckpointControls {
+    pub(crate) fn belongs_to(&self, installed: &CommittedStartup) -> bool {
+        installed
+            .budget()
+            .owns_reservation(&self._lease, cathedral_sim::checkpoint::Cohort::Running)
+    }
     pub(crate) fn admitted(budget: &Arc<CheckpointBudget>) -> checkpoint::Result<Self> {
         let lease = budget.reserve_running_overhead(CONTROL_BYTES)?;
         Ok(Self {

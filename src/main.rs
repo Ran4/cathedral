@@ -194,6 +194,10 @@ fn main() -> AppExit {
     // chase every fade that re-sets a sink's volume. `CATHEDRAL_HEADLESS_AUDIO=1`
     // keeps the sound for the runs that are *about* the soundscape.
     let muted = headless && std::env::var_os("CATHEDRAL_HEADLESS_AUDIO").is_none();
+    app.insert_resource(screenshot::requests::FrameEnvironment {
+        headless,
+        audio_disabled: muted,
+    });
     if muted {
         plugins = plugins.disable::<bevy::audio::AudioPlugin>();
     }

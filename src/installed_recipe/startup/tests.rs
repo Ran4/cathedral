@@ -127,6 +127,7 @@ fn committed_recipe_is_shared_across_consumers_and_duplicate_install_rolls_back(
         let duplicate = StagedStartup {
             recipe: committed.clone(),
             controls: crate::checkpoint_controls::CheckpointControls::admitted(&budget).unwrap(),
+            captures: crate::screenshot::requests::Requests::admitted(&budget).unwrap(),
             preparation: cathedral_backends::checkpoint_preparation::CheckpointPreparation::start(
                 budget.clone(),
             )

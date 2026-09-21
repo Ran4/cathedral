@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "59225014a9c073651a67789de5922fbb2ee0c48d6fceea0d9abbbc06daebc65d",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m3d-focused-01.log",
+  "raw_sha256": "06bc841fe3d93a0577b3425b9277973375ae297d2f5494ceb8614d0f36a46862",
+  "source_map_sha256": "4910d30b7e004d8be595b05eea1569370e0f0988e943d0adbb1f797b4c12ad21",
+  "sources_unchanged": true,
+  "wall_seconds": 248.24581633415073
+}
