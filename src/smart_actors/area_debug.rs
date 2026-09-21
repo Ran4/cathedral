@@ -26,6 +26,14 @@ pub struct AreaDebugState {
 }
 
 impl AreaDebugState {
+    #[cfg(test)]
+    pub(crate) fn enabled_for_test() -> Self {
+        Self {
+            enabled: true,
+            ..Self::default()
+        }
+    }
+
     /// Whether the `B` developer layer is on. Read by the sibling
     /// [`super::actor_sheet`] overlay (which shares this one toggle) and by the
     /// map's click-to-teleport, which treats this layer as "debug mode".
@@ -181,7 +189,10 @@ pub(super) fn update_area_debug_ui(
     };
     let Ok(player) = players.single() else {
         state.visible_area_ids.clear();
-        set_text(&mut player_text, "AREA DEBUG  ·  player transform unavailable");
+        set_text(
+            &mut player_text,
+            "AREA DEBUG  ·  player transform unavailable",
+        );
         hide_box_labels(&mut box_labels);
         return;
     };
