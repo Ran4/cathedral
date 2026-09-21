@@ -67,11 +67,10 @@ struct CathedralMeta {
     session: u64,
 }
 
-/// Startup filesystem work and warnings happen before the app. The default
-/// sinks are finite. The later installed recipe must use start_admitted with
-/// its existing shared budget; this default does not invent a private budget.
-pub(crate) fn init() -> SessionLogGuard {
-    let stderr = BoundedSink::start_default(io::stderr()).ok();
+/// Startup filesystem work and warnings happen before the app. Both finite
+/// sinks retain disjoint leases in the installed startup recipe's shared budget.
+pub(crate) fn init(budget: &cathedral_sim::checkpoint::CheckpointBudget) -> SessionLogGuard {
+    let stderr = BoundedSink::start_admitted(io::stderr(), budget).ok();
     let number = begin_session(Path::new(META_PATH));
     let directory_name = session_directory_name(number, current_timestamp());
     let logs_root = PathBuf::from(LOGS_DIRECTORY);
@@ -95,7 +94,7 @@ pub(crate) fn init() -> SessionLogGuard {
             .append(true)
             .open(root.join("logs.jsonl"))
         {
-            Ok(file) => match BoundedSink::start_default(file) {
+            Ok(file) => match BoundedSink::start_admitted(file, budget) {
                 Ok(sink) => jsonl = Some(sink),
                 Err(error) => eprintln!("[session] could not start log worker: {error}"),
             },

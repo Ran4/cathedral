@@ -5,7 +5,7 @@
 //! rewrite `config.ron` (comments in the file are not preserved; the defaults
 //! file keeps the documented reference copy).
 
-use std::{fs, path::Path};
+use std::{fs, io::Read, path::Path};
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -14,6 +14,9 @@ use crate::smart_actors::SmartActorsConfig;
 
 pub const CONFIG_PATH: &str = "config.ron";
 pub const DEFAULT_CONFIG_PATH: &str = "default_config.ron";
+/// Player settings are small (the shipped file is 6 KiB). Refuse an oversized
+/// override and retain the existing fallback to committed/built-in defaults.
+pub(crate) const MAX_CONFIG_SOURCE_BYTES: usize = 64 * 1024;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
@@ -130,10 +133,6 @@ impl Default for AppConfig {
     }
 }
 
-pub fn load_config() -> AppConfig {
-    load_config_from_paths(CONFIG_PATH, DEFAULT_CONFIG_PATH)
-}
-
 /// Load the player override first and the committed defaults second.
 ///
 /// Keeping the path selection injectable lets host integration tests exercise
@@ -144,7 +143,7 @@ pub fn load_config_from_paths(
     default_config_path: impl AsRef<Path>,
 ) -> AppConfig {
     for path in [config_path.as_ref(), default_config_path.as_ref()] {
-        match fs::read_to_string(path) {
+        match read_config_source(path) {
             Ok(source) => match ron::from_str::<AppConfig>(&source) {
                 Ok(mut config) => {
                     if let Some(warning) = config.vermin.sanitize() {
@@ -159,6 +158,30 @@ pub fn load_config_from_paths(
     }
     eprintln!("Using built-in fullscreen defaults.");
     AppConfig::default()
+}
+
+fn read_config_source(path: &Path) -> std::io::Result<String> {
+    // Fixed capacity, including a sentinel byte, even if a file grows after
+    // metadata inspection. No read_to_string/read_to_end geometric growth.
+    let mut bytes = vec![0; MAX_CONFIG_SOURCE_BYTES + 1];
+    let mut file = fs::File::open(path)?;
+    let mut used = 0;
+    while used < bytes.len() {
+        let read = file.read(&mut bytes[used..])?;
+        if read == 0 {
+            break;
+        }
+        used += read;
+    }
+    if used > MAX_CONFIG_SOURCE_BYTES {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "settings exceed 64 KiB",
+        ));
+    }
+    bytes.truncate(used);
+    String::from_utf8(bytes)
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "settings are not UTF-8"))
 }
 
 /// The configuration as loaded at startup, kept current so in-game settings

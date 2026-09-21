@@ -179,6 +179,7 @@ impl BoundedSink {
             }
         })
     }
+    #[cfg(test)]
     pub(crate) fn start_default(writer: impl Write + Send + 'static) -> io::Result<Self> {
         Self::start(writer, None, DIAGNOSTIC_SLOTS, EVIDENCE_SLOTS, false)
     }

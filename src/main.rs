@@ -4,6 +4,7 @@ mod controller;
 mod drive;
 mod fonts;
 mod host_checkpoint;
+mod installed_recipe;
 mod live_time;
 mod map;
 mod materials;
@@ -24,7 +25,7 @@ use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, MonitorSelection, WindowMode, WindowResolution};
 use bevy::winit::{UpdateMode, WinitSettings};
 use city::CityPlugin;
-use config::{PersistedConfig, load_config};
+use config::PersistedConfig;
 use controller::ControllerPlugin;
 use fonts::CathedralFontsPlugin;
 use map::MapPlugin;
@@ -39,7 +40,14 @@ use weather::WeatherPlugin;
 fn main() -> AppExit {
     // The session directory must exist before anything logs, screenshots, or
     // starts the actor engine; all three consume this process-wide state.
-    let _session_log = session_log::init();
+    let installed = match installed_recipe::InstalledRecipe::new() {
+        Ok(installed) => installed,
+        Err(error) => {
+            eprintln!("[startup] could not admit installed startup control: {error}");
+            return AppExit::error();
+        }
+    };
+    let _session_log = session_log::init(installed.budget());
     // The speech workers are subprocesses and write to their own stderr. Route
     // it into `logs.jsonl` under the worker's own source name (`stt` / `tts`),
     // so a session log still accounts for every line the run produced.
@@ -47,7 +55,17 @@ fn main() -> AppExit {
         session_log::print_args(format_args!("[smart actors/{source}] {line}"));
         session_log::log_line(source, "INFO", line);
     }));
-    let mut config = load_config();
+    let mut config = match installed.load_config() {
+        Ok(config) => config,
+        Err(error) => {
+            session_log::log_line(
+                "session",
+                "ERROR",
+                &format!("startup config admission failed: {error}"),
+            );
+            return AppExit::error();
+        }
+    };
     // Perf/CI runs force the deterministic offline engine without editing the
     // player's config.ron.
     if std::env::var_os("CATHEDRAL_FAKE_BACKEND").is_some() {
@@ -122,7 +140,7 @@ fn main() -> AppExit {
         })
         .set(WindowPlugin {
             primary_window: Some(Window {
-                title: config.title,
+                title: std::mem::take(&mut config.title),
                 resolution,
                 // A drive window should keep the size it asked for:
                 // screenshots get compared frame to frame, and a tiling WM will

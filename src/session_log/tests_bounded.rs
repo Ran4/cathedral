@@ -285,3 +285,30 @@ fn failed_write_has_no_successful_fence_and_no_unbounded_retry() {
         Err(Refusal::Closed)
     );
 }
+
+#[test]
+fn installed_recipe_shares_two_disjoint_sink_leases_and_refuses_pressure() {
+    let recipe = crate::installed_recipe::InstalledRecipe::new().unwrap();
+    let budget = recipe.budget().clone();
+    let before = budget.retained_bytes();
+    let jsonl = BoundedSink::start_admitted(io::sink(), &budget).unwrap();
+    let stderr = BoundedSink::start_admitted(io::sink(), &budget).unwrap();
+    assert_eq!(budget.retained_bytes(), before + 2 * ALLOWANCE_BYTES);
+    let retained_sender = jsonl.sender();
+    drop(jsonl);
+    assert_eq!(budget.retained_bytes(), before + 2 * ALLOWANCE_BYTES);
+    drop(retained_sender);
+    assert_eq!(budget.retained_bytes(), before + ALLOWANCE_BYTES);
+    let pressure = budget
+        .reserve(
+            Cohort::LoadCandidate,
+            cathedral_sim::checkpoint::MAX_RESIDENT_BYTES - budget.retained_bytes(),
+        )
+        .unwrap();
+    assert!(BoundedSink::start_admitted(io::sink(), &budget).is_err());
+    drop(pressure);
+    drop(stderr);
+    assert_eq!(budget.retained_bytes(), before);
+    drop(recipe);
+    assert_eq!(budget.retained_bytes(), 0);
+}
