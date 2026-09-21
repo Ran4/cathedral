@@ -630,6 +630,7 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<area_debug::AreaDebugState>()
             .init_resource::<actor_sheet::InspectedActor>()
             .init_resource::<ActorFocus>()
+            .init_resource::<targeting::ViewClue>()
             .init_resource::<interaction::InteractionState>()
             .init_resource::<interaction::PlayerSpatialState>()
             .init_resource::<body::ReflexState>()
@@ -812,7 +813,12 @@ impl Plugin for SmartActorsPlugin {
             )
             .add_systems(
                 PostUpdate,
-                targeting::update_actor_focus.in_set(SmartActorSet::UpdateFocus),
+                (
+                    targeting::update_actor_focus,
+                    interaction::update_focus_hint,
+                )
+                    .chain_ignore_deferred()
+                    .in_set(SmartActorSet::UpdateFocus),
             )
             .add_systems(
                 PostUpdate,

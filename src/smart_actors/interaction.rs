@@ -497,9 +497,6 @@ pub fn reconcile_interaction_state(
     mirror: Res<WorldMirror>,
     runtime: Res<SmartActorRuntime>,
     players: Query<&GlobalTransform, With<PlayerController>>,
-    focus: Res<ActorFocus>,
-    mark_focus: Option<Res<crate::city::MarkFocus>>,
-    chalk_prompt: Option<Res<crate::city::ChalkPrompt>>,
     mut state: ResMut<InteractionState>,
     mut hud: ResMut<SmartActorHudState>,
 ) {
@@ -566,9 +563,27 @@ pub fn reconcile_interaction_state(
             };
             format!("{}{}\n{}{}", card.text, more, controls, waiting)
         });
+}
 
+/// Current-frame visibility feedback, after UpdateFocus has sampled bodies and
+/// gates. Inventory/offer reconciliation remains in its original earlier phase.
+pub fn update_focus_hint(
+    mirror: Res<WorldMirror>,
+    runtime: Res<SmartActorRuntime>,
+    focus: Res<ActorFocus>,
+    view_clue: Option<Res<super::targeting::ViewClue>>,
+    mark_focus: Option<Res<crate::city::MarkFocus>>,
+    chalk_prompt: Option<Res<crate::city::ChalkPrompt>>,
+    state: Res<InteractionState>,
+    mut hud: ResMut<SmartActorHudState>,
+) {
+    let coin_count = selected_coin_stack(&mirror, state.selected_item.as_ref())
+        .map(|stack| state.coin_count(stack));
     hud.focus_hint = if runtime.interactions_enabled() {
-        let hint = focus_hint(&mirror, &focus, state.selected_item.as_ref(), coin_count);
+        let mut hint = focus_hint(&mirror, &focus, state.selected_item.as_ref(), coin_count);
+        if hint.is_empty() && view_clue.as_ref().is_some_and(|clue| clue.blocked_by_gate) {
+            hint = "Closed gate blocks the view".to_string();
+        }
         merge_mark_hint(hint, mark_focus.as_deref(), chalk_prompt.as_deref())
     } else {
         String::new()

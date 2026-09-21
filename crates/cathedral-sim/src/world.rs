@@ -633,6 +633,14 @@ impl World {
         self.event_sequence
     }
 
+    /// Borrow the still-owed event at the current boundary. Observation capture
+    /// must never search old events and reinterpret them with today's geometry.
+    pub(crate) fn latest_observation_event(&self) -> Option<&DomainEvent> {
+        self.events
+            .last()
+            .filter(|event| event.sequence == self.event_sequence)
+    }
+
     /// Hand the buffered events to the host. Nothing is ever dropped or
     /// filtered by the sim.
     pub fn drain_events(&mut self) -> Vec<DomainEvent> {

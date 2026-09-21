@@ -6,7 +6,7 @@
 
 use bevy::prelude::*;
 
-use crate::controller::{CollisionWorld, PlayerCamera, PlayerController};
+use crate::controller::{CollisionWorld, DynamicBarrier, PlayerCamera, PlayerController};
 
 use super::model::ActorId;
 
@@ -18,6 +18,17 @@ pub const ACTOR_FOCUS_RADIUS_M: f32 = 20.0;
 pub const ITEM_FOCUS_RADIUS_M: f32 = 4.0;
 
 const RAY_EPSILON: f32 = 1.0e-6;
+const MAX_ACTOR_SCAN: usize = 20_000;
+const MAX_FOCUS_CANDIDATES: usize = 64;
+const MAX_STATIC_SOLIDS: usize = 16_384;
+const MAX_STATIC_PLANES: usize = 65_536;
+const MAX_DYNAMIC_BARRIERS: usize = 32;
+
+/// Rebuilt cosmetic geometry hint, never an observation of a hidden actor.
+#[derive(Resource, Default)]
+pub struct ViewClue {
+    pub(super) blocked_by_gate: bool,
+}
 
 /// A local-space, axis-aligned interaction volume attached to an actor root.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
@@ -100,45 +111,102 @@ pub fn update_actor_focus(
     players: Query<&GlobalTransform, With<PlayerController>>,
     actors: Query<(Entity, &ActorId, &ActorTarget, &GlobalTransform)>,
     collision_world: Res<CollisionWorld>,
+    barriers: Query<(
+        &DynamicBarrier,
+        &Transform,
+        Option<&crate::city::gates::GateBarrier>,
+    )>,
+    mut clue: Option<ResMut<ViewClue>>,
 ) {
+    *focus = ActorFocus::default();
+    if let Some(clue) = clue.as_deref_mut() {
+        clue.blocked_by_gate = false;
+    }
     let (Ok(camera), Ok(player)) = (cameras.single(), players.single()) else {
-        *focus = ActorFocus::default();
         return;
     };
 
     let origin = camera.translation();
     let body_origin = player.translation();
     let direction = *camera.forward();
-    let wall_distance = collision_world.nearest_ray_hit(origin, direction, ACTOR_FOCUS_RADIUS_M);
+    if !origin.is_finite()
+        || !body_origin.is_finite()
+        || !direction.is_finite()
+        || actors.iter().len() > MAX_ACTOR_SCAN
+        || barriers.iter().len() > MAX_DYNAMIC_BARRIERS
+        || !static_query_supported(&collision_world)
+    {
+        return;
+    }
+    let mut wall_distance =
+        collision_world.nearest_ray_hit(origin, direction, ACTOR_FOCUS_RADIUS_M);
+    let mut gate_is_nearest = false;
+    for (barrier, transform, gate) in &barriers {
+        if !barrier.active {
+            continue;
+        }
+        if !barrier.half_size.is_finite()
+            || !barrier.half_size.cmpgt(Vec3::ZERO).all()
+            || !transform.translation.is_finite()
+        {
+            return;
+        }
+        if let Some(distance) =
+            ray_aabb_distance(origin, direction, transform.translation, barrier.half_size)
+            && distance <= ACTOR_FOCUS_RADIUS_M
+        {
+            if wall_distance.is_none_or(|wall| distance < wall) {
+                wall_distance = Some(distance);
+                gate_is_nearest = gate.is_some();
+            } else if wall_distance == Some(distance) {
+                gate_is_nearest &= gate.is_some();
+            }
+        }
+    }
 
     // Focus can only land within ACTOR_FOCUS_RADIUS_M of the player's body;
     // pre-cull the whole-cast query on a cheap squared distance (with a small
     // margin for actor extents) so the sort below handles a handful of
     // records, not all ~510.
     let cull_radius = ACTOR_FOCUS_RADIUS_M + 2.0;
-    let mut actor_records: Vec<_> = actors
-        .iter()
-        .filter(|(_, _, _, transform)| {
-            transform.translation().distance_squared(body_origin) <= cull_radius * cull_radius
-        })
-        .map(|(entity, actor_id, target, transform)| {
-            let (center, half_extents) = world_aabb(*target, transform);
-            (
-                entity,
-                actor_id,
-                TargetCandidate {
-                    center,
-                    half_extents,
-                    body_center: transform.translation(),
-                },
-            )
-        })
-        .collect();
-    actor_records.sort_by(|left, right| left.1.0.cmp(&right.1.0));
-    let candidates: Vec<_> = actor_records
-        .iter()
-        .map(|(_, _, candidate)| *candidate)
-        .collect();
+    let mut actor_records = [None; MAX_FOCUS_CANDIDATES];
+    let mut count = 0;
+    for (entity, actor_id, target, transform) in &actors {
+        if transform.translation().distance_squared(body_origin) > cull_radius * cull_radius {
+            continue;
+        }
+        if count == MAX_FOCUS_CANDIDATES || actor_id.0.len() > cathedral_sim::MAX_ID_CHARS * 4 {
+            return;
+        }
+        let (center, half_extents) = world_aabb(*target, transform);
+        actor_records[count] = Some((
+            entity,
+            actor_id,
+            TargetCandidate {
+                center,
+                half_extents,
+                body_center: transform.translation(),
+            },
+        ));
+        count += 1;
+    }
+    let actor_records = &mut actor_records[..count];
+    actor_records.sort_unstable_by(|a, b| a.unwrap().1.0.cmp(&b.unwrap().1.0));
+    if actor_records
+        .windows(2)
+        .any(|w| w[0].unwrap().1 == w[1].unwrap().1)
+    {
+        return;
+    }
+    let mut candidates = [TargetCandidate {
+        center: Vec3::ZERO,
+        half_extents: Vec3::ZERO,
+        body_center: Vec3::ZERO,
+    }; MAX_FOCUS_CANDIDATES];
+    for (slot, record) in candidates.iter_mut().zip(actor_records.iter()) {
+        *slot = record.unwrap().2;
+    }
+    let candidates = &candidates[..count];
 
     focus.actor = nearest_visible_target(
         origin,
@@ -146,7 +214,7 @@ pub fn update_actor_focus(
         body_origin,
         ACTOR_FOCUS_RADIUS_M,
         wall_distance,
-        &candidates,
+        candidates,
     )
     .map(|hit| focused_actor(&actor_records, hit));
 
@@ -158,19 +226,52 @@ pub fn update_actor_focus(
         body_origin,
         ITEM_FOCUS_RADIUS_M,
         wall_distance,
-        &candidates,
+        candidates,
     )
     .map(|hit| focused_actor(&actor_records, hit));
+    if let Some(clue) = clue.as_deref_mut() {
+        clue.blocked_by_gate = gate_is_nearest;
+    }
 }
 
-fn focused_actor(records: &[(Entity, &ActorId, TargetCandidate)], hit: TargetHit) -> FocusedActor {
-    let (entity, actor_id, _) = records[hit.index];
+fn focused_actor(
+    records: &[Option<(Entity, &ActorId, TargetCandidate)>],
+    hit: TargetHit,
+) -> FocusedActor {
+    let (entity, actor_id, _) = records[hit.index].expect("captured target");
     FocusedActor {
         actor_id: actor_id.clone(),
         entity,
         ray_distance_m: hit.ray_distance,
         body_distance_m: hit.body_distance,
     }
+}
+
+fn static_query_supported(world: &CollisionWorld) -> bool {
+    if world.len() > MAX_STATIC_SOLIDS {
+        return false;
+    }
+    let Some(planes) = world
+        .convex_prisms
+        .iter()
+        .try_fold(0usize, |n, p| n.checked_add(p.planes.len()))
+    else {
+        return false;
+    };
+    if planes > MAX_STATIC_PLANES {
+        return false;
+    }
+    world
+        .boxes
+        .iter()
+        .all(|b| b.min.is_finite() && b.max.is_finite())
+        && world.convex_prisms.iter().all(|p| {
+            p.min_y.is_finite()
+                && p.max_y.is_finite()
+                && p.planes
+                    .iter()
+                    .all(|plane| plane.normal.is_finite() && plane.offset.is_finite())
+        })
 }
 
 fn world_aabb(target: ActorTarget, transform: &GlobalTransform) -> (Vec3, Vec3) {
@@ -258,6 +359,9 @@ fn ray_aabb_distance(
 
     let min = center - half_extents;
     let max = center + half_extents;
+    if !min.is_finite() || !max.is_finite() {
+        return None;
+    }
     let mut entry: f32 = 0.0;
     let mut exit = f32::INFINITY;
 
@@ -290,6 +394,131 @@ fn ray_aabb_distance(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn actual_focus_and_hud_respect_gates_without_disclosing_hidden_actors() {
+        use crate::city::gates::{GateBarrier, GateKind};
+        use bevy::ecs::system::RunSystemOnce;
+        let mut app = App::new();
+        let mut runtime = super::super::SmartActorRuntime::starting(true);
+        runtime.connected = true;
+        runtime.ready = true;
+        app.init_resource::<ActorFocus>()
+            .init_resource::<ViewClue>()
+            .init_resource::<CollisionWorld>()
+            .init_resource::<super::super::model::WorldMirror>()
+            .init_resource::<super::super::interaction::InteractionState>()
+            .init_resource::<super::super::hud::SmartActorHudState>()
+            .insert_resource(runtime);
+        app.world_mut()
+            .spawn((PlayerController::default(), GlobalTransform::default()));
+        app.world_mut().spawn((
+            PlayerCamera,
+            GlobalTransform::from(Transform::default().looking_at(Vec3::Z, Vec3::Y)),
+        ));
+        let actor = app
+            .world_mut()
+            .spawn((
+                ActorId("hidden".into()),
+                ActorTarget::default(),
+                GlobalTransform::from_translation(Vec3::Z * 3.0),
+            ))
+            .id();
+        let gate = app
+            .world_mut()
+            .spawn((
+                DynamicBarrier {
+                    half_size: Vec3::new(1.0, 2.0, 0.1),
+                    active: false,
+                },
+                Transform::from_translation(Vec3::Z * 1.5),
+                GateBarrier(GateKind::Stone),
+            ))
+            .id();
+        app.world_mut().run_system_once(update_actor_focus).unwrap();
+        assert!(app.world().resource::<ActorFocus>().item.is_some());
+        app.world_mut()
+            .get_mut::<DynamicBarrier>(gate)
+            .unwrap()
+            .active = true;
+        app.world_mut().run_system_once(update_actor_focus).unwrap();
+        assert_eq!(*app.world().resource::<ActorFocus>(), ActorFocus::default());
+        app.world_mut()
+            .run_system_once(super::super::interaction::update_focus_hint)
+            .unwrap();
+        let hint = app
+            .world()
+            .resource::<super::super::hud::SmartActorHudState>()
+            .focus_hint
+            .clone();
+        assert_eq!(hint, "Closed gate blocks the view");
+        app.world_mut().despawn(actor);
+        app.world_mut().run_system_once(update_actor_focus).unwrap();
+        app.world_mut()
+            .run_system_once(super::super::interaction::update_focus_hint)
+            .unwrap();
+        assert_eq!(
+            app.world()
+                .resource::<super::super::hud::SmartActorHudState>()
+                .focus_hint,
+            hint
+        );
+        app.world_mut()
+            .resource_mut::<CollisionWorld>()
+            .add_box(Vec3::new(-1., -2., 0.5), Vec3::new(1., 2., 0.7));
+        app.world_mut().run_system_once(update_actor_focus).unwrap();
+        assert!(
+            !app.world().resource::<ViewClue>().blocked_by_gate,
+            "a wall hides the gate clue too"
+        );
+        app.world_mut().insert_resource(CollisionWorld::default());
+        app.world_mut()
+            .get_mut::<DynamicBarrier>(gate)
+            .unwrap()
+            .active = false;
+        app.world_mut().run_system_once(update_actor_focus).unwrap();
+        assert!(!app.world().resource::<ViewClue>().blocked_by_gate);
+    }
+
+    #[test]
+    fn crowded_or_oversized_focus_work_refuses_and_clears_old_clues() {
+        use bevy::ecs::system::RunSystemOnce;
+        let mut app = App::new();
+        app.init_resource::<ActorFocus>()
+            .insert_resource(ViewClue {
+                blocked_by_gate: true,
+            })
+            .init_resource::<CollisionWorld>();
+        app.world_mut()
+            .spawn((PlayerController::default(), GlobalTransform::default()));
+        app.world_mut()
+            .spawn((PlayerCamera, GlobalTransform::default()));
+        for n in 0..=MAX_FOCUS_CANDIDATES {
+            app.world_mut().spawn((
+                ActorId(format!("a{n}")),
+                ActorTarget::default(),
+                GlobalTransform::from_translation(Vec3::NEG_Z * 3.0),
+            ));
+        }
+        app.world_mut().run_system_once(update_actor_focus).unwrap();
+        assert_eq!(*app.world().resource::<ActorFocus>(), ActorFocus::default());
+        assert!(!app.world().resource::<ViewClue>().blocked_by_gate);
+        let mut collision = CollisionWorld::default();
+        collision.boxes.resize(
+            MAX_STATIC_SOLIDS + 1,
+            crate::controller::SolidBox {
+                min: Vec3::ZERO,
+                max: Vec3::ONE,
+            },
+        );
+        assert!(!static_query_supported(&collision));
+        collision.boxes.clear();
+        collision.boxes.push(crate::controller::SolidBox {
+            min: Vec3::splat(f32::NAN),
+            max: Vec3::ONE,
+        });
+        assert!(!static_query_supported(&collision));
+    }
 
     fn target(z: f32) -> TargetCandidate {
         TargetCandidate {

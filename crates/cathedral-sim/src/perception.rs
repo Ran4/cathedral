@@ -1,5 +1,7 @@
 //! Perspective, vision, and sound emission (`sim.py:392-482`).
 
+pub mod observation;
+
 use crate::{
     character::Character, event::DomainEvent, ids::ActorId, math::Vec3, sounds::Sound, world::World,
 };
@@ -153,7 +155,7 @@ mod tests {
     use crate::character::{CharacterSheet, Control};
     use std::collections::BTreeSet;
 
-    fn character(id: &str, position: Vec3, facing_yaw: f64) -> Character {
+    pub(super) fn character(id: &str, position: Vec3, facing_yaw: f64) -> Character {
         Character::from_sheet(CharacterSheet {
             pockets: Vec::new(),
             frontbutt: None,
