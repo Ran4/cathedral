@@ -48,6 +48,7 @@ struct Committed {
 /// join guard for its own disposal thread.
 pub(crate) struct StagedStartup {
     recipe: CommittedStartup,
+    controls: crate::checkpoint_controls::CheckpointControls,
     #[cfg(target_os = "linux")]
     preparation: cathedral_backends::checkpoint_preparation::CheckpointPreparation,
 }
@@ -94,6 +95,8 @@ impl StagedStartup {
         {
             return Err(StartupRefusal::Admission);
         }
+        let controls = crate::checkpoint_controls::CheckpointControls::admitted(installed.budget())
+            .map_err(|_| StartupRefusal::Admission)?;
         let nodes: NavNodes =
             serde_json::from_str(NAV_JSON).map_err(|_| StartupRefusal::Navigation)?;
         let count = nodes.nodes.0;
@@ -148,6 +151,7 @@ impl StagedStartup {
         )
         .map_err(|_| StartupRefusal::Services)?;
         Ok(Self {
+            controls,
             recipe: CommittedStartup(Arc::new(Committed {
                 config,
                 nav,
@@ -168,12 +172,16 @@ impl StagedStartup {
     /// resource is changed. This does not replace a running world.
     pub fn install(self, app: &mut App) -> Result<(), (StartupRefusal, Self)> {
         if app.world().contains_resource::<CommittedStartup>()
+            || app
+                .world()
+                .contains_resource::<crate::checkpoint_controls::CheckpointControls>()
             || app.is_plugin_added::<crate::smart_actors::SmartActorsPlugin>()
             || app.is_plugin_added::<crate::nav_overlay::NavDebugPlugin>()
         {
             return Err((StartupRefusal::AlreadyInstalled, self));
         }
         app.insert_resource(self.recipe);
+        app.insert_resource(self.controls);
         #[cfg(target_os = "linux")]
         app.insert_resource(InstalledPreparation {
             _worker: self.preparation,
@@ -185,6 +193,9 @@ impl StagedStartup {
 #[cfg(test)]
 mod tests;
 impl CommittedStartup {
+    pub(crate) fn same_owner(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
     /// No caller-supplied upper bound can authorize whole-App staging. The
     /// installed non-nav assets, backend transport/config copies and mutable
     /// live/candidate/retired authority have no accepted complete profile yet.

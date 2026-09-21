@@ -63,6 +63,9 @@ use super::{
 use crate::config::WeatherSettings;
 use crate::controller::{PhysicalPosition, PlayerController};
 
+#[cfg(test)]
+#[path = "local_engine/control_tests.rs"]
+mod control_tests;
 #[cfg(all(test, target_os = "linux"))]
 #[path = "local_engine/retirement_tests.rs"]
 mod retirement_tests;
@@ -375,6 +378,27 @@ impl LocalEngine {
             .ok_or_else(|| cathedral_sim::checkpoint::host::error("engine not started"))
     }
 
+    /// Control requests must bind the actual live transport and immutable
+    /// recipe, not a caller's remembered generation or a staged candidate.
+    pub(crate) fn owns_control(
+        &self,
+        handle: &BridgeHandle,
+        installed: &crate::installed_recipe::CommittedStartup,
+    ) -> bool {
+        !self.dead
+            && self.engine.is_some()
+            && self.generation == handle.generation()
+            && handle.control_route() == super::bridge::ControlRoute::Active
+            && self
+                .command_endpoint
+                .as_ref()
+                .is_some_and(|endpoint| handle.owns_sender(endpoint))
+            && self
+                .installed
+                .as_ref()
+                .is_some_and(|own| own.same_owner(installed))
+    }
+
     /// The daily round, borrowed exactly like [`Self::world`]: the character
     /// debug sheet reads a walker's errand (destination, well queue standing)
     /// from it. `None` until the engine is live.
@@ -469,6 +493,8 @@ pub(crate) fn spawn_installed(
         .as_ref()
         .map_or_else(std::env::temp_dir, |session| session.path().to_path_buf());
 
+    let mut handle = BridgeHandle::staged(commands_tx, runtime_dir, generation);
+
     let mut engine = LocalEngine {
         generation,
         publication_bytes: Arc::new(AtomicUsize::new(0)),
@@ -522,10 +548,13 @@ pub(crate) fn spawn_installed(
         }
     }
 
-    let handle = BridgeHandle::new_for_generation(commands_tx, runtime_dir, generation);
     engine.command_endpoint = Some(handle.command_sender());
     if engine.dead {
         handle.retire();
+    } else {
+        handle
+            .activate_startup()
+            .expect("unpublished startup endpoint");
     }
     (
         handle,

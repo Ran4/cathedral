@@ -1,3 +1,4 @@
+mod checkpoint_controls;
 mod city;
 mod config;
 mod controller;

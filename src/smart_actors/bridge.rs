@@ -16,7 +16,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering},
     },
 };
 
@@ -620,10 +620,18 @@ impl Drop for PublicationAllocation {
 }
 
 /// Non-blocking command endpoint plus the session's private audio directory.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub(crate) enum ControlRoute {
+    Staged = 0,
+    Active = 1,
+    Retiring = 2,
+}
+
 #[derive(Resource)]
 pub struct BridgeHandle {
     generation: RuntimeGeneration,
-    active: Arc<AtomicBool>,
+    route: Arc<AtomicU8>,
     lifetime: RetirementPin,
     commands: Sender<BridgeCommand>,
     runtime_dir: PathBuf,
@@ -646,14 +654,51 @@ impl BridgeHandle {
         runtime_dir: PathBuf,
         generation: RuntimeGeneration,
     ) -> Self {
+        let mut handle = Self::staged(commands, runtime_dir, generation);
+        handle.activate_startup().expect("new staged endpoint");
+        handle
+    }
+
+    pub(super) fn staged(
+        commands: Sender<BridgeCommand>,
+        runtime_dir: PathBuf,
+        generation: RuntimeGeneration,
+    ) -> Self {
         Self {
             generation,
-            active: Arc::new(AtomicBool::new(true)),
+            route: Arc::new(AtomicU8::new(ControlRoute::Staged as u8)),
             lifetime: Default::default(),
             commands,
             runtime_dir,
             issued: Mutex::new(0),
         }
+    }
+
+    /// Only startup may open an unpublished endpoint. This is not an adoption
+    /// API: retirement is irreversible, including for surviving worker clones.
+    pub(super) fn activate_startup(&mut self) -> Result<(), &'static str> {
+        let _gate = self.lifetime.0.lock().unwrap_or_else(|e| e.into_inner());
+        self.route
+            .compare_exchange(
+                ControlRoute::Staged as u8,
+                ControlRoute::Active as u8,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .map(|_| ())
+            .map_err(|_| "only a staged startup endpoint can activate")
+    }
+
+    pub(crate) fn control_route(&self) -> ControlRoute {
+        match self.route.load(Ordering::Acquire) {
+            0 => ControlRoute::Staged,
+            1 => ControlRoute::Active,
+            _ => ControlRoute::Retiring,
+        }
+    }
+
+    pub(super) fn owns_sender(&self, sender: &BridgeCommandSender) -> bool {
+        self.generation == sender.generation && Arc::ptr_eq(&self.route, &sender.route)
     }
 
     pub(super) fn retirement_pin(&self) -> &RetirementPin {
@@ -671,7 +716,7 @@ impl BridgeHandle {
         BridgeCommandSender {
             commands: self.commands.clone(),
             generation: self.generation,
-            active: Arc::clone(&self.active),
+            route: Arc::clone(&self.route),
             lifetime: self.lifetime.clone(),
         }
     }
@@ -680,7 +725,7 @@ impl BridgeHandle {
         self.generation
     }
     pub(crate) fn checkpoint_issued(&self) -> cathedral_sim::checkpoint::Result<u64> {
-        if !self.active.load(Ordering::Acquire) {
+        if self.control_route() != ControlRoute::Active {
             return Err(cathedral_sim::checkpoint::host::error(
                 "retired command endpoint",
             ));
@@ -692,14 +737,15 @@ impl BridgeHandle {
     }
     pub fn retire(&self) {
         let _gate = self.lifetime.0.lock().unwrap_or_else(|e| e.into_inner());
-        self.active.store(false, Ordering::Release);
+        self.route
+            .store(ControlRoute::Retiring as u8, Ordering::Release);
     }
 
     /// Enqueue without ever waiting on the engine.
     pub fn try_send(&self, command: BridgeCommand) -> Result<(), String> {
         let _gate = self.lifetime.0.lock().unwrap_or_else(|e| e.into_inner());
-        if !self.active.load(Ordering::Acquire) {
-            return Err("command runtime is retired".into());
+        if self.control_route() != ControlRoute::Active {
+            return Err("command runtime does not own active control".into());
         }
         if !command.valid_transport_body() {
             return Err("nested command transport envelope".into());
@@ -773,7 +819,7 @@ impl BridgeHandle {
 pub struct BridgeCommandSender {
     commands: Sender<BridgeCommand>,
     generation: RuntimeGeneration,
-    active: Arc<AtomicBool>,
+    route: Arc<AtomicU8>,
     lifetime: RetirementPin,
 }
 
@@ -783,11 +829,12 @@ impl BridgeCommandSender {
     }
     pub(super) fn retire(&self) {
         let _gate = self.lifetime.0.lock().unwrap_or_else(|e| e.into_inner());
-        self.active.store(false, Ordering::Release);
+        self.route
+            .store(ControlRoute::Retiring as u8, Ordering::Release);
     }
     pub fn try_send(&self, command: BridgeCommand) -> Result<(), TrySendError<BridgeCommand>> {
         let _gate = self.lifetime.0.lock().unwrap_or_else(|e| e.into_inner());
-        if !self.active.load(Ordering::Acquire)
+        if self.route.load(Ordering::Acquire) != ControlRoute::Active as u8
             || command.is_consequential()
             || matches!(command, BridgeCommand::InGeneration { .. })
         {
@@ -809,7 +856,7 @@ impl BridgeCommandSender {
         Self {
             commands,
             generation: RuntimeGeneration::INITIAL,
-            active: Arc::new(AtomicBool::new(true)),
+            route: Arc::new(AtomicU8::new(ControlRoute::Active as u8)),
             lifetime: Default::default(),
         }
     }
@@ -932,6 +979,52 @@ pub(crate) fn expect_generation(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn control_routes_refuse_staged_and_retiring_input_without_minting_identity() {
+        let (sender, receiver) = crossbeam_channel::bounded(4);
+        let mut handle = BridgeHandle::staged(sender, "/tmp".into(), RuntimeGeneration(37));
+        let worker = handle.command_sender();
+        let sound = || BridgeCommand::PlayerSound {
+            sound_id: "cough".into(),
+        };
+        let ack = || BridgeCommand::SpeechPresented {
+            speech_event_id: "receipt".into(),
+        };
+        assert_eq!(handle.control_route(), ControlRoute::Staged);
+        assert!(handle.try_send(sound()).is_err());
+        assert!(worker.try_send(ack()).is_err());
+        assert!(receiver.is_empty());
+        assert_eq!(*handle.issued.lock().unwrap(), 0);
+        handle.activate_startup().unwrap();
+        assert!(handle.activate_startup().is_err());
+        handle.try_send(sound()).unwrap();
+        worker.try_send(ack()).unwrap();
+        assert_eq!(handle.checkpoint_issued().unwrap(), 1);
+        handle.retire();
+        assert_eq!(handle.control_route(), ControlRoute::Retiring);
+        assert!(handle.activate_startup().is_err());
+        assert!(handle.try_send(sound()).is_err());
+        assert!(worker.try_send(ack()).is_err());
+        assert_eq!(*handle.issued.lock().unwrap(), 1);
+        // Retirement doesn't rewrite or drain already queued old-world input.
+        assert_eq!(receiver.len(), 2);
+        for command in receiver.try_iter() {
+            expect_generation(command, RuntimeGeneration(37));
+        }
+    }
+
+    #[test]
+    fn cancelling_staged_route_cannot_reactivate_surviving_worker() {
+        let (sender, receiver) = crossbeam_channel::bounded(1);
+        let mut handle = BridgeHandle::staged(sender, "/tmp".into(), RuntimeGeneration(38));
+        let worker = handle.command_sender();
+        worker.retire();
+        assert_eq!(handle.control_route(), ControlRoute::Retiring);
+        assert!(handle.activate_startup().is_err());
+        assert!(handle.try_send(BridgeCommand::PlayerStruggling).is_err());
+        assert!(receiver.is_empty());
+    }
 
     fn generation_event(generation: RuntimeGeneration, event: BridgeEvent) -> BridgeEvent {
         BridgeEvent::InGeneration {

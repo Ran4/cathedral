@@ -531,6 +531,7 @@ impl Plugin for SmartActorsPlugin {
             app.init_asset::<speech::StreamingPcmSource>();
         }
         app.init_resource::<hud::SmartActorHudState>()
+            .add_systems(Update, crate::checkpoint_controls::keyboard_controls)
             // Soundscape systems can always read this seam, including when
             // smart actors are disabled in config.ron.
             .init_resource::<AudioActivity>()
