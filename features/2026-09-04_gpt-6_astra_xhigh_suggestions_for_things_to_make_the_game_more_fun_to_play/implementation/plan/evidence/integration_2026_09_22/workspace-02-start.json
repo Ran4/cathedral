@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "15",
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "--workspace",
+    "--locked",
+    "--offline",
+    "-j1",
+    "--",
+    "--test-threads=1"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "environment_policy": "default Cargo home/compiler/profile; flags/wrappers cleared; headless/fake; nice15; one Cargo job and one test thread",
+  "head": "1590d35e32d4c9f927d63c7ca3f35b329cc68451",
+  "raw_log": "/tmp/alibi-integration-workspace-02.log",
+  "runner_sha256": "40b4dec23aec405e08b1107f711e5c6554a5e02edb783ed80754a6a7db60a291",
+  "source_map_sha256": "6b91d57b4cbcbee99c365d0e2b59749382238538cef36c457698fa5fdeba4737",
+  "utc": "2026-09-22T09:23:56.871544+00:00"
+}

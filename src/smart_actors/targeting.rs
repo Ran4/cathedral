@@ -248,7 +248,7 @@ fn focused_actor(
 }
 
 fn static_query_supported(world: &CollisionWorld) -> bool {
-    if world.len() > MAX_STATIC_SOLIDS {
+    if world.boxes.len().saturating_add(world.convex_prisms.len()) > MAX_STATIC_SOLIDS {
         return false;
     }
     let Some(planes) = world
