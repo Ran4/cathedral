@@ -1,0 +1,20 @@
+{
+  "after_sha256": "ac6189e1263adf1239da21d509564bec00edbb1a92ac7792b7e2764645d46149",
+  "before_sha256": "ac6189e1263adf1239da21d509564bec00edbb1a92ac7792b7e2764645d46149",
+  "completed_suites": [
+    "backend_capture",
+    "sim_lore",
+    "installed_startup",
+    "local_engine_startup"
+  ],
+  "exit_code": 0,
+  "passed_tests": 21,
+  "planned_suites": [
+    "backend_capture",
+    "sim_lore",
+    "installed_startup",
+    "local_engine_startup"
+  ],
+  "sources_unchanged": true,
+  "utc": "2026-09-22T10:35:40.517002+00:00"
+}

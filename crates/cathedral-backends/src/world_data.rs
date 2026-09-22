@@ -7,6 +7,24 @@ use std::{
 
 use cathedral_sim::{LoreCast, PlayerKnowledge, WorldSeed};
 
+mod capture;
+pub use capture::{CapturedActorSources, SourceCaptureError};
+
+/// Pure composition; parser/lore allocations are not source-storage admission.
+pub fn world_seed_from_sources<'a>(
+    base_source: &str,
+    occupations_source: &str,
+    characters: impl IntoIterator<Item = (&'a str, &'a str)>,
+    knowledge: PlayerKnowledge,
+) -> Result<WorldSeed, String> {
+    let base = WorldSeed::from_json_str(base_source)
+        .map_err(|error| format!("invalid world seed: {error}"))?;
+    let cast = LoreCast::from_borrowed_json_sources(occupations_source, characters)
+        .map_err(|error| format!("invalid lore cast: {error}"))?;
+    base.with_lore_cast_knowledge(cast, knowledge)
+        .map_err(|error| format!("invalid composed world seed: {error}"))
+}
+
 /// Load `assets/world/seed.json`, the occupation catalog, and every character
 /// below `lore/characters`. File contents are interpreted by `cathedral-sim`;
 /// this crate only owns discovery and IO.

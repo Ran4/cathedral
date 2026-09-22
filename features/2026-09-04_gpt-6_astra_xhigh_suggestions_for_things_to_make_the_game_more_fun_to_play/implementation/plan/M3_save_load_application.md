@@ -1,4 +1,4 @@
-Status: Partial, reconciled 2026-09-22. Earlier M3a–M3b2b2 acceptance stands. Diagnostic sinks and partial startup/refusal-control/screenshot cuts are committed, but complete allocation accounting, whole-App adoption, working save/load controls and host-frame acceptance remain unfinished. See [status reconciliation](STATUS_RECONCILIATION_2026_09_22.md); commit milestone labels do not close these gates.
+Status: Partial, reconciled 2026-09-22. Earlier M3a–M3b2b2 acceptance stands. Diagnostic sinks and partial startup/refusal-control/screenshot cuts are committed; immutable actor-source capture now has focused verification, but complete allocation accounting, whole-App adoption, working save/load controls and host-frame acceptance remain unfinished. See [status reconciliation](STATUS_RECONCILIATION_2026_09_22.md); commit milestone labels do not close these gates.
 
 # M3 — Save-anywhere in the application
 
@@ -101,6 +101,30 @@ inventory does not prove the old world allowance covers it. All 46 compiled
 layouts and the unchanged 60,952 / 65,536-byte preparation-control bound are
 independently audited. M3b2b3 diagnostic sinks are next; complete shared startup
 admission and application allocation remain pending.
+
+## Installed actor-source prerequisite — 2026-09-22
+
+The [source-input record](evidence/m3_asset_sources/README.md) closes the installed
+actor path's Rust-owned discovery/read/copy retention gap. When smart actors are
+enabled, startup captures the actual seed, occupations, sorted character sheets,
+areas, sound catalog and prompt sources once; LocalEngine parses those retained
+bytes. Borrowed lore composition preserves the existing loader's output and
+public APIs. Disabled actors retain their ability to start without those files.
+
+Admission precedes source IO/copies, with at most 4,096 sources, 4 MiB per file
+and 32 MiB aggregate, plus bounded discovery/path metadata. Shared ownership
+keeps the actual buffers charged until the last consumer drops. Focused checks
+cover bounds, refusals, deterministic discovery, lossy names, immutable lifetime,
+production routing and the disabled-actor path. The maximum-shaped witness
+retains 38,146,851 bytes; its final run requested 57,386,946 Rust allocation bytes
+under a 59,779,814-byte construction reservation. These are source-storage
+figures, not a parsed-asset or whole-world bound.
+
+Native ReadDir allocation, parsing/template compilation, generated crowds,
+backend environment/configuration, the production HydrationAssets factory and
+complete Running/candidate/retiring/App accounting remain open. The complete
+admission gate still refuses; this cut does not implement save/load controls,
+whole-App replacement or frame acceptance.
 
 ## Entry
 

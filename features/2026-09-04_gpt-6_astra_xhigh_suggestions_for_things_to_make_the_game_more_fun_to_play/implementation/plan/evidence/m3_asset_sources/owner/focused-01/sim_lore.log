@@ -1,0 +1,25 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling typenum v1.20.1
+   Compiling generic-array v0.14.7
+   Compiling quote v1.0.46
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling syn v2.0.118
+   Compiling sha2 v0.10.9
+   Compiling serde_derive v1.0.228
+   Compiling serde v1.0.228
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling minijinja v2.21.0
+    Finished `test` profile [optimized + debuginfo] target(s) in 5m 05s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-c32032e502ee02ba)
+
+running 5 tests
+test lore::tests::an_authored_bespoke_appearance_survives_composition ... ok
+test lore::tests::cast_order_is_relative_path_order_and_defaults_are_stable ... ok
+test lore::tests::circumstances_are_controlled_and_stable_characters_cannot_name_ambient_people ... ok
+test lore::tests::no_fixed_trade_requires_the_structural_folder_null_fields_and_support ... ok
+test lore::tests::source_path_occupation_title_and_relationships_are_validated ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 901 filtered out; finished in 0.01s
+

@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "ac6189e1263adf1239da21d509564bec00edbb1a92ac7792b7e2764645d46149",
+  "archive_sha256": "1118bd161d7dbb2dc03f4d7cf9211940b342c535b5ae1a9c616f29b53f3cad8b",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "launch_error": null,
+  "passed_tests": 5,
+  "raw_log": "/tmp/alibi-asset-capture/evidence/focused-01/installed_startup.log",
+  "raw_sha256": "eef2b7f18cba71453508bc486eec253919020a820eb94993d205a8deeda442c9",
+  "source_map_sha256": "ac6189e1263adf1239da21d509564bec00edbb1a92ac7792b7e2764645d46149",
+  "sources_unchanged": true,
+  "successful_nonempty_test_summary": true,
+  "suite": "installed_startup",
+  "utc": "2026-09-22T10:35:36.836790+00:00",
+  "wall_seconds": 389.1353586220648
+}

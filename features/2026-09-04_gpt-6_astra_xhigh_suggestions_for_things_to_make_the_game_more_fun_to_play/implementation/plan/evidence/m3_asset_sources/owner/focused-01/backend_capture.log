@@ -1,0 +1,18 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+    Finished `test` profile [optimized + debuginfo] target(s) in 2m 36s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_backends-1a4b1aedf7bcfa01)
+
+running 9 tests
+test world_data::capture::tests::captured_public_assets_compose_the_same_world_as_existing_loader ... ok
+test world_data::capture::tests::discovery_bounds_files_directories_depth_and_paths ... ok
+test world_data::capture::tests::discovery_ignores_symlinks_and_refuses_an_empty_cast ... ok
+test world_data::capture::tests::failed_capture_releases_partial_sources_after_oversized_late_file ... ok
+test world_data::capture::tests::ignored_non_json_entries_still_consume_the_discovery_limit ... ok
+test world_data::capture::tests::invalid_byte_relative_names_keep_the_existing_lossy_conversion_and_charge ... ok
+test world_data::capture::tests::ordered_snapshot_survives_file_changes_and_last_owner_keeps_charge ... ok
+test world_data::capture::tests::pressure_refuses_before_invalid_roots_can_be_read ... ok
+test world_data::capture::tests::reader_enforces_exact_cap_sentinel_total_and_utf8_before_retention ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 213 filtered out; finished in 1.97s
+

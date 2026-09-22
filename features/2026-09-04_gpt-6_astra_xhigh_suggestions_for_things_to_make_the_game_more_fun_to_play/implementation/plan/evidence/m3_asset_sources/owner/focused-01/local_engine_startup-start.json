@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "15",
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "-j",
+    "1",
+    "-p",
+    "cathedralbevy",
+    "--bin",
+    "cathedralbevy",
+    "smart_actors::local_engine::startup_tests",
+    "--",
+    "--test-threads=1",
+    "--nocapture"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "event": "START",
+  "raw_log": "/tmp/alibi-asset-capture/evidence/focused-01/local_engine_startup.log",
+  "source_map_sha256": "ac6189e1263adf1239da21d509564bec00edbb1a92ac7792b7e2764645d46149",
+  "utc": "2026-09-22T10:35:36.934547+00:00"
+}

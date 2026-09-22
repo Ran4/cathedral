@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "ac6189e1263adf1239da21d509564bec00edbb1a92ac7792b7e2764645d46149",
+  "archive_sha256": "39bc1638db6525a1c50a3810dc134681b0f3fc5ad608d25e857ca63ebb4ec7ba",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "launch_error": null,
+  "passed_tests": 5,
+  "raw_log": "/tmp/alibi-asset-capture/evidence/focused-01/sim_lore.log",
+  "raw_sha256": "490d902298cf556ec5174771a96fa60c095e4a5e41d9cc256253340a364462a2",
+  "source_map_sha256": "ac6189e1263adf1239da21d509564bec00edbb1a92ac7792b7e2764645d46149",
+  "sources_unchanged": true,
+  "successful_nonempty_test_summary": true,
+  "suite": "sim_lore",
+  "utc": "2026-09-22T10:29:07.167943+00:00",
+  "wall_seconds": 306.2730369740166
+}

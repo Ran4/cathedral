@@ -74,6 +74,32 @@ fn staging_admission_failure_does_not_resolve_backends_or_change_app() {
 }
 
 #[test]
+fn disabled_actors_stage_without_source_files_and_keep_backend_resolution() {
+    let recipe = InstalledRecipe::new().unwrap();
+    let mut config = config(&recipe);
+    config.smart_actors.enabled = false;
+    let called = AtomicUsize::new(0);
+    let staged = StagedStartup::prepare_with_source_roots(
+        recipe,
+        config,
+        |config| {
+            called.fetch_add(1, Ordering::SeqCst);
+            backend(config)
+        },
+        Path::new("/nonexistent/cathedral-disabled-assets"),
+        Path::new("/nonexistent/cathedral-disabled-lore"),
+    )
+    .unwrap();
+    assert_eq!(called.load(Ordering::SeqCst), 1);
+    assert!(!staged.recipe().config().smart_actors.enabled);
+    assert!(staged.recipe().actor_sources().is_none());
+    assert_eq!(
+        staged.recipe().require_complete_admission(),
+        Err(StartupRefusal::UnprovedWholeAppAccounting)
+    );
+}
+
+#[test]
 fn committed_recipe_is_shared_across_consumers_and_duplicate_install_rolls_back() {
     let recipe = InstalledRecipe::new().unwrap();
     let config = config(&recipe);
@@ -231,4 +257,79 @@ fn committed_prompt_session_forks_keep_same_second_archive_order() {
     #[cfg(target_os = "linux")]
     staged.preparation.join().ok().expect("empty worker joins");
     std::fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
+fn maximum_source_payload_and_long_paths_fit_scoped_rust_allocation_inventory() {
+    struct Fixture(std::path::PathBuf);
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    let fixture = Fixture(std::env::temp_dir().join(format!(
+        "cathedral-source-allocation-{}-{}", std::process::id(),
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos(),
+    )));
+    let assets = fixture.0.join("assets");
+    let lore = fixture.0.join("lore");
+    for relative in [
+        "world/seed.json",
+        "world/areas.json",
+        "sounds/catalog.toml",
+        "prompts/turn.j2",
+        "prompts/night.j2",
+        "prompts/strings.toml",
+    ] {
+        let target = assets.join(relative);
+        std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+        std::fs::write(target, b"").unwrap();
+    }
+    std::fs::create_dir_all(lore.join("core_lore")).unwrap();
+    std::fs::write(lore.join("core_lore/occupations.json"), b"").unwrap();
+    let mut directory = lore.join("characters");
+    for _ in 0..4 {
+        directory.push("d".repeat(190));
+    }
+    std::fs::create_dir_all(&directory).unwrap();
+    let count = 4096 - 7;
+    let total = 32 * 1024 * 1024;
+    let payload = vec![b'x'; total / count + 1];
+    for i in 0..count {
+        let length = total / count + usize::from(i < total % count);
+        let name = format!("{i:08}_{}.json", "n".repeat(241));
+        std::fs::write(directory.join(name), &payload[..length]).unwrap();
+    }
+    let recipe = InstalledRecipe::new().unwrap();
+    let budget = recipe.budget().clone();
+    let before = budget.retained_bytes();
+    let (sources, requested) = crate::host_checkpoint::measure_installed_allocations(|| {
+        cathedral_backends::world_data::CapturedActorSources::capture_admitted(
+            &budget, &assets, &lore,
+        )
+        .unwrap()
+    });
+    assert_eq!(sources.characters().len(), count);
+    assert_eq!(
+        sources
+            .characters()
+            .map(|(_, text)| text.len())
+            .sum::<usize>(),
+        total
+    );
+    assert!(sources.characters().all(|(path, _)| path.len() == 1019));
+    let reservation = budget.peak_retained_bytes() - before;
+    println!(
+        "installed_source_capture requested={requested} admitted={reservation} retained={} files={count} payload={total} relative_path_bytes=1019",
+        sources.charged_bytes()
+    );
+    assert!(
+        requested <= reservation,
+        "Rust allocator requested {requested} bytes under {reservation}-byte source admission"
+    );
+    assert!(sources.charged_bytes() <= reservation);
+    drop(sources);
+    assert_eq!(budget.retained_bytes(), before);
+    // This allocator does not observe libc ReadDir buffers. No parser runs in
+    // this witness; native directory and parser admission remain open gates.
 }

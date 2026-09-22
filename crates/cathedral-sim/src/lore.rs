@@ -515,6 +515,21 @@ impl LoreCast {
         occupations_source: &str,
         sources: impl IntoIterator<Item = (String, String)>,
     ) -> Result<Self, LoreError> {
+        Self::from_source_pairs(occupations_source, sources)
+    }
+
+    /// Borrow captured source text; typed parsing and scratch allocate separately.
+    pub fn from_borrowed_json_sources<'a>(
+        occupations_source: &str,
+        sources: impl IntoIterator<Item = (&'a str, &'a str)>,
+    ) -> Result<Self, LoreError> {
+        Self::from_source_pairs(occupations_source, sources)
+    }
+
+    fn from_source_pairs<P: AsRef<str>, S: AsRef<str>>(
+        occupations_source: &str,
+        sources: impl IntoIterator<Item = (P, S)>,
+    ) -> Result<Self, LoreError> {
         let occupations: Vec<Occupation> = serde_json::from_str(occupations_source)
             .map_err(|error| LoreError::new(format!("invalid occupation catalog: {error}")))?;
         let mut occupation_map = BTreeMap::new();
@@ -536,10 +551,12 @@ impl LoreCast {
         }
 
         let mut sources: Vec<_> = sources.into_iter().collect();
-        sources.sort_by(|left, right| left.0.cmp(&right.0));
+        sources.sort_by(|left, right| left.0.as_ref().cmp(right.0.as_ref()));
         let mut parsed = Vec::with_capacity(sources.len());
         let mut ids = BTreeSet::new();
         for (relative_path, source) in sources {
+            let relative_path = relative_path.as_ref();
+            let source = source.as_ref();
             let normalized = relative_path.replace('\\', "/");
             let mut components = normalized.split('/');
             let folder = components.next().unwrap_or_default();
@@ -549,7 +566,7 @@ impl LoreCast {
                     "character source '{relative_path}' must be occupation/file.json"
                 )));
             }
-            let sheet = LoreCharacterSheet::from_json_str(&source)
+            let sheet = LoreCharacterSheet::from_json_str(source)
                 .map_err(|error| LoreError::new(format!("{relative_path}: {error}")))?;
             if !file_name.ends_with(".json") || !file_name.starts_with(&format!("{}_", sheet.id)) {
                 return Err(LoreError::new(format!(

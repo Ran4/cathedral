@@ -22,6 +22,7 @@ const NAV_PARSE_BYTES: usize = 64 * 1024 * 1024;
 pub(crate) enum StartupRefusal {
     Admission,
     Navigation,
+    Sources,
     Services,
     AlreadyInstalled,
     UnprovedWholeAppAccounting,
@@ -33,6 +34,7 @@ pub(crate) enum StartupRefusal {
 #[derive(Resource, Clone)]
 pub(crate) struct CommittedStartup(Arc<Committed>);
 struct Committed {
+    actor_sources: Option<cathedral_backends::world_data::CapturedActorSources>,
     nav: Arc<NavData>,
     backend_config: Arc<BackendsConfig>,
     runtime: Arc<BackendRuntime>,
@@ -90,6 +92,41 @@ impl StagedStartup {
         backend: impl FnOnce(&crate::config::AppConfig) -> BackendsConfig,
         directory: Option<std::path::PathBuf>,
     ) -> Result<Self, StartupRefusal> {
+        Self::prepare_with_directory_and_sources(
+            installed,
+            config,
+            backend,
+            directory,
+            Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/assets")),
+            Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/lore")),
+        )
+    }
+    /// Test seam for the same production capture, without editing installed files.
+    #[cfg(test)]
+    pub(crate) fn prepare_with_source_roots(
+        installed: InstalledRecipe,
+        config: InstalledConfig,
+        backend: impl FnOnce(&crate::config::AppConfig) -> BackendsConfig,
+        assets_root: &Path,
+        lore_root: &Path,
+    ) -> Result<Self, StartupRefusal> {
+        Self::prepare_with_directory_and_sources(
+            installed,
+            config,
+            backend,
+            None,
+            assets_root,
+            lore_root,
+        )
+    }
+    fn prepare_with_directory_and_sources(
+        installed: InstalledRecipe,
+        config: InstalledConfig,
+        backend: impl FnOnce(&crate::config::AppConfig) -> BackendsConfig,
+        directory: Option<std::path::PathBuf>,
+        assets_root: &Path,
+        lore_root: &Path,
+    ) -> Result<Self, StartupRefusal> {
         if !installed
             .budget()
             .owns_reservation(&config._lease, Cohort::Running)
@@ -132,6 +169,25 @@ impl StagedStartup {
         nav_lease
             .resize(cost)
             .map_err(|_| StartupRefusal::Admission)?;
+        // SmartActorsPlugin skips engine construction when disabled. Preserve
+        // that mode's ability to start without actor lore or prompt files.
+        let actor_sources = if config.smart_actors.enabled {
+            Some(
+                cathedral_backends::world_data::CapturedActorSources::capture_admitted(
+                    installed.budget(),
+                    assets_root,
+                    lore_root,
+                )
+                .map_err(|error| match error {
+                    cathedral_backends::world_data::SourceCaptureError::Admission => {
+                        StartupRefusal::Admission
+                    }
+                    _ => StartupRefusal::Sources,
+                })?,
+            )
+        } else {
+            None
+        };
         let backend_config = Arc::new(backend(&config));
         let runtime = BackendRuntime::start_admitted(installed.budget())
             .map_err(|_| StartupRefusal::Services)?;
@@ -157,6 +213,7 @@ impl StagedStartup {
             controls,
             captures,
             recipe: CommittedStartup(Arc::new(Committed {
+                actor_sources,
                 config,
                 nav,
                 backend_config,
@@ -209,6 +266,11 @@ impl CommittedStartup {
     /// live/candidate/retired authority have no accepted complete profile yet.
     pub fn require_complete_admission(&self) -> Result<(), StartupRefusal> {
         Err(StartupRefusal::UnprovedWholeAppAccounting)
+    }
+    /// Source storage/discovery is admitted; native ReadDir, parsing and
+    /// generated-crowd allocation remain separate accounting gates.
+    pub fn actor_sources(&self) -> Option<&cathedral_backends::world_data::CapturedActorSources> {
+        self.0.actor_sources.as_ref()
     }
     pub fn config(&self) -> &crate::config::AppConfig {
         &self.0.config

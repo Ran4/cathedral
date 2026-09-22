@@ -638,13 +638,6 @@ fn build_installed(
     generation: cathedral_sim::RuntimeGeneration,
     installed: Option<&crate::installed_recipe::CommittedStartup>,
 ) -> Result<Built, String> {
-    let assets = assets_dir();
-    let lore = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lore");
-    let read = |relative: &str| -> Result<String, String> {
-        let path = assets.join(relative);
-        std::fs::read_to_string(&path)
-            .map_err(|error| format!("could not read {}: {error}", path.display()))
-    };
     // The walkable graph the engine steps its movers on. A parse failure is not
     // fatal: the engine keeps `nav: None`, nobody walks, and the rest of the cast
     // is none the wiser — exactly the frozen-fixture default (engine.rs). Only
@@ -663,18 +656,48 @@ fn build_installed(
             }
         }
     };
-    let seed = load_world_seed(&assets, &lore)?;
+    // Installed startup consumes exactly its captured bytes. Source ownership
+    // does not cover parser, compiler or generated-crowd allocation.
+    let (seed, areas, catalog, prompts) = if let Some(installed) = installed {
+        let sources = installed.actor_sources().ok_or_else(|| {
+            "actor sources were not captured: smart actors disabled at startup".to_owned()
+        })?;
+        (
+            sources.world_seed(cathedral_sim::PlayerKnowledge::PublicFigures)?,
+            AreaMap::from_json_str(sources.areas())
+                .map_err(|error| format!("invalid world areas: {error}"))?,
+            SoundCatalog::from_toml_str(sources.sounds())
+                .map_err(|error| format!("invalid sound catalog: {error}"))?,
+            PromptEnv::new(
+                sources.turn_prompt(),
+                sources.night_prompt(),
+                sources.prompt_strings(),
+            )
+            .map_err(|error| format!("invalid prompt assets: {error}"))?,
+        )
+    } else {
+        let assets = assets_dir();
+        let lore = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lore");
+        let read = |relative: &str| -> Result<String, String> {
+            let path = assets.join(relative);
+            std::fs::read_to_string(&path)
+                .map_err(|error| format!("could not read {}: {error}", path.display()))
+        };
+        (
+            load_world_seed(&assets, &lore)?,
+            AreaMap::from_json_str(&read("world/areas.json")?)
+                .map_err(|error| format!("invalid world areas: {error}"))?,
+            SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
+                .map_err(|error| format!("invalid sound catalog: {error}"))?,
+            PromptEnv::new(
+                &read("prompts/turn.j2")?,
+                &read("prompts/night.j2")?,
+                &read("prompts/strings.toml")?,
+            )
+            .map_err(|error| format!("invalid prompt assets: {error}"))?,
+        )
+    };
     let seed = with_extra_ambient(seed, config, nav.as_deref())?;
-    let areas = AreaMap::from_json_str(&read("world/areas.json")?)
-        .map_err(|error| format!("invalid world areas: {error}"))?;
-    let catalog = SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
-        .map_err(|error| format!("invalid sound catalog: {error}"))?;
-    let prompts = PromptEnv::new(
-        &read("prompts/turn.j2")?,
-        &read("prompts/night.j2")?,
-        &read("prompts/strings.toml")?,
-    )
-    .map_err(|error| format!("invalid prompt assets: {error}"))?;
 
     let backends = if let Some(installed) = installed {
         installed.backends(session, generation)
