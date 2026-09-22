@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "6c583d0df739ab5e41556b672fe36ded9abcaeace09b55161c338924b3957ad7",
+  "archive_sha256": "a19d55700d21c74ae5b18d7e329167742e066c5d8bb50339f9edcc7fc4e2d36f",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "launch_error": null,
+  "passed_tests": 9,
+  "raw_log": "/tmp/alibi-native-directory-owner/evidence/focused-01/backend_capture.log",
+  "raw_sha256": "b9545ec795dc3b96d27f61abbe6606162b3c0fe535fd9c2a10cbc8636ed506bf",
+  "source_map_sha256": "6c583d0df739ab5e41556b672fe36ded9abcaeace09b55161c338924b3957ad7",
+  "sources_unchanged": true,
+  "successful_nonempty_test_summary": true,
+  "suite": "backend_capture",
+  "utc": "2026-09-22T11:00:44.439956+00:00",
+  "wall_seconds": 124.67667307914235
+}

@@ -1,0 +1,91 @@
+
+/lib/x86_64-linux-gnu/libc.so.6:     file format elf64-x86-64
+
+
+Disassembly of section .plt:
+
+Disassembly of section .plt.got:
+
+Disassembly of section .plt.sec:
+
+Disassembly of section .text:
+
+00000000000e6640 <readdir>:
+   e6640:	f3 0f 1e fa          	endbr64 
+   e6644:	41 56                	push   %r14
+   e6646:	31 c0                	xor    %eax,%eax
+   e6648:	49 89 fe             	mov    %rdi,%r14
+   e664b:	ba 01 00 00 00       	mov    $0x1,%edx
+   e6650:	41 55                	push   %r13
+   e6652:	41 54                	push   %r12
+   e6654:	55                   	push   %rbp
+   e6655:	48 8d 6f 04          	lea    0x4(%rdi),%rbp
+   e6659:	53                   	push   %rbx
+   e665a:	48 83 ec 10          	sub    $0x10,%rsp
+   e665e:	4c 8b 25 ab 37 13 00 	mov    0x1337ab(%rip),%r12        # 219e10 <_DYNAMIC+0x250>
+   e6665:	64 45 8b 2c 24       	mov    %fs:(%r12),%r13d
+   e666a:	f0 0f b1 55 00       	lock cmpxchg %edx,0x0(%rbp)
+   e666f:	0f 85 b6 00 00 00    	jne    e672b <readdir+0xeb>
+   e6675:	49 8b 56 18          	mov    0x18(%r14),%rdx
+   e6679:	49 8b 4e 10          	mov    0x10(%r14),%rcx
+   e667d:	49 8d 5e 30          	lea    0x30(%r14),%rbx
+   e6681:	eb 21                	jmp    e66a4 <readdir+0x64>
+   e6683:	0f 1f 44 00 00       	nopl   0x0(%rax,%rax,1)
+   e6688:	4c 01 f0             	add    %r14,%rax
+   e668b:	0f b7 70 10          	movzwl 0x10(%rax),%esi
+   e668f:	48 01 f2             	add    %rsi,%rdx
+   e6692:	48 8b 70 08          	mov    0x8(%rax),%rsi
+   e6696:	48 83 38 00          	cmpq   $0x0,(%rax)
+   e669a:	49 89 56 18          	mov    %rdx,0x18(%r14)
+   e669e:	49 89 76 20          	mov    %rsi,0x20(%r14)
+   e66a2:	75 44                	jne    e66e8 <readdir+0xa8>
+   e66a4:	48 8d 42 30          	lea    0x30(%rdx),%rax
+   e66a8:	48 39 ca             	cmp    %rcx,%rdx
+   e66ab:	72 db                	jb     e6688 <readdir+0x48>
+   e66ad:	49 8b 56 08          	mov    0x8(%r14),%rdx
+   e66b1:	41 8b 3e             	mov    (%r14),%edi
+   e66b4:	48 89 de             	mov    %rbx,%rsi
+   e66b7:	e8 34 ff ff ff       	call   e65f0 <getdents64>
+   e66bc:	48 89 c1             	mov    %rax,%rcx
+   e66bf:	48 85 c0             	test   %rax,%rax
+   e66c2:	7e 14                	jle    e66d8 <readdir+0x98>
+   e66c4:	49 89 46 10          	mov    %rax,0x10(%r14)
+   e66c8:	31 d2                	xor    %edx,%edx
+   e66ca:	b8 30 00 00 00       	mov    $0x30,%eax
+   e66cf:	eb b7                	jmp    e6688 <readdir+0x48>
+   e66d1:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+   e66d8:	75 26                	jne    e6700 <readdir+0xc0>
+   e66da:	64 45 89 2c 24       	mov    %r13d,%fs:(%r12)
+   e66df:	31 c0                	xor    %eax,%eax
+   e66e1:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+   e66e8:	31 d2                	xor    %edx,%edx
+   e66ea:	41 87 56 04          	xchg   %edx,0x4(%r14)
+   e66ee:	83 fa 01             	cmp    $0x1,%edx
+   e66f1:	7f 19                	jg     e670c <readdir+0xcc>
+   e66f3:	48 83 c4 10          	add    $0x10,%rsp
+   e66f7:	5b                   	pop    %rbx
+   e66f8:	5d                   	pop    %rbp
+   e66f9:	41 5c                	pop    %r12
+   e66fb:	41 5d                	pop    %r13
+   e66fd:	41 5e                	pop    %r14
+   e66ff:	c3                   	ret    
+   e6700:	31 c0                	xor    %eax,%eax
+   e6702:	64 41 83 3c 24 02    	cmpl   $0x2,%fs:(%r12)
+   e6708:	75 de                	jne    e66e8 <readdir+0xa8>
+   e670a:	eb ce                	jmp    e66da <readdir+0x9a>
+   e670c:	48 89 ef             	mov    %rbp,%rdi
+   e670f:	48 89 44 24 08       	mov    %rax,0x8(%rsp)
+   e6714:	e8 a7 ab fa ff       	call   912c0 <__lll_lock_wake_private>
+   e6719:	48 8b 44 24 08       	mov    0x8(%rsp),%rax
+   e671e:	48 83 c4 10          	add    $0x10,%rsp
+   e6722:	5b                   	pop    %rbx
+   e6723:	5d                   	pop    %rbp
+   e6724:	41 5c                	pop    %r12
+   e6726:	41 5d                	pop    %r13
+   e6728:	41 5e                	pop    %r14
+   e672a:	c3                   	ret    
+   e672b:	48 89 ef             	mov    %rbp,%rdi
+   e672e:	e8 bd aa fa ff       	call   911f0 <__lll_lock_wait_private>
+   e6733:	e9 3d ff ff ff       	jmp    e6675 <readdir+0x35>
+
+Disassembly of section __libc_freeres_fn:

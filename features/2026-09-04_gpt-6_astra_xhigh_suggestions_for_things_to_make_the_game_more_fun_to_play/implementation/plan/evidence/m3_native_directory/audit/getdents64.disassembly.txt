@@ -1,0 +1,29 @@
+
+/lib/x86_64-linux-gnu/libc.so.6:     file format elf64-x86-64
+
+
+Disassembly of section .plt:
+
+Disassembly of section .plt.got:
+
+Disassembly of section .plt.sec:
+
+Disassembly of section .text:
+
+00000000000e65f0 <getdents64>:
+   e65f0:	f3 0f 1e fa          	endbr64 
+   e65f4:	b8 ff ff ff 7f       	mov    $0x7fffffff,%eax
+   e65f9:	48 39 c2             	cmp    %rax,%rdx
+   e65fc:	48 0f 47 d0          	cmova  %rax,%rdx
+   e6600:	b8 d9 00 00 00       	mov    $0xd9,%eax
+   e6605:	0f 05                	syscall 
+   e6607:	48 3d 00 f0 ff ff    	cmp    $0xfffffffffffff000,%rax
+   e660d:	77 01                	ja     e6610 <getdents64+0x20>
+   e660f:	c3                   	ret    
+   e6610:	48 8b 15 f9 37 13 00 	mov    0x1337f9(%rip),%rdx        # 219e10 <_DYNAMIC+0x250>
+   e6617:	f7 d8                	neg    %eax
+   e6619:	64 89 02             	mov    %eax,%fs:(%rdx)
+   e661c:	48 c7 c0 ff ff ff ff 	mov    $0xffffffffffffffff,%rax
+   e6623:	c3                   	ret    
+
+Disassembly of section __libc_freeres_fn:

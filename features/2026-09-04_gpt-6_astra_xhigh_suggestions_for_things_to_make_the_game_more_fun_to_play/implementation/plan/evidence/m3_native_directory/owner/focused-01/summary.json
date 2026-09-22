@@ -1,0 +1,16 @@
+{
+  "after_sha256": "6c583d0df739ab5e41556b672fe36ded9abcaeace09b55161c338924b3957ad7",
+  "before_sha256": "6c583d0df739ab5e41556b672fe36ded9abcaeace09b55161c338924b3957ad7",
+  "completed_suites": [
+    "backend_capture",
+    "installed_startup"
+  ],
+  "exit_code": 0,
+  "passed_tests": 15,
+  "planned_suites": [
+    "backend_capture",
+    "installed_startup"
+  ],
+  "sources_unchanged": true,
+  "utc": "2026-09-22T11:04:33.136430+00:00"
+}

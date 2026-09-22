@@ -1,4 +1,4 @@
-Status: Partial, reconciled 2026-09-22. Earlier M3a–M3b2b2 acceptance stands. Diagnostic sinks and partial startup/refusal-control/screenshot cuts are committed; immutable actor-source capture now has focused verification, but complete allocation accounting, whole-App adoption, working save/load controls and host-frame acceptance remain unfinished. See [status reconciliation](STATUS_RECONCILIATION_2026_09_22.md); commit milestone labels do not close these gates.
+Status: Partial, reconciled 2026-09-22. Earlier M3a–M3b2b2 acceptance stands. Diagnostic sinks and partial startup/refusal-control/screenshot cuts are committed; immutable actor-source capture and the pinned Linux/glibc directory object now have focused verification, but complete allocation accounting, whole-App adoption, working save/load controls and host-frame acceptance remain unfinished. See [status reconciliation](STATUS_RECONCILIATION_2026_09_22.md); commit milestone labels do not close these gates.
 
 # M3 — Save-anywhere in the application
 
@@ -120,7 +120,15 @@ retains 38,146,851 bytes; its final run requested 57,386,946 Rust allocation byt
 under a 59,779,814-byte construction reservation. These are source-storage
 figures, not a parsed-asset or whole-world bound.
 
-Native ReadDir allocation, parsing/template compilation, generated crowds,
+The [native-directory follow-up](evidence/m3_native_directory/README.md) adds a
+pre-admitted 1,052,736-byte DIR-object allowance, derived from the audited
+x86_64 Linux/glibc implementation with ordinary ptmalloc mappings and 4 KiB pages.
+The construction peak is now 60,832,550 bytes; retained source cost is unchanged.
+Nine existing capture tests, six startup tests and one isolated native allocator
+witness pass; a normal production build passes without launching the binary.
+The native maximum comes from source/binary analysis, not the Rust allocation
+counter. Other platforms/allocator modes, huge-page tuning, shared allocator
+arenas/RSS, parsing/template compilation, generated crowds,
 backend environment/configuration, the production HydrationAssets factory and
 complete Running/candidate/retiring/App accounting remain open. The complete
 admission gate still refuses; this cut does not implement save/load controls,

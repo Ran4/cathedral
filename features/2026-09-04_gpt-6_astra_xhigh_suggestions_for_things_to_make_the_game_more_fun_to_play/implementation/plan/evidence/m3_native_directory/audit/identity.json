@@ -1,0 +1,74 @@
+{
+  "disassembly": {
+    "closedir": {
+      "command": [
+        "/usr/bin/objdump",
+        "--disassemble=closedir",
+        "/lib/x86_64-linux-gnu/libc.so.6"
+      ],
+      "exit_code": 0,
+      "sha256": "84a01e926cf23813f924ae682bfd4f459e2f004b9e0901e169612d0b43b19eb4"
+    },
+    "getdents64": {
+      "command": [
+        "/usr/bin/objdump",
+        "--disassemble=getdents64",
+        "/lib/x86_64-linux-gnu/libc.so.6"
+      ],
+      "exit_code": 0,
+      "sha256": "a58afbfd9edc7051bef23516c2fc0f26d260f312221b556838cd3c47b1242101"
+    },
+    "opendir": {
+      "command": [
+        "/usr/bin/objdump",
+        "--disassemble=opendir",
+        "/lib/x86_64-linux-gnu/libc.so.6"
+      ],
+      "exit_code": 0,
+      "sha256": "e8d3911a041a6fee89496aba5ef9e6a7fdc650de2ebe1776c3fc01adaf12a173"
+    },
+    "readdir": {
+      "command": [
+        "/usr/bin/objdump",
+        "--disassemble=readdir",
+        "/lib/x86_64-linux-gnu/libc.so.6"
+      ],
+      "exit_code": 0,
+      "sha256": "da08d9979a7e759d33f8a3bdb9f6fc1faa7f599696001112200f52afeae6b0af"
+    }
+  },
+  "libc_path": "/lib/x86_64-linux-gnu/libc.so.6",
+  "libc_sha256": "b2cf6c33b74d2f22543b7a469a75b538911e690f769d0b238843a49465b83793",
+  "libc_version": "Ubuntu GLIBC 2.35-0ubuntu3.15",
+  "maximum_is_measured": false,
+  "maximum_request_bytes": 1048624,
+  "proof": "1 MiB max buffer + 48-byte DIR + 16-byte mmap overhead + 4096-byte conservative page remainder",
+  "reserved_native_bytes": 1052736,
+  "rust_std_path": "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/fs/unix.rs",
+  "rust_std_sha256": "a25523228b0ba0dbf53aaa478b52e42021513d6563df033a34896ed31a20c3a5",
+  "scope": "x86_64 Linux/GNU; ordinary ptmalloc, glibc.malloc.hugetlb=0; 4096-byte pages",
+  "symbols_command": [
+    "/usr/bin/objdump",
+    "-T",
+    "/lib/x86_64-linux-gnu/libc.so.6"
+  ],
+  "symbols_sha256": "75abf6b377836ee57e2b6f1d126d64eff973dc17f1041fe19d7c399c41f62cee",
+  "upstream": {
+    "dirstream.h": {
+      "sha256": "99395acb9d995335ba8456db4925308851d54325ea74882e247aafc340212fbe",
+      "url": "https://raw.githubusercontent.com/bminor/glibc/glibc-2.35/sysdeps/unix/sysv/linux/dirstream.h"
+    },
+    "malloc.c": {
+      "sha256": "94275fbd85eeeb063605f8469a7946189ee7b044a4257319982074462ff96c1d",
+      "url": "https://raw.githubusercontent.com/bminor/glibc/glibc-2.35/malloc/malloc.c"
+    },
+    "opendir.c": {
+      "sha256": "5a960a0d63171cc08fce846dcde43bc9aaf5c1a3e349188bd8984660f5b697f4",
+      "url": "https://raw.githubusercontent.com/bminor/glibc/glibc-2.35/sysdeps/unix/sysv/linux/opendir.c"
+    },
+    "readdir64.c": {
+      "sha256": "0c3a9875196dc8310dba02d5df8e3f058b088b6cd2ff4b265e29cf224614ec05",
+      "url": "https://raw.githubusercontent.com/bminor/glibc/glibc-2.35/sysdeps/unix/sysv/linux/readdir64.c"
+    }
+  }
+}

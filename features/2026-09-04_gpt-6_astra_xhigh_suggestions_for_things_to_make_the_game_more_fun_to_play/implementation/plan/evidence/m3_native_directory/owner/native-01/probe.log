@@ -1,0 +1,10 @@
+
+running 1 test
+test world_data::capture::tests::native_probe::native_directory_allocator_lifetime_probe ... native_directory success Stats { opens: 3, successful: 3, reads: 14, closes: 3, allocations: 3, frees: 3, live: 0, peak_live: 1, request_peak: 32816, usable_peak: 32824, mismatches: 0, read_allocations: 0, close_allocations: 0, minimum_budget: 60836646 } admitted_native=1052736
+native_directory malloc_failure Stats { opens: 1, successful: 0, reads: 0, closes: 0, allocations: 1, frees: 0, live: 0, peak_live: 0, request_peak: 32816, usable_peak: 0, mismatches: 0, read_allocations: 0, close_allocations: 0, minimum_budget: 60836646 }
+native_directory read_failure Stats { opens: 1, successful: 1, reads: 1, closes: 1, allocations: 1, frees: 1, live: 0, peak_live: 1, request_peak: 32816, usable_peak: 32824, mismatches: 0, read_allocations: 0, close_allocations: 0, minimum_budget: 60836646 }
+native_directory path_failure Stats { opens: 5, successful: 5, reads: 21, closes: 5, allocations: 5, frees: 5, live: 0, peak_live: 1, request_peak: 32816, usable_peak: 32824, mismatches: 0, read_allocations: 0, close_allocations: 0, minimum_budget: 60836646 }
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 222 filtered out; finished in 0.00s
+

@@ -1,0 +1,25 @@
+{
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "15",
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "-j",
+    "1",
+    "-p",
+    "cathedral-backends",
+    "--lib",
+    "world_data::capture::tests",
+    "--",
+    "--test-threads=1",
+    "--nocapture"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "event": "START",
+  "raw_log": "/tmp/alibi-native-directory-owner/evidence/focused-01/backend_capture.log",
+  "source_map_sha256": "6c583d0df739ab5e41556b672fe36ded9abcaeace09b55161c338924b3957ad7",
+  "utc": "2026-09-22T10:58:39.250134+00:00"
+}

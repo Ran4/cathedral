@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "6c583d0df739ab5e41556b672fe36ded9abcaeace09b55161c338924b3957ad7",
+  "archive_sha256": "a1f8f3ff4ddf3fe22d31f11dad0331f827f0ba070aaf4bd850744d8057cab4b3",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "executable": "/home/ran/src/rust/cathedralbevy/target/debug/cathedralbevy",
+  "executable_sha256": "36a186cc5a5ea28d574c5d7e31c6d334a0cb9457d32629fddd8e3874a425c168",
+  "executable_was_run": false,
+  "launch_error": null,
+  "raw_log": "/tmp/alibi-native-directory-owner/evidence/production-01/production-build.log",
+  "raw_sha256": "6505342f6af67f3155cc5496f414cb3de42e459e7b9674e9dd810506d6852d17",
+  "source_map_sha256": "6c583d0df739ab5e41556b672fe36ded9abcaeace09b55161c338924b3957ad7",
+  "sources_unchanged": true,
+  "utc": "2026-09-22T11:07:19.105313+00:00",
+  "wall_seconds": 67.85975820198655
+}

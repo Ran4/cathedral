@@ -2,6 +2,9 @@ use super::*;
 use cathedral_sim::checkpoint::{Cohort, MAX_RESIDENT_BYTES};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+#[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))]
+mod native_probe;
+
 static NEXT: AtomicU64 = AtomicU64::new(0);
 struct Fixture(PathBuf);
 impl Fixture {

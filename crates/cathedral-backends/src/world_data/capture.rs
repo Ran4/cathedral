@@ -1,7 +1,8 @@
 //! Frozen actor source inputs. Admission covers Rust-owned discovery tables,
-//! paths, source buffers and copies only. Native ReadDir buffers, parser and
-//! template compiler allocations, generated crowds and hydrated worlds are NOT
-//! covered. This owner cannot authorize complete application adoption.
+//! paths, source buffers and copies, plus one native directory object on the
+//! audited Linux/glibc platform. Parser/template compiler allocations, generated
+//! crowds and hydrated worlds are NOT covered. This owner cannot authorize
+//! complete application adoption.
 use super::*;
 use cathedral_sim::checkpoint::{CheckpointBudget, Reservation};
 use std::{fmt, io::Read, mem::size_of, sync::Arc};
@@ -24,6 +25,18 @@ const FIXED: [&str; 7] = [
     "prompts/strings.toml",
 ];
 const MAX_CHARACTERS: usize = MAX_SOURCES - FIXED.len();
+
+// Audited x86_64 Linux/GNU, Ubuntu glibc 2.35-0ubuntu3.15, 4096-byte pages,
+// ordinary ptmalloc mappings (glibc.malloc.hugetlb=0):
+// opendir allocates clamp(st_blksize, 32768, 1048576) + sizeof(DIR=48).
+// ptmalloc's ordinary chunk overhead is <=32; mmap overhead is <=2*sizeof(size_t)
+// plus a page remainder. 16+4096 conservatively covers both. This is the DIR
+// object's chunk/mapping envelope, not shared arenas, tcache or process RSS.
+// Reserve the same allowance without restricting startup on other platforms;
+// their native implementation, replacement allocators and huge-page allocator
+// tuning remain unproved. The malloc-request ceiling needs no page assumption.
+// Pinned source/binary audit: plan/evidence/m3_native_directory/README.md.
+const NATIVE_DIRECTORY_BYTES: usize = 1024 * 1024 + 48 + 16 + 4096;
 
 /// No diagnostic allocation can outlive a failed capture's reservation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,8 +93,8 @@ pub struct CapturedActorSources(Arc<SourceOwner>);
 /// CString for each DirEntry; file_name clones that CString. Linux dirent64's
 /// u16 d_reclen bounds each name by 64 KiB even for filesystems whose names
 /// exceed 255 bytes. Do not assume the declared d_name[256] is its bound.
-/// See the handoff's pinned rust-src inventory. Native DIR allocations and
-/// other platforms' filesystem-library ownership remain separate open gates.
+/// See the handoff's pinned rust-src inventory. The native DIR object allowance
+/// is scoped above; other platforms' filesystem ownership remains an open gate.
 fn peak_bytes() -> usize {
     size_of::<SourceOwner>()
         + 64
@@ -96,6 +109,7 @@ fn peak_bytes() -> usize {
         + MAX_SOURCES * 32
         + 2 * (MAX_SOURCE_BYTES + 1)
         + path_scratch_bytes()
+        + NATIVE_DIRECTORY_BYTES
 }
 
 // Four overlapping path buffers: captured character root, joined directory,
@@ -242,8 +256,9 @@ fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     let mut entries_seen = 0;
     while let Some((relative, depth)) = pending.pop() {
         let directory = joined(root, &relative)?;
-        // Only one native directory stream is alive at once. Its internal
-        // allocation is a documented remaining gate, not hidden in peak_bytes.
+        // Only one native stream is alive at once; DirEntry never escapes this
+        // loop. Its native allowance is already reserved in peak_bytes and is
+        // kept until capture_into returns, after ReadDir's final closedir.
         for entry in fs::read_dir(&directory).map_err(|_| SourceCaptureError::Io)? {
             entries_seen += 1;
             if entries_seen > MAX_ENTRIES {

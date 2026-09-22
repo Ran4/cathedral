@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "6c583d0df739ab5e41556b672fe36ded9abcaeace09b55161c338924b3957ad7",
+  "archive_sha256": "2be0de168546e8bdaebf7d43eadbfdec9770900936810b222cabf880a9ff6e7c",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "launch_error": null,
+  "passed_tests": 6,
+  "raw_log": "/tmp/alibi-native-directory-owner/evidence/focused-01/installed_startup.log",
+  "raw_sha256": "ee014f63b60ef866582496956caa126c1f9910052b09099facef98c343fcc9d6",
+  "source_map_sha256": "6c583d0df739ab5e41556b672fe36ded9abcaeace09b55161c338924b3957ad7",
+  "sources_unchanged": true,
+  "successful_nonempty_test_summary": true,
+  "suite": "installed_startup",
+  "utc": "2026-09-22T11:04:33.024329+00:00",
+  "wall_seconds": 227.92638468695804
+}

@@ -80,3 +80,5 @@ The preceding [workspace record](../integration_2026_09_22/REVIEW.md) passed 2,3
 tests before this slice. That result does not validate the later patch. Neither
 record establishes whole-App load/adoption, real-renderer frame limits, provider
 behavior or device acceptance.
+
+The later [native-directory allowance](../m3_native_directory/README.md) adds scoped Linux/glibc DIR-object admission. This source-capture record retains its original Rust-only scope, measurements and source identities.

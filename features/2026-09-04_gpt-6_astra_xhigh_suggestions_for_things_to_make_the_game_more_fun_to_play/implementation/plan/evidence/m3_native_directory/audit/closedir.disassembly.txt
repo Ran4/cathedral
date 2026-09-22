@@ -1,0 +1,28 @@
+
+/lib/x86_64-linux-gnu/libc.so.6:     file format elf64-x86-64
+
+
+Disassembly of section .plt:
+
+Disassembly of section .plt.got:
+
+Disassembly of section .plt.sec:
+
+Disassembly of section .text:
+
+00000000000e6470 <closedir>:
+   e6470:	f3 0f 1e fa          	endbr64 
+   e6474:	48 85 ff             	test   %rdi,%rdi
+   e6477:	74 10                	je     e6489 <closedir+0x19>
+   e6479:	55                   	push   %rbp
+   e647a:	8b 2f                	mov    (%rdi),%ebp
+   e647c:	e8 ef 1e f4 ff       	call   28370 <free@plt>
+   e6481:	89 ef                	mov    %ebp,%edi
+   e6483:	5d                   	pop    %rbp
+   e6484:	e9 27 35 03 00       	jmp    1199b0 <__close_nocancel>
+   e6489:	48 8b 05 80 39 13 00 	mov    0x133980(%rip),%rax        # 219e10 <_DYNAMIC+0x250>
+   e6490:	64 c7 00 16 00 00 00 	movl   $0x16,%fs:(%rax)
+   e6497:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+   e649c:	c3                   	ret    
+
+Disassembly of section __libc_freeres_fn:
