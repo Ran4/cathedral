@@ -734,10 +734,17 @@ fn build_installed(
         backends.prompt_log(prompts_dir)
     };
 
-    let shelters = Arc::new(
-        ShelterMap::from_json_str(SHELTERS_JSON)
-            .map_err(|error| format!("invalid world shelters: {error}"))?,
-    );
+    let shelters = if let Some(installed) = installed {
+        installed
+            .shelters()
+            .ok_or_else(|| "shelters were not staged: smart actors disabled at startup".to_owned())?
+            .clone()
+    } else {
+        Arc::new(
+            ShelterMap::from_json_str(SHELTERS_JSON)
+                .map_err(|error| format!("invalid world shelters: {error}"))?,
+        )
+    };
     let weather_mode = WeatherMode::from_config_name(&weather.mode).unwrap_or_else(|| {
         warn!(
             "unknown weather.mode `{}` in config.ron; using timeline",

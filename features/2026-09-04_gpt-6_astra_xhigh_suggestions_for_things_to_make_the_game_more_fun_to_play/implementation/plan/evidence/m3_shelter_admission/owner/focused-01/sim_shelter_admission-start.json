@@ -1,0 +1,25 @@
+{
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "15",
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "-j",
+    "1",
+    "-p",
+    "cathedral-sim",
+    "--lib",
+    "weather::shelter_admission::tests",
+    "--",
+    "--test-threads=1",
+    "--nocapture"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "event": "START",
+  "raw_log": "/tmp/alibi-shelter-admission-owner/evidence/focused-01/sim_shelter_admission.log",
+  "source_map_sha256": "cce7e13ba76ac09ccc9dbf215348767fd17c340d062ad11193aa5132eb269023",
+  "utc": "2026-09-22T11:24:08.851988+00:00"
+}

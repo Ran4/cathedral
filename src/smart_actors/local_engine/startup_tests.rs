@@ -30,6 +30,10 @@ fn committed_startup_reuses_navigation_and_backend_recipe_through_hello() {
     );
     assert!(!engine.dead);
     assert!(Arc::ptr_eq(
+        &engine.seed.as_ref().unwrap().config.shelters,
+        committed.shelters().unwrap()
+    ));
+    assert!(Arc::ptr_eq(
         engine.seed.as_ref().unwrap().config.nav.as_ref().unwrap(),
         committed.nav()
     ));
@@ -54,6 +58,14 @@ fn committed_startup_reuses_navigation_and_backend_recipe_through_hello() {
         .unwrap();
     engine.pump(0.0);
     let domain = engine.checkpoint_engine().unwrap();
+    assert!(Arc::ptr_eq(
+        &domain.config().shelters,
+        committed.shelters().unwrap()
+    ));
+    assert!(Arc::ptr_eq(
+        &domain.world().shelters,
+        committed.shelters().unwrap()
+    ));
     assert!(Arc::ptr_eq(
         domain.config().nav.as_ref().unwrap(),
         committed.nav()

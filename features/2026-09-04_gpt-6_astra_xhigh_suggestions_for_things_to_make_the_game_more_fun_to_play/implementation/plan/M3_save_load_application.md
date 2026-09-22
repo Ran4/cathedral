@@ -1,4 +1,4 @@
-Status: Partial, reconciled 2026-09-22. Earlier M3a–M3b2b2 acceptance stands. Diagnostic sinks and partial startup/refusal-control/screenshot cuts are committed; immutable actor-source capture and the pinned Linux/glibc directory object now have focused verification, but complete allocation accounting, whole-App adoption, working save/load controls and host-frame acceptance remain unfinished. See [status reconciliation](STATUS_RECONCILIATION_2026_09_22.md); commit milestone labels do not close these gates.
+Status: Partial, reconciled 2026-09-22. Earlier M3a–M3b2b2 acceptance stands. Diagnostic sinks and partial startup/refusal-control/screenshot cuts are committed; immutable actor-source capture, the pinned Linux/glibc directory object and shared embedded shelter parsing now have focused verification, but complete allocation accounting, whole-App adoption, working save/load controls and host-frame acceptance remain unfinished. See [status reconciliation](STATUS_RECONCILIATION_2026_09_22.md); commit milestone labels do not close these gates.
 
 # M3 — Save-anywhere in the application
 
@@ -133,6 +133,29 @@ backend environment/configuration, the production HydrationAssets factory and
 complete Running/candidate/retiring/App accounting remain open. The complete
 admission gate still refuses; this cut does not implement save/load controls,
 whole-App replacement or frame acceptance.
+
+
+## Embedded shelter definition prerequisite — 2026-09-22
+
+The [shelter record](evidence/m3_shelter_admission/README.md) admits the actual
+embedded JSON parse, duplicate validation scratch and shared immutable rows.
+Enabled startup stages one Arc reused by EngineConfig and World; disabled actors
+skip it. Existing defaults, authored order, row fingerprints and legacy APIs are
+preserved. All shelter clones keep the same storage lease through their last
+owner; existing hydration roles can retain it without a new opaque fence.
+
+The reviewed 13,240-byte artifact reserves 239,518 construction bytes, requests
+11,905 cumulative Rust allocation bytes in the successful witness, and
+retains 10,945 bytes. This proof is pinned to the artifact/parser/container
+identities, including its numeric fast path; arbitrary future numeric edits and
+other allocator/platform modes require re-audit. Six new shelter, one legacy,
+seven startup and two routing tests pass, as does a normal build; no application
+was launched and no whole-workspace rerun is claimed.
+
+Areas, sounds/TOML, seed/lore composition, prompt compilation, default catalogs,
+generated crowds, configuration/transports, production HydrationAssets and
+complete application accounting/adoption remain open. Crowd support is unchanged.
+The complete admission gate still refuses.
 
 ## Entry
 

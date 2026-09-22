@@ -93,10 +93,39 @@ fn disabled_actors_stage_without_source_files_and_keep_backend_resolution() {
     assert_eq!(called.load(Ordering::SeqCst), 1);
     assert!(!staged.recipe().config().smart_actors.enabled);
     assert!(staged.recipe().actor_sources().is_none());
+    assert!(staged.recipe().shelters().is_none());
     assert_eq!(
         staged.recipe().require_complete_admission(),
         Err(StartupRefusal::UnprovedWholeAppAccounting)
     );
+}
+
+#[test]
+fn embedded_shelter_parser_validation_and_shared_owners_fit_scoped_admission() {
+    let budget = CheckpointBudget::default();
+    let root = budget.reserve(Cohort::Running, 4096).unwrap();
+    let (map, requested) = crate::host_checkpoint::measure_installed_allocations(|| {
+        cathedral_sim::ShelterMap::installed_admitted(&budget).unwrap()
+    });
+    let peak = budget.peak_retained_bytes() - root.bytes();
+    assert!(
+        requested <= peak,
+        "cumulative Rust requests {requested} exceed peak allowance {peak}"
+    );
+    let (clones, clone_requests) =
+        crate::host_checkpoint::measure_installed_allocations(|| (map.clone(), (*map).clone()));
+    assert_eq!(
+        clone_requests, 0,
+        "cloning admitted shelter data must allocate nothing"
+    );
+    println!(
+        "installed_shelter_parse requested={requested} admitted={peak} retained={} clone_requested={clone_requests}",
+        map.admitted_storage_bytes()
+    );
+    drop(map);
+    assert!(budget.retained_bytes() > root.bytes());
+    drop(clones);
+    assert_eq!(budget.retained_bytes(), root.bytes());
 }
 
 #[test]

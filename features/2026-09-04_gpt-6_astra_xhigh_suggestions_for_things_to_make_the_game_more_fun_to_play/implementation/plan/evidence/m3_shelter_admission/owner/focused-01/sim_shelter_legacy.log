@@ -1,0 +1,8 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.56s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-c32032e502ee02ba)
+
+running 1 test
+test weather::tests::shelter_json_validates_and_classifies_points ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 911 filtered out; finished in 0.00s
+

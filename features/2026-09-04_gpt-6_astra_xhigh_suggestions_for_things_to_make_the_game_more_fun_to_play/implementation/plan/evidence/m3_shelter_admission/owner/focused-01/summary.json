@@ -1,0 +1,20 @@
+{
+  "after_sha256": "cce7e13ba76ac09ccc9dbf215348767fd17c340d062ad11193aa5132eb269023",
+  "before_sha256": "cce7e13ba76ac09ccc9dbf215348767fd17c340d062ad11193aa5132eb269023",
+  "completed_suites": [
+    "sim_shelter_admission",
+    "sim_shelter_legacy",
+    "installed_startup",
+    "local_engine_startup"
+  ],
+  "exit_code": 0,
+  "passed_tests": 16,
+  "planned_suites": [
+    "sim_shelter_admission",
+    "sim_shelter_legacy",
+    "installed_startup",
+    "local_engine_startup"
+  ],
+  "sources_unchanged": true,
+  "utc": "2026-09-22T11:36:20.532928+00:00"
+}

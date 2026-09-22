@@ -1,0 +1,24 @@
+{
+  "artifact_bytes": 13240,
+  "exponent_notation": false,
+  "files": {
+    "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_core-1.0.228/src/de/impls.rs": "9fb7a0322af51971fe1fa8f5b56c7ca3716622a6e9127b86bddfc0742c11383c",
+    "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/de.rs": "4998d7e252eb513be85b298e287048b4fb283882e9ba7df905f572f07200f3f3",
+    "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/lexical/algorithm.rs": "54d599033e5a182a3076a0ba23a3550bf8680c99399b0313166b3c42c85b35b9",
+    "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/lexical/num.rs": "2d06111d28616221995f7b4d4f13625b8d902884921268b0e02e544f871a5339",
+    "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/lexical/parse.rs": "c2bfac4c70a19938ced61e991f4ec606764887cf12bac1a0978b5b5318a56aac",
+    "/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.150/src/read.rs": "17a2efe49e5a6937c8d7d4a5c0b9eac84453de0f86bf8e7ee421387e82341bb3",
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/node.rs": "2200ca0a4fe38592c314dc7f5f40bbb160e06b6f9e4abd1eb5bc40701540ab25",
+    "/home/ran/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/raw_vec/mod.rs": "39ae2ccc61fd3bad236978201cda2ad97599403eb103de7eafdf6d7f6dd8b6f3",
+    "/home/ran/src/rust/cathedralbevy/assets/world/shelters.json": "721956d1c93a758a3ae0914c7c24b96892c54eacf68bd7d5fe4e16139383cc4e"
+  },
+  "max_fractional_digits": 2,
+  "max_numeric_mantissa": 25727,
+  "numeric_path": "de.rs625 -> lexical parse_concise_float -> fast_path; mantissa<2^53 and exponent -2..0 within -22..22",
+  "numeric_tokens": 309,
+  "offices": 30,
+  "platform": "x86_64 Linux/GNU; rustc1.96.0; serde_core1.0.228; serde_json1.0.150 float_roundtrip",
+  "rows": 28,
+  "scope": "Current embedded artifact only. Future numeric/serde changes require re-audit; arbitrary bigint parsing is not admitted.",
+  "vertices": 112
+}

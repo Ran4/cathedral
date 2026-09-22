@@ -1,0 +1,15 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 4m 22s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-c32032e502ee02ba)
+
+running 6 tests
+test weather::shelter_admission::tests::every_structural_arithmetic_overflow_refuses ... ok
+test weather::shelter_admission::tests::installed_rows_defaults_order_debug_and_content_fingerprint_match_legacy ... installed_shelters source_bytes=13240 rows=28 peak=239518 retained=10945 rows_sha256=ac1acb80bcd16db8d9684f0c86e1bced321576918063b0a8c93ec0328d7ce5b6
+ok
+test weather::shelter_admission::tests::large_duplicate_diagnostic_and_malformed_types_stay_inside_staging ... ok
+test weather::shelter_admission::tests::pressure_precedes_parsing_and_errors_release_all_staging_storage ... ok
+test weather::shelter_admission::tests::scanner_handles_escaped_delimiters_unfinished_tails_and_struct_sequences ... ok
+test weather::shelter_admission::tests::shared_rows_and_charge_survive_outer_arcs_and_last_shelter_map_clone ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 906 filtered out; finished in 0.01s
+

@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "cce7e13ba76ac09ccc9dbf215348767fd17c340d062ad11193aa5132eb269023",
+  "archive_sha256": "c3b7387bb37dea18a81f774588a2f701a5e30ca2c44722dd7f57d1a649c9f93c",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "launch_error": null,
+  "passed_tests": 1,
+  "raw_log": "/tmp/alibi-shelter-admission-owner/evidence/focused-01/sim_shelter_legacy.log",
+  "raw_sha256": "b09788d6a1efb3e9b1fddbd6a7843be256211a80bc33ab737f48584ab422ad62",
+  "source_map_sha256": "cce7e13ba76ac09ccc9dbf215348767fd17c340d062ad11193aa5132eb269023",
+  "sources_unchanged": true,
+  "successful_nonempty_test_summary": true,
+  "suite": "sim_shelter_legacy",
+  "utc": "2026-09-22T11:28:32.597446+00:00",
+  "wall_seconds": 0.6303051179274917
+}

@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "cce7e13ba76ac09ccc9dbf215348767fd17c340d062ad11193aa5132eb269023",
+  "archive_sha256": "7e7ff1491546210a7c5c77cbb38424d42263c8326cb284cba94a71fde840ad77",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "executable": "/home/ran/src/rust/cathedralbevy/target/debug/cathedralbevy",
+  "executable_sha256": "1718a9d925f12adbba4366d7e19c7478fdc036792039ea322005783a5c4b2b80",
+  "executable_was_run": false,
+  "launch_error": null,
+  "raw_log": "/tmp/alibi-shelter-admission-owner/evidence/production-01/production-build.log",
+  "raw_sha256": "d3a739f98b78adb8cf3b94d1eb7622b4f58754cc858ba997c8df8e9de7fc4182",
+  "source_map_sha256": "cce7e13ba76ac09ccc9dbf215348767fd17c340d062ad11193aa5132eb269023",
+  "sources_unchanged": true,
+  "utc": "2026-09-22T11:39:39.086517+00:00",
+  "wall_seconds": 171.4028004950378
+}

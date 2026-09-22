@@ -1555,9 +1555,31 @@ impl Shelter {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+mod shelter_admission;
+pub use shelter_admission::ShelterAdmissionError;
+
+#[derive(Clone, Default)]
 pub struct ShelterMap {
+    // None keeps the longstanding empty Default allocation-free. All parsed
+    // clones share immutable rows and (when installed) their actual charge.
+    storage: Option<std::sync::Arc<ShelterStorage>>,
+}
+struct ShelterStorage {
     shelters: Vec<Shelter>,
+    // Rows drop before their admission can be reused.
+    lease: Option<crate::checkpoint::Reservation>,
+}
+impl PartialEq for ShelterMap {
+    fn eq(&self, other: &Self) -> bool {
+        self.shelters() == other.shelters()
+    }
+}
+impl std::fmt::Debug for ShelterMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ShelterMap")
+            .field("shelters", &self.shelters())
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1582,6 +1604,15 @@ struct ShelterDocument {
 
 impl ShelterMap {
     pub fn from_json_str(source: &str) -> Result<Self, ShelterError> {
+        Ok(Self {
+            storage: Some(std::sync::Arc::new(ShelterStorage {
+                shelters: Self::parse_rows(source)?,
+                lease: None,
+            })),
+        })
+    }
+
+    fn parse_rows(source: &str) -> Result<Vec<Shelter>, ShelterError> {
         let document: ShelterDocument =
             serde_json::from_str(source).map_err(|error| ShelterError {
                 message: format!("invalid shelter JSON: {error}"),
@@ -1618,17 +1649,17 @@ impl ShelterMap {
                 });
             }
         }
-        Ok(Self {
-            shelters: document.shelters,
-        })
+        Ok(document.shelters)
     }
 
     pub fn shelters(&self) -> &[Shelter] {
-        &self.shelters
+        self.storage
+            .as_ref()
+            .map_or(&[], |storage| &storage.shelters)
     }
 
     pub fn at(&self, position: Vec3) -> Option<&Shelter> {
-        self.shelters
+        self.shelters()
             .iter()
             .find(|shelter| shelter.contains(position))
     }

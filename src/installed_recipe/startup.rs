@@ -23,6 +23,7 @@ pub(crate) enum StartupRefusal {
     Admission,
     Navigation,
     Sources,
+    Shelters,
     Services,
     AlreadyInstalled,
     UnprovedWholeAppAccounting,
@@ -35,6 +36,7 @@ pub(crate) enum StartupRefusal {
 pub(crate) struct CommittedStartup(Arc<Committed>);
 struct Committed {
     actor_sources: Option<cathedral_backends::world_data::CapturedActorSources>,
+    shelters: Option<Arc<cathedral_sim::ShelterMap>>,
     nav: Arc<NavData>,
     backend_config: Arc<BackendsConfig>,
     runtime: Arc<BackendRuntime>,
@@ -188,6 +190,22 @@ impl StagedStartup {
         } else {
             None
         };
+        let shelters = if config.smart_actors.enabled {
+            Some(
+                cathedral_sim::ShelterMap::installed_admitted(installed.budget()).map_err(
+                    |error| match error {
+                        cathedral_sim::weather::ShelterAdmissionError::Admission => {
+                            StartupRefusal::Admission
+                        }
+                        cathedral_sim::weather::ShelterAdmissionError::InvalidDefinition => {
+                            StartupRefusal::Shelters
+                        }
+                    },
+                )?,
+            )
+        } else {
+            None
+        };
         let backend_config = Arc::new(backend(&config));
         let runtime = BackendRuntime::start_admitted(installed.budget())
             .map_err(|_| StartupRefusal::Services)?;
@@ -214,6 +232,7 @@ impl StagedStartup {
             captures,
             recipe: CommittedStartup(Arc::new(Committed {
                 actor_sources,
+                shelters,
                 config,
                 nav,
                 backend_config,
@@ -267,10 +286,13 @@ impl CommittedStartup {
     pub fn require_complete_admission(&self) -> Result<(), StartupRefusal> {
         Err(StartupRefusal::UnprovedWholeAppAccounting)
     }
-    /// Source storage/discovery is admitted; native ReadDir, parsing and
-    /// generated-crowd allocation remain separate accounting gates.
+    /// Source storage/discovery is admitted on the audited platform; other
+    /// parsed definitions and generated crowds retain separate accounting gates.
     pub fn actor_sources(&self) -> Option<&cathedral_backends::world_data::CapturedActorSources> {
         self.0.actor_sources.as_ref()
+    }
+    pub fn shelters(&self) -> Option<&Arc<cathedral_sim::ShelterMap>> {
+        self.0.shelters.as_ref()
     }
     pub fn config(&self) -> &crate::config::AppConfig {
         &self.0.config
