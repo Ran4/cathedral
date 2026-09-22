@@ -1,4 +1,4 @@
-Status: Planned (2026-09-05).
+Status: Partial (2026-09-22). Partial street-query/temporary-closure foundation committed; stacked interiors, physical portals, shared traversal and persistence acceptance remain unfinished. Complete M3 persistence remains a prerequisite.
 
 # M4 — Places on more than one floor
 

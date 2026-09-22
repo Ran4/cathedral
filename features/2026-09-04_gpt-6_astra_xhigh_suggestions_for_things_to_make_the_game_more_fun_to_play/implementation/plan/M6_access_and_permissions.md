@@ -1,4 +1,4 @@
-Status: Planned (2026-09-05).
+Status: Partial (2026-09-22). Partial current travel/custody authority checks implemented and under independent review; general access registry, keys, grants, loans, portals and persistence remain unfinished. Complete M3 persistence remains a prerequisite.
 
 # M6 — Doors, authority and permission
 

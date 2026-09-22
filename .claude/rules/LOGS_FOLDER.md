@@ -30,6 +30,22 @@ One JSON object per line, chronological. Fields:
 - `target` — rust only: module path of the log site
 - `fields` — rust only, optional: structured key/values attached to the event
 
+Diagnostic output is bounded. Each JSONL/console sink has 64 ordinary and four
+reserved evidence slots; an encoded record is at most 32 KiB. Tracing captures
+at most 32 structured fields in a fixed arena. Oversized, saturated or closed
+diagnostic submissions are refused whole, with saturating counters and bounded
+recovery summaries under source `diagnostics`. Under overload the two streams
+may refuse different diagnostic records; neither is a lossless transcript.
+
+Drive/session evidence uses reserved storage and a one-second bounded wait for
+its accepted prefix to be written. Failure is explicit in the run's evidence
+state and prevents a normal drive Quit from returning success. Drive stdout
+remains its separate synchronous evidence trail. A normal shutdown joins native
+diagnostic workers; process-exit flushing is best effort with one five-second
+deadline. A disk error or hard abort can still leave incomplete output. Required
+prompt archives below have a separate admission/conservation contract and are
+not drop-eligible diagnostics.
+
 ## screenshots/
 
 - `cathedral_screenshot_<YYYY-MM-DD_HH_MM_SS>__<nn>.png` — F5 captures. `nn`

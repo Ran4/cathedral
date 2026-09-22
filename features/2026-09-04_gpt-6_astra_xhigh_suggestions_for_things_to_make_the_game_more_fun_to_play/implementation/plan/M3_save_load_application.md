@@ -1,4 +1,4 @@
-Status: M3a storage, M3b1 worker preparation/retirement transport, M3b2a atomic allocation promotion, M3b2b1 prompt archive admission and M3b2b2 native worker retention implemented and independently reviewed (2026-09-15). M3b2b3 diagnostic sinks are in progress; remaining allocation accounting, M3b2c whole-App adoption, M3c controls and M3d host-frame acceptance remain pending.
+Status: Partial, reconciled 2026-09-22. Earlier M3a–M3b2b2 acceptance stands. Diagnostic sinks and partial startup/refusal-control/screenshot cuts are committed, but complete allocation accounting, whole-App adoption, working save/load controls and host-frame acceptance remain unfinished. See [status reconciliation](STATUS_RECONCILIATION_2026_09_22.md); commit milestone labels do not close these gates.
 
 # M3 — Save-anywhere in the application
 

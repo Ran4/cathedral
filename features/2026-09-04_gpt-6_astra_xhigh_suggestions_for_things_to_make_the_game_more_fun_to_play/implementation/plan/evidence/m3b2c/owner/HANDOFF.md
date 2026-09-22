@@ -43,10 +43,23 @@ Hello preserving the Nav Arc into EngineConfig and World. Parser cumulative
 requested bytes19,689,148; count-only preflight8. The subsequent PromptLog
 session correction is deliberately outside this run's acceptance.
 
-Final `focused-03` result will be recorded after completion. Its filters include
-all installed_recipe, LocalEngine startup, session_log and config tests, adding
-the real same-second archive collision regression. No full workspace or release
-performance claim is made by this owner; coordinator review/checks follow cession.
+Final `focused-03`: **34 passed / 0 failed / 0 ignored**, 602 filtered out;
+exit 0, source unchanged. Its filters cover all installed_recipe, LocalEngine
+startup, session_log and config tests, including the real same-second archive
+collision regression. Only the historical `perf::Probe` warning remains.
+Combined command wall time was 215.919578 seconds; test execution was 4.52 seconds.
+
+- Source-map SHA256: `6f3687f39013a1d9564eeec3c0308c5fa86bce141d49893647e4303e20d567ef`
+- Original raw log: `/tmp/alibi-m3b2c-focused-03.log`
+- Raw SHA256: `28ef63c5aa058ce51ba0ac3ab39491cc9ffc6fa38b87d643e807a677e09c126a`
+- Archive SHA256: `8447564b058e8d8fc0701ab725cf21eead9b5b296ca15f07b78c7553d1675f8a`
+- Exact metadata: `focused-03-start.json`, `focused-03-sources.json`,
+  `focused-03-result.json`; retained output: `focused-03.log.gz`.
+
+Source, Cargo and executable ownership were explicitly ceded after session
+56649 exited successfully. No owner command remained live at cession. Only
+this handoff documentation changed afterward. No full workspace or release
+performance claim is made by this owner; coordinator review/checks follow.
 
 The pre-existing dirty b4 HANDOFF and LOGS_FOLDER documentation and all unrelated
 untracked docs/feature drafts/gauntlet/reference paths are preserved.

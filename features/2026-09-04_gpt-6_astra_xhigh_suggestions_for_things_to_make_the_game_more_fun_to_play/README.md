@@ -1,4 +1,4 @@
-Status: M0 baseline delivered; M1a–M1d, M2a1–M2a16, M2b–M2d, M3a, M3b1, M3b2a, M3b2b1 and M3b2b2 implemented and reviewed (2026-09-15). M3b2b3 diagnostic sinks are in progress; remaining allocation accounting, M3b2c whole-App adoption and M3c–M19 remain. M0 renderer/full-stress evidence is pending.
+Status: Reconciled 2026-09-22. M1–M2 and M3 through native retention retain their earlier acceptance records. Diagnostic sinks, admitted startup services, refusal-only controls, screenshot fixes, and partial M4/M5 foundations are committed; M6 current-authority checks are under independent review. Complete M3 allocation/adoption/save-load and frame acceptance remain unfinished, so M4–M6 are not accepted milestones and M7–M19 have not started. M0 renderer/full-stress evidence remains pending.
 
 # An Alibi in Stone
 

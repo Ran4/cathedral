@@ -1,4 +1,4 @@
-Status: Planned (2026-09-05).
+Status: Partial (2026-09-22). Partial sampled-observation fixture and gate-aware focus committed; semantic perception migration, durable observations and complete spatial coverage remain unfinished. Complete M3 persistence remains a prerequisite.
 
 # M5 — Seeing, hearing and remembering observations
 

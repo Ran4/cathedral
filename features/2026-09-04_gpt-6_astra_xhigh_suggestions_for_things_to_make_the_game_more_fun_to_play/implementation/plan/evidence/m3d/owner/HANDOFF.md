@@ -33,3 +33,18 @@ bytes with fixed metadata, avoiding ImageSamplerDescriptor's arbitrary owned
 label. The new allocation regression covers a one-megabyte label and zero
 allocation on rejected dimensions. Bevy's actually supported conversion
 formats are used. `focused-02` is the final verification of that source.
+
+`focused-02`: **38 passed / 0 failed / 0 ignored**, 610 filtered out; exit 0,
+source unchanged. Only the historical `perf::Probe` warning remains. Command
+wall time was 213.419682 seconds; test execution was 0.20 seconds.
+
+- Source-map SHA256: `cc3330cd836d9cbb75faf23987e11d3eefcb81584fe868a2bfe5bb1146f79745`
+- Original raw log: `/tmp/alibi-m3d-focused-02.log`
+- Raw SHA256: `9b02fc95649a27643fcd54f802b631cda2e91be8b5f95b47a58ed00535dbc5ca`
+- Archive SHA256: `8c67f2e1bb8a679613844fb26d49a124fb4ec053703c8c0299a1a460fcfa91d9`
+- Exact start/source/result metadata: `focused-02-start.json`,
+  `focused-02-sources.json`, `focused-02-result.json`; `focused-02.log.gz`.
+
+Source, Cargo and executable ownership were explicitly ceded after session
+32358 exited. No owner command remained live. Only this handoff changed after
+cession. The coordinator owns independent review and wider workspace checks.

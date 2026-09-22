@@ -39,8 +39,21 @@ baseline, with pressure submitted through the existing overhead API. No
 production change was needed. Exact first raw output, archive and start/result
 metadata are retained, including the failure assertions.
 
-`focused-02` repeats the same selected tests on settled source:
-checkpoint_controls, existing/new bridge tests, LocalEngine control continuation
-and installed startup tests. Result pending process exit.
+`focused-02`: **18 passed / 0 failed / 0 ignored**, 624 filtered out; exit 0,
+source unchanged. It repeats checkpoint_controls, existing/new bridge tests,
+LocalEngine control continuation and installed startup tests on settled source.
+Only the historical `perf::Probe` warning remains. Command wall time was
+152.191628 seconds; tests took 3.75 seconds.
+
+- Source-map SHA256: `48bdd2ed9088f3c7fb76f4b76d2406d3d8fcf2f70bdf1169ec5652d713969ea8`
+- Original raw log: `/tmp/alibi-m3c-focused-02.log`
+- Raw SHA256: `c503a6985b537b24a65ae8e8732b1520ac416cd0f50dede88d96cd0fdaacb440`
+- Archive SHA256: `5b5f90e63891881410c29acea921e0bdbc33dfce7ec997d361e0902a11e3ab73`
+- Exact metadata: `focused-02-start.json`, `focused-02-sources.json`,
+  `focused-02-result.json`; retained output: `focused-02.log.gz`.
+
+Source, Cargo and executable ownership were explicitly ceded after session
+62132 exited successfully. No owner command remained live; only this handoff
+document changed afterward.
 No full-workspace, complete-frame, render or provider acceptance is claimed by
 this owner; the coordinator owns independent review and broader checks.
