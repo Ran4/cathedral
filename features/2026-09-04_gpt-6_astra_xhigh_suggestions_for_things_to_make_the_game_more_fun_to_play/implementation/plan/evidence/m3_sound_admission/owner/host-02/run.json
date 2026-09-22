@@ -1,0 +1,88 @@
+{
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "defaults": {
+    "cargo_home": "/home/ran/.cargo",
+    "nice": 15,
+    "profile": "repository default dev/test",
+    "target_directory": "/home/ran/src/rust/cathedralbevy/target",
+    "test_threads": 1
+  },
+  "enumerator_sha256": "831753cd01474211d613516dc995401d33c0e3e84d0da5a051996fc90dae8340",
+  "environment": {
+    "CARGO_BUILD_JOBS": null,
+    "CARGO_BUILD_RUSTC": null,
+    "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER": null,
+    "CARGO_BUILD_RUSTC_WRAPPER": null,
+    "CARGO_BUILD_RUSTDOC": null,
+    "CARGO_BUILD_RUSTFLAGS": null,
+    "CARGO_BUILD_TARGET": null,
+    "CARGO_BUILD_TARGET_DIR": null,
+    "CARGO_ENCODED_RUSTDOCFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null,
+    "CARGO_HOME": null,
+    "CARGO_MAKEFLAGS": null,
+    "CARGO_TARGET_DIR": null,
+    "CARGO_TERM_COLOR": "never",
+    "CATHEDRAL_FAKE_BACKEND": "1",
+    "CATHEDRAL_HEADLESS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.hugetlb=0",
+    "HOME": "/home/ran",
+    "LDFLAGS": null,
+    "LD_AUDIT": null,
+    "LD_PRELOAD": null,
+    "MAKEFLAGS": null,
+    "PATH": "/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "RUSTC": null,
+    "RUSTC_WORKSPACE_WRAPPER": null,
+    "RUSTC_WRAPPER": null,
+    "RUSTDOC": null,
+    "RUSTDOCFLAGS": null,
+    "RUSTFLAGS": null,
+    "RUSTUP_HOME": null,
+    "RUSTUP_TOOLCHAIN": null,
+    "RUST_TEST_THREADS": "1"
+  },
+  "helper_sha256": "87d35e07568c17aed1a5dcd6ebdda5dc6b34ce090a8d3a0de395cbb6f4838835",
+  "prepared_at_execution_utc": "2026-09-22T12:08:03.608119+00:00",
+  "removed_environment_value_sha256": {},
+  "source_map_sha256": "1062db045e4d196ae9098df4c5b4c11e0fe38bdbf0a9b675511d2e870eb62361",
+  "source_scope": "component-inputs-v2",
+  "suites": [
+    "installed_startup",
+    "local_engine_startup"
+  ],
+  "toolchain": {
+    "cargo": {
+      "command": [
+        "/usr/bin/nice",
+        "-n",
+        "15",
+        "/home/ran/.cargo/bin/cargo",
+        "-V"
+      ],
+      "exit_code": 0,
+      "output": "cargo 1.96.0 (30a34c682 2026-05-25)\n"
+    },
+    "head": {
+      "command": [
+        "/usr/bin/git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "output": "e46317771c1f9076abbe066cfcecce515d546ff2\n"
+    },
+    "rustc": {
+      "command": [
+        "/usr/bin/nice",
+        "-n",
+        "15",
+        "/home/ran/.cargo/bin/rustc",
+        "-Vv"
+      ],
+      "exit_code": 0,
+      "output": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-unknown-linux-gnu\nrelease: 1.96.0\nLLVM version: 22.1.2\n"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.64s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-8057332b9a163743)
+
+running 7 tests
+test sounds::tests::an_empty_catalog_is_valid_and_emits_nothing ... ok
+test sounds::tests::emittable_ids_keep_catalog_order_and_exclude_the_bell ... ok
+test sounds::tests::rows_are_validated ... ok
+test sounds::tests::sfx_prompts_survive_the_move_to_the_data_file_verbatim ... ok
+test sounds::tests::the_loader_rejects_duplicate_and_malformed_ambients ... ok
+test sounds::tests::the_loader_rejects_every_malformed_row ... ok
+test sounds::tests::the_shipped_catalog_loads_with_every_row_intact ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 913 filtered out; finished in 0.00s
+

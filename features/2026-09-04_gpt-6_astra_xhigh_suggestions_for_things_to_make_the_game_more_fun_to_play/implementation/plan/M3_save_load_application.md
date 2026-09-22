@@ -1,4 +1,4 @@
-Status: Partial, reconciled 2026-09-22. Earlier M3a–M3b2b2 acceptance stands. Diagnostic sinks and partial startup/refusal-control/screenshot cuts are committed; immutable actor-source capture, the pinned Linux/glibc directory object and shared embedded shelter parsing now have focused verification, but complete allocation accounting, whole-App adoption, working save/load controls and host-frame acceptance remain unfinished. See [status reconciliation](STATUS_RECONCILIATION_2026_09_22.md); commit milestone labels do not close these gates.
+Status: Partial, reconciled 2026-09-22. Earlier M3a–M3b2b2 acceptance stands. Diagnostic sinks and partial startup/refusal-control/screenshot cuts are committed; immutable actor-source capture, the pinned Linux/glibc directory object, shared embedded shelter parsing and captured sound catalog parsing now have focused verification, but complete allocation accounting, whole-App adoption, working save/load controls and host-frame acceptance remain unfinished. See [status reconciliation](STATUS_RECONCILIATION_2026_09_22.md); commit milestone labels do not close these gates.
 
 # M3 — Save-anywhere in the application
 
@@ -156,6 +156,29 @@ Areas, sounds/TOML, seed/lore composition, prompt compilation, default catalogs,
 generated crowds, configuration/transports, production HydrationAssets and
 complete application accounting/adoption remain open. Crowd support is unchanged.
 The complete admission gate still refuses.
+
+## Captured sound catalog prerequisite — 2026-09-22
+
+The [sound record](evidence/m3_sound_admission/README.md) admits the actual captured
+runtime-editable TOML through its pinned full parser and closed catalog schema.
+A token lease precedes the counting parser pass; exact event/key/scalar spans then
+derive the AST, conversion, validation, diagnostics and shared backing reservation.
+Enabled startup stages the catalog once, and LocalEngine/EngineSeed/World retain
+one immutable backing through by-value clones. Disabled startup, existing public
+constructors, authored order and sound content are preserved.
+
+The installed witness requests 586,181 cumulative Rust allocation bytes
+under 1,458,128 construction bytes and retains 9,229 bytes; clones allocate
+zero. Two 4 MiB comment/string witnesses pass within their shape-derived charges.
+All 27 focused tests and a normal build pass with explicitly split evidence:
+15 sim tests on map A, then 12 affected host/routing tests and the build on map B
+after correcting only a routing-test field reference. The
+source cap alone does not guarantee fit under real pressure, and no generic TOML
+Deserialize or whole-world bound is claimed. No application was launched.
+
+Areas, seed/lore, prompts, other default catalogs, crowds, backend configuration/
+transports, production HydrationAssets and complete application allocation/adoption
+remain open. The complete gate still refuses.
 
 ## Entry
 

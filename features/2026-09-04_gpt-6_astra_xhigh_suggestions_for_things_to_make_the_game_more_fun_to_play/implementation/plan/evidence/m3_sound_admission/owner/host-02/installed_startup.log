@@ -1,0 +1,50 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+   Compiling cathedralbevy v0.1.0 (/home/ran/src/rust/cathedralbevy)
+warning: variants `Weather`, `Hud`, and `Interaction` are never constructed
+  --> src/perf.rs:53:5
+   |
+44 | pub enum Probe {
+   |          ----- variants in this enum
+...
+53 |     Weather,
+   |     ^^^^^^^
+54 |     Soundscape,
+55 |     Hud,
+   |     ^^^
+...
+58 |     Interaction,
+   |     ^^^^^^^^^^^
+   |
+   = note: `Probe` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `cathedralbevy` (bin "cathedralbevy" test) generated 1 warning
+    Finished `test` profile [optimized + debuginfo] target(s) in 4m 55s
+     Running unittests src/main.rs (target/debug/deps/cathedralbevy-f3d9e1077d7ef147)
+
+running 10 tests
+test installed_recipe::startup::tests::committed_prompt_session_forks_keep_same_second_archive_order ... Could not read /nonexistent/alibi-c-config.ron: No such file or directory (os error 2).
+ok
+test installed_recipe::startup::tests::committed_recipe_is_shared_across_consumers_and_duplicate_install_rolls_back ... Could not read /nonexistent/alibi-c-config.ron: No such file or directory (os error 2).
+ok
+test installed_recipe::startup::tests::disabled_actors_stage_without_source_files_and_keep_backend_resolution ... Could not read /nonexistent/alibi-c-config.ron: No such file or directory (os error 2).
+ok
+test installed_recipe::startup::tests::embedded_navigation_constructor_and_preflight_fit_scoped_admission ... installed_navigation constructor_requested=19689148 preflight_requested=8 nodes=10026
+ok
+test installed_recipe::startup::tests::embedded_shelter_parser_validation_and_shared_owners_fit_scoped_admission ... installed_shelter_parse requested=11905 admitted=239518 retained=10945 clone_requested=0
+ok
+test installed_recipe::startup::tests::invalid_captured_sound_refuses_before_backend_resolution ... Could not read /nonexistent/alibi-c-config.ron: No such file or directory (os error 2).
+ok
+test installed_recipe::startup::tests::maximum_sound_source_shapes_fit_parser_admission ... maximum_sound_parse kind=comment source_bytes=4194304 requested=201326728 admitted=306194800 retained=184
+maximum_sound_parse kind=string source_bytes=4194304 requested=205523997 admitted=486560074 retained=4194717
+ok
+test installed_recipe::startup::tests::maximum_source_payload_and_long_paths_fit_scoped_rust_allocation_inventory ... installed_source_capture requested=57395145 admitted=60832550 retained=38146851 files=4089 payload=33554432 relative_path_bytes=1019
+ok
+test installed_recipe::startup::tests::sound_parser_and_shared_owners_fit_scoped_admission ... installed_sound_parse requested=586181 admitted=1458128 retained=9229 clone_requested=0
+ok
+test installed_recipe::startup::tests::staging_admission_failure_does_not_resolve_backends_or_change_app ... Could not read /nonexistent/alibi-c-config.ron: No such file or directory (os error 2).
+ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 649 filtered out; finished in 0.76s
+

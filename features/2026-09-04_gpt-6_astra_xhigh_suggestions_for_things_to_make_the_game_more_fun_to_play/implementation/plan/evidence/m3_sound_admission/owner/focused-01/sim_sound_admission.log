@@ -1,0 +1,17 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+    Finished `test` profile [optimized + debuginfo] target(s) in 4m 26s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_sim-8057332b9a163743)
+
+running 8 tests
+test sounds::admission::tests::admitted_catalog_is_immutable_and_charge_survives_last_by_value_clone ... ok
+test sounds::admission::tests::arbitrary_long_numeric_tokens_use_std_float_semantics ... ok
+test sounds::admission::tests::arithmetic_overflow_refuses_without_parser_work ... ok
+test sounds::admission::tests::full_toml_encodings_unicode_multiline_and_struct_sequences_match_legacy ... ok
+test sounds::admission::tests::installed_content_order_debug_and_legacy_constructors_are_preserved ... installed_sounds source_bytes=11052 sounds=14 ambients=4 retained=9229 rows_sha256=9e159ccd522dab6d8b6d00694ac348708c5270d960396f1f245485bf10feaf55
+ok
+test sounds::admission::tests::malformed_escapes_deep_paths_types_and_duplicate_diagnostics_drop_under_lease ... ok
+test sounds::admission::tests::pressure_precedes_tokens_and_full_parser_expansion ... ok
+test sounds::admission::tests::source_limit_and_eof_growth_inputs_keep_legacy_meaning ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 912 filtered out; finished in 0.02s
+

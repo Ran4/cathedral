@@ -29,6 +29,10 @@ fn committed_startup_reuses_navigation_and_backend_recipe_through_hello() {
         Some(committed.clone()),
     );
     assert!(!engine.dead);
+    assert!(std::ptr::eq(
+        engine.seed.as_ref().unwrap().catalog.sounds(),
+        committed.sounds().unwrap().sounds()
+    ));
     assert!(Arc::ptr_eq(
         &engine.seed.as_ref().unwrap().config.shelters,
         committed.shelters().unwrap()
@@ -58,6 +62,10 @@ fn committed_startup_reuses_navigation_and_backend_recipe_through_hello() {
         .unwrap();
     engine.pump(0.0);
     let domain = engine.checkpoint_engine().unwrap();
+    assert!(std::ptr::eq(
+        domain.world().sound_catalog.sounds(),
+        committed.sounds().unwrap().sounds()
+    ));
     assert!(Arc::ptr_eq(
         &domain.config().shelters,
         committed.shelters().unwrap()
@@ -133,6 +141,10 @@ fn installed_engine_build_uses_captured_sources_after_original_files_disappear()
         serde_json::from_slice(&std::fs::read(&seed_path).unwrap()).unwrap();
     seed["characters"][0]["name"] = serde_json::json!("Frozen source routing witness");
     std::fs::write(&seed_path, serde_json::to_vec(&seed).unwrap()).unwrap();
+    let catalog_path = assets.join("sounds/catalog.toml");
+    let mut catalog_source = std::fs::read_to_string(&catalog_path).unwrap();
+    catalog_source.push_str("\n[[ambients]]\nsound_id='captured_only'\nsfx_prompt='Frozen source witness'\nduration_seconds=1.25\n");
+    std::fs::write(catalog_path, catalog_source).unwrap();
     let installed = InstalledRecipe::new().unwrap();
     let mut config = installed
         .load_config_from_paths(
@@ -178,6 +190,14 @@ fn installed_engine_build_uses_captured_sources_after_original_files_disappear()
         .find(|c| c.id.as_str() == PLAYER_ID)
         .unwrap();
     assert_eq!(player.name, "Frozen source routing witness");
+    assert_eq!(
+        built.0.catalog.ambients().last().unwrap().sound_id,
+        "captured_only"
+    );
+    assert!(std::ptr::eq(
+        built.0.catalog.ambients(),
+        committed.sounds().unwrap().ambients()
+    ));
     assert_eq!(
         committed.require_complete_admission(),
         Err(crate::installed_recipe::StartupRefusal::UnprovedWholeAppAccounting)

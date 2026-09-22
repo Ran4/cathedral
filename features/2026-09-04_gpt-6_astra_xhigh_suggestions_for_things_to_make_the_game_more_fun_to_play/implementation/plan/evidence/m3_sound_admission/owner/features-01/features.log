@@ -1,0 +1,17 @@
+toml v0.9.12+spec-1.1.0
+├── toml feature "default"
+│   └── cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+│       └── cathedral-sim feature "default"
+│           ├── cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+│           │   └── cathedral-backends feature "default"
+│           │       └── cathedralbevy v0.1.0 (/home/ran/src/rust/cathedralbevy)
+│           │           └── cathedralbevy feature "default" (command-line)
+│           └── cathedralbevy v0.1.0 (/home/ran/src/rust/cathedralbevy) (*)
+├── toml feature "display"
+│   └── toml feature "default" (*)
+├── toml feature "parse"
+│   └── toml feature "default" (*)
+├── toml feature "serde"
+│   └── toml feature "default" (*)
+└── toml feature "std"
+    └── toml feature "default" (*)

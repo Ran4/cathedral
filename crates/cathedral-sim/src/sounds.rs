@@ -8,9 +8,13 @@
 //! to [`SoundCatalog::from_toml_str`], which validates every row: the crate
 //! never touches the filesystem.
 
-use std::fmt;
+use std::{fmt, sync::Arc};
 
+use crate::checkpoint::Reservation;
 use serde::Deserialize;
+
+mod admission;
+pub use admission::SoundAdmissionError;
 
 /// A catalog row that fails validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -169,20 +173,61 @@ impl AmbientSound {
 
 /// The catalog, in definition order — `emittable_sound_ids` (which the prompt
 /// renders) is order-sensitive.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Clone, Default)]
 pub struct SoundCatalog {
+    storage: Option<Arc<SoundStorage>>,
+}
+
+struct SoundStorage {
     sounds: Vec<Sound>,
     ambients: Vec<AmbientSound>,
+    // Rows disappear before the final shared storage lease.
+    lease: Option<Reservation>,
+}
+
+impl PartialEq for SoundCatalog {
+    fn eq(&self, other: &Self) -> bool {
+        self.sounds() == other.sounds() && self.ambients() == other.ambients()
+    }
+}
+impl fmt::Debug for SoundCatalog {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SoundCatalog")
+            .field("sounds", &self.sounds())
+            .field("ambients", &self.ambients())
+            .finish()
+    }
 }
 
 impl SoundCatalog {
     /// Validating constructor: rows must already be valid (they are built
     /// through [`Sound::new`]); this additionally rejects duplicate ids.
     pub fn new(sounds: Vec<Sound>, ambients: Vec<AmbientSound>) -> Result<Self, SoundCatalogError> {
-        let catalog = Self { sounds, ambients };
-        for (index, sound) in catalog.sounds.iter().enumerate() {
+        Self::validate_rows(&sounds, &ambients)?;
+        Ok(Self::from_rows(sounds, ambients, None))
+    }
+
+    fn from_rows(
+        sounds: Vec<Sound>,
+        ambients: Vec<AmbientSound>,
+        lease: Option<Reservation>,
+    ) -> Self {
+        if sounds.is_empty() && ambients.is_empty() && lease.is_none() {
+            return Self::default();
+        }
+        Self {
+            storage: Some(Arc::new(SoundStorage {
+                sounds,
+                ambients,
+                lease,
+            })),
+        }
+    }
+
+    fn validate_rows(sounds: &[Sound], ambients: &[AmbientSound]) -> Result<(), SoundCatalogError> {
+        for (index, sound) in sounds.iter().enumerate() {
             sound.validate()?;
-            if catalog.sounds[..index]
+            if sounds[..index]
                 .iter()
                 .any(|other| other.sound_id == sound.sound_id)
             {
@@ -192,8 +237,8 @@ impl SoundCatalog {
                 )));
             }
         }
-        for (index, ambient) in catalog.ambients.iter().enumerate() {
-            if catalog.ambients[..index]
+        for (index, ambient) in ambients.iter().enumerate() {
+            if ambients[..index]
                 .iter()
                 .any(|other| other.sound_id == ambient.sound_id)
             {
@@ -203,7 +248,7 @@ impl SoundCatalog {
                 )));
             }
         }
-        Ok(catalog)
+        Ok(())
     }
 
     /// Parse and validate `assets/sounds/catalog.toml` (D18). Every row goes
@@ -212,6 +257,13 @@ impl SoundCatalog {
     pub fn from_toml_str(source: &str) -> Result<Self, SoundCatalogError> {
         let file: CatalogFile = toml::from_str(source)
             .map_err(|error| SoundCatalogError::new(format!("invalid sound catalog: {error}")))?;
+        let (sounds, ambients) = Self::convert_rows(file)?;
+        Self::new(sounds, ambients)
+    }
+
+    fn convert_rows(
+        file: CatalogFile,
+    ) -> Result<(Vec<Sound>, Vec<AmbientSound>), SoundCatalogError> {
         let sounds = file
             .sounds
             .into_iter()
@@ -233,7 +285,7 @@ impl SoundCatalog {
             .into_iter()
             .map(|row| AmbientSound::new(row.sound_id, row.sfx_prompt, row.duration_seconds))
             .collect::<Result<Vec<_>, _>>()?;
-        Self::new(sounds, ambients)
+        Ok((sounds, ambients))
     }
 
     /// A world with no sounds at all. `make_sound` then reports every id as
@@ -243,12 +295,14 @@ impl SoundCatalog {
     }
 
     pub fn get(&self, sound_id: &str) -> Option<&Sound> {
-        self.sounds.iter().find(|sound| sound.sound_id == sound_id)
+        self.sounds()
+            .iter()
+            .find(|sound| sound.sound_id == sound_id)
     }
 
     /// The sounds an LLM may choose, in catalog order (the prompt lists them).
     pub fn emittable_sound_ids(&self) -> Vec<&str> {
-        self.sounds
+        self.sounds()
             .iter()
             .filter(|sound| sound.actor_emittable)
             .map(|sound| sound.sound_id.as_str())
@@ -256,11 +310,13 @@ impl SoundCatalog {
     }
 
     pub fn sounds(&self) -> &[Sound] {
-        &self.sounds
+        self.storage.as_ref().map_or(&[], |storage| &storage.sounds)
     }
 
     pub fn ambients(&self) -> &[AmbientSound] {
-        &self.ambients
+        self.storage
+            .as_ref()
+            .map_or(&[], |storage| &storage.ambients)
     }
 }
 

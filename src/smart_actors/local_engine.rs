@@ -657,7 +657,7 @@ fn build_installed(
         }
     };
     // Installed startup consumes exactly its captured bytes. Source ownership
-    // does not cover parser, compiler or generated-crowd allocation.
+    // does not cover other parsers, prompt compilation or generated crowds.
     let (seed, areas, catalog, prompts) = if let Some(installed) = installed {
         let sources = installed.actor_sources().ok_or_else(|| {
             "actor sources were not captured: smart actors disabled at startup".to_owned()
@@ -666,8 +666,12 @@ fn build_installed(
             sources.world_seed(cathedral_sim::PlayerKnowledge::PublicFigures)?,
             AreaMap::from_json_str(sources.areas())
                 .map_err(|error| format!("invalid world areas: {error}"))?,
-            SoundCatalog::from_toml_str(sources.sounds())
-                .map_err(|error| format!("invalid sound catalog: {error}"))?,
+            installed
+                .sounds()
+                .ok_or_else(|| {
+                    "sound catalog was not staged: smart actors disabled at startup".to_owned()
+                })?
+                .clone(),
             PromptEnv::new(
                 sources.turn_prompt(),
                 sources.night_prompt(),

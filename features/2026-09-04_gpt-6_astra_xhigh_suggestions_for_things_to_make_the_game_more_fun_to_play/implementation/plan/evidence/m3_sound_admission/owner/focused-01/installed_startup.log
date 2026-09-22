@@ -1,0 +1,37 @@
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+   Compiling cathedralbevy v0.1.0 (/home/ran/src/rust/cathedralbevy)
+error[E0609]: no field `sound_catalog` on type `EngineConfig`
+  --> src/smart_actors/local_engine/startup_tests.rs:33:46
+   |
+33 |         engine.seed.as_ref().unwrap().config.sound_catalog.sounds(),
+   |                                              ^^^^^^^^^^^^^ unknown field
+   |
+   = note: available fields are: `checkpoint_host_image`, `checkpoint_world_identity`, `runtime_generation`, `operations`, `player_id` ... and 27 others
+
+error[E0609]: no field `sound_catalog` on type `&EngineConfig`
+  --> src/smart_actors/local_engine/startup_tests.rs:66:25
+   |
+66 |         domain.config().sound_catalog.sounds(),
+   |                         ^^^^^^^^^^^^^ unknown field
+   |
+   = note: available fields are: `checkpoint_host_image`, `checkpoint_world_identity`, `runtime_generation`, `operations`, `player_id` ... and 27 others
+
+error[E0609]: no field `sound_catalog` on type `EngineConfig`
+   --> src/smart_actors/local_engine/startup_tests.rs:201:14
+    |
+201 |             .sound_catalog
+    |              ^^^^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `checkpoint_host_image`, `checkpoint_world_identity`, `runtime_generation`, `operations`, `player_id` ... and 27 others
+
+error[E0609]: no field `sound_catalog` on type `EngineConfig`
+   --> src/smart_actors/local_engine/startup_tests.rs:209:24
+    |
+209 |         built.0.config.sound_catalog.ambients(),
+    |                        ^^^^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `checkpoint_host_image`, `checkpoint_world_identity`, `runtime_generation`, `operations`, `player_id` ... and 27 others
+
+For more information about this error, try `rustc --explain E0609`.
+error: could not compile `cathedralbevy` (bin "cathedralbevy" test) due to 4 previous errors

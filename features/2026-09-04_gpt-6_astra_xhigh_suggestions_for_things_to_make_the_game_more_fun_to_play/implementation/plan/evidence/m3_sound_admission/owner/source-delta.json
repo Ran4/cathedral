@@ -1,0 +1,12 @@
+{
+  "checked_utc": "2026-09-22T12:08:24.724925+00:00",
+  "delta": {
+    "src/smart_actors/local_engine/startup_tests.rs": {
+      "map_a": "c4f078a0796dbacc5aa7dfd4c37db010cea5f3f44c83bb6ade75b5785a347f2b",
+      "map_b": "e3b4ce17dcfa03262cfeb7f027add382e67c77922bd2ca1096dfc187c297e034"
+    }
+  },
+  "from_map": "2093b4ad924337ddc1c7c7d4c33d1297fc3b9f64ceb46f7e98c75aaa3759a8c0",
+  "reason": "Correct nonexistent EngineConfig sound_catalog test references to EngineSeed.catalog and World. Production parser/catalog/startup code unchanged; compiled build identities can change.",
+  "to_map": "1062db045e4d196ae9098df4c5b4c11e0fe38bdbf0a9b675511d2e870eb62361"
+}

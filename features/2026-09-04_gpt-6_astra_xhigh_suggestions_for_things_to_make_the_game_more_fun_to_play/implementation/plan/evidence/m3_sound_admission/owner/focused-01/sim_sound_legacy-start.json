@@ -1,0 +1,25 @@
+{
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "15",
+    "/home/ran/.cargo/bin/cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "-j",
+    "1",
+    "-p",
+    "cathedral-sim",
+    "--lib",
+    "sounds::tests",
+    "--",
+    "--test-threads=1",
+    "--nocapture"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "event": "START",
+  "raw_log": "/tmp/alibi-sound-admission-owner/evidence/focused-01/sim_sound_legacy.log",
+  "source_map_sha256": "2093b4ad924337ddc1c7c7d4c33d1297fc3b9f64ceb46f7e98c75aaa3759a8c0",
+  "utc": "2026-09-22T12:03:01.807804+00:00"
+}

@@ -2034,8 +2034,10 @@ dependencies = [
  "minijinja",
  "serde",
  "serde_json",
+ "serde_spanned",
  "sha2",
  "toml",
+ "toml_parser",
 ]
 
 [[package]]

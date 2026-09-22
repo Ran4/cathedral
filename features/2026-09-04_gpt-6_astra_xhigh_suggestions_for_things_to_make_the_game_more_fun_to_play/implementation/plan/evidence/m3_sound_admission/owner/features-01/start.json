@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "15",
+    "/home/ran/.cargo/bin/cargo",
+    "tree",
+    "-p",
+    "cathedralbevy",
+    "-e",
+    "features",
+    "-i",
+    "toml",
+    "--locked",
+    "--offline"
+  ],
+  "cwd": "/home/ran/src/rust/cathedralbevy",
+  "event": "START",
+  "helper_sha256": "87d35e07568c17aed1a5dcd6ebdda5dc6b34ce090a8d3a0de395cbb6f4838835",
+  "removed_environment_value_sha256": {},
+  "utc": "2026-09-22T11:56:30.195104+00:00"
+}

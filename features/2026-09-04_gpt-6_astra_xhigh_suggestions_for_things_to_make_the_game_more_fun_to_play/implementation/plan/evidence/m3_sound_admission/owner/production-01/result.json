@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "1062db045e4d196ae9098df4c5b4c11e0fe38bdbf0a9b675511d2e870eb62361",
+  "archive_sha256": "5f505defe7d3260d9a0953b0b0bc33c77dafbf4a374d943234accaf0e7fdf914",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "executable": "/home/ran/src/rust/cathedralbevy/target/debug/cathedralbevy",
+  "executable_sha256": "8f5415b9880d864f30fa78ebfaaa594f629d1e74ab1af34e63595379a635e3f2",
+  "executable_was_run": false,
+  "launch_error": null,
+  "raw_log": "/tmp/alibi-sound-admission-owner/evidence/production-01/production-build.log",
+  "raw_sha256": "fe14560ac8e2ded22f82bbb023db2c2c590e6d4c7c7834f256d1c41730d779a9",
+  "source_map_sha256": "1062db045e4d196ae9098df4c5b4c11e0fe38bdbf0a9b675511d2e870eb62361",
+  "sources_unchanged": true,
+  "utc": "2026-09-22T12:16:40.877537+00:00",
+  "wall_seconds": 179.20400800183415
+}

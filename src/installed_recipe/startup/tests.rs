@@ -94,6 +94,7 @@ fn disabled_actors_stage_without_source_files_and_keep_backend_resolution() {
     assert!(!staged.recipe().config().smart_actors.enabled);
     assert!(staged.recipe().actor_sources().is_none());
     assert!(staged.recipe().shelters().is_none());
+    assert!(staged.recipe().sounds().is_none());
     assert_eq!(
         staged.recipe().require_complete_admission(),
         Err(StartupRefusal::UnprovedWholeAppAccounting)
@@ -126,6 +127,121 @@ fn embedded_shelter_parser_validation_and_shared_owners_fit_scoped_admission() {
     assert!(budget.retained_bytes() > root.bytes());
     drop(clones);
     assert_eq!(budget.retained_bytes(), root.bytes());
+}
+
+#[test]
+fn sound_parser_and_shared_owners_fit_scoped_admission() {
+    let source = include_str!("../../../assets/sounds/catalog.toml");
+    let budget = CheckpointBudget::default();
+    let root = budget.reserve(Cohort::Running, 4096).unwrap();
+    let (catalog, requested) = crate::host_checkpoint::measure_installed_allocations(|| {
+        cathedral_sim::SoundCatalog::from_toml_str_admitted(source, &budget).unwrap()
+    });
+    let peak = budget.peak_retained_bytes() - root.bytes();
+    assert!(
+        requested <= peak,
+        "cumulative requests {requested} exceed peak {peak}"
+    );
+    let (clone, clone_requests) =
+        crate::host_checkpoint::measure_installed_allocations(|| catalog.clone());
+    assert_eq!(clone_requests, 0);
+    println!(
+        "installed_sound_parse requested={requested} admitted={peak} retained={} clone_requested={clone_requests}",
+        catalog.admitted_storage_bytes()
+    );
+    drop(catalog);
+    assert!(budget.retained_bytes() > root.bytes());
+    drop(clone);
+    assert_eq!(budget.retained_bytes(), root.bytes());
+}
+
+#[test]
+fn maximum_sound_source_shapes_fit_parser_admission() {
+    for (kind, prefix, suffix) in [
+        ("comment", "#", ""),
+        (
+            "string",
+            "[[ambients]]\nsound_id='max_shape'\nduration_seconds=1.0\nsfx_prompt='",
+            "'",
+        ),
+    ] {
+        let mut source = prefix.to_owned();
+        source.extend(std::iter::repeat_n(
+            'x',
+            4 * 1024 * 1024 - prefix.len() - suffix.len(),
+        ));
+        source.push_str(suffix);
+        let budget = CheckpointBudget::default();
+        let root = budget.reserve(Cohort::Running, 4096).unwrap();
+        let (catalog, requested) = crate::host_checkpoint::measure_installed_allocations(|| {
+            cathedral_sim::SoundCatalog::from_toml_str_admitted(&source, &budget).unwrap()
+        });
+        let peak = budget.peak_retained_bytes() - root.bytes();
+        assert!(
+            requested <= peak,
+            "{kind}: cumulative requests {requested} exceed peak {peak}"
+        );
+        println!(
+            "maximum_sound_parse kind={kind} source_bytes={} requested={requested} admitted={peak} retained={}",
+            source.len(),
+            catalog.admitted_storage_bytes()
+        );
+        drop(catalog);
+        assert_eq!(budget.retained_bytes(), root.bytes());
+    }
+}
+
+#[test]
+fn invalid_captured_sound_refuses_before_backend_resolution() {
+    struct Fixture(std::path::PathBuf);
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    let fixture = Fixture(std::env::temp_dir().join(format!(
+            "cathedral-invalid-sound-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        )));
+    let assets = fixture.0.join("assets");
+    let lore = fixture.0.join("lore");
+    for relative in [
+        "world/seed.json",
+        "world/areas.json",
+        "sounds/catalog.toml",
+        "prompts/turn.j2",
+        "prompts/night.j2",
+        "prompts/strings.toml",
+    ] {
+        let path = assets.join(relative);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, "invalid input").unwrap();
+    }
+    std::fs::create_dir_all(lore.join("characters")).unwrap();
+    std::fs::write(lore.join("characters/witness.json"), "{}").unwrap();
+    std::fs::create_dir_all(lore.join("core_lore")).unwrap();
+    std::fs::write(lore.join("core_lore/occupations.json"), "{}").unwrap();
+    let installed = InstalledRecipe::new().unwrap();
+    let config = config(&installed);
+    let budget = installed.budget().clone();
+    let called = AtomicUsize::new(0);
+    let result = StagedStartup::prepare_with_source_roots(
+        installed,
+        config,
+        |c| {
+            called.fetch_add(1, Ordering::SeqCst);
+            backend(c)
+        },
+        &assets,
+        &lore,
+    );
+    assert!(matches!(result, Err(StartupRefusal::Sounds)));
+    assert_eq!(called.load(Ordering::SeqCst), 0);
+    assert_eq!(budget.retained_bytes(), 0);
 }
 
 #[test]

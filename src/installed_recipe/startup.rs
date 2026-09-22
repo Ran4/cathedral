@@ -24,6 +24,7 @@ pub(crate) enum StartupRefusal {
     Navigation,
     Sources,
     Shelters,
+    Sounds,
     Services,
     AlreadyInstalled,
     UnprovedWholeAppAccounting,
@@ -37,6 +38,7 @@ pub(crate) struct CommittedStartup(Arc<Committed>);
 struct Committed {
     actor_sources: Option<cathedral_backends::world_data::CapturedActorSources>,
     shelters: Option<Arc<cathedral_sim::ShelterMap>>,
+    sounds: Option<cathedral_sim::SoundCatalog>,
     nav: Arc<NavData>,
     backend_config: Arc<BackendsConfig>,
     runtime: Arc<BackendRuntime>,
@@ -206,6 +208,23 @@ impl StagedStartup {
         } else {
             None
         };
+        let sounds = actor_sources
+            .as_ref()
+            .map(|sources| {
+                cathedral_sim::SoundCatalog::from_toml_str_admitted(
+                    sources.sounds(),
+                    installed.budget(),
+                )
+                .map_err(|error| match error {
+                    cathedral_sim::sounds::SoundAdmissionError::Admission => {
+                        StartupRefusal::Admission
+                    }
+                    cathedral_sim::sounds::SoundAdmissionError::InvalidDefinition => {
+                        StartupRefusal::Sounds
+                    }
+                })
+            })
+            .transpose()?;
         let backend_config = Arc::new(backend(&config));
         let runtime = BackendRuntime::start_admitted(installed.budget())
             .map_err(|_| StartupRefusal::Services)?;
@@ -233,6 +252,7 @@ impl StagedStartup {
             recipe: CommittedStartup(Arc::new(Committed {
                 actor_sources,
                 shelters,
+                sounds,
                 config,
                 nav,
                 backend_config,
@@ -293,6 +313,9 @@ impl CommittedStartup {
     }
     pub fn shelters(&self) -> Option<&Arc<cathedral_sim::ShelterMap>> {
         self.0.shelters.as_ref()
+    }
+    pub fn sounds(&self) -> Option<&cathedral_sim::SoundCatalog> {
+        self.0.sounds.as_ref()
     }
     pub fn config(&self) -> &crate::config::AppConfig {
         &self.0.config

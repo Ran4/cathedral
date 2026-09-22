@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "2093b4ad924337ddc1c7c7d4c33d1297fc3b9f64ceb46f7e98c75aaa3759a8c0",
+  "archive_sha256": "093ac984cc1373c2cf7528740ca167e2ff7277301d640a1b3520d8934b6cc123",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "launch_error": null,
+  "passed_tests": 7,
+  "raw_log": "/tmp/alibi-sound-admission-owner/evidence/focused-01/sim_sound_legacy.log",
+  "raw_sha256": "904c4839a2a867be1426ceef3ba78dc3bcad295816635c33952a7cd955e34656",
+  "source_map_sha256": "2093b4ad924337ddc1c7c7d4c33d1297fc3b9f64ceb46f7e98c75aaa3759a8c0",
+  "sources_unchanged": true,
+  "successful_nonempty_test_summary": true,
+  "suite": "sim_sound_legacy",
+  "utc": "2026-09-22T12:03:02.601792+00:00",
+  "wall_seconds": 0.708132193190977
+}

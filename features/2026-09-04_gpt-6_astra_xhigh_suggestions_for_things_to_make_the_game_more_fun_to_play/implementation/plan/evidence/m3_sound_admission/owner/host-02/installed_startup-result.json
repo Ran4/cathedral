@@ -1,0 +1,16 @@
+{
+  "after_source_map_sha256": "1062db045e4d196ae9098df4c5b4c11e0fe38bdbf0a9b675511d2e870eb62361",
+  "archive_sha256": "30a6301cbb6326b32f9257bc923e69f1a4a0c247a302cbcee03117c113cc7814",
+  "cargo_exit_code": 0,
+  "event": "END",
+  "launch_error": null,
+  "passed_tests": 10,
+  "raw_log": "/tmp/alibi-sound-admission-owner/evidence/host-02/installed_startup.log",
+  "raw_sha256": "d07bad2d8398338ad8a79004dd5d6e997d7585f911dec9478542830feb62c259",
+  "source_map_sha256": "1062db045e4d196ae9098df4c5b4c11e0fe38bdbf0a9b675511d2e870eb62361",
+  "sources_unchanged": true,
+  "successful_nonempty_test_summary": true,
+  "suite": "installed_startup",
+  "utc": "2026-09-22T12:13:00.780656+00:00",
+  "wall_seconds": 296.34696453996
+}
