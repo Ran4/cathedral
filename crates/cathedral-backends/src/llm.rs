@@ -65,10 +65,13 @@
 use std::{
     collections::BTreeMap,
     fmt,
+    future::Future,
+    pin::Pin,
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
+    task::{Context, Poll},
     time::{Duration, Instant},
 };
 
@@ -446,8 +449,7 @@ impl LlmClient {
         settings: LlmSettings,
         resolver: crate::dns::NativeResolver,
     ) -> Result<Self, LlmError> {
-        let http = reqwest::Client::builder()
-            .dns_resolver(Arc::new(resolver))
+        let http = crate::http::builder(resolver)
             .build()
             .map_err(|error| LlmError::Transport(error.to_string()))?;
         Ok(Self {
@@ -766,17 +768,60 @@ impl HttpCognition {
         // Construct before spawning: even a task dropped before its first poll
         // releases the lane and spends exactly its reserved failure record.
         let guard = LaneGuard::new(lane, events, request_id);
-        self.runtime.spawn(async move {
-            let started = Instant::now();
-            let result = tokio::select! {
+        let cancellation = guard.events.clone();
+        let work = async move {
+            tokio::select! {
                 result = client.complete_with_budget(prompt, max_output_tokens) => Some(result),
-                () = guard.events.retired() => None,
-            };
-            if let Some(result) = result {
-                guard.finish(result, started.elapsed().as_secs_f64());
+                () = cancellation.retired() => None,
             }
-        });
+        };
+        self.runtime.spawn(CompletionTask::new(work, guard));
         Ok(request_id)
+    }
+}
+
+/// Field order is the cancellation/unwind contract: drop the entire request
+/// future (client, prompt, request/response state and cancellation endpoint)
+/// before the terminal owner releases its lane and generation retirement pin.
+/// This also holds if the runtime discards the task before its first poll.
+/// Transport-internal spawned drivers still require separate accounting.
+struct CompletionTask<F> {
+    work: Option<Pin<Box<F>>>,
+    guard: Option<LaneGuard>,
+    started: Option<Instant>,
+}
+
+impl<F> CompletionTask<F> {
+    fn new(work: F, guard: LaneGuard) -> Self {
+        Self {
+            work: Some(Box::pin(work)),
+            guard: Some(guard),
+            started: None,
+        }
+    }
+}
+
+impl<F: Future<Output = Option<Result<String, LlmError>>>> Future for CompletionTask<F> {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
+        let task = self.get_mut();
+        let started = *task.started.get_or_insert_with(Instant::now);
+        let result = std::task::ready!(
+            task.work
+                .as_mut()
+                .expect("unfinished task")
+                .as_mut()
+                .poll(cx)
+        );
+        // Completed futures may still retain captures. Dispose those before
+        // publishing completion, including the explicit retirement branch.
+        drop(task.work.take());
+        let guard = task.guard.take().expect("unfinished task");
+        if let Some(result) = result {
+            guard.finish(result, started.elapsed().as_secs_f64());
+        }
+        Poll::Ready(())
     }
 }
 
@@ -848,6 +893,9 @@ impl Drop for LaneGuard {
         );
     }
 }
+
+#[cfg(test)]
+mod task_tests;
 
 impl Cognition for HttpCognition {
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {

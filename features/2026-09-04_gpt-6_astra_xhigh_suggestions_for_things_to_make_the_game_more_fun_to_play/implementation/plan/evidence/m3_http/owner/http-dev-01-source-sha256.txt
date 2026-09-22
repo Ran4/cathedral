@@ -1,0 +1,13 @@
+dfc9adaa2a056903ec83cfe964a2ed1382048bbc9f95df04cb322a02c41e90ef  Cargo.lock
+9c3877f095c0e1d1fa9ceef5a9334385d216b1311a9207812e66774a62be5f56  crates/cathedral-backends/Cargo.toml
+f94fa95fe284f3585cf8eea05a4ba763abfa5723b1955c22f16470104a3d0442  crates/cathedral-backends/src/http.rs
+5edb5eb739d6b249459ca69bac68f75dca5f052d1ebce8530d690c355f396dd7  crates/cathedral-backends/src/http/tests.rs
+22e4e01a45379a9d036d1cac4641c215904ec2dd24a94b0cbfadc6b325d8fe70  crates/cathedral-backends/src/lib.rs
+6730b128bdac1759974768a9e086689e921a904f73195a2ed7e03e4493bf691d  crates/cathedral-backends/src/llm.rs
+cb2df738c7d929c3bfc7aeeff48580d3e23fade4f0fae87593cae4688515a5e5  crates/cathedral-backends/src/llm/task_tests.rs
+f1f0cc8b75f97d942f017abc458e21fb04382cbfa86cd12b58974e5267db2023  crates/cathedral-backends/src/stt_cloud.rs
+f09d32584af945de6479053e0ac443b7f14fbcaef8d3190a930030c7c54875ca  crates/cathedral-backends/src/tts_cloud.rs
+8c30b009838be2126b90344ef97fb6141ac8bdf695f4e7bb00a3052a707d9b5c  /home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/async_impl/client.rs
+b8a618396c45884e5557314a0fb99ec01c1868b77132e2cc81aa0a4ac4831c06  /home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/redirect.rs
+1c2a9fd1c4cd51353a5af9c9561265bf84c6fb9ce2d4a55ead7ff16ce271efe2  /home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-util-0.1.20/src/client/legacy/pool.rs
+cd5b32ba07ef6db7b51ffe36586ce355faec8f991ded275cb12dbc5aaaab808a  /home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-util-0.1.20/src/client/legacy/client.rs

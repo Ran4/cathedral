@@ -57,8 +57,7 @@ impl CloudTranscriber {
         resolver: crate::dns::NativeResolver,
     ) -> Self {
         Self {
-            http: reqwest::Client::builder()
-                .dns_resolver(std::sync::Arc::new(resolver))
+            http: crate::http::builder(resolver)
                 .build()
                 .expect("speech HTTP client"),
             api_key: settings.api_key.clone(),

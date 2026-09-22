@@ -31,6 +31,7 @@ pub mod config;
 pub mod dns;
 pub mod events;
 pub mod fake;
+mod http;
 pub mod llm;
 pub mod mailbox;
 #[cfg(test)]

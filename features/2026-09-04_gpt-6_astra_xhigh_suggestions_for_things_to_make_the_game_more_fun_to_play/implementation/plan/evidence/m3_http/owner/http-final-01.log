@@ -1,0 +1,57 @@
+START 2026-09-22T08:39:03+00:00
+HEAD 71285f7a3f74ab552fd04f16d6b62c72014a8fc5
+Environment: login:false; default dev/test profile, repository target/, default /home/ran/.cargo; compiler flags and wrappers unset
+rustc 1.96.0 (ac68faa20 2026-05-25)
+binary: rustc
+commit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96
+commit-date: 2026-05-25
+host: x86_64-unknown-linux-gnu
+release: 1.96.0
+LLVM version: 22.1.2
+cargo 1.96.0 (30a34c682 2026-05-25)
+Cargo.lock: OK
+crates/cathedral-backends/Cargo.toml: OK
+crates/cathedral-backends/src/http.rs: OK
+crates/cathedral-backends/src/http/tests.rs: OK
+crates/cathedral-backends/src/lib.rs: OK
+crates/cathedral-backends/src/llm.rs: OK
+crates/cathedral-backends/src/llm/task_tests.rs: OK
+crates/cathedral-backends/src/stt_cloud.rs: OK
+crates/cathedral-backends/src/tts_cloud.rs: OK
+/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/async_impl/client.rs: OK
+/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/redirect.rs: OK
+/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-util-0.1.20/src/client/legacy/pool.rs: OK
+/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-util-0.1.20/src/client/legacy/client.rs: OK
+COMMAND /usr/bin/nice -n 15 /home/ran/.cargo/bin/cargo test --locked --offline -j 1 -p cathedral-backends --lib http::tests -- --test-threads=1 
+   Compiling cathedral-sim v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-sim)
+   Compiling cathedral-backends v0.1.0 (/home/ran/src/rust/cathedralbevy/crates/cathedral-backends)
+    Finished `test` profile [optimized + debuginfo] target(s) in 36.11s
+     Running unittests src/lib.rs (target/debug/deps/cathedral_backends-1a4b1aedf7bcfa01)
+
+running 3 tests
+test http::tests::idle_connections_are_disposed_while_the_client_survives_across_destinations ... ok
+test http::tests::redirects_preserve_307_body_and_strip_credentials_across_authorities ... ok
+test http::tests::ten_redirects_succeed_and_an_eleventh_is_a_transport_error ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 210 filtered out; finished in 0.04s
+
+Cargo.lock: OK
+crates/cathedral-backends/Cargo.toml: OK
+crates/cathedral-backends/src/http.rs: OK
+crates/cathedral-backends/src/http/tests.rs: OK
+crates/cathedral-backends/src/lib.rs: OK
+crates/cathedral-backends/src/llm.rs: OK
+crates/cathedral-backends/src/llm/task_tests.rs: OK
+crates/cathedral-backends/src/stt_cloud.rs: OK
+crates/cathedral-backends/src/tts_cloud.rs: OK
+/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/async_impl/client.rs: OK
+/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/redirect.rs: OK
+/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-util-0.1.20/src/client/legacy/pool.rs: OK
+/home/ran/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-util-0.1.20/src/client/legacy/client.rs: OK
+95b7fa5544f538bddb592b8461a497f9237be82c3796919b613d9a19f80d5770  target/debug/deps/cathedral_backends-1a4b1aedf7bcfa01
+86f69c4037f0b35ade217ff22d628d7088a7ea9da69ad10e09d314de9f609ef5  target/debug/deps/cathedral_backends-06339ebd51b72e4d
+5af4e5d16d146e8f67cac143a62fedb53d95e43830259a0ff6eeb3fec8df8c7f  target/debug/deps/cathedral_backends-19305d6717fa3f0a
+87709de68c2168a4b1518678450556e5234e2124e972a8ab1fb13a795a794024  target/debug/deps/cathedral_backends-22310518b4c01644
+END 2026-09-22T08:39:43+00:00
+TEST_EXIT 0
+IDENTITY_EXIT 0
