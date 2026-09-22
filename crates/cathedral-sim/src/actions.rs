@@ -2813,7 +2813,27 @@ fn route_budget(
     target: Vec3,
     no_route_message: String,
 ) -> Result<f64, ActionError> {
-    let length = world.nav.as_deref().and_then(|nav| {
+    crate::access::voluntary_travel(world, actor_id)
+        .map_err(crate::access::Denial::action_error)?;
+    duty_route_budget(world, actor_id, target, no_route_message)
+}
+
+fn duty_route_budget(
+    world: &World,
+    actor_id: &ActorId,
+    target: Vec3,
+    no_route_message: String,
+) -> Result<f64, ActionError> {
+    let Some(length) = route_length(world, actor_id, target) else {
+        return Err(ActionError::new(ActionErrorCode::NoRoute, no_route_message));
+    };
+    Ok((GO_TO_BUDGET_FACTOR * length / WALK_SPEED_MPS).max(GO_TO_MIN_BUDGET_SECONDS))
+}
+
+/// Pure geometry pricing for the already-authorised higher-priority duty owner.
+/// Calling this does not authorize voluntary travel or replace custody policy.
+fn route_length(world: &World, actor_id: &ActorId, target: Vec3) -> Option<f64> {
+    world.nav.as_deref().and_then(|nav| {
         let query = crate::nav::query::StreetQuery::new(nav, &[], 0).ok()?;
         // World intents still own legacy XZ anchors (including custody's
         // height-zero fixtures). Price their graph leg exactly as before;
@@ -2825,11 +2845,7 @@ fn route_budget(
             .route_nodes(crate::nav::query::Surface::Street, start, goal)
             .ok()?;
         Some(ticket.route(&query).ok()?.length_m)
-    });
-    let Some(length) = length else {
-        return Err(ActionError::new(ActionErrorCode::NoRoute, no_route_message));
-    };
-    Ok((GO_TO_BUDGET_FACTOR * length / WALK_SPEED_MPS).max(GO_TO_MIN_BUDGET_SECONDS))
+    })
 }
 
 /// [`route_budget`] for an errand the *sim* laid rather than the model — the
@@ -2837,7 +2853,9 @@ fn route_budget(
 /// report a missing route to, so an unroutable chase simply gets the floor
 /// budget and lapses on its own.
 pub(crate) fn route_budget_for(world: &World, actor_id: &ActorId, target: Vec3) -> f64 {
-    route_budget(world, actor_id, target, String::new()).unwrap_or(GO_TO_MIN_BUDGET_SECONDS)
+    route_length(world, actor_id, target)
+        .map(|length| (GO_TO_BUDGET_FACTOR * length / WALK_SPEED_MPS).max(GO_TO_MIN_BUDGET_SECONDS))
+        .unwrap_or(GO_TO_MIN_BUDGET_SECONDS)
 }
 
 /// `go_to` — set a travel intent; it does not move anyone
@@ -2845,32 +2863,13 @@ pub(crate) fn route_budget_for(world: &World, actor_id: &ActorId, target: Vec3) 
 /// arrival and lapse are percepts, and a second `go_to` replaces the first
 /// silently — the model issued both; it needs no telling.
 fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
-    if !world
-        .operations
-        .permits(actor_id, crate::operations::DutyPriority::LlmTravel)
-    {
-        return Err(ActionError::new(
-            ActionErrorCode::InvalidAction,
-            "committed work owns your movement; it must finish or be explicitly cancelled",
-        ));
-    }
-    if world.characters[actor_id].state.leaving_city {
-        return Err(ActionError::new(
-            ActionErrorCode::LeavingCity,
-            "your party is leaving the city; the road controller owns your movement",
-        ));
-    }
     // The second guard the law's hands need (`law_and_order.md` M4b′/M5). The
     // ladder guard in `round::decide` does nothing about a model that simply
     // decides to leave, and a confined actor who announces "I am going to the
     // well" and is not stopped is worse than one who never says it. Refused
     // plainly, so the model reads the refusal and stays in character.
-    if world.custody.holds(actor_id) {
-        return Err(ActionError::new(
-            ActionErrorCode::InCustody,
-            "you are in the law's hands and go nowhere of your own accord - speak to whoever holds you",
-        ));
-    }
+    crate::access::voluntary_travel(world, actor_id)
+        .map_err(crate::access::Denial::action_error)?;
     let parsed = args_object(args, &[], &["place_id", "person"])?;
     let place_value = optional_arg(parsed, "place_id");
     let person_value = optional_arg(parsed, "person");
@@ -3677,7 +3676,7 @@ pub(crate) fn take_into_charge(
     let station_place = station.place_id.clone();
     let station_point = station.point;
 
-    let budget_seconds = route_budget(
+    let budget_seconds = duty_route_budget(
         world,
         officer_id,
         station_point,
@@ -3849,24 +3848,13 @@ fn grab(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, A
 fn release(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
     let parsed = args_object(args, &["person"], &[])?;
     let target_id = parse_actor_id(&parsed["person"], "person")?;
-    let Some(record) = world.custody.get(&target_id) else {
-        return Err(ActionError::new(
-            ActionErrorCode::InvalidAction,
-            "nobody by that id is in the law's hands",
-        ));
-    };
     // The officer of record, anyone with a hand on them, or the keeper standing
     // at the threshold. An unrelated townsman cannot open a door that is a
     // person; a sergeant who walks up and says "let them out" can. The test is
     // `custody::keeps`, which the sheet reads too — a door the prompt offers and
     // the verb refuses is worse than no door at all.
-    let _ = record;
-    if !crate::custody::keeps(world, actor_id, &target_id) {
-        return Err(ActionError::new(
-            ActionErrorCode::InvalidAction,
-            "they are not yours to release - only those who hold them, or the law standing over them, can",
-        ));
-    }
+    crate::access::release_custody(world, actor_id, &target_id)
+        .map_err(crate::access::Denial::action_error)?;
     let record = world.custody.release(&target_id).expect("found above");
     let station = record.station.name.clone();
     // Earshot of the *releaser*, exactly as the seizure fans out from the

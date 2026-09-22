@@ -1,4 +1,4 @@
-Status: Reconciled 2026-09-22. M1–M2 and M3 through native retention retain their earlier acceptance records. Diagnostic sinks, admitted startup services, refusal-only controls, screenshot fixes, and partial M4/M5 foundations are committed; M6 current-authority checks are under independent review. Complete M3 allocation/adoption/save-load and frame acceptance remain unfinished, so M4–M6 are not accepted milestones and M7–M19 have not started. M0 renderer/full-stress evidence remains pending.
+Status: Reconciled 2026-09-22. M1–M2 and M3 through native retention retain their earlier acceptance records. Diagnostic sinks, admitted startup services, refusal-only controls, screenshot fixes, and partial M4/M5 foundations are committed; the corrected M6 current-authority slice passed independent review and 36 focused/compatibility tests. Complete M3 allocation/adoption/save-load and frame acceptance remain unfinished, so M4–M6 are not accepted milestones and M7–M19 have not started. M0 renderer/full-stress evidence remains pending.
 
 # An Alibi in Stone
 

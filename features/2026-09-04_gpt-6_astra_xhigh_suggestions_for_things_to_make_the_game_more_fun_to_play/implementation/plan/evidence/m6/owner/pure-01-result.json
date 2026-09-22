@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "8dd9330b57966a8b38590fd99d3f3d4d9192d1c5b497c5e34bf854b98ce8c37d",
+  "exit_code": 101,
+  "raw_log": "/tmp/alibi-m6-pure-01.log",
+  "raw_sha256": "4689f64af1b7f7223bb616fcae12887b4fa5c943320b2b80eeba325b6beb46ca",
+  "source_map_sha256": "9f95a7964a12dec19ed994d19bbbd21ca37c8c9840c6612e85ccea0de335de9b",
+  "sources_unchanged": true,
+  "wall_seconds": 266.1433210289106
+}

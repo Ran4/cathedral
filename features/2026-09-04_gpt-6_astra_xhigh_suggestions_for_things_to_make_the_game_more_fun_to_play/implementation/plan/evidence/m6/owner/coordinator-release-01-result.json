@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "98b0f186a01d1b00af4afe084b3dee1ad1640f966d56f650e462d40df9aec243",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m6-coordinator-release-01.log",
+  "raw_sha256": "dca24be145dce1f937907693877b3c3d32feff7559f21f72848d217bbcc0e3ca",
+  "source_map_sha256": "52eac61d7a731938eb4cfd90009bed3fa9e77f8ee7df084e6f991533c3f358ea",
+  "sources_unchanged": false,
+  "wall_seconds": 188.8078515790403
+}

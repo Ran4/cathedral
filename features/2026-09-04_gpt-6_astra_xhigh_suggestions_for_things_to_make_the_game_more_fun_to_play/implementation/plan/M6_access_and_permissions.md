@@ -1,4 +1,4 @@
-Status: Partial (2026-09-22). Partial current travel/custody authority checks implemented and under independent review; general access registry, keys, grants, loans, portals and persistence remain unfinished. Complete M3 persistence remains a prerequisite.
+Status: Partial (2026-09-22). Current travel/custody authority foundation independently reviewed, with 10 focused and 26 custody tests passing after the holder-cap release correction. General access registry, keys, grants, loans, portals and persistence remain unfinished. Complete M3 persistence remains a prerequisite.
 
 # M6 — Doors, authority and permission
 

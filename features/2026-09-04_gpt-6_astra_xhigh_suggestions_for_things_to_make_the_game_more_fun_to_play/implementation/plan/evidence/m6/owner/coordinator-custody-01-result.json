@@ -1,0 +1,9 @@
+{
+  "archive_sha256": "2cfc50e516d554641b78ae97fffb19d4b1f62c4876b24c1389bcc0022a8ab730",
+  "exit_code": 0,
+  "raw_log": "/tmp/alibi-m6-coordinator-custody-01.log",
+  "raw_sha256": "003764068a5b3f8a24df479d93aa10ebf9f66287c9750b1a84499020caab7f95",
+  "source_map_sha256": "ec7158047b6b1a0875131509d76807d0da9baf78a485bf4cb225c0dd1102424e",
+  "sources_unchanged": true,
+  "wall_seconds": 80.80255051096901
+}

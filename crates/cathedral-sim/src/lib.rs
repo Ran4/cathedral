@@ -10,6 +10,7 @@
 //! interaction boundaries are tested at `20.0 ± 1e-6`, which f32 cannot
 //! represent.
 
+pub mod access;
 pub mod actions;
 pub mod appearance;
 pub mod areas;
