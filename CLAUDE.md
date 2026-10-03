@@ -1,5 +1,39 @@
 # The Cathedral-City of Impossible Light
 
+## Builds, tests and game runs: 40% CPU cap
+
+The developer asked for builds to be capped at 40% of one core. Run cargo and the
+game through the persistent `cathedral-alibi-build` system service
+(`scripts/capped_verification/README.md`), not directly. Write a bash job to
+`features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m0_dev/owner/jobs/<run-name>.sh`
+(it runs from the repo root; run names can't be reused), then:
+
+```sh
+uv --cache-dir /tmp/cathedral-uv-cache run --no-project --offline python -I -B \
+  scripts/capped_verification/worker.py submit --run-name <run-name> \
+  --runner features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m0_dev/owner/run_capped.py
+```
+
+Output goes to `logs/capped_verification/claimed/<run-name>/output.log`, and
+`result.json` appears there when the job ends. A game run from the worker needs
+`DISPLAY=:0 WINIT_UNIX_BACKEND=x11 XDG_RUNTIME_DIR=/run/user/1000 BEVY_ASSET_ROOT=$PWD`
+plus `CATHEDRAL_HEADLESS=1`. Under the cap a debug rebuild takes tens of minutes and
+the game needs ~60 s to show a city frame, so batch your checks.
+
+## An Alibi in Stone
+
+The [plan](features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/README.md)
+is at M0. A first attempt at M1–M6 was removed from history on 2026-10-03; read
+[LESSONS_FROM_THE_FIRST_ATTEMPT.md](features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/LESSONS_FROM_THE_FIRST_ATTEMPT.md)
+before working on it.
+
+Untracked user paths to leave alone: `docs/codex_gdd/`, `reference/`,
+`features/2026-09-18_glm5_3_flash_logic_bugs.md`,
+`features/2026_09_14_more_ambient_stuff.md`,
+`features/2026_09_19_bugs_found_by_the_jev_survey.md`. Never push unless asked.
+
+---
+
 A first-person, procedural cathedral-city inspired by the monumental engraving in `docs/reference_image.png`.
 The scene is assembled entirely in Rust with Bevy 0.19 and uses original generated material artwork for
 cathedral limestone, weathered city plaster, half-timber infill, dark fieldstone, terracotta and slate roofs,

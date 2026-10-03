@@ -1,4 +1,4 @@
-Status: M0 partially executed (2026-09-07): V01/V02 reconciled, CPU portion of V03 measured; current renderer/full-stress acceptance pending. No milestone accepted; M1–M19 not started.
+Status: M0 partially executed (2026-09-07): V01/V02 reconciled, CPU portion of V03 measured; current renderer/full-stress acceptance pending. No milestone accepted; M1–M19 not started. A first attempt at M1–M6 (2026-09-07 → 10-02) was removed from history on 2026-10-03; see [LESSONS_FROM_THE_FIRST_ATTEMPT.md](LESSONS_FROM_THE_FIRST_ATTEMPT.md).
 
 # An Alibi in Stone — systems first, then the full quest
 
