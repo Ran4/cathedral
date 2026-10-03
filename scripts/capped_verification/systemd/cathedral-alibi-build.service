@@ -1,0 +1,25 @@
+[Unit]
+Description=Cathedral capped verification worker
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+User=ran
+Group=ran
+WorkingDirectory=/home/ran/src/rust/cathedralbevy
+Environment=HOME=/home/ran
+Environment=PATH=/usr/bin:/bin:/home/ran/.local/bin:/home/ran/.cargo/bin
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/ran/.local/bin/uv --cache-dir /tmp/cathedral-uv-cache run --no-project --offline python -I -B /home/ran/src/rust/cathedralbevy/scripts/capped_verification/worker.py serve
+CPUAccounting=yes
+CPUQuota=40%
+CPUQuotaPeriodSec=100ms
+Nice=15
+IOSchedulingClass=idle
+KillMode=control-group
+Restart=on-failure
+RestartSec=10s
+RestartPreventExitStatus=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,101 @@
+{
+  "boot_enabled_units": [
+    "cathedral-alibi-build.service",
+    "cathedral-alibi-build-start.path",
+    "cathedral-alibi-build-stop.path"
+  ],
+  "cpu_max": "40000 100000",
+  "cpu_max_burst": "0",
+  "files": {
+    "control.py": "209821cbaa0a1adfbe0cd80c60006615a6c9c192cdf79be2fa34e4cea8e1de99",
+    "install_capped.sh": "a64a1f54b245c4605bb7990e75aafdad1789fcc1e49d39cea2c7bf9c7dadfb64",
+    "test_control.py": "9818f19cd54a3aa4d102980e96a20fad748ed1e4bef5dc2842e67efd2e339d17",
+    "test_worker.py": "c51269a1153fbcc0f93dd720820472dd8bcae64f3999008ee328700db8348969",
+    "worker.py": "b16603ff4ddd7a764c2d1191d15c548ad1c75574695024ff66528577725af38d"
+  },
+  "initial_host_pid": "1109123",
+  "initial_invocation": "89dbd05b01664a91a6633a75d3acde9a",
+  "installed_unit_sha256": {
+    "cathedral-alibi-build-start.path": "9a069eb9f206d1d5bfeb2e167442cdd26202355de9532f75023f39962ff98f18",
+    "cathedral-alibi-build-stop.path": "964c26c2e5c9615130ae837e26cab32646b6e36af7c0fb301b2959ccfa16e3bd",
+    "cathedral-alibi-build-stop.service": "b65dd65f4cb76e230bc632f53e57635fd9f12696d1a0d37157798f66750b660f",
+    "cathedral-alibi-build.service": "a690e4cd1724faf115278c3bab92a2ad84ec2a8e7c91e3e65e5f2ad42920d429"
+  },
+  "operator_install": "user reported installed; exact four installed unit hashes match reviewed source",
+  "pid_namespace_limit": "Host PID is not visible in this tool namespace. Kernel quota is read directly; actual nice 15 is observed by worker in current-invocation startup receipt; systemd also reports configured Nice=15.",
+  "queue": {
+    "STOP": false,
+    "completed_claims": 25,
+    "pending": 0,
+    "pending_control_request": false,
+    "staging": 0
+  },
+  "restart_command": "uv --cache-dir /tmp/cathedral-uv-cache run --no-project --offline python -I -B scripts/capped_verification/control.py restart",
+  "restart_exit_code": 0,
+  "restart_output": "restart: verified",
+  "startup_receipt": {
+    "cap": {
+      "burst_usec": 0,
+      "cgroup": "/system.slice/cathedral-alibi-build.service",
+      "period_usec": 100000,
+      "quota_usec": 40000
+    },
+    "event": "worker_started",
+    "nice": 15,
+    "utc": "2026-10-01T18:28:22.312665+00:00",
+    "worker_sha256": "b16603ff4ddd7a764c2d1191d15c548ad1c75574695024ff66528577725af38d"
+  },
+  "status": "installed_and_live_idle_restart_verified",
+  "units": {
+    "cathedral-alibi-build-start.path": {
+      "ActiveState": "active",
+      "InvocationID": "88aef9cc260f43ba87b50017544d5ab9",
+      "Job": "",
+      "LoadState": "loaded",
+      "Result": "success",
+      "SubState": "running"
+    },
+    "cathedral-alibi-build-stop.path": {
+      "ActiveState": "active",
+      "InvocationID": "4ecb9747ec41423683f4e3d59f038aa1",
+      "Job": "",
+      "LoadState": "loaded",
+      "Result": "success",
+      "SubState": "waiting"
+    },
+    "cathedral-alibi-build-stop.service": {
+      "ActiveState": "inactive",
+      "ControlGroup": "",
+      "ExecMainExitTimestampMonotonic": "31966879170",
+      "ExecMainStartTimestampMonotonic": "31966870299",
+      "ExecMainStatus": "0",
+      "InvocationID": "2ab8b90aea5c495a8870f1712b7f8614",
+      "Job": "",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "Nice": "0",
+      "Result": "success",
+      "SubState": "dead"
+    },
+    "cathedral-alibi-build.service": {
+      "ActiveState": "active",
+      "ControlGroup": "/system.slice/cathedral-alibi-build.service",
+      "ExecMainExitTimestampMonotonic": "0",
+      "ExecMainStartTimestampMonotonic": "31967166138",
+      "ExecMainStatus": "0",
+      "InvocationID": "1778ceb35d7b4050a2634f452edefe44",
+      "Job": "",
+      "LoadState": "loaded",
+      "MainPID": "1141802",
+      "Nice": "15",
+      "Result": "success",
+      "SubState": "running"
+    }
+  },
+  "utc": "2026-10-01T18:29:24.319328+00:00",
+  "validation": {
+    "control_tests": 14,
+    "rust_or_game_executed": false,
+    "worker_tests": 18
+  }
+}

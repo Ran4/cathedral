@@ -1,0 +1,9 @@
+[Unit]
+Description=Request stop of the fixed Cathedral worker
+
+[Path]
+PathChanged=/home/ran/src/rust/cathedralbevy/logs/capped_verification/control/stop
+Unit=cathedral-alibi-build-stop.service
+
+[Install]
+WantedBy=multi-user.target

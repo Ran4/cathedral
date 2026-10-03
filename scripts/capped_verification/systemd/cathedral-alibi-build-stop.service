@@ -1,0 +1,7 @@
+[Unit]
+Description=Stop only the fixed Cathedral worker
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --no-block stop cathedral-alibi-build.service

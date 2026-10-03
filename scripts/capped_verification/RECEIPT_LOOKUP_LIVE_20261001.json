@@ -1,0 +1,26 @@
+{
+  "action": "control.py start",
+  "control_sha256": "134792f5e0eb3f2e7f32b9665bfaaf88cd4d08845b36067d3ec9749546dc7bc5",
+  "exit_code": 0,
+  "live_cpu_burst": "0",
+  "live_cpu_max": "40000 100000",
+  "observed_state": {
+    "ActiveState": "active",
+    "ControlGroup": "/system.slice/cathedral-alibi-build.service",
+    "ExecMainExitTimestampMonotonic": "0",
+    "ExecMainStartTimestampMonotonic": "31967166138",
+    "ExecMainStatus": "0",
+    "InvocationID": "1778ceb35d7b4050a2634f452edefe44",
+    "Job": "",
+    "LoadState": "loaded",
+    "MainPID": "1141802",
+    "Nice": "15",
+    "Result": "success",
+    "SubState": "running"
+  },
+  "output": "start: verified",
+  "result": "ALREADY_RUNNING_SAME_INVOCATION_AND_PID",
+  "runtime_rust_execution": false,
+  "utc": "2026-10-01T19:25:42.020506+00:00",
+  "worker_sha256": "b16603ff4ddd7a764c2d1191d15c548ad1c75574695024ff66528577725af38d"
+}
