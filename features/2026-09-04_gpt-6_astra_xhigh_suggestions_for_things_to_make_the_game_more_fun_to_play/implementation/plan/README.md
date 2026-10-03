@@ -1,4 +1,4 @@
-Status: M0 partially executed (2026-09-07): V01/V02 reconciled, CPU portion of V03 measured; current renderer/full-stress acceptance pending. No milestone accepted; M1–M19 not started. A first attempt at M1–M6 (2026-09-07 → 10-02) was removed from history on 2026-10-03; see [LESSONS_FROM_THE_FIRST_ATTEMPT.md](LESSONS_FROM_THE_FIRST_ATTEMPT.md).
+Status: M0 closed (2026-10-04). Plan reviewed 2026-10-04 ([PLAN_REVIEW](PLAN_REVIEW.md)): M1 and M2 rewritten as baseline fixes and simulation checkpoints + boot-from-save; the revised order for the rest awaits approval. M1–M19 not started. A first attempt at M1–M6 (2026-09-07 → 10-02) was removed from history on 2026-10-03; see [LESSONS_FROM_THE_FIRST_ATTEMPT.md](LESSONS_FROM_THE_FIRST_ATTEMPT.md).
 
 # An Alibi in Stone — systems first, then the full quest
 
@@ -11,6 +11,8 @@ The [authoritative decisions](DECISIONS.md) override the GDD where they differ. 
 For a design review, read the [case contract](CASE_CONTRACT.md) and [player experience](PLAYER_EXPERIENCE.md) next. For implementation, read [ownership and gates](OWNERSHIP_AND_GATES.md), then the next accepted milestone's successor and its relevant protocols. The [40 requirements](REQUIREMENTS.md) and [78 acceptance scenarios](VERIFICATION.md) make scope and verification traceable without requiring every implementer to reread the entire plan.
 
 ## Delivery order
+
+> **2026-10-04:** [PLAN_REVIEW](PLAN_REVIEW.md) proposes 11 milestones (R1–R11) in place of the table below, pending approval. M1 and M2 have been rewritten to the revised scope. Where the table, `RUNTIME_BUDGETS.md` or the gates below disagree with the M1/M2 files, those files govern.
 
 The foundation gate is deliberately substantial. M0–M13 establish and prove the reusable systems using development fixtures. M14–M18 author and integrate the real district and complete investigation. M19 is the final acceptance gate. Tests, persistence and player feedback accompany each milestone rather than waiting for M19.
 

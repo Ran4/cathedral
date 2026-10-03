@@ -1,5 +1,7 @@
 Status: Proposed implementation contracts (2026-09-05). These describe required work, not shipped interfaces.
 
+> **2026-10-04:** §2's wall-time-debt paragraph and §4's exactly-once replay ledger are cut ([PLAN_REVIEW](PLAN_REVIEW.md)). Keep the 100 ms hitch clamp. Late callbacks from a replaced engine are fenced by giving each adopted engine a fresh backend event channel (R3). The rest of this file is reference, not a gate.
+
 # Architecture contracts
 
 The deliverable is a living city that can host investigations. Case content supplies people, places, records, activities and evidence rules. Shared systems decide whether actions are possible and perform them. These contracts apply to both the development fixtures and the final quest.
@@ -142,6 +144,8 @@ Diagnostics expose developer truth with explicit scope: command receipt, operati
 ## 12. Compatibility is a deliberate contract
 
 Keep current city content working while migrating foundations. New layered navigation must preserve ground-only routes; new law orders must define how existing notices and authored inmates behave; save manifests must identify the actual content and geometry they restore against.
+
+Loading resumes the saved simulation time; time spent with the game closed does not advance the city (D06). The save UI says so.
 
 Reject an incompatible save before replacing the running world. A district redesign cannot silently load an old actor inside new masonry. Either provide an explicit tested migration with safe locations and retained references, or report the incompatibility and leave the current world intact.
 

@@ -1,5 +1,7 @@
 Status: M0 CPU workload measured and numerical admission targets recorded (2026-09-07). V03 remains partial: renderer/frame, full 20,000-resident stress and future DTO/active-work measurements are not accepted.
 
+> **Superseded 2026-10-04 — these are not requirements** ([PLAN_REVIEW](PLAN_REVIEW.md)). No decision asks for any number below. What survives: the existing test canaries (prompt and snapshot sizes, the knowledge limits in `knowledge/mod.rs`), D05's rule that disk work happens outside the simulation pump, and the 100 ms `MAX_FRAME_CATCHUP` clamp in `src/controller.rs`, which stays. Save/load cost is measured and logged, not gated. The time-debt policy, the replay ledger, admission budgets and the memory ceilings are cut.
+
 # Running continuously within measured limits
 
 The user requires an ordinary living city and save-anywhere. These policies prevent slow frames, background IO and durable history from quietly defeating those promises. M0 freezes the numerical reference record before dependent implementation; M13 and M19 consume that record rather than selecting accommodating thresholds after the work.

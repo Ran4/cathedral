@@ -1,67 +1,170 @@
-Status: Planned (2026-09-05).
+Status: Planned (rewritten 2026-10-04, see [PLAN_REVIEW](PLAN_REVIEW.md)). R2 in the revised order.
 
-# M2 — Complete simulation checkpoints
+# M2 — Simulation checkpoints and boot-from-save
 
-Restore an authoritative city, not a picture of one. This milestone implements pure export, validation and hydration; M3 supplies files and application controls.
+Restore the authoritative city, not a picture of it (D06). This milestone builds:
+- the pure checkpoint/restore in `cathedral-sim`;
+- lockstep tests proving that a restored engine continues like an uninterrupted one;
+- a thin real-game slice: a quicksave key and starting the game from a saved slot.
 
-## Entry
+**Load during play** (swapping worlds inside a running game) is the next milestone (R3, the rest of the old M3).
+Whether it must be in-process at all is an open question (PLAN_REVIEW Q5).
 
-M1 is accepted and the persistence inventory names every current mutable subsystem. [CHECKPOINT_PROTOCOL](CHECKPOINT_PROTOCOL.md) specifies capture, pending-work and adoption defaults. Do not begin by deriving serialization on `PublicSnapshot`: that type deliberately omits private and operational state.
+Entry: M0 closed. M1 is not a dependency.
 
-## Implementation slices
+The checkpoint analysis from the first attempt was right; its implementation was ~10× too big. LESSONS lists what to
+port and what not to repeat. `PERSISTENCE_INVENTORY.md` is a useful field checklist, not a gate. The derives, the
+exhaustive `Engine { … }` destructure/literal and the lockstep tests are the enforcement.
 
-### M2a — Versioned DTOs and state inventory
+## 1. Checkpoint and restore (pure, in `cathedral-sim`)
 
-Define an explicit checkpoint envelope with schema version, world identity, content/geometry/behavior/generator manifest, simulation/calendar position, private domain payload and host-continuation requirements. Use existing serde facilities first; measure before introducing compression or a different encoding. Represent valid “never processed” infinity sentinels as explicit DTO variants; reject invalid numeric values without rejecting virgin worlds.
+- **Derives on the real runtime types.** Add `Serialize`/`Deserialize` derives to the real types; none derive serde
+  today. They include:
+  - `World` and its characters/state;
+  - inventory jobs and `Round` with its private structs and residents;
+  - `Custody`, `Notices`, `Marks`, the animals;
+  - `Knowledge` with `Fact`, `Held` and `LearnedHow`;
+  - the weather timeline, `WorldClock`;
+  - `NpcScheduler` with `InFlight`, `TurnLane`, completions/errors and request ids;
+  - `NightOffice`;
+  - `ConversationFloor` and its warm-exchange/novelty state;
+  - `PlaceRegistry` entries.
 
-Each owning module exports and validates its own DTO. Include `World`, `CharacterState`, inventory reservations/jobs, `Round`, clock/weather, knowledge, law/custody, marks, animals, scheduling and night work. Shared immutable catalogs are referenced through an exact manifest and resolved before hydration. Rebuild indexes only where their derivation is explicit and deterministic.
+  No DTO, mirror, view or builder types. New fields get `#[serde(default)]` only where an older save of the *same
+  version* could lack them; otherwise let the version gate it.
+- **Serde helpers.** Keep them in one small module:
+  - `never`: the `f64::NEG_INFINITY` "never happened" sentinels ↔ `null`;
+  - `pairs`: maps with non-string keys (tuple keys) as a sequence of pairs, because `serde_json` rejects them as
+    object keys.
 
-Admit capture/hydration work through the global count/byte budgets in [RUNTIME_BUDGETS](RUNTIME_BUDGETS.md). Measure extraction and index building as well as encoding; a plain DTO is not automatically cheap to obtain. Establish small versioned supported-save fixtures here so M3 can exercise the real file/adoption path against them.
+  Grep for both; the review found about six saved sentinels and five tuple-key maps. For `Vec3`, either enable
+  glam's `serde` feature on the workspace dependency or use the existing `math::vec3_serde`. Glam's feature is on
+  today only through bevy's feature unification, so `-p cathedral-sim` builds would miss it. Either way, check that
+  every restored float is finite.
+- **`FactSource`** stays sealed. `knowledge/source.rs` forbids a `Serialize` impl, so serialize `Fact.source` through
+  a private save-only `#[serde(with = …)]` module inside `source.rs`. Never render it anywhere.
+- **Skipped and rebound, not saved.** Immutable assets behind `Arc` and service handles are `#[serde(skip)]` and
+  rebound on restore:
+  - the area map, catalogs (items, sounds, marks, facts), salience, adjacency, shelters and nav;
+  - the services (`Box<dyn Cognition>` and similar);
+  - scratch buffers;
+  - `PlaceRegistry`'s derived indexes, which are rebuilt from the saved entries.
+- **`Engine::checkpoint(&self, now) -> Checkpoint`** starts with an exhaustive `let Engine { … } = self;` (no `..`),
+  so a new engine field breaks the build until somebody decides whether it is saved. It is read-only: two captures
+  with no poll between them encode to identical bytes. Not saved, and reset on restore: presentation and publication
+  caches (last snapshot revision, the last-sent hot-channel state, journal caches), the transcript buffer, the speech
+  router, startup diagnostics and the services.
+- **`Checkpoint`**:
+  - `version: u32`;
+  - a geometry fingerprint: a cheap hash of the nav/areas/shelters/places data the restored world must match. A
+    mismatch refuses the load;
+  - the simulation `now`;
+  - a small label (game day, office, area name) for slot lists;
+  - the engine state.
 
-Every field has one policy: saved authoritative state, re-derived state, or discarded transient presentation/IO state with a stated continuation rule. “Private field” is not a reason for omission. An automated field inventory may support review, but behavioural continuation tests are the proof.
+  Never hash the executable, the source tree or the compiler, and add no build script.
+- **`Engine::restore(checkpoint, config, assets, services, …) -> Result<Engine, RestoreError>`** ends in an exhaustive
+  `Self { … }` literal, like `Engine::new`. It:
+  1. checks the version and geometry fingerprint;
+  2. rebinds the assets and services and re-applies the current config's ablation switches;
+  3. validates before anything else sees the engine:
+     - the player exists;
+     - all positions are finite;
+     - item and actor references resolve;
+     - the world's invariants hold, via a `check_invariants() -> Result` that the existing `assert_invariants` then
+       calls, so there is no twin;
+  4. **never** runs seeding: no `build_world`, `Round::seed`, fact/case seeding, `NightOffice` seeding or animal
+     seeding (D02: the history is installed when a world is created, never on load);
+  5. performs the start-up steps `Engine::new` does that aren't seeding (starting the scheduler, warming TTS);
+  6. resets `world.spatial_sequence` so the host's next position update is accepted;
+  7. clears the conversation floor's "awaiting a reply" state and the speech router.
 
-### M2b — Capture boundary and hydrate path
+  The first poll after a restore re-emits `Ready` with a full snapshot and every hot channel, as at startup.
+- **In-flight LLM work** (the rules from LESSONS):
+  - a completion already received but not yet applied is saved and applied exactly once after restore;
+  - a request that was submitted but has no result is re-requested once from its saved prompt;
+  - nothing is both restored to its inbox and applied;
+  - with no cognition available, the turn is unwound the way a provider failure unwinds it, but without the
+    system line or backoff;
+  - Night Office: an in-flight reflection goes back to the front of its queue, and the per-day guards stay as
+    saved, so a load never grants a second reflection.
+- **Time.** The sim keeps its own `now` (host seconds since start). The host adds one `time_offset` so the restored
+  engine sees a continuous clock: `offset = checkpoint.now - host_elapsed_at_adoption`. No sim field is rebased.
+  Loading resumes the saved simulation time; time with the game closed does not pass (D06).
 
-Capture after the ordinary complete simulation transaction/poll boundary, with a matching authoritative player physical sample, controller/fixed-step residual and a known command high-water mark. Assert the sim accepted that sample. Include committed readable receipts still awaiting host consumption. Do not capture half an item transfer or between custody insertion and its event. Do not wait for actors to finish an escort or for a provider call to return; never issue a save-only extra poll.
+## 2. Save file, quicksave and boot-from-slot (host)
 
-Construct the restored engine through a dedicated hydration path. `Engine::new` currently seeds rounds, knowledge, inmates and other authored state; running normal seeding over a checkpoint would duplicate or reset the city. Rebind immutable assets and services without replaying world creation.
+- **`crates/cathedral-backends/src/save.rs`.**
+  - One file per slot under `saves/` (gitignored). The first line is a small JSON header (version, label, wall-clock
+    save time), followed by gzip'd JSON (`flate2` is already in `Cargo.lock`).
+  - Writes run on one worker thread: encode, decode-check, write `slot.tmp` with fsync, keep the previous file as
+    `slot.bak`, then rename. There is a `list_slots` that reads headers only.
+- **Capture** happens in the host right after `engine.poll` in `LocalEngine::pump`: clone the checkpoint on the main
+  thread and hand it to the worker. No extra poll and no waiting on providers. Disk work never happens in the pump
+  (D05). Log capture time, encode time and size once per save. They are measured, not gated.
+- **A quicksave key.** Check the existing bindings for a free one; F5 is the screenshot key. It shows a short HUD
+  toast with the result.
+- **`CATHEDRAL_LOAD=<slot>`.** It reads and decodes the slot at engine build time, outside the pump. `LocalEngine`
+  then calls `Engine::restore` instead of `Engine::new`, and places the player controller at the saved player
+  position and yaw before the first spatial update. Host-only player state (pitch, flying) travels in a small
+  `HostSave` beside the checkpoint. An unreadable or incompatible slot logs an error and starts a fresh world.
+- **Drive action `save <slot>`.** Then a two-process headless run can prove it:
 
-Validate all IDs, item ownership/quantities, reservations, references, state variants, numerical values and time relationships before making the candidate usable. A corrupt reference must identify the failing subsystem and leave the current engine untouched.
+  ```sh
+  CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE='wait-online; tp …; sleep 5; save smoke; sleep 2; quit' cargo run
+  CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_LOAD=smoke CATHEDRAL_DRIVE='wait-online; sleep 3; shot loaded; quit' cargo run
+  ```
 
-### M2c — Pending cognition and speech
+## 3. Lockstep tests (`crates/cathedral-backends/tests/`)
 
-Separate committed actions from unfinished requests. A submitted NPC prompt may have drained its inbox; preserve its input receipt and the obligation to respond. The default is exact held-result restoration for completed-but-unapplied success/error completions, and exactly one load-specific retry for submitted/unfinished work. Do not both restore the drained inbox and apply its saved completion. Preserve newer arrivals separately and retain lane/fairness identity. The existing idle-retry and provider-failure helpers are not valid substitutes: one drops idle work, the other creates false failure/backoff effects.
+Run engine A uninterrupted. Run B to a capture point, encode it to bytes, drop B and restore C from the bytes with
+fresh services. Feed A and C identical steps and compare:
+- the domain `EngineMessage`s per poll, ignoring C's first-poll republish;
+- every N polls, the re-encoded checkpoints, with request ids masked.
 
-External sockets, HTTP jobs, audio handles and raw microphone capture are not engine state. Outstanding provider jobs belong to the old runtime generation. Completed, committed speech remains in transcript/knowledge receipts; audio can be regenerated or replaced with readable text without saying the line to the world a second time.
+Use the real city data and the deterministic fake cognition, with the Night Office, weather and knowledge on. Where
+work was in flight at capture, assert conservation instead of identical timing: exactly one re-request, applied
+exactly once.
 
-An unfinished player recording is not silently turned into a new utterance after load. Preserve any available text draft, report that the recording was interrupted, and require a new intentional submission. This does not prevent saving while the microphone is open.
+Scenarios (keep each to a few hundred polls; the suite runs under a 40%-of-one-core cap):
+- an idle city at 60× across an office;
+- an NPC turn in flight at capture;
+- a received-but-unapplied result at capture;
+- a player-speech reaction in flight;
+- a pending NPC offer accepted after load;
+- a custody seizure mid-escort, then the commit;
+- a night reflection across bedtime;
+- a seeded ward-air fact spreading;
+- a weather change during owed bell strokes;
+- two captures with no poll between them give identical bytes.
 
-Preserve Night Office duty identity, owed day, subject/incarnation and queued/submitted/completed/dropped state. Its current queue-time `last_reflected` stamp is not a completion marker. Hydrate queues directly, preserve the ambient once-per-day guard and retry only inside the restored valid window. Reload must not grant a second reflection, duplicate a settled memory or use an old result on the replacement world.
+Negative tests: wrong version, wrong geometry fingerprint and a NaN position are all refused, and the caller keeps
+its current engine.
 
-### M2d — Deterministic continuation
+One `#[ignore]`d run at +2,000 residents prints capture/encode/restore milliseconds and bytes.
 
-Build fixtures that run to a chosen boundary, capture, hydrate into fresh services, then execute the same subsequent inputs as an uninterrupted control. Compare canonical authoritative state and committed domain events, excluding declared transient presentation counters. Use fake or recorded cognition completions with controlled timing. Exact equality covers retained/recorded completions; intentional re-rendering of unfinished work instead proves obligation conservation and exactly-once application, since a live provider need not reproduce the unsaved future.
+**Standing rule for every later milestone:** add at least one lockstep scenario for the new state you introduce
+(D06).
 
-Test boundaries during a food transformation, market queue, road-party departure, warm conversation, pending offer, custody escort, weather transition, bell sequence, knowledge propagation and night reflection. Later milestones must add their own continuation cases before acceptance.
+## Do not build
 
-## Time and identity requirements
+- DTO, wire-twin, view or builder mirrors of the state;
+- byte/count admission, allocation meters, per-frame save/load budgets or memory ceilings;
+- slot generation/reference publication protocols, directory durability or crash-at-every-step tests;
+- staged adoption with rollback;
+- saved velocity, fixed-step residuals, wall-time debt, input watermarks or physical-sample sequences;
+- calendar or deadline rebasing;
+- durable Night Office duty identities;
+- exe/source/compiler hashing or a build script;
+- a field-index script;
+- a 20,000-resident gate;
+- offline catch-up;
+- save migrations.
 
-- Preserve logical simulation time; bind it to a new host origin.
-- Preserve calendar position/rate and every “last processed” edge, so daily work does not repeat.
-- Keep stable actor/item/fact/order/operation IDs and ID allocation counters.
-- Create a new runtime generation and reject old callbacks.
-- Revalidate references against the exact content manifest; never guess replacements from display names.
-- Preserve accepted but unfinished work and completed step IDs without accepting unsaved future effects.
+## Done when
 
-## Tests
-
-- Round trip a populated world with all present subsystems enabled.
-- Continue across every boundary listed above and compare with the control run.
-- Inject duplicate holdings, dangling references, invalid quantities, non-finite coordinates, bad time anchors and unsupported versions; all fail before adoption.
-- Feed late provider/speech callbacks from the discarded engine; all are inert.
-- Restore with cognition unavailable; deterministic city activity and previously committed consequences continue.
-- Capture at default cast, 2,000 extra citizens and 20,000 stress citizens; record capture CPU time, payload size and allocations separately from disk time.
-
-## Completion gate
-
-No current authoritative subsystem is missing from the inventory or continuation tests. Hydration does not call ordinary seed paths. Capture never waits on external services. The sim crate remains IO-free. M3 receives a validated checkpoint value and an explicit host-state contract.
+- The lockstep and negative tests pass. `cargo test -p cathedral-sim -p cathedral-backends` passes through the capped
+  worker.
+- The game builds.
+- The two-process headless drive run saves in one process and starts the next one from the slot. The city and
+  player are where they were, and the shot renders.

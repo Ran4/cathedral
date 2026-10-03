@@ -1,4 +1,4 @@
-Status: Partial (2026-09-07). Knowledge/source/ownership reconciliation and CPU baseline delivered; V03 reference-renderer and full stress acceptance remain unavailable. M1 must not advance yet.
+Status: Closed (2026-10-04). Its outputs (knowledge interface table, law role map, Tallage options, persistence inventory) stand. The remaining reference-renderer and 20,000-resident stress gate is dropped: no decision requires it ([PLAN_REVIEW](PLAN_REVIEW.md)).
 
 # M0 — Baseline and prerequisite gate
 

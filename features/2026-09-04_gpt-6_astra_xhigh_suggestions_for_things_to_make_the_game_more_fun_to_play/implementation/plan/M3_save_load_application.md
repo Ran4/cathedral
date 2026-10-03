@@ -1,5 +1,7 @@
 Status: Planned (2026-09-05).
 
+> **2026-10-04:** the save file, quicksave and boot-from-slot moved into the rewritten [M2](M2_simulation_checkpoints.md). What remains here is **load during play** (R3 in [PLAN_REVIEW](PLAN_REVIEW.md)): swap the world in the running game, give the new engine a fresh backend channel so old callbacks are inert, reset the host's HUD/puppet/player/speech state, and add a slot list noting that time does not pass while the game is closed. Whether it must be in-process is question Q5. The ≤2 ms/frame budget, retention cohorts and slot publication protocol below are cut.
+
 # M3 — Save-anywhere in the application
 
 Make the M2 checkpoint usable during ordinary play. A save is complete only after durable file publication; a load is complete only after both simulation and host state agree.

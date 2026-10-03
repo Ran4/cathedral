@@ -1,5 +1,7 @@
 Status: M0 ownership handoffs reconciled (2026-09-07); runtime gate remains partial. Downstream contracts remain required implementation, not accepted milestones.
 
+> **2026-10-04:** the M1a–M3d subcuts, handoff gates and service table are superseded by the rewritten [M1](M1_live_time_and_transactions.md)/[M2](M2_simulation_checkpoints.md) and the revised order in [PLAN_REVIEW](PLAN_REVIEW.md). ESPFEIT and the no-case-IDs-in-engine-code rule stand.
+
 # Ownership and acceptance handoffs
 
 Use this guide to assign the next bounded milestone after its producers have passed acceptance. [DECISIONS](DECISIONS.md) governs scope; [ARCHITECTURE](ARCHITECTURE.md) governs responsibilities. The detailed capture/adoption and enforcement rules remain in [CHECKPOINT_PROTOCOL](CHECKPOINT_PROTOCOL.md) and [LAW_PROTOCOL](LAW_PROTOCOL.md). This document assigns their work and gates rather than duplicating those protocols.

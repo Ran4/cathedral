@@ -1,5 +1,7 @@
 Status: Reconciled source-backed M0 inventory (2026-09-07), including shipped knowledge M5, generated residents and conversation continuity. DTO/restore implementation remains M2/M3.
 
+> **2026-10-04:** this is a non-gating field checklist for [M2](M2_simulation_checkpoints.md). The enforcement is the serde derives, the exhaustive `Engine { … }` destructure/literal and the lockstep tests ([PLAN_REVIEW](PLAN_REVIEW.md)). Comments in the code saying a save must not carry `Novelty`/`WarmExchanges` are superseded: they are saved.
+
 # Whole-world continuation inventory
 
 M2/M3 must preserve the state that changes future behaviour, not only what is visible. This inventory assigns an initial policy to the actual current engine and to every planned subsystem. The owning module remains responsible for its DTO, validation and continuation tests. [CHECKPOINT_PROTOCOL](CHECKPOINT_PROTOCOL.md) fixes the capture, pending-work, clock and adoption defaults behind these rows.

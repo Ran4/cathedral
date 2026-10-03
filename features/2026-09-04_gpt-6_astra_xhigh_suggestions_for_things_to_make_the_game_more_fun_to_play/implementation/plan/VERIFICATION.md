@@ -1,5 +1,7 @@
 Status: All scenarios below are planned (2026-09-05); none is certified by generating this file.
 
+> **2026-10-04:** scenarios V05–V18 (the M1–M3 machinery: ledger, debt, generations, publication crashes) are superseded by the acceptance lists in the rewritten [M1](M1_live_time_and_transactions.md) and [M2](M2_simulation_checkpoints.md). The rest is a source of edge cases pending the approval in [PLAN_REVIEW](PLAN_REVIEW.md).
+
 # Verification by milestone
 
 These are behavioral acceptance contracts for implementation. They deliberately include adversarial and partial-result cases. Exact future test/CLI names are assigned when the owning milestone implements them; this document does not advertise nonexistent commands.

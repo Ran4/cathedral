@@ -1,5 +1,7 @@
 Status: Proposed implementation contract (2026-09-05); owned by M1–M3, not implemented.
 
+> **2026-10-04:** where this conflicts with the rewritten [M2](M2_simulation_checkpoints.md), M2 governs ([PLAN_REVIEW](PLAN_REVIEW.md)). Still useful: §3's pending-work rules (a held result applies once, unfinished work is retried once, and nothing is both restored and applied). Superseded: cursor rebasing and time domains (one host `time_offset`), physical samples/residual/debt (capture right after `engine.poll`), staged adoption (validate fully before touching the live engine), and the slot publication protocol (tmp+fsync+rename with a `.bak`).
+
 # Capturing and resuming one coherent city
 
 This specifies the defaults behind [M2](M2_simulation_checkpoints.md), [M3](M3_save_load_application.md) and the [field inventory](PERSISTENCE_INVENTORY.md). It closes choices that otherwise tend to become omissions during implementation. Use these defaults unless source reconciliation demonstrates a better equivalent and the continuation evidence is updated.

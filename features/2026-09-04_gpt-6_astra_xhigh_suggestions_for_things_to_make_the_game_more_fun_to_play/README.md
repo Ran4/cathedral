@@ -1,4 +1,4 @@
-Status: GDD/implementation plan delivered; M0 partially executed (2026-09-07): knowledge/source audit and CPU baseline recorded, reference-renderer/full-stress acceptance pending. M1–M19 not started.
+Status: GDD/implementation plan delivered; plan reviewed and trimmed 2026-10-04 ([PLAN_REVIEW](implementation/plan/PLAN_REVIEW.md)); M0 closed; no quest gameplay shipped.
 
 # An Alibi in Stone
 
