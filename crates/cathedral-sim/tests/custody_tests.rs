@@ -91,6 +91,11 @@ fn person(id: &str, name: &str, x: f64, occupation: Option<&str>) -> Character {
 /// metres apart. `seize` prices the escort's own walk against the nav graph, so
 /// a world without one cannot seize anybody at all.
 fn law_nav() -> NavData {
+    street_nav("[0, 1, 2.0], [1, 2, 2.0], [2, 3, 2.0], [3, 4, 2.0], [4, 5, 2.0]")
+}
+
+/// [`law_nav`]'s six nodes, with only `edges` laid between them.
+fn street_nav(edges: &str) -> NavData {
     let (w, h) = (60usize, 10usize);
     let bitset = vec![0xFF_u8; (w * h).div_ceil(8)];
     let json = format!(
@@ -100,7 +105,7 @@ fn law_nav() -> NavData {
                     "agent_radius_m": 0.35, "bitset_file": "x.bin",
                     "bitset_bits": {bits}, "bitset_sha256": ""}},
           "nodes": [[0.0, 0.0], [10.0, 0.0], [20.0, 0.0], [30.0, 0.0], [40.0, 0.0], [50.0, 0.0]],
-          "edges": [[0, 1, 2.0], [1, 2, 2.0], [2, 3, 2.0], [3, 4, 2.0], [4, 5, 2.0]],
+          "edges": [{edges}],
           "places": [{{"name": "a", "node": 0, "kind": "place"}},
                      {{"name": "b", "node": 5, "kind": "place"}}],
           "sites": [],
@@ -497,6 +502,37 @@ fn seize_is_refused_past_the_confinement_cap_and_the_authored_inmates_never_coun
     world.custody.release(&actor("hel0"));
     say_and_seize(&mut world, "srgnt", "tamrd").expect("one released, one taken");
     assert_eq!(world.custody.arrest_count(), CUSTODY_MAX_ARRESTS);
+}
+
+/// A seizure the escort cannot walk is refused whole
+/// (`M1_live_time_and_transactions.md` §2). The station and the route are
+/// priced before anything is recorded, so the `NoRoute` the model reads and the
+/// world agree: nobody is in the law's hands, and the street saw nothing.
+#[test]
+fn a_seizure_with_no_way_to_the_station_takes_nobody() {
+    let mut world = law_world();
+    raise_word(&mut world, "srgnt", "tamrd");
+    // The same street with the toll-house end cut off from the rest of it, and
+    // the two of them up the far end, nearest the toll-house all the same.
+    world.nav = Some(Arc::new(street_nav(
+        "[0, 1, 2.0], [2, 3, 2.0], [3, 4, 2.0], [4, 5, 2.0]",
+    )));
+    move_to(&mut world, "srgnt", 20.0);
+    move_to(&mut world, "tamrd", 21.0);
+
+    let error = say_and_seize(&mut world, "srgnt", "tamrd").unwrap_err();
+    assert_eq!(error.code, ActionErrorCode::NoRoute, "{error}");
+    assert!(
+        !world.custody.holds(&actor("tamrd")),
+        "the refusal left them in the law's hands"
+    );
+    assert!(
+        world
+            .drain_events()
+            .iter()
+            .all(|event| event.kind != "seize"),
+        "the street saw a seizure that was refused"
+    );
 }
 
 // ------------------------------------------------------------------- the sheet

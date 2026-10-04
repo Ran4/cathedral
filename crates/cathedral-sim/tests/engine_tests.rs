@@ -357,6 +357,79 @@ fn the_offices_ring_for_the_player_only_and_publish_the_clock() {
     assert_eq!(scale, Some(10.0));
 }
 
+/// The `T` key landing on a poll the 20 Hz round skips
+/// (`M1_live_time_and_transactions.md` §1). The round last ticked a frame
+/// earlier, at the old rate; it has to resume from where it got to on the
+/// calendar, or a Kindling just rung at 10× rings again at 60× (a second
+/// restock) and a Watch just rung at 60× is lost at 1× (no settlement).
+#[test]
+fn a_time_scale_change_between_round_ticks_restocks_and_settles_exactly_once() {
+    // One game day an hour, opening at the Watch: the Kindling rings 45 s in
+    // at 10×.
+    let base = WorldClock::new(3600.0, Office::Watch, 0, 0.05);
+    let mut engine = Engine::new(
+        EngineConfig {
+            clock: base,
+            nav: Some(real_nav()),
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player");
+    engine.drain_food_log(); // the seed lays in the morning's stock itself
+
+    // 1× → 10×, then up to a round tick a hair past the Kindling.
+    engine.poll(0.0, vec![EngineCommand::CycleTimeScale]);
+    let mut now = 0.0;
+    while now < 44.0 {
+        now += 0.5;
+        engine.poll(now, Vec::new());
+    }
+    engine.poll(45.01, Vec::new());
+    // 10× → 60× between round ticks (the next is due at 45.06).
+    engine.poll(45.03, vec![EngineCommand::CycleTimeScale]);
+    engine.poll(45.1, Vec::new());
+
+    // On at 60× to a round tick a hair before tomorrow's Watch…
+    let sixty = base.with_scale(0.0, 10.0).with_scale(45.03, 60.0);
+    let watch = sixty
+        .offices_crossed(45.1, 200.0)
+        .into_iter()
+        .find_map(|(at, office)| (office == Office::Watch).then_some(at))
+        .expect("tomorrow's Watch rings inside the window");
+    now = 45.1;
+    while now < watch - 0.6 {
+        now += 0.5;
+        engine.poll(now, Vec::new());
+    }
+    engine.poll(watch - 0.01, Vec::new());
+    // …and 60× → 1× a hair after it, between round ticks again.
+    engine.poll(watch + 0.01, vec![EngineCommand::CycleTimeScale]);
+    engine.poll(watch + 0.1, Vec::new());
+
+    let log = engine.drain_food_log();
+    let count = |prefix: &str| log.iter().filter(|line| line.starts_with(prefix)).count();
+    assert_eq!(
+        (
+            count("Kindling restock, day 0"),
+            count("household_settlement: day 1")
+        ),
+        (1, 1),
+        "(restocks, settlements) across two rate changes: {log:#?}"
+    );
+}
+
 #[test]
 fn weather_override_uses_only_the_hot_channel_and_touches_no_inbox() {
     let mut harness = Builder::default().build();

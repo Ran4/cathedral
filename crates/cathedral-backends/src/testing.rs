@@ -30,11 +30,22 @@ pub struct MockResponse {
     retry_after: Option<String>,
     /// Accept the connection and never answer — for the in-flight/busy test.
     hang: bool,
+    /// Promise the whole body but send only this many bytes of it, then hold
+    /// the connection open — a provider that stalls mid-page.
+    stall_after: Option<usize>,
 }
 
 impl MockResponse {
     pub fn retry_after(mut self, seconds: &str) -> Self {
         self.retry_after = Some(seconds.to_string());
+        self
+    }
+
+    /// Advertise the whole body in `Content-Length`, send only its first
+    /// `bytes`, and never finish: a client that insists on reading all of it
+    /// waits out its timeout, one that stops early does not.
+    pub fn stall_after(mut self, bytes: usize) -> Self {
+        self.stall_after = Some(bytes);
         self
     }
 }
@@ -80,6 +91,7 @@ impl MockServer {
             body: body.to_vec(),
             retry_after: None,
             hang: false,
+            stall_after: None,
         }
     }
 
@@ -89,6 +101,7 @@ impl MockServer {
             body: body.as_bytes().to_vec(),
             retry_after: None,
             hang: false,
+            stall_after: None,
         }
     }
 
@@ -98,6 +111,7 @@ impl MockServer {
             body: Vec::new(),
             retry_after: None,
             hang: true,
+            stall_after: None,
         }
     }
 
@@ -130,7 +144,12 @@ impl MockServer {
                     };
                     match responses.get(index) {
                         Some(response) if response.hang => hung.push(stream),
-                        Some(response) => write_response(&mut stream, response),
+                        Some(response) => {
+                            write_response(&mut stream, response);
+                            if response.stall_after.is_some() {
+                                hung.push(stream);
+                            }
+                        }
                         None => write_response(
                             &mut stream,
                             &MockServer::status(
@@ -253,8 +272,11 @@ fn write_response(stream: &mut TcpStream, response: &MockResponse) {
         head.push_str(&format!("Retry-After: {retry_after}\r\n"));
     }
     head.push_str("\r\n");
+    let sent = response
+        .stall_after
+        .map_or(response.body.len(), |bytes| bytes.min(response.body.len()));
     let _ = stream.write_all(head.as_bytes());
-    let _ = stream.write_all(&response.body);
+    let _ = stream.write_all(&response.body[..sent]);
     let _ = stream.flush();
 }
 

@@ -116,6 +116,9 @@ const RETRY_BACKOFF: Duration = Duration::from_millis(500);
 const MAX_RETRY_AFTER: Duration = Duration::from_secs(20);
 /// How much of an error body reaches the log.
 const BODY_SNIPPET_CHARS: usize = 200;
+/// The most of any response body ever read into memory. A reply is a few
+/// kilobytes; past this the provider is misbehaving, not answering.
+const MAX_RESPONSE_BODY_BYTES: usize = 1024 * 1024;
 
 // ---------------------------------------------------------------------- errors
 
@@ -508,22 +511,34 @@ impl LlmClient {
                     .get(reqwest::header::RETRY_AFTER)
                     .and_then(|value| value.to_str().ok()),
             );
-            let body = response.text().await.unwrap_or_default();
+            // Bounded before the snippet is cut; the status alone decides
+            // whether the page is worth a retry.
+            let (body, _) = read_body_capped(response).await.unwrap_or_default();
             return Err(Attempt {
                 retryable: is_retryable_status(status.as_u16()),
                 retry_after,
                 error: LlmError::Http {
                     status: status.as_u16(),
-                    body_snippet: snippet(&body),
+                    body_snippet: snippet(&String::from_utf8_lossy(&body)),
                 },
             });
         }
 
-        let payload: ChatResponse = response.json().await.map_err(|error| Attempt {
+        let malformed = |message: String| Attempt {
             retryable: false,
             retry_after: None,
-            error: LlmError::Transport(error.to_string()),
-        })?;
+            error: LlmError::Transport(message),
+        };
+        let (body, oversize) = read_body_capped(response)
+            .await
+            .map_err(|error| malformed(error.to_string()))?;
+        if oversize {
+            return Err(malformed(format!(
+                "response body exceeds {MAX_RESPONSE_BODY_BYTES} bytes"
+            )));
+        }
+        let payload: ChatResponse =
+            serde_json::from_slice(&body).map_err(|error| malformed(error.to_string()))?;
 
         if let Some(usage) = payload.usage.as_ref() {
             self.usage
@@ -594,6 +609,21 @@ fn parse_retry_after(header: Option<&str>) -> Option<Duration> {
 
 fn snippet(body: &str) -> String {
     body.chars().take(BODY_SNIPPET_CHARS).collect()
+}
+
+/// A response body, but never more than [`MAX_RESPONSE_BODY_BYTES`] of it; the
+/// flag says whether the provider had more to send.
+async fn read_body_capped(mut response: reqwest::Response) -> reqwest::Result<(Vec<u8>, bool)> {
+    let mut body = Vec::new();
+    while let Some(chunk) = response.chunk().await? {
+        let room = MAX_RESPONSE_BODY_BYTES - body.len();
+        if chunk.len() > room {
+            body.extend_from_slice(&chunk[..room]);
+            return Ok((body, true));
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok((body, false))
 }
 
 // -------------------------------------------------------------- HttpCognition
@@ -1005,6 +1035,72 @@ mod tests {
             "{}",
             error.detail()
         );
+    }
+
+    /// A provider that sends back far more than any reply is cut off at
+    /// [`MAX_RESPONSE_BODY_BYTES`] instead of being read whole into memory. A
+    /// success body that size is not a reply: the turn fails once, cleanly, and
+    /// is not retried.
+    #[test]
+    fn an_oversize_reply_fails_cleanly_and_is_not_retried() {
+        let content = "x".repeat(2 * 1024 * 1024);
+        let server = MockServer::start(vec![
+            MockServer::ok(&format!(
+                r#"{{"choices": [{{"message": {{"content": "{content}"}}}}]}}"#
+            )),
+            MockServer::ok(r#"{"choices": [{"message": {"content": "never reached"}}]}"#),
+        ]);
+        let completion = complete_once(
+            settings(Provider::Moonshot, &server.base_url()),
+            backend_channel(),
+        );
+        let error = completion
+            .result
+            .expect_err("a 2 MiB body is not a reply");
+        assert_eq!(error.kind(), "LlmTransportError");
+        assert_eq!(server.request_count(), 1, "an oversize reply is not retried");
+    }
+
+    /// The same bound on an error page, which is only ever read for its
+    /// snippet: the status still decides the retry, and the archive still gets
+    /// the status and the start of the page.
+    #[test]
+    fn an_oversize_error_page_keeps_its_status_and_its_retry() {
+        let page = "e".repeat(2 * 1024 * 1024);
+        let server = MockServer::start(vec![
+            MockServer::status(503, &page),
+            MockServer::status(500, &page),
+            MockServer::ok(r#"{"choices": [{"message": {"content": "never reached"}}]}"#),
+        ]);
+        let completion = complete_once(
+            settings(Provider::Moonshot, &server.base_url()),
+            backend_channel(),
+        );
+        let error = completion.result.expect_err("two 5xx are a failure");
+        assert_eq!(error.kind(), "LlmHttpError");
+        assert_eq!(server.request_count(), 2, "a 5xx is still retried once");
+        assert!(error.detail().contains("500: eee"), "{}", error.detail());
+        assert!(error.detail().len() < 1024, "a snippet, not the page");
+    }
+
+    /// The bound itself: an error page that promises 2 MiB and stalls after
+    /// 1.5 MiB is read only up to [`MAX_RESPONSE_BODY_BYTES`], so its status
+    /// and the start of its page come back at once. Reading the page whole
+    /// would wait out the request timeout and lose the snippet.
+    #[test]
+    fn an_error_page_is_read_no_further_than_the_bound() {
+        let page = "e".repeat(2 * 1024 * 1024);
+        let server = MockServer::start(vec![
+            MockServer::status(400, &page).stall_after(3 * 1024 * 1024 / 2),
+        ]);
+        let completion = complete_once(
+            settings(Provider::Moonshot, &server.base_url()),
+            backend_channel(),
+        );
+        let error = completion.result.expect_err("a 400 is a failure");
+        assert_eq!(error.kind(), "LlmHttpError");
+        assert_eq!(server.request_count(), 1, "a 400 is not retried");
+        assert!(error.detail().contains("400: eee"), "{}", error.detail());
     }
 
     #[test]

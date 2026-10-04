@@ -1135,10 +1135,11 @@ pub struct Round {
     /// drained by the host for `--trace-food`. The game host never reads it, so
     /// it is capped ([`FOOD_LOG_CAP`]) and never grows without bound.
     food_log: Vec<String>,
-    /// Real `now` at the last office-crossing check, so Kindling restock and
-    /// Watch settlement each fire exactly once per crossing, no matter the debug
-    /// time-scale (`WorldClock::offices_crossed`).
-    last_office_now: f64,
+    /// The calendar position (game days) the last office-crossing check reached,
+    /// so Kindling restock and Watch settlement each fire exactly once per
+    /// crossing, no matter the debug time-scale or a change to it between two
+    /// ticks (`WorldClock::offices_crossed_since`).
+    last_office_days: f64,
     people: BTreeMap<ActorId, Townsperson>,
     residents: residents::Residents,
     /// Active deterministic weather diversions.  Kept at round level so the
@@ -3378,7 +3379,7 @@ impl Round {
         // is trading from the first tick — the seed's day may not be a market
         // day, in which case the square stalls simply bind nobody and wait for
         // their weekday. Runs last: it reads the enrolled `people`'s legs to bind.
-        self.last_office_now = now;
+        self.last_office_days = clock.game_days(now);
         self.seed_food(world, nav, &resolver, &mut diagnostics);
         let time = clock.at(now);
         self.bind_vendors(world, time.weekday);
@@ -6638,8 +6639,9 @@ fn poll_gap_game_days(id: &ActorId, epoch: u64) -> f64 {
 }
 
 /// Dispatch the retained Kindling restock and M5 household settlement exactly
-/// once per office crossing since the last poll, no matter the debug time-scale
-/// (`WorldClock::offices_crossed`, the same span the bells ride).
+/// once per office crossing since the last tick, no matter the debug time-scale
+/// (`WorldClock::offices_crossed_since`: the span starts where the last tick got
+/// to on the calendar, so a rate change between ticks cannot move it).
 fn tick_food_economy(
     round: &mut Round,
     world: &mut World,
@@ -6647,8 +6649,8 @@ fn tick_food_economy(
     now: f64,
     nudges: &mut Vec<ActorId>,
 ) {
-    let crossings = clock.offices_crossed(round.last_office_now, now);
-    round.last_office_now = now;
+    let crossings = clock.offices_crossed_since(round.last_office_days, now);
+    round.last_office_days = clock.game_days(now);
     for (instant, office) in crossings {
         let time = clock.at(instant);
         let day = time.day;

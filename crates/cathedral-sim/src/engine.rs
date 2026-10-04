@@ -1088,8 +1088,8 @@ pub struct Engine {
     /// ladder and its services are a 20 Hz behaviour, not a per-frame one
     /// ([`MOVEMENT_TICK_SECONDS`]): running its ~13 whole-cast passes on every
     /// render frame is pure waste at 60 Hz. The dt/office math inside
-    /// [`round::tick`] spans real elapsed time (`round.last_game_days`,
-    /// `round.last_office_now`), so a coarser cadence changes when it runs, never
+    /// [`round::tick`] spans the elapsed game time (`round.last_game_days`,
+    /// `round.last_office_days`), so a coarser cadence changes when it runs, never
     /// how much time it accounts for.
     next_round_tick_at: f64,
     /// The `now` at or after which Layer 2 may scan again
@@ -1268,7 +1268,7 @@ impl Engine {
         // The Night Office reads its bedtimes off the seeded round, so it is
         // built here and not a line earlier (M6). Off by default, and then this
         // is two map lookups and a `None`.
-        let mut night = NightOffice::new(config.night_office, now);
+        let mut night = NightOffice::new(config.night_office, &config.clock, now);
         startup_diagnostics.extend(night.seed(&world, &round));
 
         let mut capabilities = capabilities;

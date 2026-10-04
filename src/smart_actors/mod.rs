@@ -3552,6 +3552,89 @@ mod tests {
         );
     }
 
+    /// D05, the city never pauses: every overlay that takes the keyboard stops
+    /// only the player's own feet. The engine is pumped regardless, so the clock
+    /// the sun and the HUD read keeps turning and the cast keeps walking while
+    /// the player reads, types, rummages, studies the map or sits in settings.
+    #[test]
+    fn the_city_keeps_running_under_every_input_capturing_overlay() {
+        use std::collections::HashMap;
+
+        type IsOpen = fn(&World) -> bool;
+
+        fn run_for(app: &mut App, seconds: f64) {
+            let until = std::time::Instant::now() + Duration::from_secs_f64(seconds);
+            while std::time::Instant::now() < until {
+                app.update();
+                thread::sleep(Duration::from_millis(5));
+            }
+        }
+
+        /// The published game time in days, and every walker's latest pose.
+        fn published(app: &App) -> (f64, HashMap<model::ActorId, Vec3>) {
+            let clock = app.world().resource::<WorldClockState>();
+            let walkers = app
+                .world()
+                .resource::<model::MovementInbox>()
+                .0
+                .iter()
+                .map(|(id, sample)| (id.clone(), sample.position))
+                .collect();
+            (clock.day as f64 + clock.fraction, walkers)
+        }
+
+        let mut app = ready_fake_plugin_app();
+        crate::map::add_overlay_input_for_tests(&mut app);
+        // A Bellday Dayspring: somebody is on their way somewhere.
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while std::time::Instant::now() < deadline
+            && app.world().resource::<model::MovementInbox>().0.is_empty()
+        {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+
+        let overlays: [(&str, KeyCode, KeyCode, IsOpen); 5] = [
+            ("journal", journal_key(), journal_key(), |world: &World| {
+                world.resource::<JournalUiState>().open
+            }),
+            ("chat", KeyCode::Enter, KeyCode::Escape, |world: &World| {
+                world.resource::<chat::ChatInputState>().open
+            }),
+            ("inventory", KeyCode::KeyI, KeyCode::KeyI, |world: &World| {
+                world.resource::<InventoryUiState>().open
+            }),
+            ("map", KeyCode::KeyM, KeyCode::KeyM, |world: &World| {
+                world.resource::<crate::map::MapState>().fullscreen_open
+            }),
+            ("settings", KeyCode::Escape, KeyCode::Escape, |world: &World| {
+                world.resource::<ConfigMenuState>().open
+            }),
+        ];
+        for (name, open, close, is_open) in overlays {
+            tap_overlay_key(&mut app, open);
+            assert!(is_open(app.world()), "the {name} did not open");
+            let (clock_before, walkers_before) = published(&app);
+            run_for(&mut app, 0.6);
+            assert!(is_open(app.world()), "the {name} closed on its own");
+            let (clock_after, walkers_after) = published(&app);
+            assert!(
+                clock_after > clock_before,
+                "the clock stood still under the {name}: {clock_before} -> {clock_after}"
+            );
+            assert!(
+                walkers_after
+                    .iter()
+                    .any(|(id, at)| walkers_before.get(id).is_some_and(|before| before != at)),
+                "nobody walked while the {name} was open ({} walkers before, {} after)",
+                walkers_before.len(),
+                walkers_after.len(),
+            );
+            tap_overlay_key(&mut app, close);
+            assert!(!is_open(app.world()), "the {name} did not close");
+        }
+    }
+
     #[test]
     fn a_word_the_player_started_puts_the_stake_line_on_the_hud() {
         let mut app = ready_fake_plugin_app();

@@ -229,9 +229,11 @@ pub struct NightOffice {
     /// Round is authored content and does not change under us, so neither does
     /// this.
     bedtimes: BTreeMap<ActorId, Office>,
-    /// `now` at the last office-crossing check, so a whole office passing inside
-    /// one frame at 60× still owes its reflections exactly once.
-    last_office_now: f64,
+    /// The calendar position (game days) the last office-crossing check reached,
+    /// so a whole office passing inside one frame at 60× still owes its
+    /// reflections exactly once, and a rate change between two polls neither
+    /// re-rings a bedtime nor skips one.
+    last_office_days: f64,
     /// The `now` at or after which a refused submit may be retried.
     next_attempt_at: f64,
     /// The `now` at or after which a stood-down night says so again. Throttled
@@ -245,14 +247,14 @@ pub struct NightOffice {
 }
 
 impl NightOffice {
-    pub fn new(config: NightOfficeConfig, now: f64) -> Self {
+    pub fn new(config: NightOfficeConfig, clock: &WorldClock, now: f64) -> Self {
         Self {
             config,
             queue: VecDeque::new(),
             in_flight: None,
             last_reflected: BTreeMap::new(),
             bedtimes: BTreeMap::new(),
-            last_office_now: now,
+            last_office_days: clock.game_days(now),
             next_attempt_at: now,
             next_yield_report: now,
             seeded: false,
@@ -434,8 +436,8 @@ impl NightOffice {
         clock: &WorldClock,
         events: &mut Vec<SchedulerEvent>,
     ) {
-        let crossings = clock.offices_crossed(self.last_office_now, now);
-        self.last_office_now = now;
+        let crossings = clock.offices_crossed_since(self.last_office_days, now);
+        self.last_office_days = clock.game_days(now);
         for (instant, office) in crossings {
             let day = clock.at(instant).day;
             if self.config.majors {

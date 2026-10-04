@@ -1,4 +1,4 @@
-Status: Planned (rewritten 2026-10-04, see [PLAN_REVIEW](PLAN_REVIEW.md)). R1 in the revised order.
+Status: Implemented (2026-10-04). All three bugs were confirmed and fixed. The tests fail on the unfixed code and pass on the fix. Sim+backends suite green, host test green, headless drive run rendered (capped worker). Revised as R1, see [PLAN_REVIEW](PLAN_REVIEW.md).
 
 # M1 — Baseline fixes
 

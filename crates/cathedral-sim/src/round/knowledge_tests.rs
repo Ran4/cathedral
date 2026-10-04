@@ -61,7 +61,10 @@ fn a_refused_buyer_does_not_re_queue() {
     let clock = clock_at(Office::HighWick);
     world.current_time = Some(clock.at(0.0));
     coin_word(&mut world, &vendor, &buyer);
+    // What `Round::seed` would set: tick from the opening instant, not from
+    // midnight, or the first tick rings every office since then.
     round.seeded = true;
+    round.last_office_days = clock.game_days(0.0);
     queue(&mut round, &buyer, 0.0);
     let navigation = nav();
     for n in 0..20 {
@@ -119,7 +122,10 @@ fn a_bound_vendor_refuses_and_the_buyer_is_not_starved() {
     let clock = clock_at(Office::HighWick);
     world.current_time = Some(clock.at(0.0));
     coin_word(&mut world, &vendor, &buyer);
+    // What `Round::seed` would set: tick from the opening instant, not from
+    // midnight, or the first tick rings every office since then.
     round.seeded = true;
+    round.last_office_days = clock.game_days(0.0);
     queue(&mut round, &buyer, 0.0);
     // The actual tick services the queue and returns no paid-turn nudge.
     let now = PURCHASE_SECONDS + 0.1;

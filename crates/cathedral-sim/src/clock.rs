@@ -426,10 +426,24 @@ impl WorldClock {
     /// high debug scale a whole office can pass inside one frame, and a paused
     /// game can never ring one twice.
     pub fn offices_crossed(self, previous: f64, now: f64) -> Vec<(f64, Office)> {
-        if now <= previous || self.scale <= 0.0 {
+        if now <= previous {
             return Vec::new();
         }
-        let t0 = self.total_days(previous);
+        self.offices_crossed_since(self.total_days(previous), now)
+    }
+
+    /// [`offices_crossed`](Self::offices_crossed) with the start of the span
+    /// given as a calendar position — [`game_days`](Self::game_days) — instead
+    /// of a host `now`. A consumer that only checks now and then (the round's
+    /// 20 Hz tick, the Night Office) must remember where it got to *on the
+    /// calendar*: an old `now` re-read after a `T`-key rate change lands on a
+    /// different day position, so an office just crossed would ring again or
+    /// one about to ring would be skipped.
+    pub fn offices_crossed_since(self, previous_days: f64, now: f64) -> Vec<(f64, Office)> {
+        if self.scale <= 0.0 {
+            return Vec::new();
+        }
+        let t0 = previous_days;
         let t1 = self.total_days(now);
         let mut crossings: Vec<(f64, Office)> = Vec::new();
         for office in Office::ALL {

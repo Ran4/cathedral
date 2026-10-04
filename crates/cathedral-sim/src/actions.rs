@@ -3644,6 +3644,14 @@ pub(crate) fn take_into_charge(
     let station_name = station.name.clone();
     let station_place = station.place_id.clone();
     let station_point = station.point;
+    // Priced before anything is recorded: a seizure the escort cannot walk is
+    // refused whole, so the `NoRoute` the model reads and the world agree.
+    let budget_seconds = route_budget(
+        world,
+        officer_id,
+        station_point,
+        format!("no way through the streets leads to {station_name} from where you stand"),
+    )?;
 
     // The action layer has no clock, so `seized_at` is zero here exactly as a
     // clock-less world raises an undated notice. The one stamp that is *read*
@@ -3666,12 +3674,6 @@ pub(crate) fn take_into_charge(
     // required — this walk is the sim's decision, not the model's, and an
     // officer who cannot say where they are taking somebody is worse than one
     // who learns the name on the way.
-    let budget_seconds = route_budget(
-        world,
-        officer_id,
-        station_point,
-        format!("no way through the streets leads to {station_name} from where you stand"),
-    )?;
     let officer = world
         .characters
         .get_mut(officer_id)

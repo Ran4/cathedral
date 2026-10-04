@@ -6917,6 +6917,46 @@ fn a_failed_watch_handler_is_left_incomplete_and_reported_next_watch() {
     world.assert_invariants();
 }
 
+/// The `T` key between two round ticks (`M1_live_time_and_transactions.md` §1).
+/// The Kindling rings three game hours after the Watch: 45 s in at 10×, 7.5 s
+/// at 60×. Whatever the rate does in between, the stalls are restocked for it
+/// exactly once — a Kindling just rung is not rung again because the faster
+/// rate reads the last tick as further back, and one about to ring is not lost
+/// because the slower rate reads the last tick as already past it.
+#[test]
+fn a_time_scale_change_between_ticks_restocks_exactly_once() {
+    let nav = nav();
+    let restocks = |round: &mut Round| {
+        round
+            .drain_food_log()
+            .iter()
+            .filter(|line| line.starts_with("Kindling restock, day 0"))
+            .count()
+    };
+
+    // 10× → 60× a hair after the tick that rang the Kindling.
+    let ten = clock_at(Office::Watch).with_scale(0.0, 10.0);
+    let mut world = base_world();
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &ten);
+    round.drain_food_log(); // the seed lays in the morning's stock itself
+    beat(&mut round, &mut world, &nav, &ten, 45.01, 0.05);
+    let sixty = ten.with_scale(45.03, 60.0);
+    beat(&mut round, &mut world, &nav, &sixty, 45.1, 0.05);
+    assert_eq!(restocks(&mut round), 1, "10× → 60× rang the Kindling twice");
+
+    // 60× → 1× a hair after the Kindling, but before the round ticked it.
+    let sixty = clock_at(Office::Watch).with_scale(0.0, 60.0);
+    let mut world = base_world();
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &sixty);
+    round.drain_food_log();
+    beat(&mut round, &mut world, &nav, &sixty, 7.49, 0.05);
+    let one = sixty.with_scale(7.52, 1.0);
+    beat(&mut round, &mut world, &nav, &one, 7.55, 0.05);
+    assert_eq!(restocks(&mut round), 1, "60× → 1× skipped the Kindling");
+}
+
 fn active_production_fixture(work_minutes: u32) -> (World, Round, ActorId, WorldClock) {
     let producer = ActorId::from_raw("m0001");
     let mill = Vec3::new(12.0, WALK_Y, 9.0);

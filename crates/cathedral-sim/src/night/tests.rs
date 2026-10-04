@@ -149,7 +149,7 @@ fn world_with_cast() -> World {
 }
 
 fn office(enabled_tiers: NightOfficeConfig, world: &World, now: f64) -> NightOffice {
-    let mut night = NightOffice::new(enabled_tiers, now);
+    let mut night = NightOffice::new(enabled_tiers, &clock(), now);
     night.seed(world, &Round::new());
     night
 }
@@ -381,6 +381,36 @@ fn nobody_reflects_twice_in_one_night() {
         );
     }
     assert_eq!(night.owed(), 3, "one Major and two wards, once each");
+}
+
+/// The `T` key from 60× to 1× on the frame that carries a Major across their
+/// bedtime (`M1_live_time_and_transactions.md` §1). The engine applies the
+/// change before the night rings, so the lane must resume from where it got to
+/// on the calendar: the previous frame's `now`, re-read at 1×, already lies past
+/// the curfew, and the reflection it owes would never be queued.
+#[test]
+fn a_time_scale_change_on_the_bedtime_frame_still_owes_the_reflection() {
+    let mut world = world_with_cast();
+    let mut round = Round::new();
+    let majors_only = NightOfficeConfig {
+        enabled: true,
+        majors: true,
+        wards: false,
+        ambients: false,
+    };
+    let mut night = office(majors_only, &world, 0.0);
+    let fast = clock().with_scale(0.0, 60.0);
+    let mut events = Vec::new();
+
+    let frame = 1.0 / 60.0;
+    let before = at_office(&clock(), Office::Snuffing) / 60.0 - 0.5 * frame;
+    night.ring(before, &mut world, &mut round, &fast, &mut events);
+    assert_eq!(night.owed(), 0, "the curfew has not rung yet");
+
+    let now = before + frame;
+    let slow = fast.with_scale(now, 1.0);
+    night.ring(now, &mut world, &mut round, &slow, &mut events);
+    assert_eq!(night.owed(), 1, "the Major's bedtime rang across the change");
 }
 
 /// A backend with no second slot refuses, and the reflection waits for its own
@@ -686,7 +716,7 @@ fn a_reflection_that_lands_after_the_pace_deadline_still_yields_to_the_stage() {
 #[test]
 fn the_lane_is_inert_until_the_host_asks_for_it() {
     let world = world_with_cast();
-    let mut night = NightOffice::new(NightOfficeConfig::default(), 0.0);
+    let mut night = NightOffice::new(NightOfficeConfig::default(), &clock(), 0.0);
     assert!(night.seed(&world, &Round::new()).is_none());
     assert!(!night.enabled());
     assert!(!night.wants_slot(1e6));
