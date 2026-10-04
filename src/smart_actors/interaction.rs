@@ -294,6 +294,11 @@ pub struct PlayerSpatialState {
     last_position: Option<Vec3>,
     last_yaw: Option<f32>,
     last_background_send: f64,
+    /// Where a restored save put the player, and until when to wait for the
+    /// controller to arrive there (D06). Until it does, the game reports no
+    /// position: the spawn it started at would walk the saved player straight
+    /// back to it.
+    restored_at: Option<(Vec3, f64)>,
 }
 
 impl Default for PlayerSpatialState {
@@ -303,6 +308,7 @@ impl Default for PlayerSpatialState {
             last_position: None,
             last_yaw: None,
             last_background_send: f64::NEG_INFINITY,
+            restored_at: None,
         }
     }
 }
@@ -335,6 +341,12 @@ impl PlayerSpatialState {
     pub fn mark_hello_position(&mut self, position: Vec3) -> u64 {
         self.last_position = Some(position);
         self.sequence
+    }
+
+    /// Hold position reports until the controller reaches `position`, or for
+    /// two seconds at most.
+    pub fn await_restored_position(&mut self, position: Vec3, now: f64) {
+        self.restored_at = Some((position, now + 2.0));
     }
 
     pub fn retry_latest_position(&mut self) {
@@ -433,6 +445,12 @@ pub fn sync_player_position(
     let position = player.translation();
     let facing_yaw = controller.yaw();
     let now = time.elapsed_secs_f64();
+    if let Some((target, until)) = spatial.restored_at {
+        if position.distance(target) > 0.5 && now < until {
+            return;
+        }
+        spatial.restored_at = None;
+    }
     if !spatial.spatial_update_needed(position, facing_yaw)
         || now - spatial.last_background_send < f64::from(POSITION_UPDATE_HZ.recip())
     {

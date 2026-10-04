@@ -358,7 +358,7 @@ pub fn build_world(seed: &WorldSeed, config: WorldConfig) -> World {
 /// the default. `f64::clamp` would pass NaN straight through, and a NaN cone is
 /// silent poison: `sees()` compares against `cos(NaN)`, which is false for every
 /// observer, so no sound would ever be attributed again.
-fn view_cone_degrees(configured: f64) -> f64 {
+pub(crate) fn view_cone_degrees(configured: f64) -> f64 {
     if !configured.is_finite() {
         return DEFAULT_VIEW_CONE_DEGREES;
     }

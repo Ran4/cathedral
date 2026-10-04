@@ -157,7 +157,7 @@ impl MarkKindSwitches {
 }
 
 /// Which handle a mark hangs on. Never a free coordinate — see the module doc.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum MarkAnchor {
     /// That person's home door. Resolves through
     /// [`PlaceRegistry::home_of`](crate::places::PlaceRegistry::home_of) —
@@ -187,7 +187,7 @@ pub enum AnchorSlot {
 }
 
 /// One live mark.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Mark {
     pub kind: MarkKind,
     pub anchor: MarkAnchor,
@@ -237,12 +237,13 @@ pub struct AnchorSite {
 /// The live chalk. A `BTreeMap` so iteration order — and therefore every
 /// prompt bullet, every snapshot and every eviction — is identical on a
 /// replay.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Marks {
     live: BTreeMap<MarkId, Mark>,
     next_id: u64,
     /// The last game-day the decay sweep ran, so the sweep can both gate
     /// itself to once a game-minute and charge the exact elapsed span.
+    #[serde(with = "crate::checkpoint::never")]
     last_sweep_game_days: f64,
     /// Multiplies elapsed time in the decay. `1.0` in the game; a test or
     /// `config.ron` raises it to weather a wall in seconds.
@@ -250,6 +251,7 @@ pub struct Marks {
     /// The last game-day the ward's chalking beat ran, so a writer that is
     /// *called* every poll only *draws* once a day. See
     /// [`take_daily_beat`](Self::take_daily_beat).
+    #[serde(with = "crate::checkpoint::never")]
     last_beat_game_days: f64,
 }
 

@@ -9,11 +9,17 @@ base64 = "0.22.1"
 cathedral-backends = { path = "crates/cathedral-backends" }
 cathedral-sim = { path = "crates/cathedral-sim" }
 crossbeam-channel = "0.5.15"
-glam = "0.32"
+# `serde`: checkpoints carry positions (`Vec3`) directly. Bevy turns this on too,
+# but only by feature unification, which `-p cathedral-sim` builds do not get.
+glam = { version = "0.32", features = ["serde"] }
 hound = "3.5.1"
 minijinja = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# `rc`: checkpoints serialize the `Arc<BTreeMap>` stores (knowledge, household doors)
+# by value; nothing relies on their pointer identity.
+serde = { version = "1", features = ["derive", "rc"] }
+# `float_roundtrip`: a checkpoint must decode to the exact f64 it encoded, or a
+# restored city drifts from the one that was saved.
+serde_json = { version = "1", features = ["float_roundtrip"] }
 toml = "0.9"
 
 [package]

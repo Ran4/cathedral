@@ -1,4 +1,4 @@
-Status: Planned (rewritten 2026-10-04, see [PLAN_REVIEW](PLAN_REVIEW.md)). R2 in the revised order.
+Status: Implemented (2026-10-04). Serde is derived on the real types; restore never seeds anything. Lockstep, negative and round-trip tests are in `crates/cathedral-backends/tests/checkpoints.rs`. F6 quicksaves, `CATHEDRAL_LOAD=<slot>` boots from a slot, and drive `save <slot>` saves. Capture takes ~5–70 ms on the main thread. Encoding takes ~2–4 s on the writer thread under the 40% cap. Files are ~2 MB (1,000 extra residents). Revised as R2, see [PLAN_REVIEW](PLAN_REVIEW.md); load during play is R3.
 
 # M2 — Simulation checkpoints and boot-from-save
 

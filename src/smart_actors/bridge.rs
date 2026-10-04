@@ -21,6 +21,7 @@ use std::{
 };
 
 use bevy::prelude::Resource;
+use cathedral_backends::save::HostSave;
 use cathedral_sim::EngineMessage;
 use crossbeam_channel::{Receiver, Sender, TryRecvError, TrySendError};
 use serde::{Deserialize, Serialize};
@@ -304,6 +305,13 @@ pub enum BridgeCommand {
         request_id: String,
         backend: TtsBackend,
     },
+    /// Capture the city into a save slot right after the next poll (D06). Not
+    /// an engine command: the pump takes the checkpoint itself and hands it to
+    /// the save writer, so no disk work happens in the pump.
+    Save {
+        slot: String,
+        host: HostSave,
+    },
 }
 
 impl BridgeCommand {
@@ -327,6 +335,17 @@ pub enum BridgeEvent {
     /// `EngineMessage::Status` with `state: "degraded"`, and only that subsystem
     /// goes dark.
     Disconnected(String),
+    /// The engine started from a save slot (`CATHEDRAL_LOAD`) instead of a
+    /// fresh world. Sent before its first message: the player belongs where
+    /// the save left them before the game reports a position of its own.
+    Restored {
+        position_m: Position,
+        facing_yaw: f32,
+        pitch: f32,
+        flying: bool,
+    },
+    /// A save slot was written, or why not, in words for the HUD toast.
+    Saved(Result<String, String>),
 }
 
 /// Non-blocking command endpoint plus the session's private audio directory.

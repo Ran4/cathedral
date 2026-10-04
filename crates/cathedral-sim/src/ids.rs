@@ -106,7 +106,8 @@ id_newtype!(FactId, "a proposition the city repeats");
 id_newtype!(AreaId, "a named area");
 
 /// Correlates a cognition submission with its completion.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct RequestId(pub u64);
 
 /// One chalk mark ([`crate::marks`]). Counter-allocated like a ward notice's
@@ -121,15 +122,21 @@ pub struct MarkId(pub u64);
 
 /// A dense handle for one live fact ([`crate::knowledge`]). Counter-allocated
 /// like [`MarkId`] rather than made by `id_newtype!`: nobody authors it, it is
-/// never rendered, and it is never serialised. `Copy`, so a `BTreeMap` keyed on
-/// `(PlanningWard, FactKey)` can be `range`d instead of filtered.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+/// never rendered, and only a checkpoint serialises it. `Copy`, so a `BTreeMap`
+/// keyed on `(PlanningWard, FactKey)` can be `range`d instead of filtered.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
+#[serde(transparent)]
 pub struct FactKey(pub u32);
 
 /// A dense handle for one entry of [`crate::areas::AreaMap::areas`], by index.
 /// Interned so a [`crate::knowledge::FactView`] costs two bytes for a place
 /// instead of a `String`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
+#[serde(transparent)]
 pub struct AreaKey(pub u16);
 
 impl fmt::Display for MarkId {

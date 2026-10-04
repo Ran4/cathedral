@@ -1,4 +1,4 @@
-Status: GDD/implementation plan delivered; plan reviewed and trimmed 2026-10-04 ([PLAN_REVIEW](implementation/plan/PLAN_REVIEW.md)); M0 closed; no quest gameplay shipped.
+Status: GDD/implementation plan delivered; plan reviewed and trimmed 2026-10-04 ([PLAN_REVIEW](implementation/plan/PLAN_REVIEW.md)); M0 closed, M1–M2 implemented (2026-10-04); no quest gameplay shipped yet.
 
 # An Alibi in Stone
 

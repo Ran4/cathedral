@@ -20,7 +20,8 @@ use crate::world::World;
 #[derive(Clone, PartialEq, Eq)]
 pub struct FactSource(Provenance);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Serde lives on the private payload only, and only [`save`] reaches it.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 enum Provenance {
     /// An author bound it to nothing; it is simply so.
     Authored,
@@ -37,6 +38,24 @@ enum Provenance {
     QuestPhase { quest: String, phase: u8 },
     /// Minted from an event and never re-checked.
     Event { kind: String, sequence: i64 },
+}
+
+/// `#[serde(with)]` for `Fact::source`, and for nothing else: a checkpoint has
+/// to carry why a fact is true, but `FactSource` itself still implements no
+/// serde trait, so no projection, log or prompt can reach for one. Nothing reads
+/// a checkpoint except `Engine::restore`.
+pub(super) mod save {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::{FactSource, Provenance};
+
+    pub fn serialize<S: Serializer>(source: &FactSource, serializer: S) -> Result<S::Ok, S::Error> {
+        source.0.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<FactSource, D::Error> {
+        Provenance::deserialize(deserializer).map(FactSource)
+    }
 }
 
 impl fmt::Debug for FactSource {

@@ -15,6 +15,7 @@ pub mod appearance;
 pub mod areas;
 pub mod attention;
 pub mod character;
+pub mod checkpoint;
 pub mod clock;
 pub mod conversation;
 pub mod crowd;
@@ -78,9 +79,12 @@ pub use crowd::{
     extra_ambient_sheets, generate_ambient, spread_over_walkable,
 };
 pub use dogs::{DOG_SETTLED_MPS, DOG_TROT_MPS, Dog, DogCoat, DogView};
+pub use checkpoint::{
+    CHECKPOINT_VERSION, Checkpoint, CheckpointLabel, RestoreError, geometry_fingerprint,
+};
 pub use engine::{
     ActorMotion, Capabilities, CivicRope, Engine, EngineCommand, EngineConfig, EngineMessage,
-    JournalEntry, WardHeatRow,
+    EngineState, JournalEntry, WardHeatRow,
 };
 pub use error::{
     ActionError, ActionErrorCode, CommandError, CommandErrorCode, EngineInitError, PromptError,

@@ -38,6 +38,9 @@ use crate::{
         BodySlot, Character, Control, GutEntry, IntentTarget, PocketedUnit, StatusKind,
         TravelIntent,
     },
+    checkpoint::{
+        CHECKPOINT_VERSION, Checkpoint, CheckpointLabel, RestoreError, geometry_fingerprint,
+    },
     clock::{Office, Weekday, WorldClock, stroke_times},
     custody,
     error::{CommandError, CommandErrorCode, EngineInitError},
@@ -1133,6 +1136,316 @@ pub struct Engine {
     last_journal_at: f64,
 }
 
+/// The part of an [`Engine`] a checkpoint carries: its fields minus the
+/// services, the session's transcript and speech router, and the publication
+/// caches a restored engine rebuilds by republishing (see
+/// [`Engine::checkpoint`]).
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct EngineState {
+    world: World,
+    scheduler: NpcScheduler,
+    floor: ConversationFloor,
+    #[serde(with = "crate::checkpoint::never")]
+    last_player_sound_at: f64,
+    conversation: crate::conversation::Conversation,
+    npc_exchanges: WarmExchanges,
+    novelty: Novelty,
+    clock: WorldClock,
+    weather: WeatherTimeline,
+    last_weather_days: f64,
+    last_weather_sample: WeatherSample,
+    last_clock_now: f64,
+    bell_strokes: VecDeque<f64>,
+    bell_seq: u64,
+    movement_now: f64,
+    round: Round,
+    night: NightOffice,
+    next_round_tick_at: f64,
+    next_stage_hop_at: f64,
+    #[serde(with = "crate::checkpoint::never")]
+    next_player_pollen_game_days: f64,
+    #[serde(with = "crate::checkpoint::pairs")]
+    door_shut_until: BTreeMap<(ActorId, ActorId), f64>,
+}
+
+impl Engine {
+    /// Capture the whole simulation as it stands (D06), between two polls.
+    /// Read-only: two captures with no poll between them are the same value.
+    ///
+    /// The destructure names every field on purpose — a new one does not
+    /// compile until somebody decides whether a save carries it.
+    pub fn checkpoint(&self, now: f64) -> Checkpoint {
+        let Engine {
+            world,
+            // The session's, not the world's: the run transcript, the speech
+            // router's half-heard audio, the services and what they can do, and
+            // the runtime voice choice, which the host persists itself.
+            transcript: _,
+            speech_router: _,
+            env: _,
+            cognition: _,
+            transcription: _,
+            tts: _,
+            sight: _,
+            capabilities: _,
+            tts_selected: _,
+            config,
+            scheduler,
+            floor,
+            last_player_sound_at,
+            conversation,
+            npc_exchanges,
+            novelty,
+            clock,
+            weather,
+            last_weather_days,
+            last_weather_sample,
+            last_clock_now,
+            bell_strokes,
+            bell_seq,
+            movement_now,
+            round,
+            night,
+            next_round_tick_at,
+            next_stage_hop_at,
+            next_player_pollen_game_days,
+            door_shut_until,
+            // Publication caches: a restored engine starts them empty, so its
+            // first poll republishes `Ready` and every hot channel.
+            last_snapshot_revision: _,
+            lamp_revision_sent: _,
+            dogs_published: _,
+            startup_diagnostics: _,
+            ready_emitted: _,
+            last_law_standing: _,
+            last_chalk_standing: _,
+            last_ward_heat: _,
+            last_journal: _,
+            last_journal_receipts: _,
+            last_journal_at: _,
+        } = self;
+        let time = clock.at(now);
+        let area = world
+            .characters
+            .get(&config.player_id)
+            .and_then(|player| world.area_map.containing_area(player.position_m()))
+            .map(|area| area.label.clone());
+        Checkpoint {
+            version: CHECKPOINT_VERSION,
+            geometry: geometry_fingerprint(config.nav.as_deref(), &world.area_map, &config.shelters),
+            now,
+            label: CheckpointLabel {
+                day: time.day,
+                office: time.office,
+                area,
+            },
+            state: EngineState {
+                world: world.clone(),
+                scheduler: scheduler.clone(),
+                floor: floor.clone(),
+                last_player_sound_at: *last_player_sound_at,
+                conversation: conversation.clone(),
+                npc_exchanges: npc_exchanges.clone(),
+                novelty: novelty.clone(),
+                clock: *clock,
+                weather: weather.clone(),
+                last_weather_days: *last_weather_days,
+                last_weather_sample: *last_weather_sample,
+                last_clock_now: *last_clock_now,
+                bell_strokes: bell_strokes.clone(),
+                bell_seq: *bell_seq,
+                movement_now: *movement_now,
+                round: round.clone(),
+                night: night.clone(),
+                next_round_tick_at: *next_round_tick_at,
+                next_stage_hop_at: *next_stage_hop_at,
+                next_player_pollen_game_days: *next_player_pollen_game_days,
+                door_shut_until: door_shut_until.clone(),
+            },
+        }
+    }
+
+    /// Continue a captured simulation (D06) under this run's config, assets
+    /// and services. The arguments are [`Self::new`]'s minus the seed and the
+    /// spawn: the world is the checkpoint's, and nothing is seeded (D02).
+    ///
+    /// The next poll's `now` should continue from [`Checkpoint::now`]; the
+    /// host adds one offset to its own clock rather than rebasing anything
+    /// here. The first poll republishes `Ready` and every hot channel, exactly
+    /// as at startup. On `Err` nothing has been built and the caller keeps the
+    /// engine it had.
+    #[allow(clippy::too_many_arguments)]
+    pub fn restore(
+        checkpoint: Checkpoint,
+        config: EngineConfig,
+        area_map: AreaMap,
+        catalog: SoundCatalog,
+        env: PromptEnv,
+        cognition: Box<dyn Cognition>,
+        transcription: Box<dyn Transcription>,
+        tts: Box<dyn Tts>,
+        sight: Box<dyn Sight>,
+        capabilities: Capabilities,
+    ) -> Result<Self, RestoreError> {
+        checkpoint.verify(&config, &area_map)?;
+        let EngineState {
+            mut world,
+            mut scheduler,
+            mut floor,
+            last_player_sound_at,
+            conversation,
+            npc_exchanges,
+            novelty,
+            clock,
+            mut weather,
+            last_weather_days,
+            last_weather_sample,
+            last_clock_now,
+            bell_strokes,
+            bell_seq,
+            movement_now,
+            round,
+            mut night,
+            next_round_tick_at,
+            next_stage_hop_at,
+            next_player_pollen_game_days,
+            door_shut_until,
+        } = checkpoint.state;
+
+        // Rebind what the checkpoint skipped: the assets, then the switches.
+        world.area_map = area_map;
+        world.sound_catalog = catalog;
+        world.sounds_enabled = config.sounds_enabled;
+        world.view_cone_degrees = crate::seed::view_cone_degrees(config.view_cone_degrees);
+        world.nav = config.nav.clone();
+        world.shelters = config.shelters.clone();
+        world.places.reindex();
+        let mut startup_diagnostics = Vec::new();
+        bind_world(&mut world, &config, &mut startup_diagnostics);
+        // The saved schedule continues, but whether there is weather at all is
+        // this run's ablation switch; the first poll publishes the result.
+        weather.set_enabled(config.weather.enabled);
+        scheduler.retune(config.turn_delay_seconds, config.maximum_backoff_seconds);
+
+        let config = settle(config);
+        let tts_selected = config.tts_selected;
+        let mut capabilities = capabilities;
+        capabilities.tts_selected = tts_selected;
+        let mut cognition = cognition;
+        scheduler.resume(&mut world, cognition.as_mut(), capabilities.llm);
+        night.resume(config.night_office);
+        floor.forget_presentations();
+
+        Ok(Self {
+            world,
+            transcript: Vec::new(),
+            scheduler,
+            floor,
+            speech_router: SpeechRouter::new(config.stt_stream_grace_seconds),
+            env,
+            cognition,
+            transcription,
+            tts: warm(tts, tts_selected),
+            sight,
+            config,
+            capabilities,
+            tts_selected,
+            last_snapshot_revision: 0,
+            last_player_sound_at,
+            conversation,
+            npc_exchanges,
+            novelty,
+            clock,
+            weather,
+            last_weather_days,
+            last_weather_sample,
+            last_clock_now,
+            bell_strokes,
+            bell_seq,
+            movement_now,
+            round,
+            night,
+            next_round_tick_at,
+            next_stage_hop_at,
+            next_player_pollen_game_days,
+            lamp_revision_sent: 0,
+            dogs_published: false,
+            startup_diagnostics,
+            ready_emitted: false,
+            last_law_standing: None,
+            last_chalk_standing: None,
+            last_ward_heat: None,
+            door_shut_until,
+            last_journal: None,
+            last_journal_receipts: 0,
+            last_journal_at: f64::NEG_INFINITY,
+        })
+    }
+}
+
+impl Checkpoint {
+    /// Whether this checkpoint can be installed under `config` on `area_map`:
+    /// the version, the geometry, and a world that is whole — the player
+    /// present, every position finite, every item and custody reference
+    /// resolving, and [`World::check_invariants`] holding. [`Engine::restore`]
+    /// asks first; a host may ask earlier, before it gives up its services.
+    pub fn verify(&self, config: &EngineConfig, area_map: &AreaMap) -> Result<(), RestoreError> {
+        if self.version != CHECKPOINT_VERSION {
+            return Err(RestoreError::Version {
+                found: self.version,
+            });
+        }
+        let current = geometry_fingerprint(config.nav.as_deref(), area_map, &config.shelters);
+        if self.geometry != current {
+            return Err(RestoreError::Geometry {
+                saved: self.geometry,
+                current,
+            });
+        }
+        self.whole(&config.player_id).map_err(RestoreError::Invalid)
+    }
+
+    fn whole(&self, player_id: &ActorId) -> Result<(), String> {
+        let world = &self.state.world;
+        if !self.now.is_finite() {
+            return Err("the saved time is not finite".to_string());
+        }
+        if !world.characters.contains_key(player_id) {
+            return Err(format!("the player '{player_id}' is missing"));
+        }
+        if world.roster.len() != world.characters.len()
+            || world.roster.iter().any(|id| !world.characters.contains_key(id))
+        {
+            return Err("the roster does not match the characters".to_string());
+        }
+        for (id, character) in &world.characters {
+            let mut walking = character.state.movement.iter().flat_map(|walk| &walk.path);
+            if character.id() != id
+                || !character.position_m().is_finite()
+                || !character.facing_yaw().is_finite()
+                || walking.any(|point| !point.is_finite())
+            {
+                return Err(format!("{id} is not where a body can be"));
+            }
+        }
+        for dog in &world.dogs {
+            if !dog.position_m.is_finite() || !dog.base.is_finite() || !dog.facing_yaw.is_finite() {
+                return Err(format!("the dog {} is not where a body can be", dog.id));
+            }
+        }
+        for (prisoner, record) in world.custody.iter() {
+            let known = |id: &ActorId| world.characters.contains_key(id);
+            if !known(prisoner)
+                || record.officer.as_ref().is_some_and(|id| !known(id))
+                || record.holders.iter().any(|id| !known(id))
+            {
+                return Err(format!("the custody of {prisoner} names somebody missing"));
+            }
+        }
+        world.check_invariants()
+    }
+}
+
 impl Engine {
     /// Build the world from `seed`, put the player at `player_spawn`, and start
     /// the turn stream if there is any cognition to run it with.
@@ -1214,48 +1527,17 @@ impl Engine {
             world.dogs = crate::dogs::seed_pack(nav);
         }
 
-        // The chalk (`features/implemented/chalking_the_walls.md`). Nothing to seed — the
-        // walls start bare and stay bare until a hand writes — so this is only
-        // the ablation switch and the decay dial reaching the world.
-        world.marks_enabled = config.marks_enabled;
-        world.mark_kinds = config.mark_kinds;
-        world.marks.decay_scale = config.marks_decay_scale;
-
-        // The knowledge layer (`features/knowledge_and_rumor/`). The catalog is
-        // embedded, so this is the switch, any host-supplied quest packs, and
-        // the one seeding pass. Facts whose cast this world does not have are
-        // skipped with a diagnostic, which is what keeps the demo seed, every
-        // hermetic test and the 22 frozen fixtures byte-identical.
         // Publish the clock before anything reads it. `ring_offices` does this on
         // every poll, but the first poll comes after seeding, and a decaying fact
         // seeded into a clock-less world is news that never cools. A plain field
         // write: it must **not** bump `world_revision`.
         world.current_time = Some(config.clock.at(now));
-        world.knowledge_enabled = config.knowledge_enabled;
-        // Which named areas a garbled place may become, off the **live** map — the
-        // catalog is an `include_str!` asset with one lifecycle and must not
-        // acquire a world-dependent one. Empty in every world with an empty
-        // `AreaMap`, so a place garble is a no-op in the frozen fixtures.
-        world.area_adjacency = Arc::new(crate::knowledge::AreaAdjacency::build(&world.area_map));
-        // The two measurement levers, and the only place either is read into the
-        // world. `pollen_flat` replaces the table; `pollen_no_salience` deletes the
-        // factor from the roll expression — and the second is the baseline the
-        // first must reproduce, so they are deliberately not one flag.
-        world.pollen_no_salience = config.pollen_no_salience;
-        if config.pollen_flat {
-            world.salience = Arc::new(crate::knowledge::SalienceTable::flat());
-        }
+        bind_world(&mut world, &config, &mut startup_diagnostics);
+        // The knowledge layer's one seeding pass. Facts whose cast this world
+        // does not have are skipped with a diagnostic, which is what keeps the
+        // demo seed, every hermetic test and the 22 frozen fixtures
+        // byte-identical.
         if config.knowledge_enabled {
-            let mut catalog = (*world.fact_catalog).clone();
-            for pack in &config.fact_packs {
-                match catalog.extend_from_json(pack) {
-                    Ok(added) => startup_diagnostics
-                        .push(format!("[knowledge] a fact pack added {added} rows")),
-                    Err(error) => startup_diagnostics
-                        .push(format!("[knowledge] a fact pack was refused: {error}")),
-                }
-            }
-            world.fact_catalog = Arc::new(catalog);
             // `seed` borrows the catalog while it mutates the world, so the
             // `Arc` is cloned first — a refcount bump, not a copy.
             let catalog = Arc::clone(&world.fact_catalog);
@@ -1296,37 +1578,19 @@ impl Engine {
             scheduler.start(now);
         }
 
-        let sound_cooldown_seconds = config
-            .sound_cooldown_seconds
-            .clamp(0.0, MAX_SOUND_COOLDOWN_SECONDS);
-        let stt_stream_grace_seconds = config
-            .stt_stream_grace_seconds
-            .max(MIN_STT_STREAM_GRACE_SECONDS);
+        let config = settle(config);
         let tts_selected = config.tts_selected;
-        let config = EngineConfig {
-            sound_cooldown_seconds,
-            stt_stream_grace_seconds,
-            ..config
-        };
         // Captured before `config` is moved into the struct below (`WorldClock`
         // is `Copy`); the live clock starts as the configured one.
         let clock = config.clock;
-
-        // A run that *starts* on the local voice warms it now, not inside the
-        // cast's first line (`server.py:594-599`). Without this the Pocket model
-        // load lands in the first `submit`, and a slow enough cold start can
-        // outlast the floor's failsafe deadline and drop the line's audio.
-        let mut tts = tts;
-        if tts_selected == TtsBackendKind::Local {
-            tts.warm(TtsBackendKind::Local);
-        }
+        let tts = warm(tts, tts_selected);
 
         Ok(Self {
             world,
             transcript: Vec::new(),
             scheduler,
             floor: ConversationFloor::new(),
-            speech_router: SpeechRouter::new(stt_stream_grace_seconds),
+            speech_router: SpeechRouter::new(config.stt_stream_grace_seconds),
             env,
             cognition,
             transcription,
@@ -5124,6 +5388,73 @@ fn flush_world_event(event: &DomainEvent, out: &mut Vec<EngineMessage>) {
         quantity: event.quantity,
         recipient_ids: event.recipient_ids.clone(),
     });
+}
+
+/// The config- and asset-derived half of a world: the ablation switches, the
+/// measurement levers, the area adjacency and any host-supplied fact packs.
+/// Applied once by [`Engine::new`] and again by [`Engine::restore`], since a
+/// checkpoint carries none of it.
+fn bind_world(world: &mut World, config: &EngineConfig, diagnostics: &mut Vec<String>) {
+    // The chalk (`features/implemented/chalking_the_walls.md`). Nothing to seed — the
+    // walls start bare and stay bare until a hand writes — so this is only
+    // the ablation switch and the decay dial reaching the world.
+    world.marks_enabled = config.marks_enabled;
+    world.mark_kinds = config.mark_kinds;
+    world.marks.decay_scale = config.marks_decay_scale;
+    // The knowledge layer (`features/knowledge_and_rumor/`). The catalog is
+    // embedded, so this is the switch and any host-supplied quest packs.
+    world.knowledge_enabled = config.knowledge_enabled;
+    // Which named areas a garbled place may become, off the **live** map — the
+    // catalog is an `include_str!` asset with one lifecycle and must not
+    // acquire a world-dependent one. Empty in every world with an empty
+    // `AreaMap`, so a place garble is a no-op in the frozen fixtures.
+    world.area_adjacency = Arc::new(crate::knowledge::AreaAdjacency::build(&world.area_map));
+    // The two measurement levers, and the only place either is read into the
+    // world. `pollen_flat` replaces the table; `pollen_no_salience` deletes the
+    // factor from the roll expression — and the second is the baseline the
+    // first must reproduce, so they are deliberately not one flag.
+    world.pollen_no_salience = config.pollen_no_salience;
+    if config.pollen_flat {
+        world.salience = Arc::new(crate::knowledge::SalienceTable::flat());
+    }
+    if config.knowledge_enabled {
+        let mut catalog = (*world.fact_catalog).clone();
+        for pack in &config.fact_packs {
+            match catalog.extend_from_json(pack) {
+                Ok(added) => {
+                    diagnostics.push(format!("[knowledge] a fact pack added {added} rows"))
+                }
+                Err(error) => {
+                    diagnostics.push(format!("[knowledge] a fact pack was refused: {error}"))
+                }
+            }
+        }
+        world.fact_catalog = Arc::new(catalog);
+    }
+}
+
+/// The config as the engine keeps it, with its two clamps applied.
+fn settle(config: EngineConfig) -> EngineConfig {
+    EngineConfig {
+        sound_cooldown_seconds: config
+            .sound_cooldown_seconds
+            .clamp(0.0, MAX_SOUND_COOLDOWN_SECONDS),
+        stt_stream_grace_seconds: config
+            .stt_stream_grace_seconds
+            .max(MIN_STT_STREAM_GRACE_SECONDS),
+        ..config
+    }
+}
+
+/// A run that *starts* on the local voice warms it now, not inside the cast's
+/// first line (`server.py:594-599`). Without this the Pocket model load lands
+/// in the first `submit`, and a slow enough cold start can outlast the floor's
+/// failsafe deadline and drop the line's audio.
+fn warm(mut tts: Box<dyn Tts>, selected: TtsBackendKind) -> Box<dyn Tts> {
+    if selected == TtsBackendKind::Local {
+        tts.warm(TtsBackendKind::Local);
+    }
+    tts
 }
 
 fn scheduler_message(event: SchedulerEvent) -> EngineMessage {

@@ -65,7 +65,7 @@ impl SpatialActorUpdate {
 /// [`crate::NEEDLE_REROUTE_SECONDS`]). Released the moment the holder stops
 /// walking or leaves the circle, so a conversation inside the alley can never
 /// deadlock the city (`features/implemented/movement/02_navigation.md` §5).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NeedleClaim {
     pub holder: ActorId,
     /// The holder's XZ travel direction at entry; an entrant whose direction
@@ -73,9 +73,12 @@ pub struct NeedleClaim {
     pub dir: Vec3,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// A checkpoint carries the world's state; each `#[serde(skip)]` field is an
+/// asset, a config switch or scratch, and `Engine::restore` rebinds it.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct World {
     /// Authoritative named geography used whenever a prompt is rendered.
+    #[serde(skip)]
     pub area_map: AreaMap,
     pub characters: BTreeMap<ActorId, Character>,
     /// Character insertion order — the round-robin turn order (D12).
@@ -86,6 +89,7 @@ pub struct World {
     /// like `area_map` — defaulted to the crate's embedded catalog, so every
     /// `World` has it with no wiring. Shared behind an `Arc`; it never changes at
     /// runtime and never bumps `world_revision`.
+    #[serde(skip, default = "ItemCatalog::embedded")]
     pub item_catalog: Arc<ItemCatalog>,
     /// Keyed by item id: at most one live offer per item.
     pub offers: BTreeMap<ItemId, Offer>,
@@ -99,10 +103,15 @@ pub struct World {
     /// Last issued `DomainEvent` sequence.
     pub event_sequence: i64,
     /// Last applied spatial update sequence; starts at -1 so seq 0 is accepted.
+    /// Not saved: the host that loads a checkpoint counts its own updates.
+    #[serde(skip, default = "unsequenced")]
     pub spatial_sequence: i64,
+    #[serde(skip)]
     pub sounds_enabled: bool,
+    #[serde(skip)]
     pub view_cone_degrees: f64,
     /// The rows `make_sound` and the world-sound triggers resolve against.
+    #[serde(skip)]
     pub sound_catalog: SoundCatalog,
     /// The resolved world time, refreshed by the engine each poll and read by the
     /// prompt renderer for `you_are.the_hour`. Host-provided context like
@@ -117,12 +126,14 @@ pub struct World {
     pub current_weather: Option<WeatherSample>,
     /// Data-owned social shelter destinations. Presentation has a denser cover
     /// map, while this map names only places an actor can credibly occupy.
+    #[serde(skip)]
     pub shelters: Arc<ShelterMap>,
     /// The street graph, when the host carries one — host-provided context like
     /// `area_map`, set by the engine at construction. `go_to` validates and
     /// prices its route against it at intent time; `None` (the default) makes
     /// every `go_to` fail `no_route`, which is honest for a world nobody can
     /// walk in.
+    #[serde(skip)]
     pub nav: Option<Arc<NavData>>,
     /// The wayfinding registry `places_you_know` renders from and `go_to` /
     /// `tell_way` resolve against. Empty (the default) in a world without a
@@ -166,16 +177,19 @@ pub struct World {
     /// What each kind of mark means and how it weathers, authored in
     /// `assets/world/marks.json` and embedded at build time. An `Arc` because
     /// the decay sweep needs it while holding `marks` mutably.
+    #[serde(skip)]
     pub mark_catalog: Arc<crate::marks::MarkCatalog>,
     /// Whether hands may chalk at all (`config.ron:
     /// smart_actors.marks.enabled`, `CATHEDRAL_NO_MARKS`). Ablation only —
     /// turning it off stops new marks and stops the readers; it does not erase
     /// what is already on the walls.
+    #[serde(skip)]
     pub marks_enabled: bool,
     /// The per-kind switches (`config.ron: smart_actors.marks.cross` / `.tally`
     /// / `.ward_sign`), so one writer can be silenced without losing the
     /// medium — which is how you tell whether the well tally or the cross is
     /// responsible for something you are watching.
+    #[serde(skip)]
     pub mark_kinds: crate::marks::MarkKindSwitches,
     /// What each ward is saying to itself tonight (movement M6): the Night
     /// Office's ward batch returns a few sentences of mood, and every Minor of
@@ -196,20 +210,24 @@ pub struct World {
     /// Installed into [`knowledge`](Self::knowledge) by `FactCatalog::seed`,
     /// which `Engine::new` calls once; a bare `World` has the catalog and an
     /// empty store.
+    #[serde(skip)]
     pub fact_catalog: Arc<crate::knowledge::FactCatalog>,
     /// How far each kind of news travels, and which hedge rung it renders on.
+    #[serde(skip)]
     pub salience: Arc<crate::knowledge::SalienceTable>,
     /// The ablation switch. Gates **readers and writers both**, like
     /// [`marks_enabled`](Self::marks_enabled), so a run with it off is a city
     /// with no knowledge layer rather than one that accumulates state nobody
     /// reads. `config.ron: smart_actors.knowledge.enabled`, and
     /// `CATHEDRAL_NO_KNOWLEDGE=1` for one run.
+    #[serde(skip)]
     pub knowledge_enabled: bool,
     /// Which named areas a garbled place may become — `AreaMap::nearest_areas`
     /// minus the area itself, precomputed once from the **live** map. Empty in
     /// every world with an empty [`AreaMap`] (the goldens, every hermetic test),
     /// so a place garble is a no-op there. M3's consumer; landed with the air so
     /// this field list is edited once.
+    #[serde(skip)]
     pub area_adjacency: Arc<crate::knowledge::AreaAdjacency>,
     /// Every housed person's door, written **once** by `Round::seed` and by
     /// nothing else — which is what lets [`crate::knowledge::Fact::quiet_among`]
@@ -220,6 +238,7 @@ pub struct World {
     /// with the salience factor **deleted from the expression**, which is the
     /// baseline `--pollen-flat` has to reproduce. Never in `config.ron`; set only
     /// by `--pollen-no-salience` and by tests.
+    #[serde(skip)]
     pub pollen_no_salience: bool,
     /// Who has spoken so far in the reply currently being applied, cleared by
     /// the scheduler before each one.
@@ -230,8 +249,17 @@ pub struct World {
     /// guidance (turn.j2's "setting off in silence looks to them like being
     /// ignored"); here it is worth enforcing, because this is the one verb that
     /// takes the player's feet.
+    ///
+    /// Saved although only a reply in progress reads it: it outlives the
+    /// reply, and a restored world should be the one that was saved.
     pub(crate) spoke_this_turn: Option<ActorId>,
+    /// Drained by every poll's flush, so empty whenever a checkpoint is taken.
+    #[serde(skip)]
     events: Vec<DomainEvent>,
+}
+
+fn unsequenced() -> i64 {
+    -1
 }
 
 impl Default for World {
@@ -1182,6 +1210,22 @@ impl World {
     /// Sim-bug level checks, run after every successful offer/accept/decline/
     /// retract/eat. Panics on violation; tests call it directly.
     pub fn assert_invariants(&self) {
+        if let Err(message) = self.check_invariants() {
+            panic!("{message}");
+        }
+    }
+
+    /// [`Self::assert_invariants`] as a value: the same checks, reported rather
+    /// than panicked, so a restored checkpoint can be refused instead of
+    /// crashing the game that tried to load it.
+    pub fn check_invariants(&self) -> Result<(), String> {
+        macro_rules! ensure {
+            ($condition:expr, $($message:tt)+) => {
+                if !$condition {
+                    return Err(format!($($message)+));
+                }
+            };
+        }
         let mut owners: BTreeMap<&ItemId, &ActorId> = BTreeMap::new();
         for actor in self.characters.values() {
             // The stackable same-stuff stacks this holder already carries, to
@@ -1189,28 +1233,26 @@ impl World {
             let mut seen_stuff: Vec<(&ItemId, &std::collections::BTreeMap<String, String>)> =
                 Vec::new();
             for item_id in actor.holds() {
-                assert!(
+                ensure!(
                     self.items.contains_key(item_id),
                     "actor {} holds missing item {item_id}",
                     actor.id()
                 );
-                assert!(
+                ensure!(
                     owners.insert(item_id, actor.id()).is_none(),
                     "item {item_id} has multiple owners"
                 );
                 let item = &self.items[item_id];
                 // Quantity 0 is unrepresentable — the operation that would
                 // produce it removes the stack instead.
-                assert!(
+                ensure!(
                     item.quantity >= 1,
                     "item {item_id} held by {} has quantity 0",
                     actor.id()
                 );
                 // Metadata must be catalog-valid for a known kind (a test prop's
                 // ad-hoc kind is tolerated).
-                if let Err(message) = self.item_catalog.validate_item(item) {
-                    panic!("{message}");
-                }
+                self.item_catalog.validate_item(item)?;
                 // No two same-stuff **stackable** stacks on one holder: they
                 // should have merged. A non-stackable kind (a bowl of stew) may
                 // legitimately appear twice.
@@ -1218,11 +1260,11 @@ impl World {
                     for (other_id, other_meta) in &seen_stuff {
                         if self.items[*other_id].kind == item.kind && *other_meta == &item.metadata
                         {
-                            panic!(
+                            return Err(format!(
                                 "actor {} holds two same-stuff stacks {other_id} and {item_id} \
                                  that should have merged",
                                 actor.id()
-                            );
+                            ));
                         }
                     }
                     seen_stuff.push((item_id, &item.metadata));
@@ -1233,13 +1275,13 @@ impl World {
             // (palmable), and no slot is over capacity.
             let mut slot_counts: BTreeMap<crate::character::BodySlot, usize> = BTreeMap::new();
             for unit in actor.pockets() {
-                assert!(
+                ensure!(
                     actor.holds().contains(&unit.item_id),
                     "actor {} pockets {} without holding it",
                     actor.id(),
                     unit.item_id
                 );
-                assert!(
+                ensure!(
                     actor.has_body_slot(unit.slot),
                     "actor {} pockets {} in a {} they do not have",
                     actor.id(),
@@ -1247,7 +1289,7 @@ impl World {
                     unit.slot.as_str()
                 );
                 let item = &self.items[&unit.item_id];
-                assert!(
+                ensure!(
                     self.item_catalog.size(item) == crate::item::ItemSize::Palmable,
                     "actor {} pockets non-palmable {}",
                     actor.id(),
@@ -1256,7 +1298,7 @@ impl World {
                 *slot_counts.entry(unit.slot).or_default() += 1;
             }
             for (slot, count) in slot_counts {
-                assert!(
+                ensure!(
                     count <= crate::POCKET_SLOT_CAPACITY,
                     "actor {} carries {count} units in their {} (capacity {})",
                     actor.id(),
@@ -1266,25 +1308,25 @@ impl World {
             }
         }
         for (item_id, offer) in &self.offers {
-            assert!(
+            ensure!(
                 offer.item_id == *item_id,
                 "offer key does not match offer item_id"
             );
-            assert!(
+            ensure!(
                 owners.get(item_id) == Some(&&offer.giver_id),
                 "offer giver does not hold item {item_id}"
             );
-            assert!(
+            ensure!(
                 self.is_present(&offer.giver_id),
                 "absent character {} has a live offer",
                 offer.giver_id
             );
-            assert!(
+            ensure!(
                 offer.target_id.as_ref() != Some(&offer.giver_id),
                 "offer cannot target its giver"
             );
             if let Some(target_id) = &offer.target_id {
-                assert!(
+                ensure!(
                     self.is_present(target_id),
                     "offer targets a missing or absent character"
                 );
@@ -1293,22 +1335,22 @@ impl World {
             let committed = reserved
                 .checked_add(offer.quantity)
                 .and_then(|sum| sum.checked_add(self.pocketed_quantity(item_id)))
-                .expect("offer plus transform plus pocket commitment overflow");
-            assert!(
+                .ok_or("offer plus transform plus pocket commitment overflow")?;
+            ensure!(
                 committed <= self.items[item_id].quantity,
                 "item {item_id} commits {committed} units but holds only {}",
                 self.items[item_id].quantity
             );
         }
         for (item_id, item) in &self.items {
-            assert!(owners.contains_key(item_id), "item {item_id} has no owner");
+            ensure!(owners.contains_key(item_id), "item {item_id} has no owner");
             let reserved = self.transform_reserved_quantity(item_id);
             let offered = self.offered_quantity(item_id);
             let committed = reserved
                 .checked_add(offered)
                 .and_then(|sum| sum.checked_add(self.pocketed_quantity(item_id)))
-                .expect("inventory commitments overflow");
-            assert!(
+                .ok_or("inventory commitments overflow")?;
+            ensure!(
                 committed <= item.quantity,
                 "item {item_id} commits {committed} units but holds only {}",
                 item.quantity
@@ -1318,76 +1360,77 @@ impl World {
                 .get(item_id)
                 .map_or(&[][..], Vec::as_slice);
             let mut previous = None;
-            let share_total = shares.iter().fold(0u32, |sum, share| {
-                assert!(
+            let mut share_total = 0u32;
+            for share in shares {
+                ensure!(
                     share.quantity > 0,
                     "legacy restock share on {item_id} is empty"
                 );
-                assert_eq!(
-                    owners.get(item_id).copied(),
-                    Some(&share.original_vendor),
+                ensure!(
+                    owners.get(item_id).copied() == Some(&share.original_vendor),
                     "legacy restock share on {item_id} left its original vendor"
                 );
                 let key = (&share.source_id, &share.original_vendor);
                 if let Some(old) = previous {
-                    assert!(
+                    ensure!(
                         old < key,
                         "legacy restock shares on {item_id} are not unique and sorted"
                     );
                 }
                 previous = Some(key);
-                sum.checked_add(share.quantity)
-                    .expect("legacy restock shares overflow")
-            });
-            assert!(
+                share_total = share_total
+                    .checked_add(share.quantity)
+                    .ok_or("legacy restock shares overflow")?;
+            }
+            ensure!(
                 share_total <= item.quantity,
                 "legacy restock shares on {item_id} exceed the stack"
             );
         }
         for item_id in self.legacy_restock_shares.keys() {
-            assert!(
+            ensure!(
                 self.items.contains_key(item_id),
                 "legacy restock provenance points at missing item {item_id}"
             );
         }
         for (producer, job) in &self.transform_jobs {
-            assert_eq!(
-                producer, &job.producer,
+            ensure!(
+                producer == &job.producer,
                 "transform job is keyed by the wrong producer"
             );
-            assert!(
+            ensure!(
                 self.characters.contains_key(producer),
                 "transform producer is missing"
             );
-            assert!(!job.inputs.is_empty(), "transform job has no inputs");
-            assert!(!job.outputs.is_empty(), "transform job has no outputs");
-            assert!(
+            ensure!(!job.inputs.is_empty(), "transform job has no inputs");
+            ensure!(!job.outputs.is_empty(), "transform job has no outputs");
+            ensure!(
                 job.progress_work_minutes.is_finite() && job.progress_work_minutes >= 0.0,
                 "transform progress must be finite and non-negative"
             );
             for input in &job.inputs {
-                assert!(input.quantity > 0, "transform reservation is empty");
-                assert_eq!(
-                    owners.get(&input.item_id).copied(),
-                    Some(producer),
+                ensure!(input.quantity > 0, "transform reservation is empty");
+                ensure!(
+                    owners.get(&input.item_id).copied() == Some(producer),
                     "transform input {} is not held by its producer",
                     input.item_id
                 );
             }
             let mut output_keys = BTreeMap::<crate::inventory::ItemMatcher, u32>::new();
             for output in &job.outputs {
-                assert!(output.quantity > 0, "transform output is empty");
+                ensure!(output.quantity > 0, "transform output is empty");
                 let total = output_keys.entry(output.matcher()).or_default();
                 *total = total
                     .checked_add(output.quantity)
-                    .expect("transform output overflow");
+                    .ok_or("transform output overflow")?;
             }
             for (matcher, future) in output_keys {
                 self.held_quantity(producer, &matcher)
                     .checked_add(future)
-                    .expect("held stock exceeds reserved transform output capacity");
+                    .ok_or("held stock exceeds reserved transform output capacity")?;
             }
         }
+        Ok(())
     }
 }
 

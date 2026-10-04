@@ -9,6 +9,9 @@ logs/*
 # This is local
 cathedral_meta.json
 
+# Save slots (F6, drive `save <slot>`, CATHEDRAL_LOAD)
+/saves/
+
 # Local settings; committed defaults live in default_config.ron
 /config.ron
 

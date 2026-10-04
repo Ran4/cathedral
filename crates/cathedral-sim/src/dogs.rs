@@ -51,7 +51,7 @@ pub const DOG_SETTLED_MPS: f64 = 0.15;
 
 /// The coat, for the host's material choice. Render vocabulary only — the
 /// sheet renders the authored `description` prose instead.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum DogCoat {
     Brindle,
     Black,
@@ -63,7 +63,7 @@ pub enum DogCoat {
 
 /// One street dog. World state like a character's position: stepped on the
 /// movement tick, never part of the cold public snapshot.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Dog {
     pub id: DogId,
     /// The authored name — for logs and the lore record. Never rendered on a

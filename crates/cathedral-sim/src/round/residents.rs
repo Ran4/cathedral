@@ -24,7 +24,7 @@ pub enum ResidentPhase {
     WaitingToReturn,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub(super) struct Resident {
     pub patch: usize,
     pub preferred_spot: usize,
@@ -41,14 +41,14 @@ pub(super) struct Resident {
     weather_retry_until: f64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 struct ResidentWeather {
     slot: usize,
     intent: WeatherShelterIntent,
     arrived: bool,
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub(super) struct Residents {
     pub people: BTreeMap<ActorId, Resident>,
     pub reservations: SpotReservations,

@@ -199,6 +199,12 @@ impl PlayerController {
         self.yaw
     }
 
+    /// Current view pitch in radians (positive looks up). A save keeps it:
+    /// the sim knows which way the player faces, not where they look.
+    pub fn pitch(&self) -> f32 {
+        self.pitch
+    }
+
     /// Horizontal world speed in metres per second.
     ///
     /// Presentation systems use this rather than reconstructing velocity from

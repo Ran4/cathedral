@@ -188,7 +188,7 @@ impl ResidentPlaces {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SpotClaims {
     pub occupied: Option<String>,
     pub destination: Option<String>,
@@ -197,7 +197,7 @@ pub struct SpotClaims {
 /// One current spot plus at most one destination per actor. Updates are atomic
 /// in the single-threaded sim; sequential same-poll arrivals cannot double-book.
 /// Geometry is indexed once here rather than searched for every resident poll.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SpotReservations {
     positions: BTreeMap<String, Vec3>,
     owners: BTreeMap<String, ActorId>,

@@ -176,6 +176,9 @@ engine, world rules, HUD, and interaction paths.
 - `F5` / `´` - save a PNG to
   `logs/latest_session/screenshots/cathedral_screenshot_<timestamp>__<nn>.png`
   (`nn` counts up when several captures land in the same second)
+- `F6` - quicksave the whole city to `saves/quick.save`; start a later run from
+  it with `CATHEDRAL_LOAD=quick` (the city resumes at the saved time - no time
+  passes while the game is closed)
 - `V` - toggle the microphone on/off (on by default); speech is heard openly
   by every actor within 20 m. Recognized speech appears in tiny text near the
   bottom with a nearby-recipient count

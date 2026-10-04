@@ -50,7 +50,7 @@ const AMBIGUOUS: u8 = 0xFF;
 
 /// The word in one ward's air: what is being said there, how loudly, at how few
 /// removes, and by whose mouth it last got in.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Drift {
     pub heat: f32,
     /// The fewest hops any depositing carrier holds it at. A pickup lands at

@@ -13,6 +13,7 @@ pub mod dogs;
 pub mod local_engine;
 pub mod model;
 pub mod road_carts;
+pub mod saving;
 
 mod actor_sheet;
 mod area_debug;
@@ -648,6 +649,11 @@ impl Plugin for SmartActorsPlugin {
             .add_message::<hands::HandoverFeedback>()
             .init_resource::<hands::GripHolds>()
             .add_message::<body::PresentGesture>()
+            // A restored save places the player (local_engine.rs); idempotent
+            // beside the controller's own registration.
+            .add_message::<crate::controller::TeleportPlayer>()
+            .add_message::<saving::SaveRequest>()
+            .add_systems(Update, saving::request_saves)
             // The inventory's menu entries are the only part of the screen that
             // needs the engine (they write intents), so they live here rather
             // than in the always-on block above.
@@ -1013,6 +1019,7 @@ struct BridgePresentationWriters<'w> {
     soundscape: MessageWriter<'w, crate::soundscape::SoundscapeCue>,
     hands: MessageWriter<'w, hands::HandoverFeedback>,
     gestures: MessageWriter<'w, body::PresentGesture>,
+    teleports: MessageWriter<'w, crate::controller::TeleportPlayer>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -1167,6 +1174,22 @@ fn drain_bridge_messages(
                     microphone_present = true;
                 }
             }
+            bridge::BridgeEvent::Restored {
+                position_m,
+                facing_yaw,
+                pitch,
+                flying,
+            } => {
+                let position = Vec3::from(position_m);
+                presentation.teleports.write(crate::controller::TeleportPlayer {
+                    position,
+                    yaw_degrees: facing_yaw.to_degrees(),
+                    pitch_degrees: pitch.to_degrees(),
+                    fly: flying,
+                });
+                spatial.await_restored_position(position, hot.time.elapsed_secs_f64());
+            }
+            bridge::BridgeEvent::Saved(Ok(message) | Err(message)) => hud.toast(message),
             bridge::BridgeEvent::Disconnected(message) => {
                 runtime.connected = false;
                 runtime.ready = false;
@@ -3593,6 +3616,11 @@ mod tests {
             app.update();
             thread::sleep(Duration::from_millis(5));
         }
+        assert!(
+            !app.world().resource::<model::MovementInbox>().0.is_empty(),
+            "fixture problem, not a D05 regression: nobody in the test city walked \
+             within 10 s, so there is no walker to watch under the overlays"
+        );
 
         let overlays: [(&str, KeyCode, KeyCode, IsOpen); 5] = [
             ("journal", journal_key(), journal_key(), |world: &World| {

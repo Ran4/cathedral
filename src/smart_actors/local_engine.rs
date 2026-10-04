@@ -39,7 +39,9 @@ use std::{
 use bevy::prelude::*;
 use cathedral_backends::{
     BackendCapabilities, BackendEvent, BackendsConfig, BackendsHandle, BackendsOptions,
-    PromptExchange, PromptLog, SessionDir, world_data::load_world_seed,
+    PromptExchange, PromptLog, SessionDir,
+    save::{self, HostSave, SaveGame, SaveWriter},
+    world_data::load_world_seed,
 };
 use cathedral_sim::{
     ActorId as SimActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand,
@@ -65,6 +67,12 @@ use crate::config::WeatherSettings;
 /// rather than the working directory.
 fn assets_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets")
+}
+
+/// Save slots, beside the assets and for the same reason: resolved against the
+/// crate root, not the working directory. Gitignored.
+fn saves_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("saves")
 }
 
 /// The committed navigation artifact — the baked walkable surface and the welded
@@ -132,6 +140,9 @@ struct EngineSeed {
     cognition: Box<dyn Cognition>,
     transcription: Box<dyn Transcription>,
     tts: Box<dyn Tts>,
+    /// `CATHEDRAL_LOAD`'s slot, read and verified at build time — never in the
+    /// pump. `Hello` then restores it instead of building a fresh world.
+    loaded: Option<SaveGame>,
 }
 
 /// The authority. A `NonSend` resource: `Engine` owns `Box<dyn Cognition>` and
@@ -153,6 +164,13 @@ pub struct LocalEngine {
     /// A dead engine still drains its command queue (so producers never block)
     /// but never polls again.
     dead: bool,
+    /// Added to the host clock before every poll. Zero for a fresh world; a
+    /// restored one continues from the simulation time it was saved at, so
+    /// `checkpoint.now - host elapsed at adoption` (D06: time with the game
+    /// closed does not pass).
+    time_offset: f64,
+    /// The one thread saves are written on; `None` if it could not start.
+    saves: Option<SaveWriter>,
 }
 
 impl LocalEngine {
@@ -233,6 +251,10 @@ pub fn spawn(
         commands: commands_rx,
         events: events_tx.clone(),
         dead: false,
+        time_offset: 0.0,
+        saves: SaveWriter::spawn(saves_dir())
+            .inspect_err(|error| warn!("[save] {error}; saving is off"))
+            .ok(),
     };
     let mut guard = EngineGuard { _backends: None };
 
@@ -464,6 +486,7 @@ fn build(
         ..EngineConfig::default()
     };
 
+    let loaded = load_slot(&engine_config, &areas);
     Ok((
         EngineSeed {
             seed,
@@ -475,11 +498,44 @@ fn build(
             cognition,
             transcription,
             tts,
+            loaded,
         },
         backends,
         fake_cognition,
         prompt_log,
     ))
+}
+
+/// `CATHEDRAL_LOAD=<slot>`: read, decode and verify the slot now, at engine
+/// build time. A slot that cannot be read or does not fit this city is an
+/// error in the log and a fresh world, never a dead cast.
+fn load_slot(config: &EngineConfig, areas: &AreaMap) -> Option<SaveGame> {
+    let slot = std::env::var("CATHEDRAL_LOAD").ok()?;
+    let started = std::time::Instant::now();
+    let loaded = save::read_slot(&saves_dir(), &slot).and_then(|game| {
+        game.checkpoint
+            .verify(config, areas)
+            .map(|()| game)
+            .map_err(|error| error.to_string())
+    });
+    match loaded {
+        Ok(game) => {
+            let line = format!(
+                "[save] loading slot {slot} ({}), read in {:.0} ms",
+                game.checkpoint.label,
+                started.elapsed().as_secs_f64() * 1e3
+            );
+            info!("{line}");
+            crate::session_log::log_line("engine", "INFO", &line);
+            Some(game)
+        }
+        Err(error) => {
+            let line = format!("[save] cannot load slot {slot}: {error}; starting a fresh world");
+            error!("{line}");
+            crate::session_log::log_line("engine", "ERROR", &line);
+            None
+        }
+    }
 }
 
 /// The handshake's honest answer, from the probe alone.
@@ -557,7 +613,7 @@ pub struct PumpTimer {
 impl LocalEngine {
     /// One pump. `now` is monotonic seconds since app start; the sim reads no
     /// clock of its own.
-    pub(super) fn pump(&mut self, now: f64) {
+    pub(super) fn pump(&mut self, elapsed: f64) {
         if self.dead {
             // Keep the queue moving so `try_send` never wrongly reports a full
             // bridge to a player whose engine simply died.
@@ -567,7 +623,9 @@ impl LocalEngine {
 
         let mut commands: Vec<EngineCommand> = Vec::new();
         self.collect_completions(&mut commands);
+        self.report_saves();
 
+        let mut saves = Vec::new();
         while let Ok(command) = self.commands.try_recv() {
             match command {
                 // The one command the engine cannot take: it *is* the engine's
@@ -575,7 +633,9 @@ impl LocalEngine {
                 BridgeCommand::Hello {
                     position_m,
                     spatial_seq,
-                } => self.start(position_m, spatial_seq, now),
+                } => self.start(position_m, spatial_seq, elapsed),
+                // Taken after this pump's poll, never in the middle of one.
+                BridgeCommand::Save { slot, host } => saves.push((slot, host)),
                 command => {
                     if let Some(command) = translate(command) {
                         commands.push(command);
@@ -583,11 +643,17 @@ impl LocalEngine {
                 }
             }
         }
+        let now = elapsed + self.time_offset;
 
         let Some(engine) = self.engine.as_mut() else {
             // Pre-handshake, or a start that failed: a command with nowhere to
             // go is dropped, exactly as the sidecar dropped anything sent before
             // its `ready`.
+            for (slot, _) in saves {
+                self.send(BridgeEvent::Saved(Err(format!(
+                    "Nothing to save to slot {slot}: the city has not started yet"
+                ))));
+            }
             return;
         };
 
@@ -595,6 +661,9 @@ impl LocalEngine {
             Ok(messages) => {
                 for message in messages {
                     self.emit(message);
+                }
+                for (slot, host) in saves {
+                    self.capture(slot, host, now);
                 }
             }
             Err(payload) => {
@@ -604,6 +673,67 @@ impl LocalEngine {
                 let reason = panic_reason(payload.as_ref());
                 self.fail(format!("the actor engine panicked: {reason}"));
             }
+        }
+    }
+
+    /// Checkpoint the engine as this poll left it and hand it to the writer.
+    /// The clone is the only part that happens here; encoding and the disk
+    /// are the writer thread's (D05).
+    fn capture(&mut self, slot: String, host: HostSave, now: f64) {
+        let Some(engine) = self.engine.as_ref() else {
+            return;
+        };
+        let started = std::time::Instant::now();
+        let checkpoint = engine.checkpoint(now);
+        let line = format!(
+            "[save] slot {slot}: captured {} in {:.1} ms",
+            checkpoint.label,
+            started.elapsed().as_secs_f64() * 1e3
+        );
+        info!("{line}");
+        crate::session_log::log_line("engine", "INFO", &line);
+        let queued = match &self.saves {
+            Some(saves) => saves.save(slot.clone(), SaveGame { checkpoint, host }),
+            None => Err("saving is off: the save writer did not start".to_string()),
+        };
+        if let Err(error) = queued {
+            self.send(BridgeEvent::Saved(Err(format!(
+                "Save to slot {slot} failed: {error}"
+            ))));
+        }
+    }
+
+    /// Log the writes the writer finished since the last pump, and tell the
+    /// HUD.
+    fn report_saves(&mut self) {
+        let Some(saves) = &self.saves else {
+            return;
+        };
+        for outcome in saves.finished() {
+            let result = match outcome.result {
+                Ok(written) => {
+                    let line = format!(
+                        "[save] slot {}: encoded in {:.0} ms, written in {:.0} ms, {} bytes \
+                         ({} bytes JSON) to {}",
+                        outcome.slot,
+                        written.encode_ms,
+                        written.write_ms,
+                        written.file_bytes,
+                        written.json_bytes,
+                        written.path.display()
+                    );
+                    info!("{line}");
+                    crate::session_log::log_line("engine", "INFO", &line);
+                    Ok(format!("Saved to slot {}", outcome.slot))
+                }
+                Err(error) => {
+                    let line = format!("[save] slot {} failed: {error}", outcome.slot);
+                    error!("{line}");
+                    crate::session_log::log_line("engine", "ERROR", &line);
+                    Err(format!("Save to slot {} failed: {error}", outcome.slot))
+                }
+            };
+            self.send(BridgeEvent::Saved(result));
         }
     }
 
@@ -653,7 +783,45 @@ impl LocalEngine {
             cognition,
             transcription,
             tts,
+            loaded,
         } = seed;
+        if let Some(SaveGame { checkpoint, host }) = loaded {
+            // The saved city, not a new one: no seeding, and the clock carries
+            // on from where it stopped. Hello's spawn is the host's guess and
+            // loses to where the save left the player.
+            let saved_now = checkpoint.now;
+            let player_id = config.player_id.clone();
+            match Engine::restore(
+                checkpoint,
+                config,
+                areas,
+                catalog,
+                prompts,
+                cognition,
+                transcription,
+                tts,
+                Box::new(NullSight),
+                capabilities,
+            ) {
+                Ok(engine) => {
+                    self.time_offset = saved_now - now;
+                    let player = &engine.world().characters[&player_id];
+                    let at = player.position_m();
+                    match Position::new(at.x as f32, at.y as f32, at.z as f32) {
+                        Ok(position_m) => self.send(BridgeEvent::Restored {
+                            position_m,
+                            facing_yaw: player.facing_yaw() as f32,
+                            pitch: host.pitch,
+                            flying: host.flying,
+                        }),
+                        Err(_) => warn!("[save] the saved player position does not fit the game"),
+                    }
+                    self.engine = Some(engine);
+                }
+                Err(error) => self.fail(format!("the saved city could not be restored: {error}")),
+            }
+            return;
+        }
         let facing_yaw = world
             .character(&config.player_id)
             .map_or(0.0, |sheet| sheet.facing_yaw);
@@ -987,7 +1155,7 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
                 TtsBackend::Off => TtsBackendKind::Off,
             },
         },
-        BridgeCommand::Hello { .. } => return None,
+        BridgeCommand::Hello { .. } | BridgeCommand::Save { .. } => return None,
     })
 }
 
@@ -1120,7 +1288,7 @@ mod tests {
                         BridgeEvent::Disconnected(reason) => {
                             panic!("the engine disconnected while waiting for {what}: {reason}")
                         }
-                        BridgeEvent::ProcessStarted => continue,
+                        _ => continue,
                     };
                     if let EngineMessage::Speech { event_id, .. } = &message {
                         self.handle

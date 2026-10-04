@@ -97,7 +97,7 @@ pub const WARD_MOOD_MAX_CHARS: usize = 600;
 pub const WARD_EDITS_MAX: usize = 3;
 
 /// Who a reflection is about.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 enum Subject {
     /// One Major, reflecting on their own day at their own bedtime.
     Person(ActorId),
@@ -132,7 +132,7 @@ impl Subject {
 }
 
 /// A reflection that is owed, and the night it is owed for.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 struct Due {
     subject: Subject,
     /// The game day the bedtime fell on. A reflection still queued when the day
@@ -142,7 +142,7 @@ struct Due {
 }
 
 /// The one outstanding night request.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 struct Flight {
     subject: Subject,
     request_id: RequestId,
@@ -194,7 +194,7 @@ impl NightGate {
 /// Which of the three tiers the Night Office serves. All three ride the master
 /// switch, so `enabled: false` is exactly today's behaviour and every fixture,
 /// host and test keeps its bytes until it asks for the lane.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct NightOfficeConfig {
     pub enabled: bool,
     /// Individual reflection for the Majors — 31 calls a game day.
@@ -217,13 +217,14 @@ impl Default for NightOfficeConfig {
 }
 
 /// The second cognition lane.
-#[derive(Debug)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct NightOffice {
     config: NightOfficeConfig,
     queue: VecDeque<Due>,
     in_flight: Option<Flight>,
     /// The game day each subject last reflected on, so a bedtime crossed twice
     /// (a paused game, a debug time-scale) still buys one reflection.
+    #[serde(with = "crate::checkpoint::pairs")]
     last_reflected: BTreeMap<Subject, i64>,
     /// Each Major's bedtime office, resolved from the round once at seed. The
     /// Round is authored content and does not change under us, so neither does
@@ -299,6 +300,24 @@ impl NightOffice {
             WARD_OFFICE.label(),
             majors + wards,
         ))
+    }
+
+    /// Pick the lane up again in a restored engine (D06), under the current
+    /// config's switches. A reflection that was out when the save was taken
+    /// goes back to the front of the queue for the night it was owed; its
+    /// subject's guard was stamped when it was queued and stays as saved, so a
+    /// load never buys anybody a second reflection.
+    pub(crate) fn resume(&mut self, config: NightOfficeConfig) {
+        self.config = config;
+        if let Some(flight) = self.in_flight.take() {
+            match self.last_reflected.get(&flight.subject) {
+                Some(&day) => self.queue.push_front(Due {
+                    subject: flight.subject,
+                    day,
+                }),
+                None => self.dropped += 1,
+            }
+        }
     }
 
     pub fn enabled(&self) -> bool {

@@ -34,6 +34,7 @@ use crate::smart_actors::actors::ActorView;
 use crate::smart_actors::bridge::{BridgeCommand, BridgeHandle};
 use crate::smart_actors::local_engine::LocalEngine;
 use crate::smart_actors::model::{ActorId, Position};
+use crate::smart_actors::saving::SaveRequest;
 use crate::soundscape::{BellPattern, SoundscapeCue};
 
 pub const DRIVE_ENV: &str = "CATHEDRAL_DRIVE";
@@ -144,6 +145,9 @@ impl Plugin for DrivePlugin {
             self.timeout.as_secs_f64()
         ));
         spawn_watchdog(self.timeout);
+        // Idempotent beside the smart actors' own registration; a run with the
+        // cast disabled still parses and logs `save`.
+        app.add_message::<SaveRequest>();
         app.insert_resource(DriveState {
             last_framed: None,
             scheduler: Scheduler::new(self.actions.clone()),
@@ -285,6 +289,8 @@ enum Action {
         distance: f32,
         bearing_degrees: f32,
     },
+    /// Checkpoint the city into a save slot (D06), as the quicksave key does.
+    Save(String),
     Quit,
 }
 
@@ -342,6 +348,7 @@ impl Action {
                 distance,
                 bearing_degrees,
             } => format!("frame {handle} {distance} {bearing_degrees}"),
+            Self::Save(slot) => format!("save {slot}"),
             Self::Quit => "quit".into(),
         }
     }
@@ -469,6 +476,17 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
             }
         }
         "frame" => parse_frame(argument, statement),
+        "save"
+            if (1..=64).contains(&argument.len())
+                && argument
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-') =>
+        {
+            Ok(Action::Save(argument.into()))
+        }
+        "save" => Err(format!(
+            "`save` needs a slot name of letters, digits, `_` or `-`, got `{statement}`"
+        )),
         "wait-online" if argument.is_empty() => Ok(Action::WaitOnline),
         "quit" if argument.is_empty() => Ok(Action::Quit),
         "wait-online" | "quit" => Err(format!("`{verb}` takes no argument, got `{statement}`")),
@@ -781,6 +799,7 @@ enum Directive {
         distance: f32,
         bearing_degrees: f32,
     },
+    Save(String),
     Quit,
 }
 
@@ -939,6 +958,7 @@ impl Scheduler {
                 distance,
                 bearing_degrees,
             }),
+            Action::Save(slot) => Some(Directive::Save(slot)),
             Action::Quit => {
                 self.finished = true;
                 Some(Directive::Quit)
@@ -1092,7 +1112,7 @@ fn run_drive_script(
     actors: Query<(&Name, &ActorId, &Transform), With<ActorView>>,
     mut interactions: Query<(&Name, &mut Interaction)>,
     mut teleports: MessageWriter<TeleportPlayer>,
-    mut cues: MessageWriter<SoundscapeCue>,
+    (mut cues, mut saves): (MessageWriter<SoundscapeCue>, MessageWriter<SaveRequest>),
     mut exit: MessageWriter<AppExit>,
 ) {
     if let Some(key) = state.pressed_key.take() {
@@ -1372,6 +1392,9 @@ fn run_drive_script(
                 "[drive] {now:.1}s warning: `weather` needs the actor engine"
             )),
         },
+        Some(Directive::Save(slot)) => {
+            saves.write(SaveRequest { slot });
+        }
         Some(Directive::Tp {
             position,
             yaw_degrees,
@@ -1840,6 +1863,17 @@ mod tests {
         assert!(parse_script("shot sub/dir").is_err());
         assert!(parse_script("shot back\\slash").is_err());
         assert!(parse_script("shot menu_open").is_ok());
+    }
+
+    #[test]
+    fn save_slots_are_plain_file_stems() {
+        assert_eq!(
+            parse_script("save smoke-1"),
+            Ok(vec![Action::Save("smoke-1".into())])
+        );
+        assert!(parse_script("save").is_err());
+        assert!(parse_script("save ../escape").is_err());
+        assert!(parse_script("save two words").is_err());
     }
 
     #[test]

@@ -16,7 +16,7 @@ const INVITATION_SECONDS: f64 = 10.0;
 pub const CAPTURE_LIFETIME_SECONDS: f64 = 120.0;
 const MAX_EXCHANGE_WITNESSES: usize = 128;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct Engagement {
     actor: ActorId,
     at: f64,
@@ -24,7 +24,7 @@ struct Engagement {
     witnesses: BTreeSet<ActorId>,
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Conversation {
     engagement: Option<Engagement>,
     invitation: Option<(ActorId, f64)>,

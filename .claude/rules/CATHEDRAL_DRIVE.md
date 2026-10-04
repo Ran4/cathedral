@@ -189,6 +189,21 @@ Actions (each fires ~0.5 s after the previous):
   the same camera operation and log the selected id. They move only the player
   camera. A moving selector means an admitted optional route, not a measured
   displacement; inspect paired evidence for that claim.
+- `save <slot>` — checkpoint the whole city into `saves/<slot>.save`, as the
+  F6 quicksave does (slot `quick`). The pump captures after its next poll and a
+  worker thread writes the file, so leave a few seconds before `quit`; the
+  `[save] slot …` lines in `logs.jsonl` give the capture/encode/write times and
+  the size. `CATHEDRAL_LOAD=<slot>` starts the next run from that slot instead
+  of a fresh world (same clock, same people, the player where they stood); an
+  unreadable or incompatible slot logs an `ERROR` and starts fresh. Two
+  processes prove it:
+
+  ```sh
+  CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 \
+    CATHEDRAL_DRIVE='wait-online; tp 0 1 120 180; sleep 5; save smoke; sleep 5; quit' cargo run
+  CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_LOAD=smoke \
+    CATHEDRAL_DRIVE='wait-online; sleep 3; shot loaded; quit' cargo run
+  ```
 - `quit` — exit immediately.
 
 Without a trailing `quit` the game exits ~2 s after the last action; a watchdog

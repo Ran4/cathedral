@@ -255,7 +255,7 @@ impl Weekday {
 }
 
 /// A resolved instant. Cheap to compute, so it is computed rather than stored.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct WorldTime {
     /// Whole days since the epoch. Day 0 is a Bellday.
     pub day: i64,
@@ -330,7 +330,7 @@ impl WorldTime {
 
 /// The world's time: a projection of the host's `now`, plus a scale and an
 /// epoch. Copy and cheap; construct one from config and hand it to the engine.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct WorldClock {
     /// Real seconds per game day (before `scale`). From `config.ron`.
     seconds_per_day: f64,

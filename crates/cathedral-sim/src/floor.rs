@@ -43,7 +43,7 @@ pub fn speech_reading_seconds(text: &str) -> f64 {
 }
 
 /// Who currently owns the room.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ConversationFloor {
     /// Voiced utterances awaiting their `speech_presented`, insertion-ordered
     /// with their failsafe deadlines (`OrderedDict` in Python).
@@ -58,7 +58,7 @@ pub struct ConversationFloor {
     player_hold_until: f64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 struct AwaitedSpeech {
     event_id: SpeechEventId,
     deadline: f64,
@@ -183,6 +183,13 @@ impl ConversationFloor {
             };
             *floor_until = floor_until.max(now + FLOOR_POST_UTTERANCE_BEAT_SECONDS);
         }
+    }
+
+    /// A restored engine's host never queued the voices this floor is waiting
+    /// on, and its microphone is not open: forget both, keep the reading holds.
+    pub(crate) fn forget_presentations(&mut self) {
+        self.awaiting.clear();
+        self.clear_player_hold();
     }
 
     /// Extend the player's hold. Rolling and never shrinking: a dead client

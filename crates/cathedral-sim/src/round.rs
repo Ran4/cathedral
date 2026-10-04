@@ -170,6 +170,20 @@ const TRANSFORM_ABANDON_GAME_DAYS: f64 = 1.0;
 /// doorstep — matched to [`CENSUS_POST_RADIUS_M`], the same "at this post" reach.
 const TAVERN_HEARTH_RADIUS_M: f64 = CENSUS_POST_RADIUS_M;
 
+/// A [`SOURCES`] sound id. An alias, so that serde does not take the `&str`
+/// for a borrow of the save file: [`well_sound`] finds the row it names.
+type WellSound = &'static str;
+
+/// A saved [`WaterSource::draw_sound`], back to the `'static` row it named.
+fn well_sound<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<WellSound, D::Error> {
+    let sound = String::deserialize(deserializer)?;
+    SOURCES
+        .iter()
+        .map(|&(_, known)| known)
+        .find(|known| *known == sound)
+        .ok_or_else(|| serde::de::Error::custom(format!("unknown well sound {sound:?}")))
+}
+
 /// The nine public drinking sources (`07_milestones.md` M3), by nav-graph display
 /// name, each paired with its gear's sound. See the M3 notes: the Shambles work
 /// well and the Seven Lofts fire tanks are deliberately excluded.
@@ -252,7 +266,7 @@ const LIGHTNING_REFLEX_SPREAD_SECONDS: f64 = 1.5;
 
 /// What an actor means to do on arrival — the pathfind-then-act bridge lifted
 /// from seagame's `targetState` (`features/implemented/movement/02_navigation.md` §4).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Arrival {
     Work,
@@ -378,14 +392,14 @@ struct CounterGroupSpec {
     counters: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum StockSource {
     Counter(String),
     CounterGroup(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StockPlanSpec {
     id: String,
@@ -395,7 +409,7 @@ struct StockPlanSpec {
     max_spend_sparks: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StockTargetSpec {
     kind: crate::item::ItemKind,
@@ -484,7 +498,7 @@ struct StallSpec {
 
 /// A stall's open hours: a predicate on the clock, not state (`04` §1). A stall
 /// outside these offices — or a bound vendor away from the pitch — is closed.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct OpenSpec {
     /// The offices during which the stall trades.
     offices: Vec<Office>,
@@ -559,14 +573,15 @@ impl<'a> PlaceResolver<'a> {
 // --------------------------------------------------------------------------- //
 /// One public well or cistern: where its water is drawn, what it sounds like, who
 /// keeps it, and the queue waiting at the curb.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WaterSource {
     /// The nav place display name, e.g. `"Chain Well"`.
     pub name: String,
     /// The walkable node the queue forms at and the sound comes from.
     pub draw_point: Vec3,
     /// The catalog sound the keeper makes working the gear.
-    pub draw_sound: &'static str,
+    #[serde(deserialize_with = "well_sound")]
+    pub draw_sound: WellSound,
     /// The actor who works the curb, or `None` for a source with nobody nearby
     /// to keep it (which then draws no water and makes no sound).
     pub keeper: Option<ActorId>,
@@ -584,7 +599,7 @@ pub struct WaterSource {
 /// buyers waiting to buy. The loaves-in-it twin of [`WaterSource`] — plus the one
 /// thing water never needed, stock that runs out and the confessed magic that
 /// refills it.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FoodStall {
     /// The stall's name, for the trace and the census.
     pub name: String,
@@ -644,7 +659,7 @@ pub struct PartyState {
     pub trip_number: u64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct RoadParty {
     id: PartyId,
     leader: ActorId,
@@ -732,7 +747,7 @@ fn road_transition_trace(event: &str, party: &RoadParty, world: &World, day: i64
     )
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct Counter {
     id: String,
     trade: String,
@@ -746,27 +761,27 @@ struct Counter {
     radius_m: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum CounterSession {
     Daily { absolute_day: i64 },
     RoadTrip { party_id: PartyId, trip_number: u64 },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct CounterBindingKey {
     pub counter_id: String,
     pub seller: ActorId,
     pub session: CounterSession,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MarketErrandPhase {
     Approaching,
     WaitingForOpen,
     AtCounter,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MarketVisitEnd {
     TargetsSatisfied,
     BudgetExhausted,
@@ -779,7 +794,7 @@ pub enum MarketVisitEnd {
     UnpricedStock,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MarketErrand {
     pub plan_id: String,
     pub selected: Option<CounterBindingKey>,
@@ -801,21 +816,21 @@ pub struct MarketErrand {
     pub deadline_hold_began_real: Option<f64>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClosedMarketVisit {
     pub plan_id: String,
     pub bindings_seen: Vec<CounterBindingKey>,
     pub end_reason: MarketVisitEnd,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct ResolvedProductionPlan {
     producer: ActorId,
     max_jobs_per_day: u32,
     transforms: Vec<ResolvedTransformSpec>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct ResolvedTransformSpec {
     id: String,
     site: String,
@@ -829,7 +844,7 @@ struct ResolvedTransformSpec {
 
 /// A trade resolved from `food.json` for the stalls to share: who may keep it,
 /// its morning stock, and the pot's per-serving conjure.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct ResolvedTrade {
     occupations: Vec<String>,
     listings: Vec<ItemMatcher>,
@@ -840,14 +855,14 @@ struct ResolvedTrade {
 /// A buyer's errand at a food stall (M3), parallel to the water `source`/`Phase`
 /// machinery: a townsperson can be walking to a stall, standing in its queue, or
 /// eating at the pitch while the rest of their round waits.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct FoodErrand {
     /// Index into [`Round::stalls`].
     stall: usize,
     phase: FoodPhase,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 enum FoodPhase {
     /// Walking to the stall's pitch.
     Approaching,
@@ -862,7 +877,7 @@ enum FoodPhase {
 /// derived from the nav graph at seed, the lit state from the lamplighters'
 /// dusk beats — and the host mirrors it into lantern props and point lights via
 /// `EngineMessage::Lamps`. Nobody lights a lamp but its keeper.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Lamp {
     /// The square's display name, e.g. `"The Wickmarket"`.
     pub square: String,
@@ -876,7 +891,7 @@ pub struct Lamp {
 
 /// One leg of a resolved daily round: the office it begins at, where it puts your
 /// feet, what you do there, and which weekdays it applies to.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct RoundLeg {
     from: Office,
     at: Vec3,
@@ -890,7 +905,7 @@ struct RoundLeg {
 /// Where an enrolled townsperson is in their errand. Public for the developer
 /// character sheet's [`Round::errand_debug`] view; nothing outside the round
 /// ever writes one.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Phase {
     /// Standing at some anchor; the ladder may send them somewhere.
     Idle,
@@ -909,7 +924,7 @@ pub enum Phase {
 
 /// One enrolled townsperson: where they sleep, their day, their well (if any),
 /// and where they are in it right now.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct Townsperson {
     /// Their bed, or `None` for the homeless — who are then still in the street
     /// at the Snuffing, exactly as the lore intends.
@@ -973,7 +988,7 @@ struct Townsperson {
 /// a provider decision.  `below_since_days` implements the 10--20 game-minute
 /// release hysteresis, so a wavering front cannot make a crowd seesaw at every
 /// sample.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 struct WeatherShelterIntent {
     shelter: usize,
     target: Vec3,
@@ -1106,7 +1121,7 @@ impl Census {
 /// One producer's entry in the stranded-job watchdog
 /// ([`Round::transform_stall_watch`]): the job and progress figure last
 /// observed, and the game-day the figure last moved.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct TransformStallWatch {
     job_id: String,
     progress_work_minutes: f64,
@@ -1116,7 +1131,7 @@ struct TransformStallWatch {
 /// The whole daily round: the staffed water sources and every enrolled
 /// townsperson. Inert until [`Round::seed`] runs (only when the host supplies a
 /// nav graph), so a world without nav has an empty round and no behaviour.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Round {
     sources: Vec<WaterSource>,
     /// The taverns' hearths (food & items M2), resolved from the nav graph at
@@ -1133,7 +1148,9 @@ pub struct Round {
     food_trades: BTreeMap<String, ResolvedTrade>,
     /// A bounded log of restock, sales, production, road traffic, and settlement,
     /// drained by the host for `--trace-food`. The game host never reads it, so
-    /// it is capped ([`FOOD_LOG_CAP`]) and never grows without bound.
+    /// it is capped ([`FOOD_LOG_CAP`]) and never grows without bound. A trace,
+    /// not world state, so a checkpoint does not carry it.
+    #[serde(skip)]
     food_log: Vec<String>,
     /// The calendar position (game days) the last office-crossing check reached,
     /// so Kindling restock and Watch settlement each fire exactly once per
@@ -1239,6 +1256,7 @@ pub struct Round {
     market_errands: BTreeMap<ActorId, MarketErrand>,
     closed_market_visits: BTreeMap<String, ClosedMarketVisit>,
     production_plans: Vec<ResolvedProductionPlan>,
+    #[serde(with = "crate::checkpoint::pairs")]
     production_starts: BTreeMap<(ActorId, i64), u32>,
     production_last_game_days: f64,
     /// Physical eligibility sampled on the preceding pump for each active
@@ -1259,6 +1277,7 @@ pub struct Round {
     /// ids must be cloned out to iterate while the body mutates `people`, but
     /// the `Vec` itself need not be reallocated every 20 Hz tick. Always drained
     /// empty between ticks, so it never affects `Clone`/`PartialEq`.
+    #[serde(skip)]
     ladder_scratch: Vec<ActorId>,
 }
 

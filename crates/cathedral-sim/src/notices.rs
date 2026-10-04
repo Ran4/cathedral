@@ -115,7 +115,7 @@ pub enum Rung {
 
 /// An officer out of patience, calling the accused to answer by a named office
 /// bell. Nothing but settling the notice discharges it.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Summons {
     /// Who called them, so the sheet and the HUD can name the door.
     pub by: ActorId,
@@ -128,7 +128,7 @@ pub struct Summons {
 }
 
 /// One wrong on the ward's tongues.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct WardNotice {
     /// Monotonic per-world; the salt that decides which gossips carry it.
     pub id: u64,
@@ -216,7 +216,7 @@ impl WardNotice {
 /// actions branch on them, so they are world state, not engine bookkeeping —
 /// but the decay clock is driven from outside (`Engine::poll`), because the
 /// sim is clock-free by design.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 pub struct Notices {
     live: Vec<WardNotice>,
     next_id: u64,

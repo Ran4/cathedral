@@ -2006,6 +2006,7 @@ dependencies = [
  "clap",
  "crossbeam-channel",
  "dotenvy",
+ "flate2",
  "futures-util",
  "hound",
  "libc",

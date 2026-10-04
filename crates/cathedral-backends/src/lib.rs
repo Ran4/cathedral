@@ -27,6 +27,7 @@ pub mod fake;
 pub mod llm;
 pub mod prompt_log;
 pub mod runtime;
+pub mod save;
 pub mod session_dir;
 pub mod stt_cloud;
 pub mod stt_local;

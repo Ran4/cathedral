@@ -81,12 +81,14 @@ pub const STAGE_PARTNER_MEMORY_SECONDS: f64 = 30.0;
 /// "conversation over" event. The player's own slot stays separate, because it
 /// also feeds the stage's reserved seat and must keep its exact semantics.
 ///
-/// Like [`Novelty`], this is derived bookkeeping, not world state: it lives on
-/// the engine, never in [`World`], and a save file must not carry it. It is
-/// bounded by the number of *concurrent* conversations — in practice a handful
-/// — so a plain `BTreeMap` is the whole data structure.
-#[derive(Debug, Clone, Default)]
+/// Like [`Novelty`], this is bookkeeping rather than world state: it lives on
+/// the engine, never in [`World`]. A checkpoint does carry it, because a warm
+/// pair holds two bodies still and a restored city must keep holding them. It
+/// is bounded by the number of *concurrent* conversations — in practice a
+/// handful — so a plain `BTreeMap` is the whole data structure.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct WarmExchanges {
+    #[serde(with = "crate::checkpoint::pairs")]
     pairs: BTreeMap<(ActorId, ActorId), f64>,
 }
 
@@ -274,15 +276,16 @@ pub const NOVELTY_MEMORY_SECONDS: f64 = 60.0;
 /// What each actor had already been told when their last prompt went out.
 ///
 /// This is derived bookkeeping, not world state, and it deliberately does not
-/// live in [`World`]: nothing in the simulation may branch on it, and a save
-/// file must not carry it. The engine owns one and recomputes it beside
+/// live in [`World`]: nothing in the simulation may branch on it. A checkpoint
+/// carries it all the same, so a restored stage spends exactly the turns the
+/// saved one would have. The engine owns one and recomputes it beside
 /// [`on_stage`], once per poll (D20).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct Novelty {
     last_told: BTreeMap<ActorId, Memory>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 struct Memory {
     /// [`context_hash`] as it stood the moment their prompt was submitted — the
     /// world exactly as that prompt showed it to them. `None` while they have

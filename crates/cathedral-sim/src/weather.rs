@@ -240,7 +240,7 @@ impl Default for WeatherSample {
 
 /// Climate knobs are deliberately collected in one value so a future season
 /// can replace the warm-summer table without touching any consumer.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct WeatherClimate {
     pub precipitation_chance_per_slot: f64,
     pub fog_chance_per_day: f64,
@@ -269,7 +269,7 @@ impl Default for WeatherClimate {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WeatherMode {
     Timeline,
     Forced(WeatherKind),
@@ -287,7 +287,7 @@ impl WeatherMode {
 
 /// The authoritative part of host weather configuration.  Visual quality and
 /// volumetric toggles stay in the Bevy host and cannot alter this schedule.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct WeatherConfig {
     pub enabled: bool,
     pub seed: u64,
@@ -306,7 +306,7 @@ impl Default for WeatherConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 struct ForcedWeather {
     kind: WeatherKind,
     intensity: Option<f64>,
@@ -321,7 +321,7 @@ struct ForcedWeather {
 /// way.  The schedule treats it as one more ended shower, so a forced storm's
 /// streets dry on the ordinary integral instead of snapping dry the instant
 /// the override goes.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 struct WeatherResidue {
     cleared_at_days: f64,
     wetness: f64,
@@ -340,7 +340,7 @@ pub struct LightningStrike {
 
 /// Pure weather schedule plus a developer override.  The only mutation is the
 /// explicit override; timeline sampling itself is referentially transparent.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WeatherTimeline {
     config: WeatherConfig,
     climate: WeatherClimate,
@@ -383,6 +383,24 @@ impl WeatherTimeline {
 
     pub fn config(&self) -> WeatherConfig {
         self.config
+    }
+
+    /// Re-apply a restored run's on/off switch (`CATHEDRAL_NO_WEATHER`, an
+    /// ablation lever) to a saved timeline. The saved seed and mode stay, so
+    /// the schedule is the one that was running; when the switch flips, the
+    /// sky becomes the one [`Self::new`] builds under it, and an override or
+    /// residue from the other side of the switch goes.
+    pub fn set_enabled(&mut self, enabled: bool) {
+        if self.config.enabled == enabled {
+            return;
+        }
+        let fresh = Self::new(WeatherConfig {
+            enabled,
+            ..self.config
+        });
+        self.config = fresh.config;
+        self.forced = fresh.forced;
+        self.residue = None;
     }
 
     pub fn set_override(

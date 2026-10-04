@@ -40,7 +40,7 @@ use crate::{
 ///
 /// [`CognitionError::new`] sets both to the kind, which is right for the errors
 /// the sim raises itself (they have no further story to tell).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CognitionError {
     kind: String,
     detail: String,
@@ -108,7 +108,7 @@ impl std::error::Error for CognitionBusy {}
 
 /// One finished cognition request, matched back to its submission by
 /// [`RequestId`] (D10 — strictly stronger than Python's actor-id echo).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Completion {
     pub request_id: RequestId,
     pub result: Result<String, CognitionError>,

@@ -13,7 +13,7 @@
 //! `places_known`, seeded by the round and grown by `tell_way`. The registry is
 //! the world's: one namespace, so a shared id means the same place to everyone.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde::Deserialize;
 
@@ -72,7 +72,7 @@ struct WardDoc {
 // The public model
 // --------------------------------------------------------------------------- //
 /// One walkable destination the model can hold a handle to.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PlaceEntry {
     pub id: PlaceId,
     /// Prompt-facing: how people *speak* of the place — grounding a spoken name
@@ -93,21 +93,27 @@ pub struct PlaceEntry {
 /// The world's id → place mapping. Empty (the default) in a world without a
 /// nav graph, which keeps every frozen fixture rendering an empty
 /// `places_you_know`.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PlaceRegistry {
     entries: Vec<PlaceEntry>,
+    /// The lookups below it are derived from `entries` and the home owners, and
+    /// rebuilt by [`Self::reindex`] when a checkpoint is restored.
+    #[serde(skip)]
     by_id: HashMap<PlaceId, usize>,
     /// Nav-place display name → entry, for resolving workplace/leg labels.
     /// Homes are deliberately absent (two Tam Ruds would collide, and no round
     /// leg ever names a house by prose).
+    #[serde(skip)]
     by_name: HashMap<String, usize>,
-    /// Housed character → their home's entry.
-    home_by_owner: HashMap<ActorId, usize>,
+    /// Housed character → their home's entry. Saved, unlike the other indexes:
+    /// a home entry does not say whose it is.
+    home_by_owner: BTreeMap<ActorId, usize>,
     /// The same binding read the other way — a home's id → whose it is. Kept
     /// rather than searched because [`Self::owner_of_home`] is asked once per
     /// reachable anchor on every chalk poll, and a crowd
     /// (`features/implemented/give_the_crowd_somewhere_to_be.md` M4) files 20,000 homes for
     /// that scan to walk.
+    #[serde(skip)]
     owner_by_home: HashMap<PlaceId, ActorId>,
 }
 
@@ -181,6 +187,31 @@ impl PlaceRegistry {
         self.by_name.entry(entry.name.clone()).or_insert(index);
         self.entries.push(entry);
         Ok(index)
+    }
+
+    /// Rebuild the derived lookups from the saved entries and home owners,
+    /// exactly as [`Self::insert`] and [`Self::add_home`] first filled them.
+    pub(crate) fn reindex(&mut self) {
+        self.by_id.clear();
+        self.by_name.clear();
+        self.owner_by_home.clear();
+        let len = self.entries.len();
+        self.home_by_owner.retain(|_, index| *index < len);
+        let mut homes = vec![None; len];
+        for (owner, &index) in &self.home_by_owner {
+            homes[index] = Some(owner);
+        }
+        for (index, entry) in self.entries.iter().enumerate() {
+            self.by_id.insert(entry.id.clone(), index);
+            match homes[index] {
+                Some(owner) => {
+                    self.owner_by_home.insert(entry.id.clone(), owner.clone());
+                }
+                None => {
+                    self.by_name.entry(entry.name.clone()).or_insert(index);
+                }
+            }
+        }
     }
 
     /// Register a housed character's home — "Tam Rud's house" — under a

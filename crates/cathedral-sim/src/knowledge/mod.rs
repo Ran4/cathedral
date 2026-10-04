@@ -368,7 +368,7 @@ impl Topic {
 }
 
 /// Which fields a hop may move. The rest is load-bearing truth.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct GarbleMask {
     pub subject: bool,
     pub place: bool,
@@ -463,10 +463,10 @@ impl GarbleMask {
 /// One proposition about the world. Authored, minted from an event, or coined by a
 /// mouth. Its identity is the id: the same fact is the same fact however many
 /// mouths it has been through and however wrong it has got.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Fact {
     pub id: FactId,
-    /// Dense handle. Never authored, never rendered, never serialised.
+    /// Dense handle. Never authored or rendered; only a checkpoint serialises it.
     pub key: FactKey,
     /// Mint order, and the garble seed's first term — so a chain is
     /// reconstructible from [`Held::from`] rather than logged.
@@ -510,6 +510,7 @@ pub struct Fact {
     /// subject has no lore, or when they are of the no-trade quarter, in which
     /// case every listener is `craft_other`.
     pub craft_ear: Option<String>,
+    #[serde(with = "crate::knowledge::source::save")]
     source: FactSource,
 }
 
@@ -545,7 +546,7 @@ impl Fact {
 /// chain reconstructible instead of merely logged. Deliberately carries no
 /// `topic`, so "topic is invariant under garbling" is *unrepresentable* rather
 /// than merely asserted.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct FactView {
     pub subject: Option<ActorId>,
     pub place: Option<AreaKey>,
@@ -659,7 +660,7 @@ pub enum Learned {
 /// The stored row. Interned and flattened to 88 bytes (4 + 1 + 4 + 16 + 24 + 32 =
 /// 81, and the 8-aligned `learned_on`/`from`/`view` round it up), so six of them
 /// are ~530 B rather than ~1.6 KB.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub(crate) struct Holding {
     key: FactKey,
     hops: u8,
@@ -709,7 +710,7 @@ pub const JOURNAL_PUBLISH_SECONDS: f64 = 1.0;
 pub const WHEN_DAYS_MAX: i64 = 7;
 
 /// One permission to coin a word. An offered permission survives its exchange.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Occasion {
     pub subject: Option<ActorId>,
     pub from: Option<ActorId>,
@@ -718,7 +719,7 @@ pub struct Occasion {
 }
 
 /// The player's remembered telling, kept even after its holding leaves the store.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct LearnedHow {
     pub word: String,
     pub at: Option<f64>,
@@ -746,7 +747,7 @@ pub struct LearnedHow {
 /// `holdings` is behind an [`Arc`] because `World::market_sale` does
 /// `let mut staged = self.clone()` on **every** catalog sale, so a bare map would
 /// deep-copy the whole store per transaction. Write through `Arc::make_mut`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Knowledge {
     live: BTreeMap<FactKey, Fact>,
     by_id: BTreeMap<FactId, FactKey>,
@@ -760,8 +761,10 @@ pub struct Knowledge {
     ///
     /// The key is `(PlanningWard, FactKey)` and both halves are `Copy + Ord`, so
     /// one ward's air is a `BTreeMap::range` and not a filter.
+    #[serde(with = "crate::checkpoint::shared_pairs")]
     air: Arc<BTreeMap<(PlanningWard, FactKey), Drift>>,
     /// `f64::NEG_INFINITY` at [`Default`], so the first stir beat always fires.
+    #[serde(with = "crate::checkpoint::never")]
     last_sweep_game_days: f64,
     occasions: BTreeMap<ActorId, Occasion>,
     raises: BTreeMap<ActorId, (i64, Office, u8)>,
@@ -774,6 +777,7 @@ pub struct Knowledge {
     /// receipts until the next stir, rather than replaying an evicted pair.
     player_stage_stir: Option<u32>,
     player_stage_tellings: BTreeSet<(FactKey, ActorId)>,
+    #[serde(with = "crate::checkpoint::never")]
     last_hearsay_beat_game_days: f64,
     /// At most one entry per effective subject per live fact. Removed with
     /// the fact, so a long-running city's daily notices cannot grow this forever.

@@ -140,7 +140,7 @@ impl CharacterSheet {
 /// The M2 ping-pong: an actor walks back and forth between two named nav places.
 /// M4 replaces this with the character's real daily round, so it stays a plain
 /// pair of place names plus which end we are currently heading for.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Patrol {
     pub a: String,
     pub b: String,
@@ -153,7 +153,7 @@ pub struct Patrol {
 /// character means it never walks (the player, a statue);
 /// [`CharacterState::from_sheet`] starts it `None` and only the mover pipeline
 /// ever sets it.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Movement {
     /// Exact bounded local route: preserve swept safety after avoidance and never
     /// replace it with an unbounded street detour. Existing walks leave this false.
@@ -281,7 +281,7 @@ pub struct PocketedUnit {
 /// on its way to becoming a stool, or a swallowed inedible on its way back.
 /// Formed items land in the butt slot when `due_game_days` lapses on the game
 /// clock — a pure function of (actor, meal, clock), no RNG.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GutEntry {
     /// What comes out: `"poop"` for a meal, the swallowed kind otherwise.
     pub kind: crate::item::ItemKind,
@@ -301,7 +301,7 @@ pub struct GutEntry {
 /// number, `features/food_and_items/03_hunger.md` §5); a world without a nav
 /// graph enrols nobody, so both gauges stay full and the frozen golden fixtures
 /// are byte-identical.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Needs {
     /// Falls with time; refilled at a well. The fastest gauge to decay.
     pub thirst: f64,
@@ -343,7 +343,7 @@ pub struct VendorListing {
 /// [`crate::ActorSnapshot::active_gesture`] so a player who walks up mid-loop
 /// still sees it; a one-shot gesture (a wave) needs no such state because it
 /// completes before anyone new arrives.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct ActiveGesture {
     pub kind: GestureKind,
     /// The absolute sim-time expiry ([`crate::DANCE_MAX_SECONDS`] after it
@@ -354,7 +354,7 @@ pub struct ActiveGesture {
 }
 
 /// Where a [`TravelIntent`] is headed.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum IntentTarget {
     /// A handle from `places_you_know`. The name and point are captured at
     /// intent time so the percepts that end the errand need no registry.
@@ -379,7 +379,7 @@ pub enum IntentTarget {
 /// minutes — a suggestion layered on an already-autonomous agent, never its
 /// brain (05_the_llm_seam.md §2). It expires on a route-derived budget, the
 /// pressing needs preempt it, and both endings are percepts.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TravelIntent {
     pub target: IntentTarget,
     /// Real-seconds lifetime, priced from the route at intent time
@@ -399,7 +399,7 @@ pub struct TravelIntent {
 /// their meal at the Hungry Ox instead of at home changes one line, and
 /// tomorrow they walk somewhere different; the player, who has no idea why,
 /// sees a person who has changed their habits.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RoundEdit {
     /// Zero-based index into [`CharacterState::daily_round`] — which is exactly
     /// the round's resolved leg list, one prose line per leg. The *model* names
@@ -413,7 +413,7 @@ pub struct RoundEdit {
 }
 
 /// Everything an action may change.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CharacterState {
     pub position_m: Vec3,
     pub facing_yaw: f64,
@@ -559,7 +559,7 @@ impl CharacterState {
 }
 
 /// A character in the world: the sheet it was seeded from plus live state.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Character {
     pub sheet: CharacterSheet,
     pub state: CharacterState,

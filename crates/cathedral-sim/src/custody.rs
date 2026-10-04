@@ -154,7 +154,7 @@ pub const STONE_HOUSE_PLACE_NAME: &str = "The Stone House";
 
 /// Where a prisoner is being taken, resolved once at `seize` so the escort and
 /// the HUD read the same answer even if the registry is later reloaded.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Station {
     pub place_id: PlaceId,
     /// How people speak of it — what the HUD line and the officer's `say` name.
@@ -176,7 +176,7 @@ impl Station {
 }
 
 /// Which box of the diagram somebody is in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Confinement {
     /// Taken and walking to the station beside the officer. Free to step aside,
     /// talk to somebody, look at a stall — within [`CUSTODY_LEASH_M`].
@@ -186,7 +186,7 @@ pub enum Confinement {
 }
 
 /// One person in the law's hands.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct CustodyRecord {
     /// Who took them and walks them there. `None` for the authored inmates, who
     /// were already inside when the run began and have no arresting officer.
@@ -282,7 +282,7 @@ impl CustodyRecord {
 /// renders it, the behaviour ladder is guarded by it and actions branch on it,
 /// so it is world state — but every real-time clock in it is driven from
 /// outside, because the sim is clock-free by design.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 pub struct Custody {
     held: BTreeMap<ActorId, CustodyRecord>,
 }

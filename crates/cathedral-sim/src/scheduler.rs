@@ -32,7 +32,7 @@ use crate::{
     MAX_LLM_REPLY_CHARS,
     actions::apply_action,
     attention::IdleGate,
-    character::Control,
+    character::{Character, Control},
     ids::{ActorId, RequestId},
     lore::Significance,
     prompt::{PromptEnv, parse_reply, render_prompt_and_drain},
@@ -96,7 +96,7 @@ pub enum SchedulerEvent {
 /// consumed slot is a conversation ended by a network blip — and an idle turn
 /// goes back to nobody, because the rotation that produced it comes around
 /// again on its own.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 enum TurnLane {
     /// Player speech selected this turn. Its completed reply may ignore a
     /// background-only conversation-floor hold, but never speech the player
@@ -109,7 +109,7 @@ enum TurnLane {
 }
 
 /// The one outstanding request.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 struct InFlight {
     actor_id: ActorId,
     /// Presence generation at submit. A reply from before departure may never
@@ -126,6 +126,7 @@ struct InFlight {
     prompt: String,
 }
 
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct NpcScheduler {
     /// The LLM cast in world-insertion order, frozen at construction
     /// (`scheduler.py:137-139`). An NPC added to the world later is never
@@ -178,13 +179,10 @@ impl NpcScheduler {
         maximum_backoff_seconds: f64,
         now: f64,
     ) -> Self {
-        // `f64::max` returns the other operand for NaN, so this sanitizes too.
-        let minimum_delay_seconds = minimum_delay_seconds.max(0.0);
-        let maximum_backoff_seconds = maximum_backoff_seconds.max(1.0).max(minimum_delay_seconds);
-        Self {
+        let mut scheduler = Self {
             order,
-            minimum_delay_seconds,
-            maximum_backoff_seconds,
+            minimum_delay_seconds: 0.0,
+            maximum_backoff_seconds: 1.0,
             round_robin_index: 0,
             priority_handoffs: VecDeque::new(),
             player_reactions: VecDeque::new(),
@@ -195,7 +193,20 @@ impl NpcScheduler {
             provider_failures: 0,
             running: false,
             submitted: None,
-        }
+        };
+        scheduler.retune(minimum_delay_seconds, maximum_backoff_seconds);
+        scheduler
+    }
+
+    /// Set the turn pacing, normalized as [`Self::new`] documents. A restored
+    /// engine calls it with this run's config: the pacing is the developer's
+    /// cost knob, not part of the world a save carries.
+    pub(crate) fn retune(&mut self, minimum_delay_seconds: f64, maximum_backoff_seconds: f64) {
+        // `f64::max` returns the other operand for NaN, so this sanitizes too.
+        self.minimum_delay_seconds = minimum_delay_seconds.max(0.0);
+        self.maximum_backoff_seconds = maximum_backoff_seconds
+            .max(1.0)
+            .max(self.minimum_delay_seconds);
     }
 
     /// Idempotent: also clears any residual delay so the first turn can start on
@@ -755,9 +766,7 @@ impl NpcScheduler {
         }
         let presence_epoch = actor.state.presence_epoch;
         let actor_name = actor.name().to_string();
-        let output_token_budget = actor
-            .lore()
-            .map(|_| actor.significance().output_token_budget());
+        let output_token_budget = turn_budget(actor);
         // Taken before the render, because the render is what empties the inbox.
         let drained_events = actor.inbox().to_vec();
 
@@ -884,6 +893,40 @@ impl NpcScheduler {
             return Some(self.order[index].clone());
         }
         None
+    }
+
+    /// Pick the turn stream up again in a restored engine (D06).
+    ///
+    /// The provider that owed the in-flight reply belonged to the engine that
+    /// was saved. A reply that had already arrived is still held, and the next
+    /// harvest applies it once. Otherwise the saved prompt goes out once more,
+    /// under a new request id. With no cognition to send it to, the turn is
+    /// unwound the way a provider failure unwinds it — percepts back, lane
+    /// requeued — but with no `system:` line and no backoff, because nothing
+    /// failed.
+    pub(crate) fn resume(&mut self, world: &mut World, cognition: &mut dyn Cognition, llm: bool) {
+        self.running = llm;
+        self.submitted = None;
+        if self.held_result.is_some() {
+            return;
+        }
+        let Some(flight) = self.in_flight.as_mut() else {
+            return;
+        };
+        let budget = world.characters.get(&flight.actor_id).and_then(turn_budget);
+        if llm && let Ok(request_id) = cognition.request_with_budget(flight.prompt.clone(), budget) {
+            flight.request_id = request_id;
+            return;
+        }
+        let flight = self.in_flight.take().expect("checked above");
+        world.knowledge.take_seated(&flight.actor_id);
+        world.knowledge.withdraw_offer(&flight.actor_id);
+        if let Some(actor) = world.characters.get_mut(&flight.actor_id) {
+            prepend(&mut actor.state.inbox, flight.drained_events);
+            prepend(&mut actor.state.pending_history, flight.presented);
+            actor.rebound_percepts();
+        }
+        self.requeue_unspent_turn(&flight.actor_id, flight.lane);
     }
 
     /// Put a turn that never reached the model back at the head of the lane
@@ -1031,6 +1074,13 @@ fn weighted_turn_order(
         );
     }
     order
+}
+
+/// The completion cap a turn by `actor` is submitted with.
+fn turn_budget(actor: &Character) -> Option<u32> {
+    actor
+        .lore()
+        .map(|_| actor.significance().output_token_budget())
 }
 
 fn prepend(target: &mut Vec<String>, mut front: Vec<String>) {
@@ -1638,5 +1688,74 @@ mod tests {
         assert_eq!(cognition.requests.len(), 2);
         assert!(cognition.requests[1].0.contains("the cart is stuck"));
         assert!(cognition.requests[1].0.contains(SYSTEM_PROVIDER_FAILED));
+    }
+
+    /// A restored engine with nobody to ask (D06): the saved turn that was out
+    /// unwinds the way a failure would — percepts back, the reaction at the
+    /// head of its lane — but with no `system:` line, no backoff and nothing
+    /// sent, because nothing failed. A provider that refuses the re-request
+    /// unwinds it the same way.
+    #[test]
+    fn a_restored_turn_with_no_cognition_unwinds_without_failing() {
+        struct Refusing;
+        impl Cognition for Refusing {
+            fn request(&mut self, _prompt: String) -> Result<RequestId, CognitionBusy> {
+                Err(CognitionBusy)
+            }
+        }
+
+        let mut world = World::new();
+        let ambient = ActorId::from_raw("ambnt");
+        world.add_character(lore_character("ambnt", Significance::Ambient));
+        world
+            .characters
+            .get_mut(&ambient)
+            .unwrap()
+            .notify_percept("The player says to you: what is your name?");
+        let before = world.characters[&ambient].clone();
+        let mut scheduler = NpcScheduler::new(stage_turn_order(&world), 2.0, 60.0, 0.0);
+        scheduler.start(0.0);
+        assert!(scheduler.prioritize_player_reaction(&world, &ambient, 0.0));
+
+        let env = PromptEnv::new(
+            include_str!("../../../assets/prompts/turn.j2"),
+            include_str!("../../../assets/prompts/night.j2"),
+            include_str!("../../../assets/prompts/strings.toml"),
+        )
+        .unwrap();
+        let mut cognition = BudgetCognition::default();
+        let empty = BTreeSet::new();
+        scheduler.poll(
+            0.0,
+            &mut world,
+            &mut Vec::new(),
+            &mut Vec::new(),
+            false,
+            IdleGate::Stage(&empty),
+            &mut cognition,
+            &env,
+        );
+        assert!(scheduler.in_flight_is_player_reaction());
+        assert!(world.characters[&ambient].inbox().is_empty(), "the render took it");
+
+        for llm in [false, true] {
+            let (mut scheduler, mut world) = (scheduler.clone(), world.clone());
+            let next_turn_at = scheduler.next_turn_at;
+            if llm {
+                scheduler.resume(&mut world, &mut Refusing, true);
+            } else {
+                scheduler.resume(&mut world, &mut cognition, false);
+            }
+            assert_eq!(scheduler.in_flight_actor_id(), None);
+            assert_eq!(scheduler.running(), llm);
+            assert_eq!(scheduler.priority_actor_id(), Some(&ambient));
+            assert!(scheduler.player_reaction_pending());
+            assert_eq!(scheduler.next_turn_at, next_turn_at, "no backoff");
+            assert_eq!(scheduler.provider_failures, 0);
+            let actor = &world.characters[&ambient];
+            assert_eq!(actor.inbox(), before.inbox(), "the percept, and no system line");
+            assert_eq!(actor.pending_history(), before.pending_history());
+        }
+        assert_eq!(cognition.requests.len(), 1, "nothing was asked again");
     }
 }

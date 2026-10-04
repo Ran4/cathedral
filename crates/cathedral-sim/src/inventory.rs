@@ -74,7 +74,7 @@ impl StockSpec {
 
 /// Quantity in a normal held stack which belongs to a magic legacy restock.
 /// Provenance is operational state and never travels with transferred goods.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct LegacyRestockShare {
     pub original_vendor: ActorId,
     pub source_id: String,
@@ -89,7 +89,7 @@ pub struct ReservedInput {
 
 /// One resumable producer job. Jobs live in `World` because an action verb must
 /// see their commitments even though the round owns the production planner.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TransformJob {
     pub job_id: String,
     pub spec_id: String,
@@ -101,13 +101,13 @@ pub struct TransformJob {
     pub progress_work_minutes: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TransformReceiptLine {
     pub item_id: ItemId,
     pub quantity: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TransformReceipt {
     pub job_id: String,
     pub producer: ActorId,
@@ -116,7 +116,7 @@ pub struct TransformReceipt {
     pub completed_on_day: i64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompletedTransform {
     pub receipt: TransformReceipt,
     pub completed_on_day: i64,

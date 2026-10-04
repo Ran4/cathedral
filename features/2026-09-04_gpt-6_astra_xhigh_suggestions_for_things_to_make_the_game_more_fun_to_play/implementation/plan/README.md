@@ -1,4 +1,4 @@
-Status: M0 closed; M1 (baseline fixes) implemented (2026-10-04). Plan reviewed 2026-10-04 ([PLAN_REVIEW](PLAN_REVIEW.md)): M1 and M2 rewritten as baseline fixes and simulation checkpoints + boot-from-save; the revised order for the rest awaits approval. M2–M19 not started. A first attempt at M1–M6 (2026-09-07 → 10-02) was removed from history on 2026-10-03; see [LESSONS_FROM_THE_FIRST_ATTEMPT.md](LESSONS_FROM_THE_FIRST_ATTEMPT.md).
+Status: M0 closed; M1 (baseline fixes) and M2 (simulation checkpoints + boot-from-save) implemented (2026-10-04). Plan reviewed 2026-10-04 ([PLAN_REVIEW](PLAN_REVIEW.md)); the revised order (R3 load during play onwards) and questions Q1–Q13 await approval. A first attempt at M1–M6 (2026-09-07 → 10-02) was removed from history on 2026-10-03; see [LESSONS_FROM_THE_FIRST_ATTEMPT.md](LESSONS_FROM_THE_FIRST_ATTEMPT.md).
 
 # An Alibi in Stone — systems first, then the full quest
 
