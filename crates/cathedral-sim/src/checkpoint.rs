@@ -85,7 +85,7 @@ impl std::error::Error for RestoreError {}
 /// shelters. FNV-1a rather than `DefaultHasher`, whose algorithm may change
 /// between compilers — a rebuild must not invalidate every save.
 pub fn geometry_fingerprint(nav: Option<&NavData>, areas: &AreaMap, shelters: &ShelterMap) -> u64 {
-    let mut hash = Fnv(0xCBF2_9CE4_8422_2325);
+    let mut hash = Fnv::new();
     if let Some(nav) = nav {
         hash.write(&(nav.node_count() as u64).to_le_bytes());
         for node in 0..nav.node_count() {
@@ -115,14 +115,32 @@ pub fn geometry_fingerprint(nav: Option<&NavData>, areas: &AreaMap, shelters: &S
     hash.0
 }
 
-struct Fnv(u64);
+/// FNV-1a's construction: the one hash whose values a save may carry. Fed
+/// bytes, never `Hash` impls, so nothing in std can change what it returns.
+/// Its multiplier is not FNV's published prime (`0x100_0000_01B3`); saves
+/// already carry fingerprints made with this one, so it stays as it is.
+pub(crate) struct Fnv(u64);
 
 impl Fnv {
-    fn write(&mut self, bytes: &[u8]) {
+    pub(crate) fn new() -> Self {
+        Self(0xCBF2_9CE4_8422_2325)
+    }
+
+    pub(crate) fn write(&mut self, bytes: &[u8]) {
         for byte in bytes {
             self.0 ^= u64::from(*byte);
             self.0 = self.0.wrapping_mul(0x1_0000_0000_01B3);
         }
+    }
+
+    /// A string and a terminator, so `("ab", "c")` and `("a", "bc")` differ.
+    pub(crate) fn write_str(&mut self, text: &str) {
+        self.write(text.as_bytes());
+        self.write(&[0xFF]);
+    }
+
+    pub(crate) fn finish(&self) -> u64 {
+        self.0
     }
 }
 

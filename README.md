@@ -179,6 +179,9 @@ engine, world rules, HUD, and interaction paths.
 - `F6` - quicksave the whole city to `saves/quick.save`; start a later run from
   it with `CATHEDRAL_LOAD=quick` (the city resumes at the saved time - no time
   passes while the game is closed)
+- `F9` - quickload `saves/quick.save` into the running game; the `Esc` menu
+  lists every slot with a Load button. A slot that cannot be read leaves the
+  current city running and says why
 - `V` - toggle the microphone on/off (on by default); speech is heard openly
   by every actor within 20 m. Recognized speech appears in tiny text near the
   bottom with a nearby-recipient count

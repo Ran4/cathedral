@@ -1121,10 +1121,55 @@ pub fn clear_speech_presentation(
     if messages.read().next().is_none() {
         return;
     }
-    for entity in &transient_entities {
+    tear_down_presentation(
+        &mut commands,
+        &mut state,
+        &mut hud,
+        &transient_entities,
+        microphone.as_deref(),
+    );
+}
+
+/// A load replaced the world (D06): every line, bubble and voice of the old
+/// one goes, before the intake takes in the new world's first lines from the
+/// same drain.
+pub fn forget_replaced_speech(
+    mut commands: Commands,
+    mut loads: MessageReader<super::saving::WorldLoaded>,
+    mut state: ResMut<SpeechPresentationState>,
+    mut hud: ResMut<SmartActorHudState>,
+    transient_entities: Query<
+        Entity,
+        Or<(With<SpeechBubbleStack>, With<SpeechBubble>, With<NpcVoice>)>,
+    >,
+    microphone: Option<Res<MicrophoneService>>,
+) {
+    if loads.read().count() == 0 {
+        return;
+    }
+    tear_down_presentation(
+        &mut commands,
+        &mut state,
+        &mut hud,
+        &transient_entities,
+        microphone.as_deref(),
+    );
+}
+
+fn tear_down_presentation(
+    commands: &mut Commands,
+    state: &mut SpeechPresentationState,
+    hud: &mut SmartActorHudState,
+    transient_entities: &Query<
+        Entity,
+        Or<(With<SpeechBubbleStack>, With<SpeechBubble>, With<NpcVoice>)>,
+    >,
+    microphone: Option<&MicrophoneService>,
+) {
+    for entity in transient_entities {
         commands.entity(entity).try_despawn();
     }
-    let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
+    let _ = resume_microphone_after_voice(state, microphone);
     state.clear();
     hud.subtitle.clear();
 }

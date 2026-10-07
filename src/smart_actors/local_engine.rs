@@ -27,27 +27,38 @@
 //! The engine is built on `Hello`, not at plugin build: `hello` *is* the first
 //! spatial update (`server.py:826-828`), and the player's real spawn has to be
 //! in the world before the first snapshot leaves it.
+//!
+//! A load during play (D06, D08 Q5) replaces the engine between two pumps: the
+//! save thread reads and decodes the slot, the pump verifies it against the
+//! running config, takes the old engine apart for its config, assets and
+//! speech services, and restores the new one with a fresh cognition client on
+//! a fresh channel. What the old engine still had out is inert: its LLM replies
+//! land on a channel nobody reads, and the speech services tag everything with
+//! the engine it was asked for ([`Generation`]).
 
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     panic::{self, AssertUnwindSafe},
     path::{Path, PathBuf},
     rc::Rc,
     sync::Arc,
+    time::Instant,
 };
 
 use bevy::prelude::*;
 use cathedral_backends::{
-    BackendCapabilities, BackendEvent, BackendsConfig, BackendsHandle, BackendsOptions,
-    PromptExchange, PromptLog, SessionDir,
-    save::{self, HostSave, SaveGame, SaveWriter},
+    BackendCapabilities, BackendEvent, BackendRuntime, BackendsConfig, BackendsHandle,
+    BackendsOptions, HttpCognition, LlmConfigError, LlmSettings, PromptExchange, PromptLog,
+    SessionDir, backend_channel,
+    save::{self, HostSave, LoadOutcome, SaveGame, SaveWriter},
     world_data::load_world_seed,
 };
 use cathedral_sim::{
     ActorId as SimActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand,
     EngineConfig, EngineMessage, FakeCognition, ItemId as SimItemId, NavData, NullSight, Office,
     PromptEnv, RequestId, ShelterMap, SoundCatalog, SpatialActorUpdate, SpeechEventId,
-    SttBackendKind, Transcription, Tts, TtsBackendKind, Vec3 as SimVec3,
+    SttBackendKind, SttSubmitError, Transcription, TranscriptionJobId, TranscriptionOutcome, Tts,
+    TtsBackendKind, TtsOutcome, TtsRequest, TtsSubmitError, Vec3 as SimVec3,
     WeatherConfig as SimWeatherConfig, WeatherMode, WorldClock, WorldSeed,
 };
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
@@ -73,6 +84,24 @@ fn assets_dir() -> PathBuf {
 /// crate root, not the working directory. Gitignored.
 fn saves_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("saves")
+}
+
+/// Where the slots live, and the one the game starts from. Only the real
+/// game's startup reads `CATHEDRAL_LOAD` (`main.rs`), so a test never boots
+/// from whatever slot the developer's shell happens to name.
+#[derive(Debug, Clone)]
+pub struct SaveSettings {
+    pub dir: PathBuf,
+    pub boot_slot: Option<String>,
+}
+
+impl Default for SaveSettings {
+    fn default() -> Self {
+        Self {
+            dir: saves_dir(),
+            boot_slot: None,
+        }
+    }
 }
 
 /// The committed navigation artifact — the baked walkable surface and the welded
@@ -128,6 +157,188 @@ impl Cognition for SharedCognition {
     }
 }
 
+/// How to give an engine a cognition client of its own. Every engine — the
+/// first, and each one a load adopts — gets a fresh one on a fresh channel,
+/// so a reply owed to a replaced engine has nowhere to land (D06). Nothing
+/// restarts: the provider client shares the backends' runtime.
+enum Minter {
+    Fake,
+    Provider {
+        runtime: Arc<BackendRuntime>,
+        llm: Result<LlmSettings, LlmConfigError>,
+    },
+}
+
+/// Where the current engine's LLM replies arrive.
+enum Replies {
+    Fake(SharedCognition),
+    Provider(Receiver<BackendEvent>),
+}
+
+impl Minter {
+    fn mint(&self) -> (Box<dyn Cognition>, Replies) {
+        match self {
+            Self::Fake => {
+                let fake = SharedCognition::default();
+                (Box::new(fake.clone()), Replies::Fake(fake))
+            }
+            Self::Provider { runtime, llm } => {
+                let (sender, replies) = backend_channel();
+                let cognition = HttpCognition::new(Arc::clone(runtime), llm.clone(), sender);
+                (Box::new(cognition), Replies::Provider(replies))
+            }
+        }
+    }
+}
+
+/// Which engine the speech services are working for.
+///
+/// They outlive any one engine — they own the local speech workers, which a
+/// load must not restart — and a restored engine's speech ids and
+/// transcription jobs start again from the save, so a late voice or
+/// transcript for the replaced world would otherwise be taken for one of its
+/// successor's. Every submission is tagged with the current generation and
+/// the pump hands an engine only outcomes carrying its own (D06).
+#[derive(Clone, Default)]
+struct Generation(Rc<Cell<u64>>);
+
+/// Transcription job ids are small counters; the generation rides above them.
+const JOB_ID_BITS: u32 = 40;
+
+impl Generation {
+    fn advance(&self) {
+        self.0.set(self.0.get() + 1);
+    }
+
+    fn tag_event(&self, event_id: SpeechEventId) -> SpeechEventId {
+        SpeechEventId(format!("{}#{}", event_id.0, self.0.get()))
+    }
+
+    fn untag_event(&self, event_id: SpeechEventId) -> Option<SpeechEventId> {
+        let (event, generation) = event_id.0.rsplit_once('#')?;
+        (generation.parse::<u64>().ok()? == self.0.get()).then(|| SpeechEventId(event.to_string()))
+    }
+
+    fn tag_job(&self, job: TranscriptionJobId) -> TranscriptionJobId {
+        TranscriptionJobId((self.0.get() << JOB_ID_BITS) | (job.0 & ((1 << JOB_ID_BITS) - 1)))
+    }
+
+    fn untag_job(&self, job: TranscriptionJobId) -> Option<TranscriptionJobId> {
+        (job.0 >> JOB_ID_BITS == self.0.get())
+            .then_some(TranscriptionJobId(job.0 & ((1 << JOB_ID_BITS) - 1)))
+    }
+
+    /// `None`: the outcome belongs to a replaced engine. Realtime results are
+    /// keyed by the microphone's recording names, which never repeat in a
+    /// session, so they need no tag.
+    fn untag_transcription(&self, outcome: TranscriptionOutcome) -> Option<TranscriptionOutcome> {
+        match outcome {
+            TranscriptionOutcome::Done { job, result } => Some(TranscriptionOutcome::Done {
+                job: self.untag_job(job)?,
+                result,
+            }),
+            realtime @ TranscriptionOutcome::Realtime(_) => Some(realtime),
+        }
+    }
+
+    fn untag_tts(&self, outcome: TtsOutcome) -> Option<TtsOutcome> {
+        Some(match outcome {
+            TtsOutcome::Chunk {
+                event_id,
+                seq,
+                sample_rate,
+                samples,
+            } => TtsOutcome::Chunk {
+                event_id: self.untag_event(event_id)?,
+                seq,
+                sample_rate,
+                samples,
+            },
+            TtsOutcome::StreamEnd {
+                event_id,
+                chunk_count,
+                first_chunk_ms,
+            } => TtsOutcome::StreamEnd {
+                event_id: self.untag_event(event_id)?,
+                chunk_count,
+                first_chunk_ms,
+            },
+            TtsOutcome::Done { event_id, result } => TtsOutcome::Done {
+                event_id: self.untag_event(event_id)?,
+                result,
+            },
+        })
+    }
+}
+
+/// The voice, tagging each line with the engine that asked for it.
+struct TaggedTts {
+    inner: Box<dyn Tts>,
+    generation: Generation,
+}
+
+impl Tts for TaggedTts {
+    fn available(&self, kind: TtsBackendKind) -> bool {
+        self.inner.available(kind)
+    }
+
+    fn submit(&mut self, mut request: TtsRequest) -> Result<(), TtsSubmitError> {
+        request.event_id = self.generation.tag_event(request.event_id);
+        self.inner.submit(request)
+    }
+
+    fn warm(&mut self, kind: TtsBackendKind) {
+        self.inner.warm(kind);
+    }
+}
+
+/// The ear, tagging each batch job with the engine that asked for it. Every
+/// method is forwarded, the defaulted ones included.
+struct TaggedTranscription {
+    inner: Box<dyn Transcription>,
+    generation: Generation,
+}
+
+impl Transcription for TaggedTranscription {
+    fn available(&self, kind: SttBackendKind) -> bool {
+        self.inner.available(kind)
+    }
+
+    fn submit_batch(
+        &mut self,
+        job: TranscriptionJobId,
+        wav_path: PathBuf,
+        kind: SttBackendKind,
+    ) -> Result<(), SttSubmitError> {
+        self.inner
+            .submit_batch(self.generation.tag_job(job), wav_path, kind)
+    }
+
+    fn realtime_begin(&mut self, key: &str) -> bool {
+        self.inner.realtime_begin(key)
+    }
+
+    fn realtime_append(&mut self, key: &str, samples: &[i16]) -> bool {
+        self.inner.realtime_append(key, samples)
+    }
+
+    fn realtime_commit(&mut self, key: &str) -> bool {
+        self.inner.realtime_commit(key)
+    }
+
+    fn realtime_clear(&mut self, key: &str) {
+        self.inner.realtime_clear(key);
+    }
+
+    fn recording_seconds(&self, wav_path: &Path) -> Option<f64> {
+        self.inner.recording_seconds(wav_path)
+    }
+
+    fn discard_recording(&mut self, wav_path: &Path) {
+        self.inner.discard_recording(wav_path);
+    }
+}
+
 /// Everything `Engine::new` needs, held until `Hello` brings the last piece:
 /// where the player is standing.
 struct EngineSeed {
@@ -137,7 +348,6 @@ struct EngineSeed {
     prompts: PromptEnv,
     config: EngineConfig,
     capabilities: Capabilities,
-    cognition: Box<dyn Cognition>,
     transcription: Box<dyn Transcription>,
     tts: Box<dyn Tts>,
     /// `CATHEDRAL_LOAD`'s slot, read and verified at build time — never in the
@@ -151,13 +361,17 @@ struct EngineSeed {
 pub struct LocalEngine {
     seed: Option<EngineSeed>,
     engine: Option<Engine>,
-    /// Everything the backends finish — LLM turns, transcripts, voices —
+    /// What the speech backends finish — transcripts, voices, worker status —
     /// arrives here (D7). The handle they hang off lives in the [`EngineGuard`],
     /// so a dropped guard stops them; this receiver then simply runs dry.
     completions: Option<Receiver<BackendEvent>>,
-    /// Present in fake mode only; the real provider answers on the backend
-    /// channel instead.
-    fake_cognition: Option<SharedCognition>,
+    /// The current engine's LLM replies: its own fake, or its own channel.
+    replies: Option<Replies>,
+    /// Makes each engine's cognition; `None` only when the backends never
+    /// started.
+    minter: Option<Minter>,
+    /// The engine the speech services are currently working for.
+    generation: Generation,
     prompt_log: PromptLog,
     commands: Receiver<BridgeCommand>,
     events: Sender<BridgeEvent>,
@@ -169,7 +383,8 @@ pub struct LocalEngine {
     /// `checkpoint.now - host elapsed at adoption` (D06: time with the game
     /// closed does not pass).
     time_offset: f64,
-    /// The one thread saves are written on; `None` if it could not start.
+    /// The one thread saves are written and read on; `None` if it could not
+    /// start.
     saves: Option<SaveWriter>,
 }
 
@@ -220,6 +435,39 @@ impl LocalEngine {
         self.engine = None;
         self.fail("the actor engine panicked: staged by a test".to_string());
     }
+
+    /// The current engine's fake cognition — **tests only**. A test keeps the
+    /// replaced engine's to ask it for a reply after a load and prove that
+    /// nothing in the new world hears it.
+    #[cfg(test)]
+    pub(super) fn fake_cognition(&self) -> Option<FakeHandle> {
+        match &self.replies {
+            Some(Replies::Fake(fake)) => Some(FakeHandle(fake.clone())),
+            _ => None,
+        }
+    }
+}
+
+/// A fake cognition kept past its engine's replacement (tests only).
+#[cfg(test)]
+pub(super) struct FakeHandle(SharedCognition);
+
+#[cfg(test)]
+impl FakeHandle {
+    /// Have the fake answer `prompt` as if its engine had asked: the reply is
+    /// staged exactly where a real turn's would be.
+    pub(super) fn reply_to(&self, prompt: &str) -> RequestId {
+        self.0
+            .0
+            .borrow_mut()
+            .request(prompt.to_string())
+            .expect("the fake is never busy")
+    }
+
+    /// How many staged replies nobody has collected.
+    pub(super) fn undelivered(&self) -> usize {
+        self.0.0.borrow_mut().drain_completions().len()
+    }
 }
 
 /// Start the engine and hand the ECS its resources.
@@ -230,6 +478,7 @@ impl LocalEngine {
 pub fn spawn(
     config: &SmartActorsConfig,
     weather: &WeatherSettings,
+    saves: &SaveSettings,
 ) -> (BridgeHandle, BridgeInbox, EngineGuard, LocalEngine) {
     let (commands_tx, commands_rx) = bounded(COMMAND_QUEUE_CAPACITY);
     // Unbounded, unlike the sidecar's 256-slot event queue: producer and
@@ -246,23 +495,29 @@ pub fn spawn(
         seed: None,
         engine: None,
         completions: None,
-        fake_cognition: None,
+        replies: None,
+        minter: None,
+        generation: Generation::default(),
         prompt_log: PromptLog::new(None, None),
         commands: commands_rx,
         events: events_tx.clone(),
         dead: false,
         time_offset: 0.0,
-        saves: SaveWriter::spawn(saves_dir())
+        saves: SaveWriter::spawn(saves.dir.clone())
             .inspect_err(|error| warn!("[save] {error}; saving is off"))
             .ok(),
     };
     let mut guard = EngineGuard { _backends: None };
 
     match build(config, weather, session) {
-        Ok((seed, backends, fake_cognition, prompt_log)) => {
+        Ok((mut seed, backends, minter, prompt_log)) => {
+            seed.loaded = saves
+                .boot_slot
+                .as_deref()
+                .and_then(|slot| load_slot(&saves.dir, slot, &seed.config, &seed.areas));
             engine.completions = Some(backends.events().clone());
             engine.seed = Some(seed);
-            engine.fake_cognition = fake_cognition;
+            engine.minter = Some(minter);
             engine.prompt_log = prompt_log;
             guard._backends = Some(backends);
             // The handshake still opens with the same event, so mod.rs's
@@ -283,12 +538,7 @@ pub fn spawn(
     )
 }
 
-type Built = (
-    EngineSeed,
-    BackendsHandle,
-    Option<SharedCognition>,
-    PromptLog,
-);
+type Built = (EngineSeed, BackendsHandle, Minter, PromptLog);
 
 /// Fill the streets: `config.ron: smart_actors.extra_ambient_npcs` generated
 /// ambient citizens appended to the authored cast.
@@ -388,13 +638,14 @@ fn build(
     let backends = BackendsHandle::start(backends_config, session)
         .map_err(|error| format!("could not start the actor backends: {error}"))?;
 
-    let (cognition, fake_cognition): (Box<dyn Cognition>, Option<SharedCognition>) =
-        if config.fake_backend {
-            let fake = SharedCognition::default();
-            (Box::new(fake.clone()), Some(fake))
-        } else {
-            (Box::new(backends.cognition()), None)
-        };
+    let minter = if config.fake_backend {
+        Minter::Fake
+    } else {
+        Minter::Provider {
+            runtime: Arc::clone(backends.runtime()),
+            llm: backends.config().llm.clone(),
+        }
+    };
     // Real STT/TTS engines (or their offline stand-ins): the handle picks by
     // `fake_mode`, so this one call site is both modes.
     let transcription: Box<dyn Transcription> = backends.transcription();
@@ -486,7 +737,6 @@ fn build(
         ..EngineConfig::default()
     };
 
-    let loaded = load_slot(&engine_config, &areas);
     Ok((
         EngineSeed {
             seed,
@@ -495,13 +745,12 @@ fn build(
             prompts,
             config: engine_config,
             capabilities,
-            cognition,
             transcription,
             tts,
-            loaded,
+            loaded: None,
         },
         backends,
-        fake_cognition,
+        minter,
         prompt_log,
     ))
 }
@@ -509,10 +758,9 @@ fn build(
 /// `CATHEDRAL_LOAD=<slot>`: read, decode and verify the slot now, at engine
 /// build time. A slot that cannot be read or does not fit this city is an
 /// error in the log and a fresh world, never a dead cast.
-fn load_slot(config: &EngineConfig, areas: &AreaMap) -> Option<SaveGame> {
-    let slot = std::env::var("CATHEDRAL_LOAD").ok()?;
-    let started = std::time::Instant::now();
-    let loaded = save::read_slot(&saves_dir(), &slot).and_then(|game| {
+fn load_slot(dir: &Path, slot: &str, config: &EngineConfig, areas: &AreaMap) -> Option<SaveGame> {
+    let started = Instant::now();
+    let loaded = save::read_slot(dir, slot).and_then(|game| {
         game.checkpoint
             .verify(config, areas)
             .map(|()| game)
@@ -621,9 +869,15 @@ impl LocalEngine {
             return;
         }
 
+        self.report_saves();
+        // Between the last poll and this one: a slot the save thread has
+        // decoded replaces the engine before anything is collected for it, so
+        // the game hears the swap and the new world's first messages in one
+        // drain.
+        let replaced = self.adopt_loads(elapsed);
+
         let mut commands: Vec<EngineCommand> = Vec::new();
         self.collect_completions(&mut commands);
-        self.report_saves();
 
         let mut saves = Vec::new();
         while let Ok(command) = self.commands.try_recv() {
@@ -634,8 +888,24 @@ impl LocalEngine {
                     position_m,
                     spatial_seq,
                 } => self.start(position_m, spatial_seq, elapsed),
+                // A save asked for the city the player was looking at, which a
+                // load has just replaced: never the loaded one under its name.
+                BridgeCommand::Save { slot, .. } if replaced => {
+                    self.send(BridgeEvent::Saved(Err(format!(
+                        "Not saved to slot {slot}: a load replaced the city"
+                    ))));
+                }
                 // Taken after this pump's poll, never in the middle of one.
                 BridgeCommand::Save { slot, host } => saves.push((slot, host)),
+                BridgeCommand::Load { slot } => self.request_load(slot),
+                // The voice choice is the session's, not the world's.
+                command @ BridgeCommand::SetTtsBackend { .. } => commands.extend(translate(command)),
+                // Everything else in the queue was written against the world
+                // just replaced — above all the player's last position there,
+                // which would stand the restored player where they had walked
+                // to. The game learns of the swap in this pump's drain and
+                // speaks to the new world from then on.
+                _ if replaced => {}
                 command => {
                     if let Some(command) = translate(command) {
                         commands.push(command);
@@ -683,7 +953,7 @@ impl LocalEngine {
         let Some(engine) = self.engine.as_ref() else {
             return;
         };
-        let started = std::time::Instant::now();
+        let started = Instant::now();
         let checkpoint = engine.checkpoint(now);
         let line = format!(
             "[save] slot {slot}: captured {} in {:.1} ms",
@@ -737,27 +1007,166 @@ impl LocalEngine {
         }
     }
 
+    /// Hand the slot to the save thread to read and decode (D05: no disk work
+    /// in the pump); [`Self::adopt_loads`] takes it from there.
+    fn request_load(&mut self, slot: String) {
+        let queued = if self.engine.is_none() {
+            Err("the city has not started yet".to_string())
+        } else {
+            match &self.saves {
+                Some(saves) => saves.load(slot.clone()),
+                None => Err("the save thread did not start".to_string()),
+            }
+        };
+        if let Err(error) = queued {
+            self.refuse_load(&slot, &error);
+        }
+    }
+
+    /// Adopt every slot the save thread finished decoding since the last pump;
+    /// whether any replaced the engine.
+    fn adopt_loads(&mut self, elapsed: f64) -> bool {
+        let Some(saves) = &self.saves else {
+            return false;
+        };
+        let mut replaced = false;
+        for LoadOutcome {
+            slot,
+            read_ms,
+            result,
+        } in saves.loaded()
+        {
+            match result.and_then(|game| self.adopt(&slot, read_ms, game, elapsed)) {
+                Ok(()) => replaced = true,
+                Err(error) => self.refuse_load(&slot, &error),
+            }
+        }
+        replaced
+    }
+
+    /// Replace the running engine with a decoded slot. A slot that does not
+    /// verify against this run's config and map is refused before the old
+    /// engine is touched, so the city carries on.
+    fn adopt(
+        &mut self,
+        slot: &str,
+        read_ms: f64,
+        game: SaveGame,
+        elapsed: f64,
+    ) -> Result<(), String> {
+        let SaveGame { checkpoint, host } = game;
+        let (Some(engine), Some(minter)) = (self.engine.as_ref(), self.minter.as_ref()) else {
+            return Err("the city has not started yet".to_string());
+        };
+        let started = Instant::now();
+        checkpoint
+            .verify(engine.config(), &engine.world().area_map)
+            .map_err(|error| error.to_string())?;
+        let verify_ms = started.elapsed().as_secs_f64() * 1e3;
+
+        // The new engine's cognition is fresh; its speech services are the
+        // old one's, now working for the next generation.
+        let (cognition, replies) = minter.mint();
+        self.generation.advance();
+        let started = Instant::now();
+        let parts = self.engine.take().expect("checked above").into_parts();
+        let drop_ms = started.elapsed().as_secs_f64() * 1e3;
+        let started = Instant::now();
+        let saved_now = checkpoint.now;
+        let label = checkpoint.label.clone();
+        let engine = Engine::restore_verified(
+            checkpoint,
+            parts.config,
+            parts.area_map,
+            parts.catalog,
+            parts.env,
+            cognition,
+            parts.transcription,
+            parts.tts,
+            Box::new(NullSight),
+            parts.capabilities,
+        );
+        let restore_ms = started.elapsed().as_secs_f64() * 1e3;
+        self.replies = Some(replies);
+        self.time_offset = saved_now - elapsed;
+
+        let line = format!(
+            "[save] slot {slot}: loaded {label}; read+decode {read_ms:.0} ms on the save \
+             thread, verify {verify_ms:.1} ms + old world dropped {drop_ms:.1} ms + restore \
+             {restore_ms:.1} ms on the main thread"
+        );
+        info!("{line}");
+        crate::session_log::log_line("engine", "INFO", &line);
+        self.send(BridgeEvent::Loaded(Ok(format!("Loaded slot {slot}: {label}"))));
+        self.send_restored(&engine, host);
+        self.engine = Some(engine);
+        Ok(())
+    }
+
+    fn refuse_load(&self, slot: &str, error: &str) {
+        let line = format!("[save] cannot load slot {slot}: {error}; this city carries on");
+        error!("{line}");
+        crate::session_log::log_line("engine", "ERROR", &line);
+        self.send(BridgeEvent::Loaded(Err(format!(
+            "Could not load slot {slot}: {error}"
+        ))));
+    }
+
+    /// Put the player where a restored world left them, before its first
+    /// message: `Hello`'s spawn, or wherever the player has walked to since,
+    /// loses to the save.
+    fn send_restored(&self, engine: &Engine, host: HostSave) {
+        let player = &engine.world().characters[&engine.config().player_id];
+        let at = player.position_m();
+        match Position::new(at.x as f32, at.y as f32, at.z as f32) {
+            Ok(position_m) => self.send(BridgeEvent::Restored {
+                position_m,
+                facing_yaw: player.facing_yaw() as f32,
+                pitch: host.pitch,
+                flying: host.flying,
+            }),
+            Err(_) => warn!("[save] the saved player position does not fit the game"),
+        }
+    }
+
     /// The host's half of the backend contract (D7): everything the outside
     /// world finished since the last pump, handed back as commands.
     fn collect_completions(&mut self, commands: &mut Vec<EngineCommand>) {
-        if let Some(fake) = &self.fake_cognition {
-            for completion in fake.0.borrow_mut().drain_completions() {
-                commands.push(EngineCommand::LlmCompletion(completion));
+        match &self.replies {
+            Some(Replies::Fake(fake)) => {
+                for completion in fake.0.borrow_mut().drain_completions() {
+                    commands.push(EngineCommand::LlmCompletion(completion));
+                }
             }
+            Some(Replies::Provider(replies)) => {
+                for event in replies.try_iter() {
+                    if let BackendEvent::LlmCompletion(completion) = event {
+                        commands.push(EngineCommand::LlmCompletion(completion));
+                    }
+                }
+            }
+            None => {}
         }
         let Some(completions) = &self.completions else {
             return;
         };
         for event in completions.try_iter() {
             let command = match event {
-                BackendEvent::LlmCompletion(completion) => EngineCommand::LlmCompletion(completion),
+                // Each engine's cognition answers on its own channel, above.
+                BackendEvent::LlmCompletion(_) => continue,
                 BackendEvent::Status(status) => EngineCommand::BackendStatus(status),
                 event => match (
                     event.clone().into_transcription_outcome(),
                     event.into_tts_outcome(),
                 ) {
-                    (Some(outcome), _) => EngineCommand::Transcription(outcome),
-                    (_, Some(outcome)) => EngineCommand::Tts(outcome),
+                    (Some(outcome), _) => match self.generation.untag_transcription(outcome) {
+                        Some(outcome) => EngineCommand::Transcription(outcome),
+                        None => continue,
+                    },
+                    (_, Some(outcome)) => match self.generation.untag_tts(outcome) {
+                        Some(outcome) => EngineCommand::Tts(outcome),
+                        None => continue,
+                    },
                     _ => continue,
                 },
             };
@@ -769,7 +1178,7 @@ impl LocalEngine {
     /// renders its first snapshot. The facing comes from the seed: the game only
     /// starts reporting a bearing with its first `spatial_update`.
     fn start(&mut self, position_m: Position, spatial_seq: u64, now: f64) {
-        let Some(seed) = self.seed.take() else {
+        let (Some(seed), Some(minter)) = (self.seed.take(), self.minter.as_ref()) else {
             // A second hello (there is no in-place restart) or a dead engine.
             return;
         };
@@ -780,18 +1189,26 @@ impl LocalEngine {
             prompts,
             config,
             capabilities,
-            cognition,
             transcription,
             tts,
             loaded,
         } = seed;
+        let (cognition, replies) = minter.mint();
+        self.replies = Some(replies);
+        let transcription = Box::new(TaggedTranscription {
+            inner: transcription,
+            generation: self.generation.clone(),
+        });
+        let tts = Box::new(TaggedTts {
+            inner: tts,
+            generation: self.generation.clone(),
+        });
         if let Some(SaveGame { checkpoint, host }) = loaded {
             // The saved city, not a new one: no seeding, and the clock carries
-            // on from where it stopped. Hello's spawn is the host's guess and
-            // loses to where the save left the player.
+            // on from where it stopped. `load_slot` verified it under this very
+            // config and map, so nothing past here can refuse it.
             let saved_now = checkpoint.now;
-            let player_id = config.player_id.clone();
-            match Engine::restore(
+            let engine = Engine::restore_verified(
                 checkpoint,
                 config,
                 areas,
@@ -802,24 +1219,10 @@ impl LocalEngine {
                 tts,
                 Box::new(NullSight),
                 capabilities,
-            ) {
-                Ok(engine) => {
-                    self.time_offset = saved_now - now;
-                    let player = &engine.world().characters[&player_id];
-                    let at = player.position_m();
-                    match Position::new(at.x as f32, at.y as f32, at.z as f32) {
-                        Ok(position_m) => self.send(BridgeEvent::Restored {
-                            position_m,
-                            facing_yaw: player.facing_yaw() as f32,
-                            pitch: host.pitch,
-                            flying: host.flying,
-                        }),
-                        Err(_) => warn!("[save] the saved player position does not fit the game"),
-                    }
-                    self.engine = Some(engine);
-                }
-                Err(error) => self.fail(format!("the saved city could not be restored: {error}")),
-            }
+            );
+            self.time_offset = saved_now - now;
+            self.send_restored(&engine, host);
+            self.engine = Some(engine);
             return;
         }
         let facing_yaw = world
@@ -1155,7 +1558,9 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
                 TtsBackend::Off => TtsBackendKind::Off,
             },
         },
-        BridgeCommand::Hello { .. } | BridgeCommand::Save { .. } => return None,
+        BridgeCommand::Hello { .. } | BridgeCommand::Save { .. } | BridgeCommand::Load { .. } => {
+            return None;
+        }
     })
 }
 
@@ -1255,7 +1660,18 @@ mod tests {
 
     impl Harness {
         fn new() -> Self {
-            let (handle, inbox, guard, engine) = spawn(&fake_config(), &WeatherSettings::default());
+            Self::saving_to(SaveSettings::default().dir)
+        }
+
+        fn saving_to(dir: PathBuf) -> Self {
+            let (handle, inbox, guard, engine) = spawn(
+                &fake_config(),
+                &WeatherSettings::default(),
+                &SaveSettings {
+                    dir,
+                    boot_slot: None,
+                },
+            );
             Self {
                 handle,
                 inbox,
@@ -1263,6 +1679,48 @@ mod tests {
                 guard,
                 now: 0.0,
             }
+        }
+
+        /// The handshake, through to `Ready`.
+        fn start(&mut self) {
+            assert!(matches!(
+                self.inbox.try_recv(),
+                Some(BridgeEvent::ProcessStarted)
+            ));
+            self.send(BridgeCommand::Hello {
+                position_m: player_position(),
+                spatial_seq: 0,
+            });
+            self.run_until("ready", |message| {
+                matches!(message, EngineMessage::Ready { .. })
+            });
+        }
+
+        /// Pump, in real time, until the pump itself says `found` — the save
+        /// thread's work arrives on its own clock.
+        fn wait_for(&mut self, what: &str, mut found: impl FnMut(&BridgeEvent) -> bool) {
+            for _ in 0..2_000 {
+                if self.step().iter().any(&mut found) {
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            panic!("timed out waiting for {what}");
+        }
+
+        /// The voices the engine reported lost over a few pumps.
+        fn tts_failures(&mut self) -> Vec<String> {
+            let mut failed = Vec::new();
+            for _ in 0..4 {
+                for event in self.step() {
+                    if let BridgeEvent::Message(message) = event
+                        && let EngineMessage::TtsFailed { event_id, .. } = *message
+                    {
+                        failed.push(event_id.0);
+                    }
+                }
+            }
+            failed
         }
 
         /// One frame: pump, then hand back everything the drain would have seen.
@@ -1459,12 +1917,61 @@ mod tests {
         );
     }
 
+    /// A voice still being made for the replaced world never speaks in the
+    /// loaded one — not even under the speech id the loaded world goes on to
+    /// use, since its ids carry on from the save (D06, Alibi R3). The speech
+    /// workers are the same processes either side of the load; only what they
+    /// finish for the old engine is left unheard.
+    #[test]
+    fn a_voice_owed_to_the_replaced_world_is_not_heard_in_the_loaded_one() {
+        let dir = std::env::temp_dir().join(format!(
+            "cathedral-test-voice-saves-{}",
+            std::process::id()
+        ));
+        let mut harness = Harness::saving_to(dir.clone());
+        harness.start();
+        harness.send(BridgeCommand::Save {
+            slot: "voice".into(),
+            host: HostSave::default(),
+        });
+        harness.wait_for("the save", |event| {
+            matches!(event, BridgeEvent::Saved(Ok(_)))
+        });
+        harness.send(BridgeCommand::Load {
+            slot: "voice".into(),
+        });
+        harness.wait_for("the load", |event| {
+            matches!(event, BridgeEvent::Loaded(Ok(_)))
+        });
+
+        let backends = harness
+            .guard
+            ._backends
+            .as_ref()
+            .expect("the backends started")
+            .sender();
+        let lost = |event_id: &str| BackendEvent::TtsDone {
+            event_id: SpeechEventId(event_id.into()),
+            result: Err(cathedral_sim::SpeechError::new("the line was lost")),
+        };
+        // The first engine's speech-1, finishing late…
+        backends.send(lost("speech-1#0"));
+        assert_eq!(harness.tts_failures(), Vec::<String>::new());
+        // …and this engine's own.
+        backends.send(lost("speech-1#1"));
+        assert_eq!(harness.tts_failures(), vec!["speech-1".to_string()]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// A dead engine must look exactly like a dead sidecar: the game keeps
     /// running, offline.
     #[test]
     fn a_failed_start_disconnects_instead_of_crashing_the_game() {
-        let (handle, inbox, _guard, mut engine) =
-            spawn(&fake_config(), &WeatherSettings::default());
+        let (handle, inbox, _guard, mut engine) = spawn(
+            &fake_config(),
+            &WeatherSettings::default(),
+            &SaveSettings::default(),
+        );
         assert!(matches!(
             inbox.try_recv(),
             Some(BridgeEvent::ProcessStarted)
@@ -1536,7 +2043,11 @@ mod tests {
     /// the guard owns it: dropping the guard must take the recordings with it.
     #[test]
     fn the_handle_names_a_private_directory_the_guard_owns() {
-        let (handle, _inbox, guard, _engine) = spawn(&fake_config(), &WeatherSettings::default());
+        let (handle, _inbox, guard, _engine) = spawn(
+            &fake_config(),
+            &WeatherSettings::default(),
+            &SaveSettings::default(),
+        );
         let directory = handle.runtime_dir().to_path_buf();
         assert!(directory.is_dir());
         assert!(
@@ -1647,9 +2158,9 @@ mod tests {
     /// so the microphone worker is spawned and the cast has a (silent) voice.
     #[test]
     fn fake_mode_reports_every_capability_and_selects_the_configured_voice() {
-        let (seed, _backends, fake, _log) =
+        let (seed, _backends, minter, _log) =
             build(&fake_config(), &WeatherSettings::default(), None).expect("the shipped assets");
-        assert!(fake.is_some());
+        assert!(matches!(minter, Minter::Fake));
         assert!(seed.capabilities.llm);
         assert!(
             seed.capabilities.stt && seed.capabilities.stt_cloud && seed.capabilities.stt_local

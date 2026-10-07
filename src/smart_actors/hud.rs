@@ -269,17 +269,24 @@ impl SmartActorHudState {
     pub fn clear_transients_on_disconnect(&mut self, detail: impl Into<String>) {
         self.connection = ConnectionUiState::Offline;
         self.connection_detail = detail.into();
-        self.offer_card.clear();
-        self.offer_outcome = None;
-        self.focus_hint.clear();
-        self.subtitle.clear();
-        self.player_transcript = None;
+        self.clear_world_transients();
         self.microphone_available = false;
         self.microphone_unavailable = false;
         self.listening = false;
         self.cloud_voice = VoiceBackendUi::checking();
         self.local_voice = VoiceBackendUi::checking();
         self.npc_voice_backend = "OFF".into();
+    }
+
+    /// What the HUD says about the world it was projecting — the offer card
+    /// and its outcome, the focus hint, the subtitle, the player's last words
+    /// and the toast. Losing the engine makes them stale, and so does a load.
+    pub fn clear_world_transients(&mut self) {
+        self.offer_card.clear();
+        self.offer_outcome = None;
+        self.focus_hint.clear();
+        self.subtitle.clear();
+        self.player_transcript = None;
         self.transient = None;
     }
 

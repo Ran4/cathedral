@@ -34,7 +34,7 @@ use crate::smart_actors::actors::ActorView;
 use crate::smart_actors::bridge::{BridgeCommand, BridgeHandle};
 use crate::smart_actors::local_engine::LocalEngine;
 use crate::smart_actors::model::{ActorId, Position};
-use crate::smart_actors::saving::SaveRequest;
+use crate::smart_actors::saving::{LoadRequest, SaveRequest};
 use crate::soundscape::{BellPattern, SoundscapeCue};
 
 pub const DRIVE_ENV: &str = "CATHEDRAL_DRIVE";
@@ -146,8 +146,9 @@ impl Plugin for DrivePlugin {
         ));
         spawn_watchdog(self.timeout);
         // Idempotent beside the smart actors' own registration; a run with the
-        // cast disabled still parses and logs `save`.
+        // cast disabled still parses and logs `save` and `load`.
         app.add_message::<SaveRequest>();
+        app.add_message::<LoadRequest>();
         app.insert_resource(DriveState {
             last_framed: None,
             scheduler: Scheduler::new(self.actions.clone()),
@@ -291,6 +292,8 @@ enum Action {
     },
     /// Checkpoint the city into a save slot (D06), as the quicksave key does.
     Save(String),
+    /// Replace the running city with a save slot, as the quickload key does.
+    Load(String),
     Quit,
 }
 
@@ -349,6 +352,7 @@ impl Action {
                 bearing_degrees,
             } => format!("frame {handle} {distance} {bearing_degrees}"),
             Self::Save(slot) => format!("save {slot}"),
+            Self::Load(slot) => format!("load {slot}"),
             Self::Quit => "quit".into(),
         }
     }
@@ -476,16 +480,20 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
             }
         }
         "frame" => parse_frame(argument, statement),
-        "save"
+        "save" | "load"
             if (1..=64).contains(&argument.len())
                 && argument
                     .bytes()
                     .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-') =>
         {
-            Ok(Action::Save(argument.into()))
+            Ok(if verb == "save" {
+                Action::Save(argument.into())
+            } else {
+                Action::Load(argument.into())
+            })
         }
-        "save" => Err(format!(
-            "`save` needs a slot name of letters, digits, `_` or `-`, got `{statement}`"
+        "save" | "load" => Err(format!(
+            "`{verb}` needs a slot name of letters, digits, `_` or `-`, got `{statement}`"
         )),
         "wait-online" if argument.is_empty() => Ok(Action::WaitOnline),
         "quit" if argument.is_empty() => Ok(Action::Quit),
@@ -800,6 +808,7 @@ enum Directive {
         bearing_degrees: f32,
     },
     Save(String),
+    Load(String),
     Quit,
 }
 
@@ -959,6 +968,7 @@ impl Scheduler {
                 bearing_degrees,
             }),
             Action::Save(slot) => Some(Directive::Save(slot)),
+            Action::Load(slot) => Some(Directive::Load(slot)),
             Action::Quit => {
                 self.finished = true;
                 Some(Directive::Quit)
@@ -1112,7 +1122,11 @@ fn run_drive_script(
     actors: Query<(&Name, &ActorId, &Transform), With<ActorView>>,
     mut interactions: Query<(&Name, &mut Interaction)>,
     mut teleports: MessageWriter<TeleportPlayer>,
-    (mut cues, mut saves): (MessageWriter<SoundscapeCue>, MessageWriter<SaveRequest>),
+    (mut cues, mut saves, mut loads): (
+        MessageWriter<SoundscapeCue>,
+        MessageWriter<SaveRequest>,
+        MessageWriter<LoadRequest>,
+    ),
     mut exit: MessageWriter<AppExit>,
 ) {
     if let Some(key) = state.pressed_key.take() {
@@ -1394,6 +1408,9 @@ fn run_drive_script(
         },
         Some(Directive::Save(slot)) => {
             saves.write(SaveRequest { slot });
+        }
+        Some(Directive::Load(slot)) => {
+            loads.write(LoadRequest { slot });
         }
         Some(Directive::Tp {
             position,
@@ -1874,6 +1891,12 @@ mod tests {
         assert!(parse_script("save").is_err());
         assert!(parse_script("save ../escape").is_err());
         assert!(parse_script("save two words").is_err());
+        assert_eq!(
+            parse_script("save here; load here"),
+            Ok(vec![Action::Save("here".into()), Action::Load("here".into())])
+        );
+        assert!(parse_script("load").is_err());
+        assert!(parse_script("load ../escape").is_err());
     }
 
     #[test]

@@ -209,6 +209,16 @@ impl NpcScheduler {
             .max(self.minimum_delay_seconds);
     }
 
+    /// Replace the rotation with this run's (a restored engine: the turn order
+    /// follows `config.ron`'s `idle_cognition.mode`, not the saver's). The same
+    /// order keeps its place in the rotation; a different one starts at its head.
+    pub(crate) fn reorder(&mut self, order: Vec<ActorId>) {
+        if self.order != order {
+            self.order = order;
+            self.round_robin_index = 0;
+        }
+    }
+
     /// Idempotent: also clears any residual delay so the first turn can start on
     /// the next poll.
     pub fn start(&mut self, now: f64) {

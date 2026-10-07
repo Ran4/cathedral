@@ -45,6 +45,7 @@ use crate::{
         bridge::{BridgeCommand, BridgeHandle},
         model::{ActorId, MovementInbox, Position, WorldMirror},
         road_carts::RoadCartView,
+        saving::WorldLoaded,
     },
     weather::{CoverMaterial, PrecipitationOcclusionMap, WeatherLightning, WorldWeatherState},
 };
@@ -496,7 +497,8 @@ impl Plugin for SoundscapePlugin {
             .init_resource::<WeatherAudioState>()
             .init_resource::<WorldWeatherState>()
             .init_resource::<PrecipitationOcclusionMap>()
-            .add_message::<WeatherLightning>();
+            .add_message::<WeatherLightning>()
+            .add_message::<WorldLoaded>();
 
         app.configure_sets(
             Update,
@@ -513,6 +515,7 @@ impl Plugin for SoundscapePlugin {
         app.add_systems(
             Update,
             (
+                forget_replaced_world.before(SoundscapeSet::IngestCues),
                 ingest_soundscape_cues.in_set(SoundscapeSet::IngestCues),
                 project_well_mechanism_activity.in_set(SoundscapeSet::ProjectActivity),
                 schedule_curfew_bell,
@@ -1717,6 +1720,31 @@ fn schedule_curfew_bell(
     cooldowns.hold(key, first_stroke_at + occupies);
     log_bell_peal(&plan, &format!(", day {}", clock.day));
     send_bell_to_sim(BellPattern::ScoldCurfew, bridge.as_deref());
+}
+
+/// A loaded world (D06) is another timeline. What the replaced one queued —
+/// the rest of a peal, a bucket's splash — must not play into it, its bell
+/// ropes are not held, and the clock it arrives at is a first reading rather
+/// than an edge: the curfew and the office bells ring when the loaded world
+/// reaches them, never because the clock jumped.
+fn forget_replaced_world(
+    mut loads: MessageReader<WorldLoaded>,
+    mut scheduled: ResMut<ScheduledSounds>,
+    mut cooldowns: ResMut<CueCooldowns>,
+    mut civic: ResMut<CivicBellState>,
+    mut wells: ResMut<WellSoundState>,
+    mut carts: ResMut<CartSoundState>,
+    mut nature: ResMut<UrbanNatureState>,
+) {
+    if loads.read().count() == 0 {
+        return;
+    }
+    *scheduled = default();
+    *cooldowns = default();
+    *civic = default();
+    *wells = default();
+    *carts = default();
+    nature.observed_office = None;
 }
 
 fn begin_well_draw(

@@ -196,7 +196,12 @@ fn main() {
         WeatherPlugin::new(weather.clone()),
         perf::PerfPlugin,
     ))
-    .add_plugins(SmartActorsPlugin::with_weather(smart_actors, weather));
+    // `CATHEDRAL_LOAD=<slot>` starts from a save. Read here, in the real
+    // game's startup only, so no test ever boots from the developer's slot.
+    .add_plugins(
+        SmartActorsPlugin::with_weather(smart_actors, weather)
+            .booting_from(std::env::var("CATHEDRAL_LOAD").ok()),
+    );
     if let Some(drive) = drive {
         app.add_plugins(drive);
     }

@@ -1,4 +1,4 @@
-Status: M0 closed; M1 and M2 implemented (2026-10-04); PLAN_REVIEW accepted 2026-10-07 (D08) and its changes 1–8 applied; next: M3, load during play. A first attempt at M1–M6 (2026-09-07 → 10-02) was removed from history on 2026-10-03; see [LESSONS_FROM_THE_FIRST_ATTEMPT.md](LESSONS_FROM_THE_FIRST_ATTEMPT.md).
+Status: M0 closed; M1 and M2 implemented (2026-10-04); PLAN_REVIEW accepted 2026-10-07 (D08) and its changes 1–8 applied; M3 (load during play) implemented 2026-10-07; next: M4, accounts, inquiries and findings. A first attempt at M1–M6 (2026-09-07 → 10-02) was removed from history on 2026-10-03; see [LESSONS_FROM_THE_FIRST_ATTEMPT.md](LESSONS_FROM_THE_FIRST_ATTEMPT.md).
 
 # An Alibi in Stone — systems first, then the full quest
 
@@ -17,7 +17,7 @@ Each milestone has an observable result a player could notice. M1–M7 build the
 | [M0 — Baseline](M0_baseline_and_prerequisites.md) (closed) | M0 | Knowledge interfaces, law role map, Tallage options, persistence inventory | — |
 | [M1 — Baseline fixes](M1_live_time_and_transactions.md) (R1, done) | M1, real bugs only | Pressing T across Kindling gives exactly one restock and settlement. A seize with no route leaves nobody in custody. A huge provider reply fails cleanly. | ~90 + tests |
 | [M2 — Simulation checkpoints + boot from a save](M2_simulation_checkpoints.md) (R2, done) | M2 + M3's file slice | A save→restore engine continues in lockstep with an uninterrupted one. Quicksave in the game, then start a new process from the slot, and the city continues. | 1.2–1.6k + ~1k tests |
-| [M3 — Load during play](M3_load_during_play.md) (R3) | the rest of M3 | Quickload in the running game swaps the world. Old callbacks are inert. HUD, puppets and player are reset. | 300–600 |
+| [M3 — Load during play](M3_load_during_play.md) (R3, done) | the rest of M3 | Quickload in the running game swaps the world. Old callbacks are inert. HUD, puppets and player are reset. | 300–600 |
 | [M4 — Accounts, inquiries and findings](M4_accounts_inquiries_findings.md) (R4, first playable) | M9 + M10 core + M8 review trigger + M13 loader | Question two witnesses in a dev case, lodge their accounts, and a dated review (attended or missed) gives a partial or full finding. | 1.6–2.2k |
 | [M5 — Rooms: floors, doors, locks, senses](M5_rooms.md) (R5) | M4 + M5 + M6 physical | The player and an NPC climb a stair. An NPC reroutes around or unlocks a locked door. A street NPC no longer overhears upstairs. | 1.8–2.6k |
 | [M6 — Things in places](M6_things_in_places.md) (R6) | M7 + grants + M8 errands | Find an item on a shelf, read a document, get consent to search, and watch a keeper move an item at Lamplight unless warned. | 1.5–2k |

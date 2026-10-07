@@ -654,6 +654,23 @@ fn a_run_without_weather_loads_a_rainy_save_dry() {
     assert_eq!(skies, vec![WeatherKind::Clear], "this run's switch, not the save's");
 }
 
+/// Who thinks next is the developer's cost knob (`idle_cognition.mode` in
+/// `config.ron`), so a save made under the stage gate and loaded by a run set
+/// to `"all"` takes turns in the city-wide order, as a fresh `"all"` run would.
+#[test]
+fn a_restored_city_takes_turns_in_this_runs_order() {
+    let a = City::beside_ilse();
+    let saved: Vec<ActorId> = a.engine.scheduler().turn_order().to_vec();
+    assert_eq!(saved, cathedral_sim::stage_turn_order(a.engine.world()));
+    let checkpoint: Checkpoint = serde_json::from_slice(&a.capture()).expect("decodes");
+    let mut everyone = config(Office::Dayspring);
+    everyone.idle_mode = IdleCognitionMode::All;
+    let c = City::restore_under(checkpoint, a.spatial_seq, everyone).expect("restores");
+    let order = c.engine.scheduler().turn_order();
+    assert_eq!(order, cathedral_sim::background_turn_order(c.engine.world()));
+    assert_ne!(order, saved, "the two modes weight the cast differently");
+}
+
 #[test]
 fn two_captures_with_no_poll_between_them_are_the_same_bytes() {
     let mut a = City::beside_ilse();

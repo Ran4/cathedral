@@ -1,8 +1,11 @@
-//! Esc-driven settings menu for the voice backends.
+//! Esc-driven settings menu for the voice backends, and the saved cities.
 //!
 //! Each settings row shows the setting name, a cloud/local pill toggle, and
 //! the live status of the selected backend. Choices persist to `config.ron`;
 //! NPC voices only persist once the engine confirms the switch.
+//!
+//! Below them, one row per save slot with a Load button (D06). The list is
+//! read from the slots' header lines each time the menu opens.
 
 use bevy::ecs::hierarchy::ChildSpawnerCommands;
 use bevy::prelude::*;
@@ -14,6 +17,7 @@ use crate::fonts::CathedralFonts;
 use super::bridge::{self, TranscriptionBackend, TtsBackend};
 use super::hud::{self, ConnectionUiState, SmartActorHudState, VoiceModelUiState};
 use super::interaction::MicrophoneInputState;
+use super::saving::{LoadRequest, SaveSlots};
 use super::{SmartActorRuntime, request_tts_backend};
 
 const SCRIM: Color = Color::srgba(0.01, 0.015, 0.03, 0.55);
@@ -55,6 +59,19 @@ pub(super) struct BackendPill {
 
 #[derive(Component)]
 pub(super) struct RowStatusText(SettingRow);
+
+/// Where the slot rows go; refilled whenever the menu opens.
+#[derive(Component)]
+pub(super) struct SaveSlotList;
+
+/// Loads its slot. Its `Name` is `Load slot <slot>`, so a drive script can
+/// `click` it.
+#[derive(Component)]
+pub(super) struct LoadSlotButton(String);
+
+/// D06's default, said where the player chooses a slot.
+const TIME_STANDS_STILL: &str = "Time does not pass while the game is closed: \
+     a saved city resumes at the moment it was saved.";
 
 pub(super) fn spawn_config_menu(mut commands: Commands, fonts: Option<Res<CathedralFonts>>) {
     let body_font = fonts
@@ -117,6 +134,25 @@ pub(super) fn spawn_config_menu(mut commands: Commands, fonts: Option<Res<Cathed
                         "Local Canary-Qwen",
                         &body_font,
                     );
+                    panel.spawn((
+                        Text::new(format!("Saved cities. {TIME_STANDS_STILL}")),
+                        TextFont {
+                            font: body_font.clone(),
+                            font_size: FontSize::Px(14.5),
+                            ..default()
+                        },
+                        TextColor(hud::MUTED),
+                    ));
+                    panel.spawn((
+                        Name::new("Save slot list"),
+                        SaveSlotList,
+                        Node {
+                            width: percent(100),
+                            flex_direction: FlexDirection::Column,
+                            row_gap: px(6),
+                            ..default()
+                        },
+                    ));
                 });
         });
 }
@@ -266,12 +302,105 @@ fn set_menu_open(menu: &mut ConfigMenuState, cursor: &mut CursorOptions, open: b
     };
 }
 
+/// One row per save slot, newest first, refilled each time the menu opens.
+pub(super) fn refresh_save_slots(
+    mut commands: Commands,
+    menu: Res<ConfigMenuState>,
+    slots: Option<Res<SaveSlots>>,
+    fonts: Option<Res<CathedralFonts>>,
+    list: Single<(Entity, Option<&Children>), With<SaveSlotList>>,
+) {
+    if !menu.is_changed() || !menu.open {
+        return;
+    }
+    let (list, rows) = *list;
+    for row in rows.into_iter().flatten() {
+        commands.entity(*row).despawn();
+    }
+    let font = fonts
+        .as_deref()
+        .map(CathedralFonts::body)
+        .unwrap_or_default();
+    let note = |text: &str| {
+        (
+            Text::new(text),
+            TextFont {
+                font: font.clone(),
+                font_size: FontSize::Px(14.5),
+                ..default()
+            },
+            TextColor(hud::MUTED),
+        )
+    };
+    let Some(slots) = slots else {
+        commands
+            .entity(list)
+            .with_child(note("Saving needs the actor engine, which config.ron disables."));
+        return;
+    };
+    let found = cathedral_backends::save::list_slots(&slots.dir);
+    if found.is_empty() {
+        commands
+            .entity(list)
+            .with_child(note("No saved cities yet. F6 saves this one; F9 loads it back."));
+        return;
+    }
+    commands.entity(list).with_children(|list| {
+        for (slot, header) in found {
+            list.spawn(Node {
+                width: percent(100),
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Center,
+                column_gap: px(16),
+                ..default()
+            })
+            .with_children(|row| {
+                row.spawn((
+                    Text::new(format!("{slot} — {}", header.label)),
+                    TextFont {
+                        font: font.clone(),
+                        font_size: FontSize::Px(16.0),
+                        ..default()
+                    },
+                    TextColor(hud::TEXT),
+                    Node {
+                        flex_grow: 1.0,
+                        ..default()
+                    },
+                ));
+                row.spawn((
+                    Name::new(format!("Load slot {slot}")),
+                    Button,
+                    LoadSlotButton(slot),
+                    Node {
+                        padding: UiRect::axes(px(14), px(6)),
+                        border_radius: BorderRadius::all(px(8)),
+                        ..default()
+                    },
+                    BackgroundColor(CONTINUE_BG),
+                ))
+                .with_child((
+                    Text::new("Load"),
+                    TextFont {
+                        font: font.clone(),
+                        font_size: FontSize::Px(14.5),
+                        ..default()
+                    },
+                    TextColor(hud::TEXT),
+                ));
+            });
+        }
+    });
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn handle_config_menu_buttons(
     mut menu: ResMut<ConfigMenuState>,
     mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
     continue_clicks: Query<&Interaction, (Changed<Interaction>, With<ContinueButton>)>,
     pill_clicks: Query<(&Interaction, &BackendPill), Changed<Interaction>>,
+    load_clicks: Query<(&Interaction, &LoadSlotButton), Changed<Interaction>>,
+    mut loads: MessageWriter<LoadRequest>,
     handle: Option<Res<bridge::BridgeHandle>>,
     mut runtime: Option<ResMut<SmartActorRuntime>>,
     mut microphone: Option<ResMut<MicrophoneInputState>>,
@@ -285,6 +414,15 @@ pub(super) fn handle_config_menu_buttons(
         .any(|interaction| *interaction == Interaction::Pressed)
     {
         set_menu_open(&mut menu, &mut cursor, false);
+    }
+    // Loading closes the menu: what the player chose to see is the city.
+    for (interaction, button) in &load_clicks {
+        if *interaction == Interaction::Pressed {
+            loads.write(LoadRequest {
+                slot: button.0.clone(),
+            });
+            set_menu_open(&mut menu, &mut cursor, false);
+        }
     }
     for (interaction, pill) in &pill_clicks {
         if *interaction != Interaction::Pressed {
@@ -369,7 +507,7 @@ pub(super) fn update_config_menu(
     mut pills: Query<(&BackendPill, &Interaction, &mut BackgroundColor, &Children)>,
     mut continue_button: Query<
         (&Interaction, &mut BackgroundColor),
-        (With<ContinueButton>, Without<BackendPill>),
+        (Or<(With<ContinueButton>, With<LoadSlotButton>)>, Without<BackendPill>),
     >,
     mut statuses: Query<(&RowStatusText, &mut Text, &mut TextColor)>,
     mut pill_labels: Query<&mut TextColor, Without<RowStatusText>>,

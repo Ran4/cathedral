@@ -1,4 +1,4 @@
-Status: Planned (2026-10-07).
+Status: Implemented (2026-10-07). F9, drive `load <slot>` and the Esc menu's slot list load in the running game. Each adopted engine gets a fresh cognition channel; the carried-across STT/TTS services tag their work with the engine's generation, so late voices and transcripts from the replaced world are dropped. Commands queued for the replaced world are discarded at the swap. The five R2 follow-ups are done. Host tests (save, keep playing, load; a stale voice) and a headless drive run (save, play on at 60×, refused bad slot, load, menu load) passed under the capped worker. Load cost: read+decode ~0.5–0.7 s on the save thread; on the main thread verify ~100 ms, old-world drop 7–90 ms, restore ~1 ms (Q6: reported, not optimised).
 
 # M3 — Load during play
 

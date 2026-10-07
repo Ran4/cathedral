@@ -38,6 +38,7 @@ use std::{
 use crate::{
     HEARING_RADIUS_M, ITEM_INTERACTION_RADIUS_M,
     character::{Character, Control},
+    checkpoint::Fnv,
     ids::ActorId,
     lore::LoreProfile,
     world::World,
@@ -469,7 +470,9 @@ impl Memory {
 ///   clock, their own goal, their own inventory, their own `wait`. An actor is
 ///   not news to themselves.
 pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
-    let mut hasher = DefaultHasher::new();
+    // FNV over bytes, not `DefaultHasher`: a checkpoint carries these values
+    // (`Novelty`), so they must not change with the toolchain.
+    let mut hasher = Fnv::new();
     let Some(actor) = world
         .characters
         .get(actor_id)
@@ -495,7 +498,7 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
             .get(*other_id)
             .is_some_and(|other| other.is_settled())
         {
-            other_id.as_str().hash(&mut hasher);
+            hasher.write_str(other_id.as_str());
         }
     }
 
@@ -515,12 +518,14 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
         }
         if offer.giver_id == *actor_id {
             // `you_offer`: what they have put on the table, and to whom.
-            offer.item_id.as_str().hash(&mut hasher);
-            offer
-                .target_id
-                .as_ref()
-                .map(ActorId::as_str)
-                .hash(&mut hasher);
+            hasher.write_str(offer.item_id.as_str());
+            match &offer.target_id {
+                Some(target) => {
+                    hasher.write(&[1]);
+                    hasher.write_str(target.as_str());
+                }
+                None => hasher.write(&[0]),
+            }
         } else if offer.target_id.is_none() || offer.target_id.as_ref() == Some(actor_id) {
             // `offered_to_you`, which the prompt drops beyond arm's reach — so
             // an offer walking into range is news, exactly as it reads.
@@ -530,8 +535,8 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
             if actor.position_m().distance_squared(giver.position_m())
                 <= ITEM_INTERACTION_RADIUS_M * ITEM_INTERACTION_RADIUS_M
             {
-                offer.item_id.as_str().hash(&mut hasher);
-                offer.giver_id.as_str().hash(&mut hasher);
+                hasher.write_str(offer.item_id.as_str());
+                hasher.write_str(offer.giver_id.as_str());
             }
         }
     }
@@ -540,8 +545,8 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
     // news. A named transition is; so is this actor crossing beneath cover,
     // because those are the only weather facts their prompt actually changes.
     if let Some(weather) = world.current_weather {
-        weather.semantic_revision.hash(&mut hasher);
-        world.is_sheltered(actor.position_m()).hash(&mut hasher);
+        hasher.write(&weather.semantic_revision.to_le_bytes());
+        hasher.write(&[u8::from(world.is_sheltered(actor.position_m()))]);
     }
 
     hasher.finish()
@@ -967,6 +972,18 @@ mod tests {
         assert!(!IdleGate::Suppressed.allows(&near));
         assert!(IdleGate::Suppressed.is_suppressed());
         assert!(!IdleGate::All.is_suppressed());
+    }
+
+    /// A save carries these hashes and a later build compares against them, so
+    /// the value is pinned: the checkpoint hash over `far`, `mid` and
+    /// `player`, the settled company within earshot of `near`. If this
+    /// changes, every saved stage reads as news after a rebuild.
+    #[test]
+    fn the_saved_context_hash_does_not_change_between_builds() {
+        assert_eq!(
+            context_hash(&world(), &ActorId::from_raw("near")),
+            0x82C9_BCE6_2332_8566
+        );
     }
 
     /// The load-bearing rule. If novelty keys on coordinates, the player

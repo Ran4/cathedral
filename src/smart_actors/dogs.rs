@@ -555,10 +555,14 @@ pub fn drive_dog_bodies(
     time: Res<Time>,
     inbox: Res<DogInbox>,
     margin: Option<Res<crate::city::CutMarginProfile>>,
+    mut loads: MessageReader<super::saving::WorldLoaded>,
     mut dogs: Query<(Entity, &StreetDog, &mut Transform, Option<&mut DogMotion>)>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::Dogs);
     let now = time.elapsed_secs_f64();
+    // A loaded world puts every dog where it has them, with no sweep from
+    // where the replaced world left them.
+    let snap = loads.read().count() > 0;
     for (entity, dog, mut transform, motion) in &mut dogs {
         let Some(sample) = inbox.0.get(&dog.id) else {
             continue;
@@ -566,11 +570,15 @@ pub fn drive_dog_bodies(
         match motion {
             None => {
                 commands.entity(entity).insert(DogMotion {
-                    previous: Vec3::new(
-                        transform.translation.x,
-                        sample.position.y,
-                        transform.translation.z,
-                    ),
+                    previous: if snap {
+                        sample.position
+                    } else {
+                        Vec3::new(
+                            transform.translation.x,
+                            sample.position.y,
+                            transform.translation.z,
+                        )
+                    },
                     current: sample.position,
                     prev_yaw: sample.facing_yaw,
                     cur_yaw: sample.facing_yaw,
@@ -582,7 +590,7 @@ pub fn drive_dog_bodies(
                 });
             }
             Some(mut motion) => {
-                if sample.seq != motion.seq {
+                if snap || sample.seq != motion.seq {
                     motion.previous = motion.current;
                     motion.prev_yaw = motion.cur_yaw;
                     motion.prev_phase = motion.cur_phase;
@@ -592,6 +600,11 @@ pub fn drive_dog_bodies(
                     motion.speed = sample.speed;
                     motion.t0 = now;
                     motion.seq = sample.seq;
+                }
+                if snap {
+                    motion.previous = motion.current;
+                    motion.prev_yaw = motion.cur_yaw;
+                    motion.prev_phase = motion.cur_phase;
                 }
                 let t = ((now - motion.t0) / MOVEMENT_TICK_SECONDS).clamp(0.0, 1.0) as f32;
                 let mut translation = motion.previous.lerp(motion.current, t);

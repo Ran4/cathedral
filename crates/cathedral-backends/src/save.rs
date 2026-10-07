@@ -7,7 +7,8 @@
 //! Writes run on one worker thread ([`SaveWriter`]), never in the engine pump
 //! (D05): encode, decode the bytes back as a check, write `<slot>.tmp` and
 //! fsync it, keep the previous save as `<slot>.bak`, then rename the new file
-//! into place.
+//! into place. A load during play reads and decodes on the same thread, so it
+//! always sees a save requested before it.
 
 use std::{
     fs::{self, File},
@@ -177,24 +178,57 @@ pub struct SaveOutcome {
     pub result: Result<SlotWrite, String>,
 }
 
-/// The one thread every save is written on. Dropping it waits for the writes
-/// already handed to it, so a save requested just before quitting lands.
+/// One finished read: the decoded slot, or why it could not be had.
+pub struct LoadOutcome {
+    pub slot: String,
+    /// Reading and decoding, on the save thread.
+    pub read_ms: f64,
+    pub result: Result<SaveGame, String>,
+}
+
+enum Job {
+    Write(String, Box<SaveGame>),
+    Read(String),
+}
+
+/// The one thread every save is written and read on. Dropping it waits for
+/// the jobs already handed to it, so a save requested just before quitting
+/// lands.
 pub struct SaveWriter {
-    jobs: Option<Sender<(String, SaveGame)>>,
+    jobs: Option<Sender<Job>>,
     done: Receiver<SaveOutcome>,
+    loads: Receiver<LoadOutcome>,
     thread: Option<JoinHandle<()>>,
 }
 
 impl SaveWriter {
     pub fn spawn(dir: PathBuf) -> Result<Self, String> {
-        let (jobs, inbox) = unbounded::<(String, SaveGame)>();
+        let (jobs, inbox) = unbounded::<Job>();
         let (report, done) = unbounded();
+        let (report_load, loads) = unbounded();
         let thread = thread::Builder::new()
             .name("save-writer".into())
             .spawn(move || {
-                for (slot, game) in inbox {
-                    let result = write_slot(&dir, &slot, &game);
-                    if report.send(SaveOutcome { slot, result }).is_err() {
+                for job in inbox {
+                    let sent = match job {
+                        Job::Write(slot, game) => {
+                            let result = write_slot(&dir, &slot, &game);
+                            report.send(SaveOutcome { slot, result }).is_ok()
+                        }
+                        Job::Read(slot) => {
+                            let started = Instant::now();
+                            let result = read_slot(&dir, &slot);
+                            let read_ms = started.elapsed().as_secs_f64() * 1e3;
+                            report_load
+                                .send(LoadOutcome {
+                                    slot,
+                                    read_ms,
+                                    result,
+                                })
+                                .is_ok()
+                        }
+                    };
+                    if !sent {
                         break;
                     }
                 }
@@ -203,20 +237,36 @@ impl SaveWriter {
         Ok(Self {
             jobs: Some(jobs),
             done,
+            loads,
             thread: Some(thread),
         })
     }
 
     pub fn save(&self, slot: String, game: SaveGame) -> Result<(), String> {
+        self.send(Job::Write(slot, Box::new(game)))
+    }
+
+    /// Read and decode a slot off the caller's thread; [`Self::loaded`] hands
+    /// it back.
+    pub fn load(&self, slot: String) -> Result<(), String> {
+        self.send(Job::Read(slot))
+    }
+
+    fn send(&self, job: Job) -> Result<(), String> {
         self.jobs
             .as_ref()
-            .and_then(|jobs| jobs.send((slot, game)).ok())
+            .and_then(|jobs| jobs.send(job).ok())
             .ok_or_else(|| "the save writer has stopped".to_string())
     }
 
     /// The writes finished since the last call.
     pub fn finished(&self) -> Vec<SaveOutcome> {
         self.done.try_iter().collect()
+    }
+
+    /// The reads finished since the last call.
+    pub fn loaded(&self) -> Vec<LoadOutcome> {
+        self.loads.try_iter().collect()
     }
 }
 

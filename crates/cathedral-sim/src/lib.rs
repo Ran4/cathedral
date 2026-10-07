@@ -84,7 +84,7 @@ pub use checkpoint::{
 };
 pub use engine::{
     ActorMotion, Capabilities, CivicRope, Engine, EngineCommand, EngineConfig, EngineMessage,
-    EngineState, JournalEntry, WardHeatRow,
+    EngineParts, EngineState, JournalEntry, WardHeatRow,
 };
 pub use error::{
     ActionError, ActionErrorCode, CommandError, CommandErrorCode, EngineInitError, PromptError,

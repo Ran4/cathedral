@@ -338,10 +338,14 @@ pub(crate) fn drive_npc_bodies(
     time: Res<Time>,
     inbox: Res<MovementInbox>,
     margin: Option<Res<crate::city::CutMarginProfile>>,
+    mut loads: MessageReader<super::saving::WorldLoaded>,
     mut movers: Query<(Entity, &ActorId, &mut Transform, Option<&mut NpcMotion>), With<ActorView>>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::ActorViews);
     let now = time.elapsed_secs_f64();
+    // A loaded world puts everyone where it has them: a sweep from where the
+    // replaced world last had a walker would cross the city through walls.
+    let snap = loads.read().count() > 0;
     for (entity, actor_id, mut transform, motion) in &mut movers {
         let Some(sample) = inbox.0.get(actor_id) else {
             // Either a non-mover, who never had a sample, or somebody whose
@@ -380,13 +384,17 @@ pub(crate) fn drive_npc_bodies(
                 });
             }
             Some(mut motion) => {
-                if sample.seq != motion.seq {
+                if snap || sample.seq != motion.seq {
                     motion.previous = motion.current;
                     motion.prev_yaw = motion.cur_yaw;
                     motion.current = sample.position;
                     motion.cur_yaw = sample.facing_yaw;
                     motion.t0 = now;
                     motion.seq = sample.seq;
+                }
+                if snap {
+                    motion.previous = motion.current;
+                    motion.prev_yaw = motion.cur_yaw;
                 }
                 let t = ((now - motion.t0) / MOVEMENT_TICK_SECONDS).clamp(0.0, 1.0) as f32;
                 let mut translation = motion.previous.lerp(motion.current, t);

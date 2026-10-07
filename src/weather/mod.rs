@@ -154,6 +154,7 @@ impl Plugin for WeatherPlugin {
             .init_resource::<WeatherReactiveMaterials>()
             .init_resource::<WeatherRoseWindow>()
             .add_message::<WeatherLightning>()
+            .add_message::<crate::smart_actors::saving::WorldLoaded>()
             .configure_sets(
                 Update,
                 (
@@ -163,7 +164,12 @@ impl Plugin for WeatherPlugin {
                 )
                     .chain(),
             )
-            .add_systems(Update, smooth_weather.in_set(WeatherSet::Smooth));
+            .add_systems(
+                Update,
+                (forget_replaced_sky, smooth_weather)
+                    .chain()
+                    .in_set(WeatherSet::Smooth),
+            );
 
         // Minimal/no-renderer apps still get every authority/projection
         // resource above. Render systems are installed only when the standard
@@ -189,6 +195,17 @@ impl Plugin for WeatherPlugin {
                         .in_set(WeatherSet::Effects),
                 );
         }
+    }
+}
+
+/// A loaded world's sky is its own, not one to ease into from the sky of the
+/// world it replaced: the next sample snaps, as the first one of a session does.
+fn forget_replaced_sky(
+    mut loads: MessageReader<crate::smart_actors::saving::WorldLoaded>,
+    mut visual: ResMut<SmoothedWeather>,
+) {
+    if loads.read().count() > 0 {
+        *visual = SmoothedWeather::default();
     }
 }
 

@@ -1288,6 +1288,38 @@ impl Engine {
         capabilities: Capabilities,
     ) -> Result<Self, RestoreError> {
         checkpoint.verify(&config, &area_map)?;
+        Ok(Self::restore_verified(
+            checkpoint,
+            config,
+            area_map,
+            catalog,
+            env,
+            cognition,
+            transcription,
+            tts,
+            sight,
+            capabilities,
+        ))
+    }
+
+    /// [`Self::restore`] after the caller has run [`Checkpoint::verify`] under
+    /// the same `config` and `area_map`: everything past the check, which
+    /// cannot fail. A host that must not lose its services to a refused save
+    /// (a load during play, the boot fallback to a fresh world) verifies
+    /// first and then calls this.
+    #[allow(clippy::too_many_arguments)]
+    pub fn restore_verified(
+        checkpoint: Checkpoint,
+        config: EngineConfig,
+        area_map: AreaMap,
+        catalog: SoundCatalog,
+        env: PromptEnv,
+        cognition: Box<dyn Cognition>,
+        transcription: Box<dyn Transcription>,
+        tts: Box<dyn Tts>,
+        sight: Box<dyn Sight>,
+        capabilities: Capabilities,
+    ) -> Self {
         let EngineState {
             mut world,
             mut scheduler,
@@ -1325,7 +1357,12 @@ impl Engine {
         // The saved schedule continues, but whether there is weather at all is
         // this run's ablation switch; the first poll publishes the result.
         weather.set_enabled(config.weather.enabled);
+        // Pacing and turn order are this run's cost knobs, not the saver's.
         scheduler.retune(config.turn_delay_seconds, config.maximum_backoff_seconds);
+        scheduler.reorder(match config.idle_mode {
+            IdleCognitionMode::All => background_turn_order(&world),
+            IdleCognitionMode::Stage => stage_turn_order(&world),
+        });
 
         let config = settle(config);
         let tts_selected = config.tts_selected;
@@ -1336,7 +1373,7 @@ impl Engine {
         night.resume(config.night_office);
         floor.forget_presentations();
 
-        Ok(Self {
+        Self {
             world,
             transcript: Vec::new(),
             scheduler,
@@ -1379,8 +1416,50 @@ impl Engine {
             last_journal: None,
             last_journal_receipts: 0,
             last_journal_at: f64::NEG_INFINITY,
-        })
+        }
     }
+
+    /// Take a running engine apart for the one that replaces it (a load
+    /// during play, D06): the config and assets this run started with, and
+    /// the speech services, which own the local workers and must not restart.
+    /// Everything else — the world, the cognition, the caches — is dropped
+    /// here. The runtime voice choice (the X key) travels in the config, and
+    /// the startup notice about the voice, already said, does not.
+    pub fn into_parts(self) -> EngineParts {
+        let Engine {
+            world,
+            env,
+            transcription,
+            tts,
+            mut config,
+            mut capabilities,
+            tts_selected,
+            ..
+        } = self;
+        config.tts_selected = tts_selected;
+        config.tts_startup_message = None;
+        capabilities.tts_selected = tts_selected;
+        EngineParts {
+            config,
+            area_map: world.area_map,
+            catalog: world.sound_catalog,
+            env,
+            transcription,
+            tts,
+            capabilities,
+        }
+    }
+}
+
+/// What [`Engine::into_parts`] hands to [`Engine::restore_verified`].
+pub struct EngineParts {
+    pub config: EngineConfig,
+    pub area_map: AreaMap,
+    pub catalog: SoundCatalog,
+    pub env: PromptEnv,
+    pub transcription: Box<dyn Transcription>,
+    pub tts: Box<dyn Tts>,
+    pub capabilities: Capabilities,
 }
 
 impl Checkpoint {

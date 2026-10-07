@@ -204,6 +204,21 @@ Actions (each fires ~0.5 s after the previous):
   CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_LOAD=smoke \
     CATHEDRAL_DRIVE='wait-online; sleep 3; shot loaded; quit' cargo run
   ```
+- `load <slot>` — replace the running city with `saves/<slot>.save`, as the F9
+  quickload does (slot `quick`; the Esc menu's `click Load slot <slot>` is the
+  third way). The save thread reads it, then the engines swap between two
+  polls: the clock, the cast and the player go back to the save, and the HUD,
+  speech and puppets of the replaced world are dropped. Allow a few seconds;
+  the `[save] slot …: loaded …` line gives the read/decode and main-thread
+  times. A missing or damaged slot toasts the reason and the city carries on.
+  One process, a save and a load:
+
+  ```sh
+  CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE_TIMEOUT=120 \
+    CATHEDRAL_DRIVE='wait-online; tp 0 1 120 180; sleep 3; save here; sleep 5; \
+    key KeyT; key KeyT; tp 60 1 200 0; sleep 10; shot before_load; \
+    load here; sleep 5; shot after_load; quit' cargo run
+  ```
 - `quit` — exit immediately.
 
 Without a trailing `quit` the game exits ~2 s after the last action; a watchdog

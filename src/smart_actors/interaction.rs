@@ -256,6 +256,11 @@ impl InteractionState {
         self.active_offer = None;
     }
 
+    #[cfg(test)]
+    pub(super) fn pending_count(&self) -> usize {
+        self.pending.len()
+    }
+
     fn item_is_pending(&self, item_id: &ItemId) -> bool {
         self.pending
             .values()

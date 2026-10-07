@@ -421,6 +421,7 @@ enum SmartActorSet {
 pub struct SmartActorsPlugin {
     config: SmartActorsConfig,
     weather: WeatherSettings,
+    saves: local_engine::SaveSettings,
 }
 
 /// Read-only signal for audio systems that should yield while dialogue is active.
@@ -506,11 +507,30 @@ impl SmartActorsPlugin {
         Self {
             config,
             weather: WeatherSettings::default(),
+            saves: local_engine::SaveSettings::default(),
         }
     }
 
     pub fn with_weather(config: SmartActorsConfig, weather: WeatherSettings) -> Self {
-        Self { config, weather }
+        Self {
+            config,
+            weather,
+            saves: local_engine::SaveSettings::default(),
+        }
+    }
+
+    /// Start from this save slot instead of a fresh world (`CATHEDRAL_LOAD`,
+    /// read by the real game's startup only).
+    pub fn booting_from(mut self, slot: Option<String>) -> Self {
+        self.saves.boot_slot = slot;
+        self
+    }
+
+    /// Keep save slots somewhere other than the repository's `saves/`.
+    #[cfg(test)]
+    fn with_saves_dir(mut self, dir: std::path::PathBuf) -> Self {
+        self.saves.dir = dir;
+        self
     }
 }
 
@@ -541,11 +561,15 @@ impl Plugin for SmartActorsPlugin {
         // The Esc settings menu exists even when smart actors are disabled;
         // its rows then report the disabled state instead of toggling.
         app.init_resource::<config_menu::ConfigMenuState>()
+            // Its slot rows write these even when the engine is off, though
+            // there is then nothing to read them.
+            .add_message::<saving::LoadRequest>()
             .add_systems(Startup, config_menu::spawn_config_menu)
             .add_systems(
                 Update,
                 (
                     config_menu::toggle_config_menu,
+                    config_menu::refresh_save_slots,
                     config_menu::handle_config_menu_buttons,
                     config_menu::persist_backend_selections,
                     config_menu::update_config_menu,
@@ -602,8 +626,12 @@ impl Plugin for SmartActorsPlugin {
             return;
         }
 
-        let (handle, inbox, worker, engine) = local_engine::spawn(&self.config, &self.weather);
+        let (handle, inbox, worker, engine) =
+            local_engine::spawn(&self.config, &self.weather, &self.saves);
         app.insert_non_send(engine);
+        app.insert_resource(saving::SaveSlots {
+            dir: self.saves.dir.clone(),
+        });
 
         app.insert_resource(handle)
             .insert_resource(inbox)
@@ -653,7 +681,8 @@ impl Plugin for SmartActorsPlugin {
             // beside the controller's own registration.
             .add_message::<crate::controller::TeleportPlayer>()
             .add_message::<saving::SaveRequest>()
-            .add_systems(Update, saving::request_saves)
+            .add_message::<saving::WorldLoaded>()
+            .add_systems(Update, (saving::request_saves, saving::request_loads))
             // The inventory's menu entries are the only part of the screen that
             // needs the engine (they write intents), so they live here rather
             // than in the always-on block above.
@@ -860,6 +889,9 @@ impl Plugin for SmartActorsPlugin {
                             dogs::animate_dog_gait,
                         )
                             .chain_ignore_deferred(),
+                        // Before the intake: a load's first lines arrive in
+                        // the same drain as the load itself.
+                        speech::forget_replaced_speech,
                         speech::receive_speech_events,
                         speech::receive_tts_clips,
                         speech::receive_tts_pcm_chunks,
@@ -1020,6 +1052,10 @@ struct BridgePresentationWriters<'w> {
     hands: MessageWriter<'w, hands::HandoverFeedback>,
     gestures: MessageWriter<'w, body::PresentGesture>,
     teleports: MessageWriter<'w, crate::controller::TeleportPlayer>,
+    loaded: MessageWriter<'w, saving::WorldLoaded>,
+    /// Who has hold of whom. Not a writer, but reset with the rest of the
+    /// presentation when a load replaces the world.
+    grips: ResMut<'w, hands::GripHolds>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -1100,6 +1136,11 @@ fn drain_bridge_messages(
     while let Some(event) = inbox.try_recv() {
         events.push(event);
     }
+    // A load in this drain replaced the world: whatever the old one said
+    // before the swap is moot, and must not reach the new one's screen.
+    let replaced_at = events
+        .iter()
+        .rposition(|event| matches!(event, bridge::BridgeEvent::Loaded(Ok(_))));
     let is_snapshot: Vec<bool> = events
         .iter()
         .map(|event| {
@@ -1136,7 +1177,7 @@ fn drain_bridge_messages(
                 // Once the engine is known dead, never let a buffered late
                 // message revive interactions against stale state; this slice
                 // has no in-place restart.
-                if !runtime.connected {
+                if !runtime.connected || replaced_at.is_some_and(|at| event_index < at) {
                     continue;
                 }
                 *message_seq += 1;
@@ -1190,6 +1231,40 @@ fn drain_bridge_messages(
                 spatial.await_restored_position(position, hot.time.elapsed_secs_f64());
             }
             bridge::BridgeEvent::Saved(Ok(message) | Err(message)) => hud.toast(message),
+            bridge::BridgeEvent::Loaded(Err(reason)) => hud.toast(truncate_owned(reason, 300)),
+            bridge::BridgeEvent::Loaded(Ok(message)) => {
+                // A load replaced the engine (D06). The new world's first
+                // messages follow in this same drain and rebuild the mirror,
+                // the clock and every hot channel; until then nothing the
+                // old world left on screen may survive into it.
+                let was_recording = microphone_input.recording_active();
+                forget_world_transients(
+                    &mut runtime,
+                    &mut interaction,
+                    &mut microphone_input,
+                    &mut hot.law,
+                );
+                hud.clear_world_transients();
+                // Each is republished by the new engine's first poll, except
+                // an empty journal, which is simply never sent.
+                hot.movement.0.clear();
+                hot.dogs.0.clear();
+                *hot.weather = WorldWeatherState::default();
+                *hot.chalk = default();
+                *hot.journal = default();
+                *hot.ward_heat = default();
+                *world_clock = default();
+                *presentation.grips = default();
+                // The speech presentation, the bodies' sweeps, the sky and the
+                // soundscape's edges each forget the old world on this, the
+                // speech before it takes in the new world's first lines.
+                presentation.loaded.write(saving::WorldLoaded);
+                hud.toast(if was_recording {
+                    format!("{message}. What you were saying was not heard.")
+                } else {
+                    message
+                });
+            }
             bridge::BridgeEvent::Disconnected(message) => {
                 runtime.connected = false;
                 runtime.ready = false;
@@ -1201,16 +1276,18 @@ fn drain_bridge_messages(
                 runtime.tts_local_available = false;
                 runtime.tts_selected = bridge::TtsBackend::Off;
                 runtime.tts_selection_pending = None;
-                runtime.thinking_actor_id = None;
-                interaction.clear_pending();
-                microphone_input.clear_on_disconnect();
                 // The hot channels freeze wherever the engine's last message
                 // left them, which for three of them is merely stale scenery — a
                 // walker stopped mid-street, a lamp left lit, a sky that stops
                 // changing. The law's is not: it holds the player's feet, and
                 // nothing above can ever release them again, so it is let go of
                 // here (see [`custody::PlayerCustodyState::clear_on_disconnect`]).
-                hot.law.clear_on_disconnect();
+                forget_world_transients(
+                    &mut runtime,
+                    &mut interaction,
+                    &mut microphone_input,
+                    &mut hot.law,
+                );
                 hud.clear_transients_on_disconnect(truncate_owned(message, 300));
                 presentation.clear.write(speech::ClearSpeechPresentation);
                 if microphone_present {
@@ -1243,6 +1320,22 @@ fn drain_bridge_messages(
             ..Default::default()
         };
     }
+}
+
+/// What a dead engine and a replaced one both leave stale: the actor shown
+/// thinking, the player's pending requests, an utterance being recorded for
+/// the old world (its audio is dropped when it ends) and the law's hold on
+/// the player.
+fn forget_world_transients(
+    runtime: &mut SmartActorRuntime,
+    interaction: &mut interaction::InteractionState,
+    microphone_input: &mut interaction::MicrophoneInputState,
+    law: &mut custody::PlayerCustodyState,
+) {
+    runtime.thinking_actor_id = None;
+    interaction.clear_pending();
+    microphone_input.clear_on_disconnect();
+    law.clear_on_disconnect();
 }
 
 #[derive(Default)]
@@ -3265,9 +3358,24 @@ mod tests {
         );
     }
 
+    /// A save directory of the test's own, so no test ever writes or reads the
+    /// developer's `saves/`.
+    fn test_saves_dir() -> std::path::PathBuf {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        std::env::temp_dir().join(format!(
+            "cathedral-test-saves-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ))
+    }
+
     /// The whole plugin on the in-process engine and the fake backends — no
     /// subprocess, no network, no `uv` — pumped until the cast is online.
     fn ready_fake_plugin_app() -> App {
+        ready_fake_plugin_app_saving_to(test_saves_dir())
+    }
+
+    fn ready_fake_plugin_app_saving_to(saves: std::path::PathBuf) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
             .init_asset::<Mesh>()
@@ -3298,14 +3406,17 @@ mod tests {
                 ..default()
             },
         ));
-        app.add_plugins(SmartActorsPlugin::new(SmartActorsConfig {
-            enabled: true,
-            fake_backend: true,
-            uv_binary: "uv".into(),
-            tts_backend: "local".into(),
-            pause_microphone_during_npc_voice: true,
-            ..SmartActorsConfig::default()
-        }));
+        app.add_plugins(
+            SmartActorsPlugin::new(SmartActorsConfig {
+                enabled: true,
+                fake_backend: true,
+                uv_binary: "uv".into(),
+                tts_backend: "local".into(),
+                pause_microphone_during_npc_voice: true,
+                ..SmartActorsConfig::default()
+            })
+            .with_saves_dir(saves),
+        );
         // Fake mode reports transcription available, so the plugin spawns the
         // capture worker — but a test may not open the developer's microphone
         // and put the room's noise into the scripted conversation. The worker
@@ -3325,6 +3436,260 @@ mod tests {
         assert!(app.world().resource::<SmartActorRuntime>().ready);
         app.update();
         app
+    }
+
+    /// Run frames until `done`, or fail naming `what`.
+    fn update_until(app: &mut App, what: &str, mut done: impl FnMut(&mut App) -> bool) {
+        let deadline = std::time::Instant::now() + Duration::from_secs(20);
+        while std::time::Instant::now() < deadline {
+            app.update();
+            if done(app) {
+                return;
+            }
+            thread::sleep(Duration::from_millis(5));
+        }
+        panic!("timed out waiting for {what}");
+    }
+
+    fn toast(app: &App) -> Option<String> {
+        app.world()
+            .resource::<hud::SmartActorHudState>()
+            .transient_text()
+            .map(str::to_string)
+    }
+
+    fn sim_player(app: &App) -> cathedral_sim::Vec3 {
+        app.world()
+            .non_send::<local_engine::LocalEngine>()
+            .world()
+            .expect("the engine is running")
+            .characters[&cathedral_sim::ActorId::from_raw(PLAYER_ID)]
+            .position_m()
+    }
+
+    fn bubbles(app: &mut App) -> usize {
+        let world = app.world_mut();
+        world
+            .query_filtered::<Entity, With<speech::SpeechBubble>>()
+            .iter(world)
+            .count()
+    }
+
+    fn has_puppet(app: &mut App, id: &str) -> bool {
+        let world = app.world_mut();
+        world
+            .query_filtered::<&model::ActorId, With<actors::ActorView>>()
+            .iter(world)
+            .any(|actor| actor.0 == id)
+    }
+
+    /// R3 (D06, D08 Q5): save, keep playing, load — inside the running game.
+    ///
+    /// What a player would notice: a slot that cannot be read changes nothing;
+    /// the good one puts the clock back at the saved time and the player where
+    /// they stood; somebody who arrived since is gone from the street, and the
+    /// conversation, the coin held out and everything the HUD said about them
+    /// are gone with the world they happened in. The replaced world's
+    /// cognition, still answering after the swap, is heard by nobody.
+    #[test]
+    fn a_load_during_play_brings_back_the_saved_city_and_nothing_of_the_one_it_replaced() {
+        #[derive(Resource, Default)]
+        struct Teleports(Vec<crate::controller::TeleportPlayer>);
+        fn record(
+            mut reader: MessageReader<crate::controller::TeleportPlayer>,
+            mut seen: ResMut<Teleports>,
+        ) {
+            seen.0.extend(reader.read().copied());
+        }
+
+        let saves = test_saves_dir();
+        let mut app = ready_fake_plugin_app_saving_to(saves.clone());
+        app.init_resource::<Teleports>()
+            .add_systems(PostUpdate, record.after(SmartActorSet::DrainBridge));
+        let ilse = model::ActorId("k0fb1".into());
+        let coin = model::ItemId("c0prs".into());
+
+        // F6's slot, here and now.
+        let saved_at = sim_player(&app);
+        let saved_clock = *app.world().resource::<clock::WorldClockState>();
+        app.world_mut().write_message(saving::SaveRequest {
+            slot: "here".into(),
+        });
+        update_until(&mut app, "the save", |app| {
+            toast(app).as_deref() == Some("Saved to slot here")
+        });
+
+        // Keep playing: the clock at 60×, a visitor walks in, the player walks
+        // 30 m off, talks to Ilse and is held out her coin.
+        for _ in 0..2 {
+            app.world()
+                .resource::<bridge::BridgeHandle>()
+                .try_send(bridge::BridgeCommand::CycleTimeScale)
+                .expect("room in the queue");
+        }
+        {
+            let mut engine = app
+                .world_mut()
+                .non_send_mut::<local_engine::LocalEngine>();
+            let world = engine.world_mut().expect("the engine is running");
+            let mut visitor =
+                world.characters[&cathedral_sim::ActorId::from_raw("k0fb1")].sheet.clone();
+            visitor.id = cathedral_sim::ActorId::from_raw("zz9vt");
+            visitor.name = "A Visitor".into();
+            visitor.holds.clear();
+            visitor.pockets.clear();
+            visitor.lore = None;
+            world.add_character(cathedral_sim::Character::from_sheet(visitor));
+        }
+        update_until(&mut app, "the visitor's puppet", |app| {
+            has_puppet(app, "zz9vt")
+        });
+        app.world_mut().write_message(InjectPlayerTranscript {
+            text: "What's your name?".into(),
+            target_id: Some(ilse.clone()),
+        });
+        update_until(&mut app, "Ilse's reply", |app| bubbles(app) > 0);
+        app.world_mut().write_message(InjectPlayerTranscript {
+            text: "Please offer me your coin".into(),
+            target_id: Some(ilse.clone()),
+        });
+        update_until(&mut app, "the coin held out", |app| {
+            app.world()
+                .resource::<model::WorldMirror>()
+                .offer(&coin)
+                .is_some()
+        });
+        let walked_to = Vec3::new(0.0, 0.91, 141.0);
+        {
+            let world = app.world_mut();
+            let mut player = world
+                .query_filtered::<&mut Transform, With<crate::controller::PlayerController>>()
+                .single_mut(world)
+                .expect("one player");
+            player.translation = walked_to;
+        }
+        update_until(&mut app, "the walk", |app| {
+            (sim_player(app).z - 141.0).abs() < 0.5
+        });
+        // Long enough at 60× for the clock to have visibly moved on.
+        update_until(&mut app, "the clock to run on", |app| {
+            app.world().resource::<clock::WorldClockState>().fraction - saved_clock.fraction
+                > 0.01
+        });
+        app.world_mut()
+            .resource_mut::<hud::SmartActorHudState>()
+            .show_offer_outcome("OFFER DECLINED", "from the world being replaced");
+        let request_id = app
+            .world_mut()
+            .resource_mut::<interaction::InteractionState>()
+            .request_id();
+        app.world_mut()
+            .resource_mut::<interaction::InteractionState>()
+            .insert_pending(request_id, interaction::PendingKind::Recording, 1);
+        let replaced_cognition = app
+            .world()
+            .non_send::<local_engine::LocalEngine>()
+            .fake_cognition()
+            .expect("fake mode");
+
+        // A slot that is not there, and one that is not a save, are refused
+        // with a reason, and this city carries on.
+        std::fs::write(saves.join("torn.save"), b"not a save at all\n").expect("writable");
+        for slot in ["nowhere", "torn"] {
+            app.world_mut().write_message(saving::LoadRequest { slot: slot.into() });
+            update_until(&mut app, "the refusal", |app| {
+                toast(app).is_some_and(|text| text.starts_with(&format!("Could not load slot {slot}")))
+            });
+            assert!((sim_player(&app).z - 141.0).abs() < 0.5, "{slot}: still where we walked");
+            assert!(has_puppet(&mut app, "zz9vt"), "{slot}: the visitor is still here");
+        }
+
+        // F9's slot — while the player keeps reporting where they walked to,
+        // so the frame the swap lands has a position for the old world queued.
+        app.world_mut().write_message(saving::LoadRequest {
+            slot: "here".into(),
+        });
+        let mut spatial_seq = 1_000_000;
+        update_until(&mut app, "the load", |app| {
+            if toast(app).is_some_and(|text| text.starts_with("Loaded slot here")) {
+                return true;
+            }
+            spatial_seq += 1;
+            app.world()
+                .resource::<bridge::BridgeHandle>()
+                .try_send(bridge::BridgeCommand::SpatialUpdate {
+                    position_m: model::Position::try_from(walked_to).expect("finite"),
+                    spatial_seq,
+                    facing_yaw: 0.0,
+                })
+                .expect("room in the queue");
+            false
+        });
+        // The teleport, the clock and the cast all land in the frame of the swap,
+        // and nothing the player did in the old world follows them in.
+        let back_where_saved = |app: &App| {
+            let player = sim_player(app);
+            assert!(
+                (player.x - saved_at.x).abs() < 0.01 && (player.z - saved_at.z).abs() < 0.01,
+                "the player is back where they saved: {player:?}, saved {saved_at:?}"
+            );
+        };
+        back_where_saved(&app);
+        let teleport = app
+            .world()
+            .resource::<Teleports>()
+            .0
+            .last()
+            .copied()
+            .expect("the controller is told where the save left the player");
+        assert!((teleport.position.z - saved_at.z as f32).abs() < 0.01);
+        let clock = *app.world().resource::<clock::WorldClockState>();
+        assert_eq!(clock.day, saved_clock.day);
+        assert!(
+            (clock.fraction - saved_clock.fraction).abs() < 0.002,
+            "the clock reads the saved time: {} against {}",
+            clock.fraction,
+            saved_clock.fraction
+        );
+        assert!((clock.scale - saved_clock.scale).abs() < 0.5, "and runs at its pace");
+        // …and stays there while the controller is on its way (it never gets
+        // there in this app, which has no controller to move).
+        for _ in 0..5 {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+        back_where_saved(&app);
+        assert!(!has_puppet(&mut app, "zz9vt"), "the visitor came after the save");
+        assert!(has_puppet(&mut app, "k0fb1"));
+        assert_eq!(bubbles(&mut app), 0, "the conversation happened in the other world");
+        assert!(app.world().resource::<model::WorldMirror>().offer(&coin).is_none());
+        let hud = app.world().resource::<hud::SmartActorHudState>();
+        assert!(hud.subtitle.is_empty());
+        assert_eq!(hud.offer_outcome_text(), None);
+        assert_eq!(hud.player_transcript_text(), None);
+        assert_eq!(
+            app.world()
+                .resource::<interaction::InteractionState>()
+                .pending_count(),
+            0
+        );
+
+        // The replaced world's cognition answers after all: nobody hears it.
+        // (Whatever it had staged in the old engine's last poll was left
+        // behind the same way; count only the reply asked for now.)
+        let _left_behind = replaced_cognition.undelivered();
+        replaced_cognition.reply_to("What's your name?");
+        for _ in 0..30 {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(bubbles(&mut app), 0, "no answer to a question this world never asked");
+        assert_eq!(
+            replaced_cognition.undelivered(),
+            1,
+            "the old engine's reply is still where it was staged: nobody reads it"
+        );
+        let _ = std::fs::remove_dir_all(&saves);
     }
 
     /// The hot channels reach [`process_engine_message`] as their `ResMut`

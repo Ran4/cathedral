@@ -312,6 +312,12 @@ pub enum BridgeCommand {
         slot: String,
         host: HostSave,
     },
+    /// Replace the running city with a save slot (D06, D08 Q5). The pump has
+    /// the save thread read and decode it, then swaps engines between two
+    /// polls; a slot that cannot be read or verified leaves this city running.
+    Load {
+        slot: String,
+    },
 }
 
 impl BridgeCommand {
@@ -335,9 +341,16 @@ pub enum BridgeEvent {
     /// `EngineMessage::Status` with `state: "degraded"`, and only that subsystem
     /// goes dark.
     Disconnected(String),
-    /// The engine started from a save slot (`CATHEDRAL_LOAD`) instead of a
-    /// fresh world. Sent before its first message: the player belongs where
-    /// the save left them before the game reports a position of its own.
+    /// A load during play replaced the engine: everything the game projected
+    /// from the old world is stale (`Ok`, with the HUD's words for it), or the
+    /// slot was refused and the old world runs on (`Err`, the reason). An `Ok`
+    /// is followed by [`Self::Restored`] and then the new engine's first
+    /// messages, all in the same drain.
+    Loaded(Result<String, String>),
+    /// The engine started from a save slot (`CATHEDRAL_LOAD`, or a load during
+    /// play) instead of a fresh world. Sent before its first message: the
+    /// player belongs where the save left them before the game reports a
+    /// position of its own.
     Restored {
         position_m: Position,
         facing_yaw: f32,
