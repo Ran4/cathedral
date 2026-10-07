@@ -6,7 +6,7 @@ Complete the GDD's alternate approaches on the same systems. The investigation m
 
 ## Entry
 
-M16 is accepted. M5's real perception/following has shipped, so covert observation is included rather than deferred behind `NullSight`. Use the corrected recipes and explicit search scopes in [CASE_CONTRACT.md](CASE_CONTRACT.md).
+M16 is accepted. M5's real perception/following has shipped, so covert observation is included rather than deferred behind `NullSight`. Use the corrected recipes and explicit search scopes in [CASE_CONTRACT.md](../CASE_CONTRACT.md).
 
 ## Private account and restitution
 

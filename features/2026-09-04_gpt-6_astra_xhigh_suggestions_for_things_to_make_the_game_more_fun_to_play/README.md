@@ -1,4 +1,4 @@
-Status: GDD/implementation plan delivered; plan reviewed and trimmed 2026-10-04 ([PLAN_REVIEW](implementation/plan/PLAN_REVIEW.md)); M0 closed, M1–M2 implemented (2026-10-04); no quest gameplay shipped yet.
+Status: GDD/implementation plan delivered; plan reviewed 2026-10-04 and accepted 2026-10-07 ([PLAN_REVIEW](implementation/plan/PLAN_REVIEW.md), D08), now M0–M11; M0 closed, M1–M2 implemented (2026-10-04); no quest gameplay shipped yet.
 
 # An Alibi in Stone
 
@@ -15,10 +15,10 @@ Nine original diagrams explain the chronology, topology, timing, sightlines, evi
 cover foundations, milestones, tests and sources.
 
 The [implementation plan](implementation/plan/README.md) records the 2026-09-05 decisions and a
-systems-first M0–M19 delivery. Its [decision record](implementation/plan/DECISIONS.md) and
+systems-first M0–M11 delivery (trimmed from M0–M19 by the plan review). Its [decision record](implementation/plan/DECISIONS.md) and
 [case contract](implementation/plan/CASE_CONTRACT.md) supersede conflicting GDD recommendations,
 including pausing, save/load scope, dynamic enforcement and the repaired evidence/timing routes.
-The original DOCX/PDF and model remain the earlier proposal. [M0’s current execution record](implementation/plan/M0_baseline_and_prerequisites.md) and [baseline reconciliation](implementation/plan/BASELINE_RECONCILIATION.md) explain the completed audit, real measurements and remaining gate; no quest gameplay has shipped from this plan.
+The original DOCX/PDF and model remain the earlier proposal. [M0’s current execution record](implementation/plan/M0_baseline_and_prerequisites.md) and [baseline reconciliation](implementation/plan/BASELINE_RECONCILIATION.md) explain the completed audit; no quest gameplay has shipped from this plan.
 
 | File | Purpose |
 |---|---|
@@ -34,7 +34,7 @@ The original DOCX/PDF and model remain the earlier proposal. [M0’s current exe
 | [validation.json](validation.json) | PDF pagination, expected headings and text-bound checks |
 | [figures/](figures/) | Nine diagrams in PNG/SVG plus the unchanged architectural reference |
 | [previews/](previews/) | 35 rendered PDF pages and three contact sheets |
-| [implementation/plan/](implementation/plan/README.md) | Milestones, shared protocols, 40 requirements, 78 planned scenarios and review evidence |
+| [implementation/plan/](implementation/plan/README.md) | Decisions, the plan review, milestones M0–M11, the case contract and checklist; superseded material in `archive/` |
 
 Regenerate from the repository root:
 
@@ -67,6 +67,6 @@ existing canon. The shared knowledge/rumour feature remains a prerequisite for q
 
 No game run, human playtest, game-code change, lore edit, branch change or backlog reorder was
 performed for the original GDD. The later planning pass's source checks and unsuccessful hidden-window
-survey are recorded separately in its [review log](implementation/plan/REVIEW_LOG.md).
+survey are recorded separately in its [review log](implementation/plan/archive/REVIEW_LOG.md) (archived).
 The market screenshot and general gathering material from the earlier
 GDD are superseded by the investigation design.

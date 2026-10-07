@@ -1,4 +1,4 @@
-Status: Proposed content repairs and implementation contract (2026-09-05); to be validated before M15 authoring.
+Status: Implementation contract for the case (2026-09-05), with PLAN_REVIEW item 7 applied 2026-10-07 (D08). Authored in [M9](M9_core_case.md) and [M10](M10_alternatives_and_aftermath.md); [CASE_CHECKLIST](CASE_CHECKLIST.md) is the one-page outcome list.
 
 # The complete case the plan must deliver
 
@@ -28,7 +28,7 @@ Keep the fixed crime before world opening. Do not spawn it when the player accep
 
 ## Readable papers and the household's tools
 
-M15 must author complete operative excerpts, not only a paragraph saying “some forged papers.” Use a coherent pledge record, purported release and pre-incident counterfoil with stable document and object IDs.
+M9 must author complete operative excerpts, not only a paragraph saying “some forged papers.” Use a coherent pledge record, purported release and pre-incident counterfoil with stable document and object IDs.
 
 Default content to develop: a twelve-spark pledge over a marked iron plane, brace and three chisels. The genuine record permits the debtor household to redeem its tools upon payment. The purported release falsely acknowledges payment and substitutes Corin's client as authorised collector. Odo's pre-incident counterfoil identifies the packet and records the authenticity concern. His later E16 comparison establishes which record is genuine and what collection authority fails.
 
@@ -46,7 +46,7 @@ The E01–E16 labels remain a reading cross-reference to the GDD. Runtime data s
 |---|---|
 | E01 | Odo's pre-player account of the sole continuous shove/removal encounter, packet identity and wallet/catch interaction |
 | E02 | Authenticated pre-incident packet/counterfoil inventory, with specific contents and provenance |
-| E03/E04 | Actual two sightings and actual interval without counter observation; neither implies continuous presence |
+| E03/E04 | Actual two sightings and actual interval without counter observation; neither implies continuous presence. The unseen interval has its own root, independent of Lise: a visible hoist cycle the player can watch and time in the world, plus the tenders' testimony that it ran uninterrupted |
 | E05 | Supported conservative work interval, after complete physical timing has been re-authored/measured |
 | E06/E07 | Averil's and Gile's independently rooted observations of Warin at the same relevant cry |
 | E08 | Learned private connection and separately established historical access, not just today's open door |
@@ -127,7 +127,7 @@ Opportunity is established separately by the timed route and historical access. 
 
 ## A concrete private corroboration route
 
-Author a short exchange immediately before the shove that only Odo and the assailant heard. One proposed exchange is Odo's quiet “Leave the pledge” and the reply “Then neither.” Fix the exact approved text during M15 writing and record it privately before the player can ask about it.
+Author a short exchange immediately before the shove that only Odo and the assailant heard. One proposed exchange is Odo's quiet “Leave the pledge” and the reply “Then neither.” Fix the exact approved text during M9 writing and record it privately before the player can ask about it.
 
 The suspect must supply and voluntarily confirm the relevant detail independently. Verification compares the sealed records and the disclosure history established to the reviewer, rather than reading a culprit flag or every private whisper in the world. A leading question or prior publication **established in the admissible record** defeats a claimed independent match. The finding states that no such disclosure is established, not that omnisciently none occurred. A secret leak may mislead the review until discovered and then justify amendment; identical submitted records cannot expose different hidden leak histories through different diagnostics. The dated physical chain remains available.
 
@@ -144,7 +144,9 @@ Author separate scopes and grounds for passage inspection, rack search, wallet c
 | Inspect/compare the identified wallet | The logged encounter fragment plus Lise's prior account identifying Corin's particular wallet and its intact-before/broken-after change; the comparison result is not yet required | A general search of all his possessions |
 | Extend inspection to the identified desk | Authenticated missing-packet inventory, a relevant failed rack search, the now-supported encounter/catch chain, and independent evidence of Corin's use of this desk | Treating a packet already found there as the prerequisite grounds |
 
-M15 installs Lise's voluntary pre-player deposition alongside the original inquiry records. In defending the alibi she recorded the two sightings and the wallet she saw before/after, including a specific visible repair/mark identifying the same wallet. She also identified the particular upper-room desk Corin ordinarily uses, by stable location and visible distinguishing features. This supplies the desk-use ground before anyone searches that container. The existing counterfoil's general reference to work passing through “Corin's desk” is insufficient by itself to identify a particular locked object.
+This late wallet-then-desk route is part of the **core** case (M9), not an alternative.
+
+M9 installs Lise's voluntary pre-player deposition alongside the original inquiry records. In defending the alibi she recorded the two sightings and the wallet she saw before/after, including a specific visible repair/mark identifying the same wallet. She also identified the particular upper-room desk Corin ordinarily uses, by stable location and visible distinguishing features. This supplies the desk-use ground before anyone searches that container. The existing counterfoil's general reference to work passing through “Corin's desk” is insufficient by itself to identify a particular locked object.
 
 She need not have known what the broken catch meant or that a packet would later be in the desk. Author the exact distinguishing details on the physical objects and in her account. The original deposition is retrievable from the ordinary authorised docket when she is absent or later refuses to repeat it; a copy retains her single source origin. It is not a new witness, and it is not secretly granted to the player at opening.
 
@@ -156,7 +158,7 @@ Consent and official inspection remain alternatives. Denial can create a need fo
 
 Initial state: the packet is in the loft rack H. A successful real retrieval moves H → Corin's physical custody → his actual desk. Its destination is not a teleport target.
 
-At Lamplight, Corin attempts the authored activity if he can act and the packet remains accessible. Early recovery, another holder, detention, blocked access or an active lawful seizure is handled through current state. One delayed attempt is permitted within the same Lamplight office after an actually learned warning; author its delay policy and alternative entrance against M14 geometry. If the attempt is abandoned, the packet stays wherever the last completed physical step left it.
+At Lamplight, Corin attempts the authored activity if he can act and the packet remains accessible. Early recovery, another holder, detention, blocked access or an active lawful seizure is handled through current state. One delayed attempt is permitted within the same Lamplight office after an actually learned warning; author its delay policy and alternative entrance against M8 geometry. If the attempt is abandoned, the packet stays wherever the last completed physical step left it.
 
 There is no later invisible cleanup move. Observing Corin receive a packet from the player does not prove he stole it before. Hiding evidence or planting it may deceive a casual observer; a formal inquiry can reject only defects established through admissible knowledge, not private omniscient history.
 
@@ -166,13 +168,13 @@ The GDD's day numbers are **case-relative**, not instructions to overwrite the c
 
 At the default Dayspring opening and unchanged hour-long day, this gives the GDD's case-day-1 Lamplight/case-day-2 High Wick windows: about 27.5 and 72.5 real minutes. A different opening office or changed clock rate changes the running opportunity, and the UI reports the actual calendar dates. It does not promise these real-minute values universally. The completed historical sequence must predate creation under its explicitly recorded historical time basis; accelerated developer clock settings must not map a victim's later arrival into the future by blindly reusing current seconds-per-day on past elapsed offsets.
 
-Warin's original hold expiry is resolved from its historical grounds and authorised duration **independently** of those future appointments. A fresh world opening at a later office may leave less hold time, or see release before its later review. Choosing a conveniently future review cannot renew detention. A developer “late case” starts from the same saved original anchor and advances production simulation; creating a new anchor at the requested late clock would reset the case.
+Warin is held at the Tallage station on recorded grounds, with an expiry in game time (a calendar date and office), not through the Stone House's "prisoner" circumstance. That expiry is resolved from its historical grounds and authorised duration **independently** of those future appointments. A fresh world opening at a later office may leave less hold time, or see release before its later review. Choosing a conveniently future review cannot renew detention. A developer “late case” starts from the same saved original anchor and advances production simulation; creating a new anchor at the requested late clock would reset the case.
 
 A player taking 75–100 minutes cannot attend the original 72.5-minute review as though it waited. They can obtain an earlier limited finding, lodge evidence for that review, arrive after it, request a later review or reopen the result.
 
-One supported deferral moves the meeting to the next High Wick. It **does not extend Warin's original detention expiry**. Hold authority, review appointment, sponsorship and formal clearance have separate records. Averil can voluntarily sponsor provisional release under the authored procedure; sponsorship does not itself prove innocence.
+One supported deferral moves the meeting to the next High Wick. It **does not extend Warin's original detention expiry**. Hold authority, review appointment, sponsorship and formal clearance have separate records. Averil can voluntarily sponsor provisional release. Sponsorship is an effect of that release (its recorded conditions), not a separate record or procedure, and it does not itself prove innocence.
 
-Default sponsorship terms: Averil gives a reachable address and undertakes to relay an actually delivered review notice; Warin separately accepts an obligation to report at the named next High Wick window. Both accept before sponsored release is ordered. A missing acceptance leaves sponsorship pending, while the original hold still expires on its own authority. A missed report causes a recorded failed attendance, contact/rescheduling and, where supported, a fresh summons inquiry; it does not automatically renew custody. Deliberate evasion requires established grounds distinct from absence. Define the reporting window and notice lead time in M15, using the normal journey/appointment policies.
+Default sponsorship terms: Averil gives a reachable address and undertakes to relay an actually delivered review notice; Warin separately accepts an obligation to report at the named next High Wick window. Both accept before sponsored release is ordered. A missing acceptance leaves sponsorship pending, while the original hold still expires on its own authority. A missed report causes a recorded failed attendance, contact/rescheduling and, where supported, a fresh summons inquiry; it does not automatically renew custody. Deliberate evasion requires established grounds distinct from absence. Define the reporting window and notice lead time in M9, using the normal journey/appointment policies.
 
 An unattended hearing considers what has actually been lodged, including valid autonomous submissions by NPCs. The result is not hardcoded to leave Warin suspected whenever the player is absent. Nor do autonomous submissions invent undisclosed player deductions.
 
@@ -182,9 +184,9 @@ Eight-spark restitution and a hush payment are distinct agreements with named pa
 
 Default hush terms are finite and displayed before acceptance: Corin pays the player eight sparks to withhold a specifically named packet/account bundle from institutional submission or disclosure until the specified next High Wick deadline. **Sealed delivery of that bundle to Mott also breaks these terms**; it belongs to the separate legitimate private-submission route, not a loophole making hush harmless. Warin's independent cry-witness accounts can be explicitly excluded from the withheld bundle, allowing his separate clearance without substantiating the Corin case. Already lodged records cannot be recalled by this bargain.
 
-Actual payment and the silence deadline are separate steps. The undertaking completes only at expiry if no established breach occurred. Disclosure by Odo or another independent source is not the player's breach. A proven breach permits Corin's agreed repayment demand; any institutional civil remedy must pass the ordinary procedure and may be refused where an evidence-withholding term is not enforceable. There is no instant confiscation, magical renewed hold or cancellation of evidence. Corin receives no immunity and cannot forbid another witness from speaking. M15 fixes the exact referenced records, deadline and recipient scope; M17 must show what inquiry may remain mistaken/unresolved. Do not merge discretion, restitution and concealment into one benign settlement choice.
+Actual payment and the silence deadline are separate steps. The undertaking completes only at expiry if no established breach occurred. Disclosure by Odo or another independent source is not the player's breach. A proven breach permits Corin's agreed repayment demand; any institutional civil remedy must pass the ordinary procedure and may be refused where an evidence-withholding term is not enforceable. There is no instant confiscation, magical renewed hold or cancellation of evidence. Corin receives no immunity and cannot forbid another witness from speaking. M9 fixes the exact referenced records, deadline and recipient scope; M10 must show what inquiry may remain mistaken/unresolved. Do not merge discretion, restitution and concealment into one benign settlement choice.
 
-Warin's cart-related thanks must be a concrete authorised cargo-journey favour, with eligible route, availability and redemption. His biography does not give him ownership of a cart to gift. Do not substitute an unusable dialogue promise or silently transfer somebody else's vehicle.
+Warin's cart-related thanks is a one-use agreement (the same agreement mechanism as restitution and hush): a concrete authorised cargo-journey favour, with eligible route, availability and a single redemption. His biography does not give him ownership of a cart to gift. Do not substitute an unusable dialogue promise or silently transfer somebody else's vehicle.
 
 Tools return through an actual authorised handover/delivery **when genuine redemption or another valid release permits it**; otherwise their continued pledge custody and the protected redemption right are the truthful outcome. Orders enter ordinary enforcement. Corrections reach keepers and public records. Relationships and later dialogue respond to what each person learned, with room for loyal, embarrassed or resentful reactions rather than one universal reputation score.
 
@@ -196,7 +198,7 @@ Lise's later passage access is a concrete spatial consequence. Under the authore
 2. Independent cry witnesses clear Warin with no Corin case. The player may stop there legitimately.
 3. A voluntary private admission uses independently recorded corroboration; a contaminated detail route instead requires the physical chain.
 4. A watcher obtains actual handling evidence, then substantiates the narrower or fuller allegation their remaining evidence supports.
-5. A late player misses retrieval and review, obtains lawful desk access and completes the physical route without a bargain.
+5. A late player misses retrieval and review, obtains lawful desk access and completes the physical route without a bargain. (Core: M9 ships routes 1, 2 and 5; the rest are M10.)
 6. An explorer finds the passage or packet first and later learns its significance without reseeding or losing clues.
 7. The player reads/types through scheduled events; the city continues, missed observations stay missed, and another complete route remains.
 8. A supported order is issued while Corin is elsewhere; guards acquire it, search, reach him and act, or remain honestly blocked/wanted.

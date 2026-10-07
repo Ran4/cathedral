@@ -1,55 +1,49 @@
-Status: M0 closed; M1 (baseline fixes) and M2 (simulation checkpoints + boot-from-save) implemented (2026-10-04). [PLAN_REVIEW](PLAN_REVIEW.md) was accepted 2026-10-07 (D08); next: apply its changes 1–8 (this table becomes R1–R11), then R3, load during play. A first attempt at M1–M6 (2026-09-07 → 10-02) was removed from history on 2026-10-03; see [LESSONS_FROM_THE_FIRST_ATTEMPT.md](LESSONS_FROM_THE_FIRST_ATTEMPT.md).
+Status: M0 closed; M1 and M2 implemented (2026-10-04); PLAN_REVIEW accepted 2026-10-07 (D08) and its changes 1–8 applied; next: M3, load during play. A first attempt at M1–M6 (2026-09-07 → 10-02) was removed from history on 2026-10-03; see [LESSONS_FROM_THE_FIRST_ATTEMPT.md](LESSONS_FROM_THE_FIRST_ATTEMPT.md).
 
 # An Alibi in Stone — systems first, then the full quest
 
-The [M0 coordinator review](BASELINE_REVIEW.md) records the delivered baseline, the repaired host test fixture and the remaining acceptance gate.
-
 Build the machinery for investigations that happen inside a living city, then use it to deliver the complete quest. People keep their own time. Physical evidence has a location and a history. A finding may justify an order; available guards must then carry it out. The player can save at any moment and resume a coherent world.
 
-The [authoritative decisions](DECISIONS.md) override the GDD where they differ. In particular, there is **no quest mode and no pause for reading, talking or selecting evidence**. A larger district redesign is authorised. Full world save/load and reusable systems are required parts of delivery.
+The [authoritative decisions](DECISIONS.md) override the GDD where they differ. In particular, there is **no quest mode and no pause for reading, talking or selecting evidence**. A larger district redesign is authorised. Full world save/load and reusable systems are required parts of delivery. D08 adopts the [plan review](PLAN_REVIEW.md): the order below, its doc changes, and the default answer to each of its questions.
 
-For a design review, read the [case contract](CASE_CONTRACT.md) and [player experience](PLAYER_EXPERIENCE.md) next. For implementation, read [ownership and gates](OWNERSHIP_AND_GATES.md), then the next accepted milestone's successor and its relevant protocols. The [40 requirements](REQUIREMENTS.md) and [78 acceptance scenarios](VERIFICATION.md) make scope and verification traceable without requiring every implementer to reread the entire plan.
+For a design review, read the [case contract](CASE_CONTRACT.md), its one-page [checklist](CASE_CHECKLIST.md) and [player experience](PLAYER_EXPERIENCE.md). For implementation, read the next milestone file, the decisions and LESSONS.
 
 ## Delivery order
 
-> **2026-10-04:** [PLAN_REVIEW](PLAN_REVIEW.md) proposes 11 milestones (R1–R11) in place of the table below, pending approval. M1 and M2 have been rewritten to the revised scope. Where the table, `RUNTIME_BUDGETS.md` or the gates below disagree with the M1/M2 files, those files govern.
+Each milestone has an observable result a player could notice. M1–M7 build the reusable systems on dev fixtures (D01, Q1); M8–M10 author the district and the case on them; M11 is playtesting and release. The R numbers are the [plan review's](PLAN_REVIEW.md); the files keep the M numbers.
 
-The foundation gate is deliberately substantial. M0–M13 establish and prove the reusable systems using development fixtures. M14–M18 author and integrate the real district and complete investigation. M19 is the final acceptance gate. Tests, persistence and player feedback accompany each milestone rather than waiting for M19.
+| Milestone | From (old plan) | Observable result | Rough size |
+|---|---|---|---|
+| [M0 — Baseline](M0_baseline_and_prerequisites.md) (closed) | M0 | Knowledge interfaces, law role map, Tallage options, persistence inventory | — |
+| [M1 — Baseline fixes](M1_live_time_and_transactions.md) (R1, done) | M1, real bugs only | Pressing T across Kindling gives exactly one restock and settlement. A seize with no route leaves nobody in custody. A huge provider reply fails cleanly. | ~90 + tests |
+| [M2 — Simulation checkpoints + boot from a save](M2_simulation_checkpoints.md) (R2, done) | M2 + M3's file slice | A save→restore engine continues in lockstep with an uninterrupted one. Quicksave in the game, then start a new process from the slot, and the city continues. | 1.2–1.6k + ~1k tests |
+| [M3 — Load during play](M3_load_during_play.md) (R3) | the rest of M3 | Quickload in the running game swaps the world. Old callbacks are inert. HUD, puppets and player are reset. | 300–600 |
+| [M4 — Accounts, inquiries and findings](M4_accounts_inquiries_findings.md) (R4, first playable) | M9 + M10 core + M8 review trigger + M13 loader | Question two witnesses in a dev case, lodge their accounts, and a dated review (attended or missed) gives a partial or full finding. | 1.6–2.2k |
+| [M5 — Rooms: floors, doors, locks, senses](M5_rooms.md) (R5) | M4 + M5 + M6 physical | The player and an NPC climb a stair. An NPC reroutes around or unlocks a locked door. A street NPC no longer overhears upstairs. | 1.8–2.6k |
+| [M6 — Things in places](M6_things_in_places.md) (R6) | M7 + grants + M8 errands | Find an item on a shelf, read a document, get consent to search, and watch a keeper move an item at Lamplight unless warned. | 1.5–2k |
+| [M7 — Orders, enforcement, agreements](M7_orders_enforcement_agreements.md) (R7) | M11 + M12 + M8 agreements | A finding issues an order. A guard learns of it, searches, seizes, escorts and commits the subject, and the hold lasts until review. An agreement can be kept or breached. | 1.2–1.7k |
+| [M8 — The Tallage district](M8_tallage_district.md) (R8) | M14 | Walk the district: the counter loses sight of the yard, and the public detour is measurably longer than the blind interval. | geometry + bake |
+| [M9 — The core case](M9_core_case.md) (R9, D01 review point) | M15 + M16 + M18 core | The quest plays from a fresh world to Warin's release and Corin's guard-executed arrest. | 0.6–1.2k + content |
+| [M10 — Alternatives and aftermath](M10_alternatives_and_aftermath.md) (R10) | M17 + M18 rest + LOS ray | Every GDD route is reachable, and consequences persist on return visits. | 1.2–2k |
+| [M11 — Playtest and release](M11_playtest_and_release.md) (R11) | M19, shrunk | Developer playtests, a main-path drive run, a multi-day fake run and perf at default and +2,000 residents. | tests |
 
-| Milestone | Deliverable | Observable result |
-|---|---|---|
-| [M0 — Baseline and prerequisite gate](M0_baseline_and_prerequisites.md) | Reconcile the completed knowledge feature, current code and production risks | A verified starting point and explicit contracts; no competing fact store |
-| [M1 — Live time and committed actions](M1_live_time_and_transactions.md) | Advancing time, receipts, generations and a minimal operation/duty kernel | Reading never pauses the city; work and resource ownership are explicit |
-| [M2 — Complete simulation checkpoints](M2_simulation_checkpoints.md) | Export/restore all authoritative state and rebase host time | A deterministic run continues coherently across an engine replacement |
-| [M3 — Save-anywhere in the application](M3_save_load_application.md) | Atomic files, version checks, asynchronous writes and complete host restoration | Save or load during normal play without lost evidence or duplicated actions |
-| [M4 — Places on more than one floor](M4_layered_navigation.md) | Shared spatial data, traversable interiors, stairs and dynamic route revisions | Player and NPC can take the same real upper route |
-| [M5 — Seeing, hearing and remembering observations](M5_perception_and_observations.md) | Local perception with occlusion and durable observation provenance | A witness learns what they could perceive; following survives walls and lost sight |
-| [M6 — Doors, authority and permission](M6_access_and_permissions.md) | Physical access, scoped consent, keys and entry operations | A real door and route respond to permission, possession and current state |
-| [M7 — Objects that can be investigated](M7_objects_and_examinations.md) | Placed objects, documents, containers, comparison and custody receipts | A paper or fragment can be found, moved, compared and accounted for |
-| [M8 — Undertakings and appointments](M8_activities_and_appointments.md) | Composite activities, strategies, agreements, favours and scheduled meetings | Citizens actually attempt promised work and report fulfilment or interruption |
-| [M9 — Statements, evidence and findings](M9_inquiries_and_evidence.md) | Recorded accounts, provenance, submissions and bounded proof rules | Independent evidence supports a specific finding without reading hidden guilt |
-| [M10 — Clear conversation and controls](M10_conversation_and_interface.md) | Shared action semantics, explicit controls, receipts and a live notebook | The player understands what was said, requested, done and still pending |
-| [M11 — Orders and lawful dispositions](M11_orders_and_dispositions.md) | Evidence-backed orders, separate allegations and explicit discharge | Returning property cannot silently erase an unrelated assault allegation |
-| [M12 — Guards execute their orders](M12_dynamic_enforcement.md) | Informed assignment, search, encounter, seizure, escort and custody | An off-stage guard can find and arrest a suspect through ordinary simulation |
-| [M13 — Authoring tools and reusable-system gate](M13_authoring_and_foundation_acceptance.md) | Validated content packs, development controls and independent scenarios | Another investigation can be authored without adding case-specific engine branches |
-| [M14 — Build the investigative district](M14_tallage_district.md) | Finished connected places, props and verified routes/sightlines | The shortcut is an enjoyable spatial discovery in a functioning district |
-| [M15 — Install the fixed history](M15_incident_and_cast.md) | Seven cast roles, original incident, object history and honest witness knowledge | The mystery already exists whether or not the player engages with it |
-| [M16 — The complete core investigation](M16_investigation_and_public_review.md) | Discovery, demonstrations, independent clearance and public findings | The player can clear Warin and substantiate the case through their own reconstruction |
-| [M17 — Alternatives and moving evidence](M17_alternatives_and_recovery.md) | Private resolution, hush bargain, observation, early/late recovery and reopening | Different approaches and missed events produce coherent continuations |
-| [M18 — Life after the finding](M18_lasting_consequences.md) | Integrated law, work, relationships, records and repeat visits | The district changes because citizens act on what happened |
-| [M19 — Full acceptance and release](M19_acceptance_and_release.md) | Long-running, save/load, accessibility, provider and human play acceptance | A complete, legible investigation that remains sound when players depart from the walkthrough |
+The superseded milestone files (old M3–M19) are in [archive/](archive/), as edge-case sources only.
 
-Every milestone is an implementation/review unit under `features/AGENTS.md`: use ESPFEIT, one milestone agent at a time with a fresh context and a bounded handoff. Do not implement dependent milestones against speculative outputs. Read the shipped interfaces again at each gate.
+## Rules for every milestone
+
+- One milestone agent at a time with a fresh context and a bounded handoff (ESPFEIT, `features/AGENTS.md`). Re-read the shipped interfaces at each start; don't build against speculative outputs.
+- Ship a non-case dev fixture for the new behaviour (D01) and at least one save→restore lockstep scenario for the new state (D06).
+- Each milestone file lists 3–8 player-visible acceptance checks; those are its gate.
+- No case IDs in engine code. Check with the grep in [OWNERSHIP_AND_GATES](OWNERSHIP_AND_GATES.md).
+- Headless late-start fixtures use poll steps of 0.4 s or less: the default 18 s watch-clock step drops walks.
+- Don't commit raw evidence (logs, traces, screenshots, test binaries). A milestone's status line states what was verified.
+- Builds, tests and game runs go through the capped worker (`CLAUDE.md`), and game runs use `CATHEDRAL_HEADLESS=1`.
 
 ## Existing work and ownership
 
-Knowledge and rumour is a separate shared feature, now [implemented through M5 and independently accepted on 2026-09-06](../../../implemented/knowledge_and_rumor/README.md). M0 reconciles its actual fact, holder, receipt, journal and consequence interfaces at current source `46e24ab`. [BASELINE_RECONCILIATION](BASELINE_RECONCILIATION.md) and [the measured record](evidence/m0_baseline/README.md) supersede the old planning prerequisite status. Shared archived identity remains an explicitly owned M5/M9 extension, not an already shipped retention guarantee. M0 stays partial because the current environment cannot provide required renderer/frame evidence, and production placement does not admit all 20,000 requested stress residents.
+Knowledge and rumour is a separate shared feature, [implemented and accepted on 2026-09-06](../../../implemented/knowledge_and_rumor/README.md). [BASELINE_RECONCILIATION](BASELINE_RECONCILIATION.md) records its actual fact, holder, receipt and journal interfaces. This plan extends that service; it does not build a second fact store.
 
 Law, movement, items, speech, weather and ordinary NPC rounds already exist. Their implementation is the starting point, including fixes and extensions required by this plan. Historical files under `features/implemented/` are records and must not be rewritten to pretend the new work has shipped.
-
-Source names and proposed contracts do not certify that a new API or command already exists. Status changes need implementation evidence. The plan explicitly reconciles the separate keys proposal as a required subset; it does not mark that broader feature complete.
-
-The review repaired material gaps in the earlier GDD: the complete private trip omitted a departure delay from its conservative timing check; the physical route did not satisfy the old theft recipe; late wallet/desk search needed noncircular grounds; and the original review time could not wait for a slow reader. The case contract also fixes calendar anchoring, independent hold expiry, private versus hush terms and the unpaid pledge's actual property outcome. These are stated changes, not hidden assumptions that the old validator already proves them.
 
 ## Non-negotiable acceptance conditions
 
@@ -62,41 +56,29 @@ The review repaired material gaps in the earlier GDD: the complete private trip 
 7. Navigation, collision, access, perception and visual geometry describe the same spaces. Legal alternative routes remain legal.
 8. The player can miss events, decline disclosure, clear only Warin or return later without corrupting the mystery.
 9. No important consequence relies on an LLM getting an idle turn near the player.
-10. Completion requires measured implementation behaviour and human play evidence, not only a passing authored walkthrough.
+10. Completion requires implementation behaviour and developer play, not only a passing authored walkthrough.
 
-## Review documents
+## Documents
 
 | Document | Purpose |
 |---|---|
-| [Decisions](DECISIONS.md) | The user's authoritative choices and the GDD policies they replace |
-| [Architecture](ARCHITECTURE.md) | Shared responsibilities, time, operations, knowledge, evidence and enforcement contracts |
-| [Baseline reconciliation](BASELINE_RECONCILIATION.md) | Current shipped interfaces, source/persistence/role handoffs, district risks and acceptance limits |
-| [Source audit](SOURCE_AUDIT.md) | Historical 2026-09-05 implementation audit, superseded where the reconciliation says so |
-| [Ownership and gates](OWNERSHIP_AND_GATES.md) | Producers/consumers, dependency order, keys overlap, subcuts and sequential handoffs |
-| [Persistence inventory](PERSISTENCE_INVENTORY.md) | Existing/planned state owners and restore policies |
-| [Checkpoint protocol](CHECKPOINT_PROTOCOL.md) | Exact capture/adoption, pending cognition, time, callbacks and durable slot policies |
-| [Spatial proof protocol](SPATIAL_PROOF_PROTOCOL.md) | Traversal coverage, complete timing, perception continuity and historical applicability |
-| [Law protocol](LAW_PROTOCOL.md) | Briefings, fair dispatch, post coverage, station capacity, custody grounds and actual release |
-| [Runtime budgets](RUNTIME_BUDGETS.md) | Accepted time, resource admission, archival knowledge, replay retention and measurement gates |
-| [Case contract](CASE_CONTRACT.md) | Complete quest requirements and explicit repairs to the GDD's evidence/timing gaps |
-| [Player experience](PLAYER_EXPERIENCE.md) | Concrete play moments, meaningful choices and formative iteration criteria |
-| [Requirements](REQUIREMENTS.md) | D01–D07 mapped to 40 testable requirements |
-| [Verification](VERIFICATION.md) | 78 planned behavioral scenarios, grouped by owning milestone |
-| [Risks](RISKS.md) | Failures that block delivery and the evidence needed to retire them |
-| [Review log](REVIEW_LOG.md) | Actual planning checks, source concurrency, failed visual survey and remaining evidence |
+| [Decisions](DECISIONS.md) | The user's authoritative choices (D01–D08) |
+| [Plan review](PLAN_REVIEW.md) | Why the plan is shaped this way: per-milestone verdicts, the questions and their defaults |
+| [Lessons](LESSONS_FROM_THE_FIRST_ATTEMPT.md) | What went wrong in the removed first attempt |
+| [Case contract](CASE_CONTRACT.md) and [checklist](CASE_CHECKLIST.md) | The complete quest and its outcomes |
+| [Player experience](PLAYER_EXPERIENCE.md) | Concrete play moments and playtest revision criteria |
+| [Case playthroughs](VERIFICATION.md) | V64–V74, the real-case scenarios for M9/M10 |
+| [Architecture](ARCHITECTURE.md) | Authority, receipts, statements, findings, activities, orders and compatibility |
+| [Ownership](OWNERSHIP_AND_GATES.md) | The no-case-IDs rule and the boundary with the keys proposal |
+| [Risks](RISKS.md) | The failures that can sink the delivery |
+| [Baseline reconciliation](BASELINE_RECONCILIATION.md), [source audit](SOURCE_AUDIT.md) | M0's interface tables and gap analysis |
+| [Persistence inventory](PERSISTENCE_INVENTORY.md), [checkpoint protocol](CHECKPOINT_PROTOCOL.md) | Field checklist and pending-work rules for save/load (M2 governs) |
+| [archive/](archive/) | Superseded milestone files, budgets, requirements, protocols, review log and the full 78-scenario list |
 
-## Inspecting and maintaining the plan
+## The Tallage illustration
 
-The [existing Tallage illustration](evidence/tallage_existing.png) is generated from current cadastral/navigation data, with [source hashes and coordinates](evidence/site_audit.json). It is not a screenshot or a validated proposal for new interiors. The attempted headless visual survey produced no screenshot; that limit remains explicit in the review log.
-
-From this plan directory:
+The [existing Tallage illustration](evidence/tallage_existing.png) is generated from current cadastral/navigation data, with [source hashes and coordinates](evidence/site_audit.json). It is not a screenshot or a proposal for new interiors. Regenerate it after its source geometry changes:
 
 ```sh
-uv run --cache-dir /tmp/cathedral-gdd-uv evidence/plan_catalog.py
-uv run --cache-dir /tmp/cathedral-gdd-uv evidence/probe_design.py
-uv run --cache-dir /tmp/cathedral-gdd-uv evidence/validate_plan.py --write
+uv run --cache-dir /tmp/cathedral-gdd-uv evidence/render_site_audit.py
 ```
-
-The first checks generated requirement/scenario tables; use `--write` after editing their catalog source. The second reproduces finite arithmetic and original-model recipe observations. The third checks local links/anchors, milestone status, generated coverage, current site-source hashes and the probe's original-model hash. [design_probe.json](evidence/design_probe.json) and [structural_validation.json](evidence/structural_validation.json) record their scope. None is a claim that the planned gameplay acceptance scenarios have run.
-
-Regenerate the site illustration with `uv run --cache-dir /tmp/cathedral-gdd-uv evidence/render_site_audit.py` after its source geometry changes. Keep the original GDD generation separate until its manuscript/model are deliberately reconciled with the implementation authority.

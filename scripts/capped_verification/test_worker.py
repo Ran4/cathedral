@@ -15,13 +15,12 @@ class WorkerTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.relative = worker.EVIDENCE + "/m3_fake_admission/owner/run_capped.py"
+        self.relative = "evidence/m3_fake_admission/owner/run_capped.py"
         self.runner = self.root / self.relative
         self.runner.parent.mkdir(parents=True)
         self.runner.write_text("print('fake runner executed')\n")
         for name in ("run_tests.py", "run_build.py", "reviewed-sources.json"):
             self.runner.with_name(name).write_text("{}\n")
-        (self.root / worker.EVIDENCE / "component_input_sources.py").write_text("# fake\n")
         self.job = {"runner": self.relative, "run_name": "20260926-test"}
         self.worker_hash = worker.sha(Path(worker.__file__))
 
@@ -66,7 +65,7 @@ class WorkerTests(unittest.TestCase):
         invalid = [dict(self.job, command="cargo build"), dict(self.job, run_name="../bad"),
                    dict(self.job, run_name="-bad"), dict(self.job, run_name="x" * 81),
                    dict(self.job, runner="/bin/sh"), dict(self.job, runner="scripts/run_capped.py"),
-                   dict(self.job, runner=self.relative.replace("m3_", "m20_")),
+                   dict(self.job, runner=self.relative.replace("evidence/", ".evidence/")),
                    dict(self.job, runner=self.relative.replace("m3_fake_admission", "../m3_fake_admission")),
                    dict(self.job, runner=self.relative.replace("run_capped.py", "run_build.py"))]
         for job in invalid:
@@ -106,7 +105,7 @@ class WorkerTests(unittest.TestCase):
         result = worker.read_json(claimed / "result.json")
         self.assertEqual(result["job"], self.job)
         self.assertEqual(result["worker_sha256"], self.worker_hash)
-        self.assertEqual(len(result["helper_sha256"]), 5)
+        self.assertEqual(len(result["helper_sha256"]), 4)
         self.assertIn("fake runner executed", (claimed / "output.log").read_text())
         self.assertIsNone(worker.claim_next(queue))
         with self.assertRaises(ValueError):

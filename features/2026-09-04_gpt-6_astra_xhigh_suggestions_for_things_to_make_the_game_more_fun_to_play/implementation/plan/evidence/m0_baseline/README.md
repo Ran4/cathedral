@@ -4,6 +4,8 @@ V01/V02 source reconciliation is in [BASELINE_RECONCILIATION](../../BASELINE_REC
 
 ## Reproduce the measured workload
 
+> **2026-10-07:** `alibi_baseline`, `run_baseline.py` and `inventory_fields.py` were retired (PLAN_REVIEW item 5); the commands below are historical. `cathedral-headless --extra-ambient n` measures the same crowd workload.
+
 From the repository root, sequentially:
 
 ```sh
@@ -44,11 +46,11 @@ The established 160 KiB snapshot canary is a different, smaller authored fixture
 - [sim_tests.log](sim_tests.log): the current deterministic baseline command's RTK summary, 1,063 passed/one ignored, 21 suites. It is a summary, not a full per-test transcript. [build.log](build.log) records the successful release example build.
 - [post_measurement_changes.json](post_measurement_changes.json), [host_focused.log](host_focused.log): the subsequent baseline repair adds the skin asset only to the shared host test helper; 29 focused tests pass. This intentional test-only source delta postdates the CPU identity record and does not change the measured backend binary. Root’s complete workspace review is recorded separately.
 - [review_checks.json](review_checks.json): independent raw/sample/percentile/counter/source checks by the coordinator, before that test-only repair. All 30,800 raw samples and 13 pairs reproduce their summaries.
-- [workspace_gate.json](workspace_gate.json): final complete workspace rerun after the test-fixture repair, 1,780 passed, zero failed, eight ignored; compressed initial/focused-failure/final transcripts are linked in that record. The [coordinator review](../../BASELINE_REVIEW.md) records acceptance boundaries.
+- [workspace_gate.json](workspace_gate.json): final complete workspace rerun after the test-fixture repair, 1,780 passed, zero failed, eight ignored; compressed initial/focused-failure/final transcripts are linked in that record. The [coordinator review](../../archive/BASELINE_REVIEW.md) records acceptance boundaries.
 - [BUDGETS.json](BUDGETS.json): machine-readable numerical targets and explicit unmeasured branches; these do not report absent services as measured.
 - [owner_fields.json](owner_fields.json): 26 selected private owners / 323 field declarations, checked by `../inventory_fields.py`; the policy table lives in PERSISTENCE_INVENTORY.
 - [renderer_availability.json](renderer_availability.json): no display variables or GPU devices; NVIDIA query exits 9. The approved outside-sandbox check found the same state. No new Bevy run or screenshot was attempted; no current frame/VSync/focus evidence exists.
 
 An earlier short measurement used the compatibility crowd helper without authored spawn exclusions and ended before resident dwell expired. It was rejected in review and moved outside the feature evidence; none of its numbers above survives. The final direct production generator run uses a newly built binary and longer declared segments.
 
-Missing evidence remains material: real-renderer/ordinary-host frames and accepted-time recovery; actual full 20,000 extra residents; full-day physical-time behavior; active future operations; checkpoint/replay/archive DTO allocation and concurrent generation residency. Fake dialogue and archived provider probes are not human comprehension/play evidence. [RUNTIME_BUDGETS](../../RUNTIME_BUDGETS.md) distinguishes numerical limits from these unmeasured achievements.
+Missing evidence remains material: real-renderer/ordinary-host frames and accepted-time recovery; actual full 20,000 extra residents; full-day physical-time behavior; active future operations; checkpoint/replay/archive DTO allocation and concurrent generation residency. Fake dialogue and archived provider probes are not human comprehension/play evidence. [RUNTIME_BUDGETS](../../archive/RUNTIME_BUDGETS.md) distinguishes numerical limits from these unmeasured achievements.

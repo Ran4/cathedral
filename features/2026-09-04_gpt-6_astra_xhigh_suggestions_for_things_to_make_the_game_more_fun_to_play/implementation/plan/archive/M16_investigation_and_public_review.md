@@ -6,7 +6,7 @@ Deliver the first full playable investigation through ordinary city systems. The
 
 ## Entry
 
-M15 is accepted. The corrected recipes in [CASE_CONTRACT.md](CASE_CONTRACT.md) supersede the GDD model's incomplete theft path.
+M15 is accepted. The corrected recipes in [CASE_CONTRACT.md](../CASE_CONTRACT.md) supersede the GDD model's incomplete theft path.
 
 ## Playable flow
 

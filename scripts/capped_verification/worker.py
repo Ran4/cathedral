@@ -17,9 +17,9 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
-EVIDENCE = ("features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/"
-            "implementation/plan/evidence")
-RUNNER_PATTERN = re.compile(re.escape(EVIDENCE) + r"/m(?:[0-9]|1[0-9])_[a-z0-9_]+/owner/run_capped\.py\Z")
+# Any reviewed runner at <repo-relative dirs>/owner/run_capped.py. Components may
+# not start with a dot, so "." and ".." never match; regular_beneath re-checks.
+RUNNER_PATTERN = re.compile(r"(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)+owner/run_capped\.py\Z")
 NAME_PATTERN = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}\Z")
 MAX_JSON = 32768
 MAX_PENDING = 256
@@ -94,7 +94,7 @@ def validate_job(job, root):
     if not isinstance(job["run_name"], str) or not NAME_PATTERN.fullmatch(job["run_name"]):
         raise ValueError("Unsafe run name (maximum 80 ASCII filename characters)")
     if not isinstance(job["runner"], str) or not RUNNER_PATTERN.fullmatch(job["runner"]):
-        raise ValueError("Runner must be evidence/m0..m19_<name>/owner/run_capped.py")
+        raise ValueError("Runner must be <repo-relative dirs>/owner/run_capped.py")
     return regular_beneath(root, job["runner"])
 
 
@@ -103,7 +103,6 @@ def identities(job, root):
     relatives = [str(runner.relative_to(root))]
     relatives += [str((runner.parent / name).relative_to(root)) for name in
                   ("run_tests.py", "run_build.py", "reviewed-sources.json")]
-    relatives.append(EVIDENCE + "/component_input_sources.py")
     return {relative: sha(regular_beneath(root, relative)) for relative in relatives}
 
 

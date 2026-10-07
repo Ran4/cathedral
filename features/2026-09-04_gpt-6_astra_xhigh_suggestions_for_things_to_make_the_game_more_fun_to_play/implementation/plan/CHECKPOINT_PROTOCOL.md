@@ -4,7 +4,7 @@ Status: Proposed implementation contract (2026-09-05); owned by M1–M3, not imp
 
 # Capturing and resuming one coherent city
 
-This specifies the defaults behind [M2](M2_simulation_checkpoints.md), [M3](M3_save_load_application.md) and the [field inventory](PERSISTENCE_INVENTORY.md). It closes choices that otherwise tend to become omissions during implementation. Use these defaults unless source reconciliation demonstrates a better equivalent and the continuation evidence is updated.
+This specifies the defaults behind [M2](M2_simulation_checkpoints.md), [M3](archive/M3_save_load_application.md) and the [field inventory](PERSISTENCE_INVENTORY.md). It closes choices that otherwise tend to become omissions during implementation. Use these defaults unless source reconciliation demonstrates a better equivalent and the continuation evidence is updated.
 
 ## 1. Identity and clocks
 

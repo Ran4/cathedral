@@ -1,4 +1,4 @@
-Status: Approved by the developer on 2026-10-07 (D08): the revised R1–R11 order, the default answer to every question Q1–Q13, and proposed changes 1–8. R1 (M1) and R2 (M2) were implemented 2026-10-04. Changes 1–8 are not applied yet.
+Status: Approved by the developer on 2026-10-07 (D08): the revised R1–R11 order, the default answer to every question Q1–Q13, and proposed changes 1–8. R1 (M1) and R2 (M2) were implemented 2026-10-04. All eight changes were applied on 2026-10-07. Change 6: the capped worker no longer hashes `component_input_sources.py` and accepts any `<dirs>/owner/run_capped.py` runner; it was restarted and verified.
 
 # Plan review — what to keep of Astra's plan
 

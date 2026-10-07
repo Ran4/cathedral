@@ -1,6 +1,6 @@
 # Capped verification worker
 
-Runs reviewed `m0_<name>` through `m19_<name>` owner evidence runners sequentially in one
+Runs reviewed `<dir>/owner/run_capped.py` runners sequentially in one
 long-lived system service. The fixed `cathedral-alibi-build` unit name excludes
 overlap with the earlier one-shot service. All descendants run as `ran:ran` and
 share **40% of one CPU core**, a 100 ms quota period, nice 15, and idle I/O.
@@ -74,21 +74,20 @@ submit without sudo:
 ```sh
 uv --cache-dir /tmp/cathedral-uv-cache run --no-project --offline python -I -B \
   scripts/capped_verification/worker.py submit \
-  --runner features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m3_fact_admission/owner/run_capped.py \
-  --run-name 20260926-facts-reviewed-01
+  --runner features/2026-09-04_gpt-6_astra_xhigh_suggestions_for_things_to_make_the_game_more_fun_to_play/implementation/plan/evidence/m0_dev/owner/run_capped.py \
+  --run-name 20261007-example-01
 ```
 
 Submission is authorization to execute that reviewed runner. Jobs contain only
 `runner` and `run_name`; arbitrary commands, extra arguments, path traversal, and
-symlinked runner/helpers are rejected. The accepted path is exactly the evidence
-root shown above plus `m(?:[0-9]|1[0-9])_[a-z0-9_]+/owner/run_capped.py`. Future reviewed legs fit
+symlinked runner/helpers are rejected. The accepted path is any repository-relative
+`<dirs>/owner/run_capped.py` whose components do not start with a dot. New runners fit
 this pattern without restarting the worker. Names are unique forever, up to 80
 ASCII filename characters, beginning with a letter or digit. Queue order is
 lexicographic by name; timestamp prefixes are useful. At most 256 jobs may wait.
 
 Submission pins SHA-256 identities of `run_capped.py`, `run_tests.py`,
-`run_build.py`, `reviewed-sources.json`, the shared source enumerator, and the
-worker. The runner itself must enforce the reviewed source map and check it
+`run_build.py`, `reviewed-sources.json` and the worker. The runner itself must enforce the reviewed source map and check it
 between stages. Keep sources/helpers frozen until that job finishes; submit the
 next leg only after reviewing and freezing it. This is a trusted-owner queue,
 not a sandbox for hostile scripts or concurrent edits by the same Unix account.

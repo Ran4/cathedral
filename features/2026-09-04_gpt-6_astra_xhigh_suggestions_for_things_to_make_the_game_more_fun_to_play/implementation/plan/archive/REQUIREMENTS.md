@@ -2,7 +2,7 @@ Status: Planned acceptance coverage (2026-09-05); generated from evidence/plan_c
 
 # Requirement traceability
 
-The seven [authoritative decisions](DECISIONS.md) become the requirements below. Coverage names planned acceptance scenarios, not completed tests. [VERIFICATION.md](VERIFICATION.md) gives each trigger and observable result. Current execution evidence is recorded separately in [REVIEW_LOG.md](REVIEW_LOG.md).
+The seven [authoritative decisions](../DECISIONS.md) become the requirements below. Coverage names planned acceptance scenarios, not completed tests. [VERIFICATION.md](VERIFICATION.md) gives each trigger and observable result. Current execution evidence is recorded separately in [REVIEW_LOG.md](REVIEW_LOG.md).
 
 | ID | Decision | Required result | Acceptance coverage |
 |---|---|---|---|

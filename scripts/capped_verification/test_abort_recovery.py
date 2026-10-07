@@ -26,13 +26,12 @@ class AbortRecoveryTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.job_id = 'interrupted-1'
-        self.runner = worker.EVIDENCE + '/m3_fake_abort/owner/run_capped.py'
+        self.runner = 'evidence/m3_fake_abort/owner/run_capped.py'
         source = self.root / self.runner
         source.parent.mkdir(parents=True)
         source.write_text("print('fake')\n")
         for name in ('run_tests.py', 'run_build.py', 'reviewed-sources.json'):
             source.with_name(name).write_text('{}\n')
-        (self.root / worker.EVIDENCE / 'component_input_sources.py').write_text('# fake\n')
         self.job_value = {'runner': self.runner, 'run_name': self.job_id}
         worker.submit(self.root, self.job_value)
         self.queue = worker.setup(self.root)
@@ -43,7 +42,7 @@ class AbortRecoveryTests(unittest.TestCase):
         (self.job / 'output.log').write_text('actual incomplete output\n')
         self.directory = self.queue / 'control'
         self.directory.mkdir()
-        self.stop = self.root / worker.EVIDENCE / 'm3_fake_abort/owner/after-stop.json'
+        self.stop = self.root / 'evidence/m3_fake_abort/owner/after-stop.json'
         self.stop_value = {'status': 'unit_stopped_cgroup_empty', 'job_id': self.job_id,
                            'prior_invocation': 'a' * 32, 'cgroup_empty': True, 'state': INACTIVE}
         self.stop.write_text(json.dumps(self.stop_value))

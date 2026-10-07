@@ -6,7 +6,7 @@ Author a mystery that already exists when the player arrives. The final content 
 
 ## Entry
 
-M14 is accepted. Read [CASE_CONTRACT.md](CASE_CONTRACT.md), the final content schema and applicable lore instructions. No essential record can refer to a provisional room or an ambient-only actor.
+M14 is accepted. Read [CASE_CONTRACT.md](../CASE_CONTRACT.md), the final content schema and applicable lore instructions. No essential record can refer to a provisional room or an ambient-only actor.
 
 ## Cast work
 

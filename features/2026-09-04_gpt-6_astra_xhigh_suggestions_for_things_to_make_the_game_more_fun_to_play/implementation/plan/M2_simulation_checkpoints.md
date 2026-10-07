@@ -7,8 +7,8 @@ Restore the authoritative city, not a picture of it (D06). This milestone builds
 - lockstep tests proving that a restored engine continues like an uninterrupted one;
 - a thin real-game slice: a quicksave key and starting the game from a saved slot.
 
-**Load during play** (swapping worlds inside a running game) is the next milestone (R3, the rest of the old M3).
-Whether it must be in-process at all is an open question (PLAN_REVIEW Q5).
+**Load during play** (swapping worlds inside a running game) is the next milestone, [M3](M3_load_during_play.md)
+(R3). It is in-process (D08, Q5).
 
 Entry: M0 closed. M1 is not a dependency.
 

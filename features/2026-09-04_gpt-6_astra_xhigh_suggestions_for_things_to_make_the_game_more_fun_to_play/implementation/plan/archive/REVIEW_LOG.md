@@ -17,7 +17,7 @@ This pass did not implement or claim that concurrent work. No branch/worktree wa
 | Check | Actual result | Limit |
 |---|---|---|
 | `cargo test -p cathedral-sim --tests` on the opening working tree | Exit 0; existing unit/integration suites passed | Baseline only, before later concurrent pollen changes. Does not exercise the proposed systems |
-| Source audit of engine, scheduler, Night, clock, round, inventory, law, nav, collision, host and lore | Concrete gaps recorded in [SOURCE_AUDIT](SOURCE_AUDIT.md) and milestone contracts | Static source is not proof of new runtime behavior |
+| Source audit of engine, scheduler, Night, clock, round, inventory, law, nav, collision, host and lore | Concrete gaps recorded in [SOURCE_AUDIT](../SOURCE_AUDIT.md) and milestone contracts | Static source is not proof of new runtime behavior |
 | Original GDD model/content review | Identified missing departure delay, incomplete physical theft recipe, alibi/contradiction conflation, missing private detail and late-search gaps | Original model/validator remain unchanged; their old pass is not acceptance of the repaired case |
 | Hidden-window Bevy survey | Compilation succeeded; watchdog exit 124 at first screenshot request; screenshot directory empty | No successful visual survey or GPU performance claim |
 | `uv run evidence/render_site_audit.py` | Generated current-footprint PNG/SVG and source/hash report; diagram viewed and bottom-label layout corrected | Source-data illustration only; no proposed room, path or timing certificate |
@@ -35,7 +35,7 @@ CATHEDRAL_DRIVE='wait-online; weather clear; tp -215 95 160 0 -50; sleep 3; shot
 cargo run > /tmp/alibi_plan_tallage_survey.log 2>&1
 ```
 
-The renderer logged software-only support at `09:43:47 UTC`. Drive reached `shot plan_tallage_overview` at its 11.7-second mark and then hit the 120-second watchdog. The directory [session 777 screenshots](../../../../logs/session_777_2026-09-05_11_43_46/screenshots/) was empty when checked. The run also logged cursor-confinement and audio-loader errors. No claim is made about their cause beyond the recorded messages; they were not repaired by this planning pass.
+The renderer logged software-only support at `09:43:47 UTC`. Drive reached `shot plan_tallage_overview` at its 11.7-second mark and then hit the 120-second watchdog. The directory [session 777 screenshots](../../../../../logs/session_777_2026-09-05_11_43_46/screenshots/) was empty when checked. The run also logged cursor-confinement and audio-loader errors. No claim is made about their cause beyond the recorded messages; they were not repaired by this planning pass.
 
 The headless flag was used throughout. No synthetic desktop input was sent. This failed run was not retried as a slow software-rendering benchmark. The useful fallback was to illustrate the actual cadastral/navigation source, explicitly labeled as such.
 
@@ -62,7 +62,7 @@ Fresh-context reviewers were used one at a time under `features/AGENTS.md`'s ESP
 | Recall and deadline causality | Registry decisions versus finite issued mandates, physical recall receipt, in-transit grants, local version tombstones, keeper-carried expiry defaults and exclusive boundary ordering |
 | Closing durability/source reconciliation | Immutable save generations with recoverable acknowledged references; pollen M2 holdings, mint context, per-person cursors and content-keyed derived caches added to the continuation inventory |
 
-These changes are implementation requirements, not implemented fixes. The original GDD remains a historical design proposal where [DECISIONS](DECISIONS.md) and [CASE_CONTRACT](CASE_CONTRACT.md) explicitly supersede it.
+These changes are implementation requirements, not implemented fixes. The original GDD remains a historical design proposal where [DECISIONS](../DECISIONS.md) and [CASE_CONTRACT](../CASE_CONTRACT.md) explicitly supersede it.
 
 ## Remaining implementation evidence
 

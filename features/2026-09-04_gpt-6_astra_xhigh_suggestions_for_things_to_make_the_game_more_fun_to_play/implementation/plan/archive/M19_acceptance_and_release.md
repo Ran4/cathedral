@@ -10,7 +10,7 @@ M0–M18 are accepted with their own evidence. Resolve open risks and intentiona
 
 ## Deterministic acceptance
 
-Run the full simulation/backend/host suites appropriate to the changed modules. Add an end-to-end scenario matrix covering the core and alternate paths in [CASE_CONTRACT.md](CASE_CONTRACT.md), including insufficient evidence, correlated hearsay, planted objects, refusal, absence, interruption, missed events and dynamic orders.
+Run the full simulation/backend/host suites appropriate to the changed modules. Add an end-to-end scenario matrix covering the core and alternate paths in [CASE_CONTRACT.md](../CASE_CONTRACT.md), including insufficient evidence, correlated hearsay, planted objects, refusal, absence, interruption, missed events and dynamic orders.
 
 For each decisive transition, save just before and just after it, restore into fresh services/process state, and continue. Compare committed effects with an uninterrupted control. Include search, escort, hearing, private disclosure, swallowed unique objects, payment and property return.
 
@@ -46,7 +46,7 @@ Test corrupt/incompatible saves and interrupted writes. Previous valid slots and
 
 ## Human acceptance
 
-Recruit five to eight formative testers across different input preferences and familiarity levels. Follow [PLAYER_EXPERIENCE](PLAYER_EXPERIENCE.md) for the scene coverage, proposed revision triggers and distinction between unguided discovery and assisted fixture coverage. This is a design feedback sample, not a statistical proof. Ask each to explain their reconstruction before presenting the author solution.
+Recruit five to eight formative testers across different input preferences and familiarity levels. Follow [PLAYER_EXPERIENCE](../PLAYER_EXPERIENCE.md) for the scene coverage, proposed revision triggers and distinction between unguided discovery and assisted fixture coverage. This is a design feedback sample, not a statistical proof. Ask each to explain their reconstruction before presenting the author solution.
 
 Look for the intended discoveries: two sightings are not continuous observation; the upper connection changes the journey; opportunity does not identify an assailant. Test whether players who clear only Warin recognise a legitimate achievement, and whether players who continue want to do so.
 

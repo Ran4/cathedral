@@ -1,6 +1,6 @@
 Status: Planned (2026-09-05).
 
-> **2026-10-04:** the save file, quicksave and boot-from-slot moved into the rewritten [M2](M2_simulation_checkpoints.md). What remains here is **load during play** (R3 in [PLAN_REVIEW](PLAN_REVIEW.md)): swap the world in the running game, give the new engine a fresh backend channel so old callbacks are inert, reset the host's HUD/puppet/player/speech state, and add a slot list noting that time does not pass while the game is closed. It is in-process (D08, Q5). The ≤2 ms/frame budget, retention cohorts and slot publication protocol below are cut.
+> **2026-10-04:** the save file, quicksave and boot-from-slot moved into the rewritten [M2](../M2_simulation_checkpoints.md). What remains here is **load during play** (R3 in [PLAN_REVIEW](../PLAN_REVIEW.md)): swap the world in the running game, give the new engine a fresh backend channel so old callbacks are inert, reset the host's HUD/puppet/player/speech state, and add a slot list noting that time does not pass while the game is closed. It is in-process (D08, Q5). The ≤2 ms/frame budget, retention cohorts and slot publication protocol below are cut.
 >
 > **R3 follow-ups from M2's review (2026-10-04):**
 >
@@ -16,7 +16,7 @@ Make the M2 checkpoint usable during ordinary play. A save is complete only afte
 
 ## Entry
 
-M2 is accepted. Private checkpoint validation and hydration work with fresh services. M1 provides runtime generations and action high-water marks. Follow the concrete capture/adoption/default-pending-work contract in [CHECKPOINT_PROTOCOL](CHECKPOINT_PROTOCOL.md).
+M2 is accepted. Private checkpoint validation and hydration work with fresh services. M1 provides runtime generations and action high-water marks. Follow the concrete capture/adoption/default-pending-work contract in [CHECKPOINT_PROTOCOL](../CHECKPOINT_PROTOCOL.md).
 
 ## Host responsibilities
 
@@ -34,7 +34,7 @@ Rebuild the mirror, movement inbox, entity bindings, doors, item visuals, lamps,
 
 1. The player requests a slot save from normal play. UI says “Saving…” while the city continues.
 2. Capture a coherent engine/player boundary and its simulation time. Show the captured time, not an implied guarantee that later actions are already saved.
-3. Use [CHECKPOINT_PROTOCOL's generation/reference publication](CHECKPOINT_PROTOCOL.md#6-publishing-slots): encode, validate and durably publish an immutable payload, retain the prior acknowledged reference/payload, then atomically publish the new small slot reference with directory durability. Overwriting the sole payload is insufficient for the promised recovery guarantee.
+3. Use [CHECKPOINT_PROTOCOL's generation/reference publication](../CHECKPOINT_PROTOCOL.md#6-publishing-slots): encode, validate and durably publish an immutable payload, retain the prior acknowledged reference/payload, then atomically publish the new small slot reference with directory durability. Overwriting the sole payload is insufficient for the promised recovery guarantee.
 4. Report success only after publication. On failure, retain the previous save and give a useful message. Do not silently mark a failed write successful because the in-memory capture worked.
 5. Bound queued requests by count and retained bytes. Preserve manual save intent; coalesce redundant autosaves where safe. Serialize same-slot publication or supersede older requests so a slow older save cannot overwrite a newer one. Save-operation IDs survive unrelated world loads. A slow disk cannot accumulate an unbounded queue of full-world copies.
 

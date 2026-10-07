@@ -6,13 +6,13 @@ Create places worth investigating, using the accepted reusable systems. The disc
 
 ## Entry
 
-M13's foundation gate is accepted. Review [CASE_CONTRACT.md](CASE_CONTRACT.md) and the actual tools/interfaces that shipped. M0 survey notes are hypotheses, not final placements.
+M13's foundation gate is accepted. Review [CASE_CONTRACT.md](../CASE_CONTRACT.md) and the actual tools/interfaces that shipped. M0 survey notes are hypotheses, not final placements.
 
 ## Site and redesign
 
 The user permits a larger district redesign. Compare at least two plausible site arrangements before committing: adapt the current pawnshop block, or rework a larger set of lanes/property connections while retaining the Tallage's recognisable civic relationships.
 
-For each candidate supply plans and sections, ordinary property/storage/work purposes, every entrance connection and unaffected pedestrian/cart journeys before claiming route distances. Start from the [source-data illustration](evidence/tallage_existing.png); it shows existing footprints and the door/place mismatch, not validated new rooms.
+For each candidate supply plans and sections, ordinary property/storage/work purposes, every entrance connection and unaffected pedestrian/cart journeys before claiming route distances. Start from the [source-data illustration](../evidence/tallage_existing.png); it shows existing footprints and the door/place mismatch, not validated new rooms.
 
 Current anchors include the Tallage at approximately `(-213.5, 63)`, the pawnshop centred near `(-188.8, 33.1)`, the weigh-beam near `(-214.2, 45.5)`, and the Tally Bridge between warehouse and toll-house over the dry Cut. These are audit references, not mandatory quest coordinates. If an established anchor changes under the authorised redesign, update current lore/geography and every projection explicitly; historical implemented-feature records keep their original coordinates.
 
