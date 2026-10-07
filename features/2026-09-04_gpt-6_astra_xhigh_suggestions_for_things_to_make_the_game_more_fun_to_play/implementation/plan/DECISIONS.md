@@ -1,4 +1,4 @@
-Status: Authoritative user decisions recorded (2026-09-05); incorporated into the delivered implementation plan.
+Status: Authoritative user decisions: D01–D07 recorded 2026-09-05, D08 (plan review accepted) 2026-10-07.
 
 # Decisions that govern the implementation
 
@@ -65,6 +65,31 @@ An order's issue, receipt, assignment, search, encounter, seizure, escort, commi
 The system must handle absence, stale information, interrupted journeys, locked premises, competing duties, an unavailable officer, a corrected finding and a suspect already held for another matter. Nobody gains the suspect's live position or private evidence merely because an order exists.
 
 Use and, where necessary, rework the shipped law and movement systems. Do not build a separate quest police service. A quest emits a supported request or authorised order; the city performs its consequences.
+
+## D08 — The 2026-10-04 plan review is accepted
+
+On 2026-10-07 the user accepted [PLAN_REVIEW](PLAN_REVIEW.md) as a whole: "I'm okay with the suggestions." This adopts:
+- the revised milestone order R1–R11;
+- its proposed doc/process changes 1–8;
+- the **default answer** to each of its questions Q1–Q13. Two of these bear on the next milestones:
+  - Q5: R3 swaps the world inside the running game.
+  - Q6: saving keeps the 100 ms clamp, measured and reported.
+
+  The rest set the shape of later milestones. In brief:
+  - Q1: every generic system is finished on dev fixtures before case authoring.
+  - Q2: the Rooms fixture is a separate dev building; the Tallage comes at R8.
+  - Q3: no early real-case slice.
+  - Q4: the private route stays upstairs.
+  - Q7: the new order becomes the warrant rung.
+  - Q8: only grounded holds run on game-day expiry.
+  - Q9: recalls travel like orders.
+  - Q10: the hoist interval is both visible and testified.
+  - Q11: routes are measured, not exhaustively proved.
+  - Q12: the four GDD side routes stay in reduced form.
+  - Q13: round legs, appointments and duties all break a conversation after one excuse turn.
+- The design-rule defaults: a save-only `FactSource` serializer, and no spoiler obfuscation of save files.
+
+Where this record and older plan documents disagree, D08 and the rewritten milestone files govern.
 
 ## Changes from the GDD
 

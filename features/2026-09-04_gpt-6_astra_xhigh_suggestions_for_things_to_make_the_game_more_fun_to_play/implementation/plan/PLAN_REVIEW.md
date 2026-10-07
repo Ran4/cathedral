@@ -1,4 +1,4 @@
-Status: Review of the M0–M19 plan (2026-10-04). The rewritten M1 and M2 files are in force. The revised order below and the questions at the end are awaiting the developer's approval.
+Status: Approved by the developer on 2026-10-07 (D08): the revised R1–R11 order, the default answer to every question Q1–Q13, and proposed changes 1–8. R1 (M1) and R2 (M2) were implemented 2026-10-04. Changes 1–8 are not applied yet.
 
 # Plan review — what to keep of Astra's plan
 

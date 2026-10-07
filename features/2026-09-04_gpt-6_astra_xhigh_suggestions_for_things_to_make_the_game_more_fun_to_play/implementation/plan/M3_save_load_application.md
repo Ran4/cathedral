@@ -1,6 +1,14 @@
 Status: Planned (2026-09-05).
 
-> **2026-10-04:** the save file, quicksave and boot-from-slot moved into the rewritten [M2](M2_simulation_checkpoints.md). What remains here is **load during play** (R3 in [PLAN_REVIEW](PLAN_REVIEW.md)): swap the world in the running game, give the new engine a fresh backend channel so old callbacks are inert, reset the host's HUD/puppet/player/speech state, and add a slot list noting that time does not pass while the game is closed. Whether it must be in-process is question Q5. The ≤2 ms/frame budget, retention cohorts and slot publication protocol below are cut.
+> **2026-10-04:** the save file, quicksave and boot-from-slot moved into the rewritten [M2](M2_simulation_checkpoints.md). What remains here is **load during play** (R3 in [PLAN_REVIEW](PLAN_REVIEW.md)): swap the world in the running game, give the new engine a fresh backend channel so old callbacks are inert, reset the host's HUD/puppet/player/speech state, and add a slot list noting that time does not pass while the game is closed. It is in-process (D08, Q5). The ≤2 ms/frame budget, retention cohorts and slot publication protocol below are cut.
+>
+> **R3 follow-ups from M2's review (2026-10-04):**
+>
+> - **Saved idle-turn hashes.** `Novelty`'s saved context hashes come from `DefaultHasher` (`attention.rs`), which may change with the Rust toolchain. Switch them to a fixed hash such as the FNV in `checkpoint.rs`.
+> - **Turn order.** The scheduler's turn `order` (from `idle_cognition.mode`) comes from the save rather than `config.ron`; the pacing already follows config.
+> - **Restore errors.** A restore error after `verify` passed kills the engine (`LocalEngine::fail`) instead of starting fresh.
+> - **Local speech workers.** In-process load with local speech restarts the speech worker subprocesses unless the STT/TTS services are carried across, so fence only cognition.
+> - **Test isolation.** Host tests honour `CATHEDRAL_LOAD`, so never run `cargo test` with it exported.
 
 # M3 — Save-anywhere in the application
 
