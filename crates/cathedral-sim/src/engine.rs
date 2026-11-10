@@ -600,6 +600,19 @@ pub enum EngineCommand {
         kind: crate::marks::MarkKind,
         anchor: String,
     },
+    /// The player's ask control (`M4_accounts_inquiries_findings.md`): have
+    /// somebody give their account of a matter under inquiry without a word
+    /// being spoken. It ends in the same [`crate::knowledge::recount`] as the
+    /// `recount` verb an asked person answers with, so asking by the control
+    /// and asking in speech record the same account.
+    ///
+    /// It carries no position: the hearing check reads where the last spatial
+    /// update put the player.
+    PlayerAsk {
+        request_id: String,
+        target_id: ActorId,
+        inquiry_id: String,
+    },
     /// CATHEDRAL_DRIVE `commit` (`law_and_order.md` M5): finish the escort at
     /// the Stone House, so a scripted run can look at the inside of the gaol —
     /// the booking, the posted fee, the bell, and what walking out costs.
@@ -2784,6 +2797,16 @@ impl Engine {
                         error.message
                     ))),
                 }
+            }
+
+            EngineCommand::PlayerAsk {
+                request_id,
+                target_id,
+                inquiry_id,
+            } => {
+                let result = crate::inquiry::ask(&mut self.world, &target_id, &inquiry_id)
+                    .map_err(CommandError::from);
+                self.finish_player_action(now, &request_id, result, out);
             }
 
             EngineCommand::DebugSeize { officer, target } => {

@@ -17,9 +17,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 
 use crate::clock::{Office, WorldTime};
-use crate::ids::{ActorId, FactId};
+use crate::error::{ActionError, ActionErrorCode};
+use crate::ids::{ActorId, FactId, FactKey};
 use crate::knowledge::catalog::{RawFact, parse_fact};
-use crate::knowledge::{self, DAY_OFFSET_MAX, FactCatalog, FactSpec, FactView, Telling};
+use crate::knowledge::{
+    self, DAY_OFFSET_MAX, FactCatalog, FactSpec, FactView, KNOWN_SHEET_MAX, Telling,
+};
+use crate::perception::{cap_first, identify};
 use crate::world::World;
 
 /// How many different facts the world's inquiries may list between them. An
@@ -357,6 +361,108 @@ fn person(world: &World, field: std::fmt::Arguments<'_>, id: &str) -> Result<Act
     }
 }
 
+/// Which of the facts seated on `speaker`'s sheet they could give the player
+/// an account of: those an inquiry is about, while the player is in earshot.
+///
+/// `seated` is cut to [`KNOWN_SHEET_MAX`] before the filter, as
+/// [`knowledge::Knowledge::note_seated`] cuts what it keeps. The prompt asks
+/// with the whole relevance list and the `recount` verb with the kept one, so
+/// the sheet offers the verb for exactly the facts the verb will find.
+pub fn recountable(world: &World, speaker: &ActorId, seated: &[FactKey]) -> Vec<FactKey> {
+    if world.inquiries.is_empty() || knowledge::player_in_earshot(world, speaker).is_none() {
+        return Vec::new();
+    }
+    let under_inquiry = |fact: &FactId| world.inquiries.iter().any(|i| i.facts.contains(fact));
+    seated
+        .iter()
+        .take(KNOWN_SHEET_MAX)
+        .copied()
+        .filter(|key| {
+            world
+                .knowledge
+                .fact(*key)
+                .is_some_and(|fact| under_inquiry(&fact.id))
+        })
+        .collect()
+}
+
+/// [`knowledge::recount`] for each of `keys`: the words of every account
+/// recorded, or the first refusal when none was. A refusal has therefore
+/// recorded nothing, whichever key it came from.
+pub(crate) fn recount_all(
+    world: &mut World,
+    speaker: &ActorId,
+    keys: &[FactKey],
+) -> Result<Vec<String>, &'static str> {
+    let mut words = Vec::new();
+    let mut refusal = None;
+    for key in keys {
+        match knowledge::recount(world, speaker, *key) {
+            Ok(word) => words.push(word),
+            Err(reason) => refusal = refusal.or(Some(reason)),
+        }
+    }
+    match refusal {
+        Some(reason) if words.is_empty() => Err(reason),
+        _ => Ok(words),
+    }
+}
+
+/// The player's ask control: `target` gives their account of every fact of one
+/// inquiry that they hold, and nothing is said aloud.
+///
+/// It records through [`knowledge::recount`], exactly as the `recount` verb
+/// does after a spoken answer, so asking by the control and asking in words
+/// leave the same account. The target is told they were asked. A refusal names
+/// its own reason and leaves the world as it was.
+pub fn ask(world: &mut World, target: &ActorId, inquiry_id: &str) -> Result<String, ActionError> {
+    let Some(inquiry) = world.inquiries.iter().find(|i| i.id == inquiry_id) else {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            "nobody is looking into any such matter",
+        ));
+    };
+    let (Some(player), Some(them)) = (world.player_id(), world.characters.get(target)) else {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownTarget,
+            "there is nobody by that id to ask",
+        ));
+    };
+    let name = cap_first(&identify(&world.characters[player], them));
+    if knowledge::player_in_earshot(world, target).is_none() {
+        return Err(ActionError::new(
+            ActionErrorCode::OutOfRange,
+            format!("{name} is too far to ask"),
+        ));
+    }
+    let keys: Vec<FactKey> = inquiry
+        .facts
+        .iter()
+        .filter_map(|fact| world.knowledge.key_of(fact))
+        .filter(|key| knowledge::holds_key(world, target, *key).is_some())
+        .collect();
+    if keys.is_empty() {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            format!("{name} has nothing to tell you about that"),
+        ));
+    }
+    let asked = format!(
+        "{} asked you about \"{}\", and you told them what you know of it.",
+        cap_first(&identify(them, &world.characters[player])),
+        inquiry.title
+    );
+
+    let words = recount_all(world, target, &keys)
+        .map_err(|reason| ActionError::new(ActionErrorCode::InvalidAction, reason))?;
+    world
+        .characters
+        .get_mut(target)
+        .expect("the target was found above")
+        .notify_percept(asked);
+    Ok(format!("{name} tells you: \"{}\"", words.join("\" and \"")))
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::{Value, json};
@@ -369,33 +475,55 @@ mod tests {
         ActorId::from_raw(id)
     }
 
+    fn body(id: &str, control: Control) -> Character {
+        Character::from_sheet(CharacterSheet {
+            pockets: Vec::new(),
+            frontbutt: None,
+            id: actor(id),
+            name: id.to_string(),
+            control,
+            back_story: String::new(),
+            location_description: String::new(),
+            appearance: Default::default(),
+            voice_key: None,
+            position_m: Vec3::new(0.0, 0.91, 0.0),
+            facing_yaw: 0.0,
+            holds: Vec::new(),
+            goal: crate::GOAL_NONE.into(),
+            memories: Vec::new(),
+            knows: BTreeSet::new(),
+            lore: None,
+            presence: Presence::InCity,
+            presence_epoch: 0,
+            economic_class: EconomicClass::Resident,
+        })
+    }
+
     /// A hermetic world of four: two witnesses, a listener and a reviewer.
     fn world() -> World {
         let mut world = World::new();
         for id in ["ada", "bem", "cob", "rev"] {
-            world.add_character(Character::from_sheet(CharacterSheet {
-                pockets: Vec::new(),
-                frontbutt: None,
-                id: actor(id),
-                name: id.to_string(),
-                control: Control::Llm,
-                back_story: String::new(),
-                location_description: String::new(),
-                appearance: Default::default(),
-                voice_key: None,
-                position_m: Vec3::new(0.0, 0.91, 0.0),
-                facing_yaw: 0.0,
-                holds: Vec::new(),
-                goal: crate::GOAL_NONE.into(),
-                memories: Vec::new(),
-                knows: BTreeSet::new(),
-                lore: None,
-                presence: Presence::InCity,
-                presence_epoch: 0,
-                economic_class: EconomicClass::Resident,
-            }));
+            world.add_character(body(id, Control::Llm));
         }
         world
+    }
+
+    /// [`world`] with the pack in it and a player standing among the four.
+    fn asked_world() -> World {
+        let mut world = world();
+        world.add_character(body("player", Control::Player));
+        install(&mut world, &pack().to_string()).expect("the pack installs");
+        world
+    }
+
+    fn step_away(world: &mut World, id: &str) {
+        world
+            .characters
+            .get_mut(&actor(id))
+            .expect("they are in the world")
+            .state
+            .position_m
+            .x = crate::HEARING_RADIUS_M + 0.5;
     }
 
     fn pack() -> Value {
@@ -639,6 +767,96 @@ mod tests {
             "inquiries[0].facts of 'test_cart' brings the world to 25 facts under inquiry; the \
              limit is 24"
         );
+    }
+
+    /// The sheet keeps three seats, so a matter seated fourth is one the
+    /// speaker was never shown, and neither the row nor the verb may reach it.
+    #[test]
+    fn only_a_kept_seat_under_inquiry_in_earshot_is_recountable() {
+        let mut world = asked_world();
+        let cart = world
+            .knowledge
+            .key_of(&FactId::from_raw("test.cart"))
+            .expect("the pack installed it");
+        let other = |n: u32| FactKey(cart.0 + 1 + n);
+        let ada = actor("ada");
+
+        assert_eq!(
+            recountable(&world, &ada, &[other(0), other(1), cart]),
+            vec![cart]
+        );
+        assert!(recountable(&world, &ada, &[other(0), other(1), other(2), cart]).is_empty());
+
+        step_away(&mut world, "ada");
+        assert!(recountable(&world, &ada, &[cart]).is_empty());
+    }
+
+    /// The ask control records what the target holds, as they hold it, tells
+    /// them they were asked, and reports what they told.
+    #[test]
+    fn asking_records_the_targets_account_and_tells_them_so() {
+        let mut world = asked_world();
+        let told = ask(&mut world, &actor("cob"), "test_cart").expect("cob holds it");
+        let word = "the cart went over at the ford at some point with nobody on the box";
+        assert_eq!(told, format!("A stranger (id cob) tells you: \"{word}\""));
+
+        let accounts = &world.knowledge.player_learned[&FactId::from_raw("test.cart")].accounts;
+        assert_eq!(accounts.len(), 1);
+        assert_eq!(
+            (
+                accounts[0].speaker.as_str(),
+                accounts[0].origin.as_ref().map(ActorId::as_str),
+                accounts[0].hops,
+                accounts[0].view.day_offset,
+                accounts[0].word.as_str()
+            ),
+            ("cob", Some("ada"), 1, -1, word)
+        );
+        let asked = "A stranger (id player) asked you about \"The cart at the ford\", and you told \
+                     them what you know of it.";
+        assert_eq!(world.characters[&actor("cob")].inbox(), [asked]);
+    }
+
+    /// Each refusal has its own sentence and leaves the world as it was.
+    #[test]
+    fn a_refused_ask_says_why_and_changes_nothing() {
+        let mut world = asked_world();
+        step_away(&mut world, "bem");
+        let before = world.clone();
+        let mut refused = |target: &str, inquiry: &str| {
+            let error = ask(&mut world, &actor(target), inquiry).expect_err("the ask is refused");
+            (error.code, error.message)
+        };
+
+        assert_eq!(
+            refused("ada", "test_wheel"),
+            (
+                ActionErrorCode::InvalidAction,
+                "nobody is looking into any such matter".to_string()
+            )
+        );
+        assert_eq!(
+            refused("zz999", "test_cart"),
+            (
+                ActionErrorCode::UnknownTarget,
+                "there is nobody by that id to ask".to_string()
+            )
+        );
+        assert_eq!(
+            refused("bem", "test_cart"),
+            (
+                ActionErrorCode::OutOfRange,
+                "A stranger (id bem) is too far to ask".to_string()
+            )
+        );
+        assert_eq!(
+            refused("rev", "test_cart"),
+            (
+                ActionErrorCode::InvalidAction,
+                "A stranger (id rev) has nothing to tell you about that".to_string()
+            )
+        );
+        assert_eq!(world, before);
     }
 
     #[test]

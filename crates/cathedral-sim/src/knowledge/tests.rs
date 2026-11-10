@@ -1995,3 +1995,284 @@ fn player_stage_telling_deduplication_has_a_strict_cap() {
     assert!(knowledge.note_player_stage_telling(FactKey(cap as u32), actor("mouth"), 8));
     assert_eq!(knowledge.player_stage_tellings.len(), 1);
 }
+
+// ---------------------------------------------------------------------------
+// Accounts — what somebody told the player to their face
+// ---------------------------------------------------------------------------
+
+/// A clocked world holding the player and `people`, all on one spot and so
+/// within earshot of one another.
+fn account_world(people: &[&str]) -> World {
+    let mut world = world_at_day(0);
+    let mut player = character("player", "Player", None, &[]);
+    player.sheet.control = Control::Player;
+    world.add_character(player);
+    for id in people {
+        world.add_character(character(id, id, None, &[]));
+    }
+    world
+}
+
+/// A standing fact about a cart going over on day 0, which `seeded` saw.
+fn cart_fact(world: &mut World, id: &str, seeded: &[&str]) -> FactKey {
+    seed_one(
+        world,
+        &format!(
+            r#"{{"id": "{id}", "topic": "talk", "said": "the cart went over at the ford, {{day}}",
+                "seeded": {seeded:?}, "day": 0, "decays": false}}"#
+        ),
+    )
+}
+
+/// Give `by`, who was not there, the fact as somebody told it to them.
+fn retold(world: &mut World, by: &str, key: FactKey, hops: u8, from: Option<&str>, day_offset: i8) {
+    let telling = Telling {
+        hops,
+        from: from.map(actor),
+        heat: 1.0,
+        view: FactView {
+            day_offset,
+            ..FactView::default()
+        },
+    };
+    learn(world, &actor(by), key, telling, None);
+}
+
+fn accounts<'a>(world: &'a World, fact: &str) -> &'a [Account] {
+    &world.knowledge.player_learned[&FactId::from_raw(fact)].accounts
+}
+
+/// Each speaker's account is their own version of it, a second speaker adds a
+/// second row, and asking somebody again replaces their row where it stands.
+#[test]
+fn each_speaker_gives_one_account_and_a_re_ask_replaces_it_in_place() {
+    let mut world = account_world(&["ada", "cob"]);
+    let key = cart_fact(&mut world, "test.cart", &["ada"]);
+    retold(&mut world, "cob", key, 1, Some("ada"), -1);
+
+    let witness = recount(&mut world, &actor("ada"), key).expect("ada was there");
+    assert_eq!(witness, "the cart went over at the ford, today");
+    let reteller = recount(&mut world, &actor("cob"), key).expect("cob was told");
+    assert_eq!(reteller, "the cart went over at the ford, yesterday");
+
+    let first_asked = world.current_time;
+    let place = world.knowledge.player_learned[&FactId::from_raw("test.cart")].place;
+    assert_eq!(
+        accounts(&world, "test.cart"),
+        [
+            Account {
+                speaker: actor("ada"),
+                origin: Some(actor("ada")),
+                hops: 0,
+                view: FactView::default(),
+                word: witness,
+                told: first_asked,
+                place,
+            },
+            Account {
+                speaker: actor("cob"),
+                origin: Some(actor("ada")),
+                hops: 1,
+                view: FactView {
+                    day_offset: -1,
+                    ..FactView::default()
+                },
+                word: reteller,
+                told: first_asked,
+                place,
+            },
+        ]
+    );
+
+    world.current_time = world_at_day(1).current_time;
+    recount(&mut world, &actor("ada"), key).expect("ada is asked again");
+    let rows = accounts(&world, "test.cart");
+    assert_eq!(rows.len(), 2);
+    assert_eq!(
+        (
+            rows[0].speaker.as_str(),
+            rows[0].word.as_str(),
+            rows[0].told
+        ),
+        (
+            "ada",
+            "the cart went over at the ford, yesterday",
+            world.current_time
+        )
+    );
+    assert_eq!(
+        (rows[1].speaker.as_str(), rows[1].told),
+        ("cob", first_asked)
+    );
+}
+
+/// The origin is what the speaker can vouch for and nothing further: their own
+/// eyes, or the one mouth they had it from, and nobody once it is further off
+/// or they cannot say who told them.
+#[test]
+fn an_account_traces_no_further_than_its_speaker_can_vouch() {
+    let mut world = account_world(&["ada", "cob", "dov", "eve"]);
+    let key = cart_fact(&mut world, "test.cart", &["ada"]);
+    retold(&mut world, "cob", key, 1, Some("ada"), 0);
+    retold(&mut world, "dov", key, 2, Some("cob"), 0);
+    retold(&mut world, "eve", key, 1, None, 0);
+    for speaker in ["ada", "cob", "dov", "eve"] {
+        recount(&mut world, &actor(speaker), key).expect("each of them holds it");
+    }
+    let origins: Vec<(&str, Option<&str>)> = accounts(&world, "test.cart")
+        .iter()
+        .map(|account| {
+            (
+                account.speaker.as_str(),
+                account.origin.as_ref().map(ActorId::as_str),
+            )
+        })
+        .collect();
+    assert_eq!(
+        origins,
+        [
+            ("ada", Some("ada")),
+            ("cob", Some("ada")),
+            ("dov", None),
+            ("eve", None)
+        ]
+    );
+}
+
+/// Nobody can be made to recount what they do not hold, the player is not told
+/// about themselves, and an account is given within earshot or not at all.
+/// Each refusal leaves the world exactly as it was.
+#[test]
+fn a_refused_recount_changes_nothing() {
+    let mut world = account_world(&["ada", "bem"]);
+    let key = cart_fact(&mut world, "test.cart", &["ada"]);
+    let about_the_player = seed_one(
+        &mut world,
+        r#"{"id": "test.guest", "topic": "talk", "said": "{subject} came in by the ford gate",
+            "subject": ["player"], "seeded": ["ada"], "decays": false}"#,
+    );
+    let before = world.clone();
+    assert_eq!(
+        recount(&mut world, &actor("bem"), key),
+        Err("you have nothing to recount about that")
+    );
+    assert_eq!(
+        recount(&mut world, &actor("ada"), about_the_player),
+        Err("there is no account to give of that")
+    );
+    assert_eq!(world, before);
+
+    world
+        .characters
+        .get_mut(&actor("ada"))
+        .expect("ada is in the world")
+        .state
+        .position_m
+        .x = crate::HEARING_RADIUS_M + 0.5;
+    let before = world.clone();
+    assert_eq!(
+        recount(&mut world, &actor("ada"), key),
+        Err("there is nobody within earshot to give your account to")
+    );
+    assert_eq!(world, before);
+}
+
+/// A receipt takes an account from as many people as it counts mouths. The
+/// next new speaker is refused, nobody already there is displaced, and asking
+/// one of them again still replaces their row.
+#[test]
+fn a_full_page_refuses_a_new_speaker_and_keeps_everyone_on_it() {
+    let names: Vec<String> = (0..=PLAYER_RECEIPTS_MAX)
+        .map(|n| format!("s{n:02}"))
+        .collect();
+    let speakers: Vec<&str> = names.iter().map(String::as_str).collect();
+    let mut world = account_world(&speakers);
+    world.add_character(character("ada", "ada", None, &[]));
+    let key = cart_fact(&mut world, "test.cart", &["ada"]);
+    for speaker in &speakers {
+        retold(&mut world, speaker, key, 1, Some("ada"), 0);
+    }
+    let (late, on_the_page) = speakers.split_last().expect("there are speakers");
+    for speaker in on_the_page {
+        recount(&mut world, &actor(speaker), key).expect("there is room");
+    }
+    assert_eq!(accounts(&world, "test.cart").len(), PLAYER_RECEIPTS_MAX);
+
+    let before = world.clone();
+    assert_eq!(
+        recount(&mut world, &actor(late), key),
+        Err("your notes on this matter are full")
+    );
+    assert_eq!(world, before);
+
+    world.current_time = world_at_day(1).current_time;
+    recount(&mut world, &actor(on_the_page[0]), key).expect("they are already on the page");
+    let rows = accounts(&world, "test.cart");
+    assert_eq!(rows.len(), PLAYER_RECEIPTS_MAX);
+    assert_eq!(
+        (rows[0].speaker.as_str(), rows[0].told),
+        (on_the_page[0], world.current_time)
+    );
+    assert_eq!(rows[1].speaker.as_str(), on_the_page[1]);
+}
+
+/// A receipt somebody gave an account on never makes room for another. It is
+/// the oldest in the log here, and seventy later receipts push out the oldest
+/// of the others instead.
+#[test]
+fn a_receipt_with_an_account_outlives_seventy_later_receipts() {
+    let mut world = account_world(&["ada"]);
+    let kept = cart_fact(&mut world, "test.kept", &["ada"]);
+    recount(&mut world, &actor("ada"), kept).expect("ada was there");
+    let account = accounts(&world, "test.kept").to_vec();
+
+    for n in 0..70 {
+        let key = cart_fact(&mut world, &format!("test.later{n:02}"), &["ada"]);
+        let heard_on = f64::from(n + 1) / 100.0;
+        learn(
+            &mut world,
+            &actor("player"),
+            key,
+            telling(1, 1.0, None),
+            Some(heard_on),
+        );
+    }
+    let log = &world.knowledge.player_learned;
+    assert_eq!(log.len(), PLAYER_RECEIPTS_MAX);
+    assert_eq!(accounts(&world, "test.kept"), account);
+    assert!(
+        !log.contains_key(&FactId::from_raw("test.later06")),
+        "the seven oldest of the others left"
+    );
+    assert!(log.contains_key(&FactId::from_raw("test.later07")));
+}
+
+/// With every receipt kept there is no victim, and the eviction stops looking
+/// instead of spinning. Play cannot fill the log this way, because the facts
+/// under inquiry are capped far below it, so the last receipt is put in by hand.
+#[test]
+fn a_log_of_nothing_but_kept_receipts_stops_evicting() {
+    let mut world = account_world(&["ada"]);
+    let mut keys = Vec::new();
+    for n in 0..PLAYER_RECEIPTS_MAX {
+        let key = cart_fact(&mut world, &format!("test.kept{n:02}"), &["ada"]);
+        recount(&mut world, &actor("ada"), key).expect("ada was there");
+        keys.push(key);
+    }
+    let spare = world.knowledge.player_learned[&FactId::from_raw("test.kept00")].clone();
+    world
+        .knowledge
+        .player_learned
+        .insert(FactId::from_raw("test.spare"), spare);
+
+    learn(
+        &mut world,
+        &actor("player"),
+        keys[1],
+        telling(1, 1.0, None),
+        Some(0.5),
+    );
+    let log = &world.knowledge.player_learned;
+    assert_eq!(log.len(), PLAYER_RECEIPTS_MAX + 1);
+    assert!(log.values().all(|receipt| !receipt.accounts.is_empty()));
+}

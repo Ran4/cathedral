@@ -29,7 +29,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use crate::character::Character;
-use crate::clock::Office;
+use crate::clock::{Office, WorldTime};
 use crate::ids::{ActorId, AreaKey, FactId, FactKey};
 use crate::lore::PlanningWard;
 use crate::prompt::PromptStrings;
@@ -718,6 +718,24 @@ pub struct Occasion {
     pub offered: bool,
 }
 
+/// What one person told the player, to their face, of a matter under inquiry
+/// ([`crate::inquiry`]): their own version, as they held it when they said it.
+/// [`recount`] is its only writer.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Account {
+    pub speaker: ActorId,
+    /// Whose eyes it rests on, as far as the speaker can say: their own when
+    /// they were there, whoever told them at one remove, and nobody's beyond.
+    pub origin: Option<ActorId>,
+    /// How far the speaker stands from the event.
+    pub hops: u8,
+    /// The speaker's version, which is what differs when two accounts disagree.
+    pub view: FactView,
+    pub word: String,
+    pub told: Option<WorldTime>,
+    pub place: Option<AreaKey>,
+}
+
 /// The player's remembered telling, kept even after its holding leaves the store.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct LearnedHow {
@@ -728,6 +746,10 @@ pub struct LearnedHow {
     pub hops: u8,
     pub tellings: u16,
     pub wards: u8,
+    /// One per speaker, in the order they first gave one; asking somebody again
+    /// replaces theirs in place. A receipt with accounts is never evicted, and
+    /// like `mouths_seen` it stops at [`PLAYER_RECEIPTS_MAX`] people.
+    pub accounts: Vec<Account>,
     wards_seen: u8,
     /// Distinct mouths, retained across stirs. The receipt cap also bounds each
     /// receipt's attribution set; once full, its displayed count saturates.
@@ -891,6 +913,14 @@ impl Knowledge {
     pub fn note_seated(&mut self, actor: &ActorId, mut keys: Vec<FactKey>) {
         keys.truncate(KNOWN_SHEET_MAX);
         self.seated = Some((actor.clone(), keys));
+    }
+    /// What [`Self::note_seated`] kept for `actor`, left where it is: the
+    /// `recount` verb reads it while the reply that will take it is applied.
+    pub fn seated_for(&self, actor: &ActorId) -> &[FactKey] {
+        match &self.seated {
+            Some((who, keys)) if who == actor => keys,
+            _ => &[],
+        }
     }
     pub fn take_seated(&mut self, actor: &ActorId) -> Vec<FactKey> {
         if self.seated.as_ref().is_some_and(|(who, _)| who == actor) {
@@ -1152,6 +1182,20 @@ impl Knowledge {
                         + r.mouths_seen
                             .iter()
                             .map(|id| id.as_str().len() + 48)
+                            .sum::<usize>()
+                        + r.accounts
+                            .iter()
+                            .map(|account| {
+                                std::mem::size_of::<Account>()
+                                    + account.speaker.as_str().len()
+                                    + account.word.capacity()
+                                    + account.origin.as_ref().map_or(0, |id| id.as_str().len())
+                                    + account
+                                        .view
+                                        .subject
+                                        .as_ref()
+                                        .map_or(0, |id| id.as_str().len())
+                            })
                             .sum::<usize>()
                         + 48
                         + std::mem::size_of::<LearnedHow>()
@@ -2472,6 +2516,7 @@ fn record_player_receipt_inner(
             hops: held.hops,
             tellings: 0,
             wards: 0,
+            accounts: Vec::new(),
             wards_seen: 0,
             mouths_seen: BTreeSet::new(),
             unattributed_seen: false,
@@ -2501,20 +2546,118 @@ fn record_player_receipt_inner(
         world.knowledge.bump_receipts_revision();
     }
     while world.knowledge.player_learned.len() > PLAYER_RECEIPTS_MAX {
+        // A receipt somebody gave an account on is kept for good, so only the
+        // others can make room, and when there are none the log stays over.
         let victim = world
             .knowledge
             .player_learned
             .iter()
+            .filter(|(_, receipt)| receipt.accounts.is_empty())
             .min_by(|(li, l), (ri, r)| {
                 l.at.unwrap_or(f64::NEG_INFINITY)
                     .total_cmp(&r.at.unwrap_or(f64::NEG_INFINITY))
                     .then_with(|| li.cmp(ri))
             })
             .map(|(id, _)| id.clone());
-        if let Some(id) = victim {
-            world.knowledge.player_learned.remove(&id);
-        }
+        let Some(id) = victim else { break };
+        world.knowledge.player_learned.remove(&id);
     }
+}
+
+/// The player, when `speaker` is somebody else standing within earshot of
+/// them. An account is given to the player's face, so everything that offers
+/// or records one asks this first.
+pub(crate) fn player_in_earshot<'a>(world: &'a World, speaker: &ActorId) -> Option<&'a ActorId> {
+    let player = world.player_id().filter(|player| *player != speaker)?;
+    let near = world.is_present(speaker)
+        && world.is_present(player)
+        && world.characters[speaker]
+            .position_m()
+            .distance(world.characters[player].position_m())
+            <= crate::HEARING_RADIUS_M;
+    near.then_some(player)
+}
+
+/// Put what `speaker` holds of a fact on the player's record, as their account
+/// of it. Returns their version in words.
+///
+/// The single writer of an [`Account`]: the `recount` verb an asked person
+/// answers with and the player's ask control both end here, so a question put
+/// by typing, by voice or by the control records the same thing. What is
+/// recorded is the speaker's own holding, so nobody can be made to recount
+/// what they do not hold, and no model's wording is part of it.
+///
+/// The player learns the fact by the ordinary path, one remove beyond the
+/// speaker, which is what writes the receipt and the journal. `origin` is read
+/// off the speaker's holding alone and no chain is walked: they vouch for
+/// themselves when they were there, for whoever told them at one remove, and
+/// for nobody beyond that.
+///
+/// A refusal records nothing.
+pub fn recount(world: &mut World, speaker: &ActorId, key: FactKey) -> Result<String, &'static str> {
+    let (Some(held), Some(fact)) = (holds_key(world, speaker, key), world.knowledge.fact(key))
+    else {
+        return Err("you have nothing to recount about that");
+    };
+    let id = fact.id.clone();
+    let Some(player) = player_in_earshot(world, speaker).cloned() else {
+        return Err("there is nobody within earshot to give your account to");
+    };
+    let days = world.current_time.map(|time| time.game_days());
+    // The speaker's version, in the words the player would read it in. None
+    // when the fact is about the player, who is never told about themselves.
+    let Some(word) = render_plain(world, &player, key, &held, days) else {
+        return Err("there is no account to give of that");
+    };
+    if let Some(receipt) = world.knowledge.player_learned.get(&id)
+        && receipt.accounts.len() >= PLAYER_RECEIPTS_MAX
+        && !receipt.accounts.iter().any(|a| a.speaker == *speaker)
+    {
+        return Err("your notes on this matter are full");
+    }
+
+    learn(
+        world,
+        &player,
+        key,
+        Telling {
+            hops: held.hops.saturating_add(1),
+            from: Some(speaker.clone()),
+            heat: held.heat(days) * HOP_LOSS,
+            view: held.view.clone(),
+        },
+        days,
+    );
+    let account = Account {
+        speaker: speaker.clone(),
+        origin: match held.hops {
+            0 => Some(speaker.clone()),
+            1 => held.from,
+            _ => None,
+        },
+        hops: held.hops,
+        view: held.view,
+        word: word.clone(),
+        told: world.current_time,
+        place: world
+            .characters
+            .get(&player)
+            .and_then(|c| mint::area_key_at(world, c.position_m())),
+    };
+    // `learn` wrote the receipt in every case play reaches. Otherwise the log
+    // declined the entry, and the player has only learned what they were told.
+    let Some(receipt) = world.knowledge.player_learned.get_mut(&id) else {
+        return Err("there is no account to give of that");
+    };
+    match receipt
+        .accounts
+        .iter_mut()
+        .find(|existing| existing.speaker == account.speaker)
+    {
+        Some(existing) => *existing = account,
+        None => receipt.accounts.push(account),
+    }
+    Ok(word)
 }
 
 /// Being asked brings back a cold telling at one absolute heat. Standing

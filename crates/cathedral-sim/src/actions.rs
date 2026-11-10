@@ -170,6 +170,7 @@ fn dispatch(
         "draw_mark" => draw_mark(world, actor_id, args),
         "scrub_mark" => scrub_mark(world, actor_id, args),
         "raise_word" => raise_word(world, actor_id, args),
+        "recount" => recount(world, actor_id, args),
         // Checked last, after every verb has had its chance to match.
         unknown => Err(ActionError::new(
             ActionErrorCode::UnknownVerb,
@@ -4334,6 +4335,43 @@ fn raise_word(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
     world.knowledge.note_raise(actor_id, day, office);
     Ok(format!(
         "{} starts a word going: \"{said}\"",
+        world.characters[actor_id].name()
+    ))
+}
+
+/// Put what was just said about a matter under inquiry on the asker's record
+/// (`M4_accounts_inquiries_findings.md`).
+///
+/// It takes no arguments, so there is nothing for a model to get wrong: the
+/// accounts are of the facts this turn's own sheet seated that an inquiry is
+/// about ([`crate::inquiry::recountable`]), each as the speaker holds it. The
+/// seats are still in their slot here, because the scheduler takes them only
+/// after a reply's actions have been applied.
+///
+/// Refused without a `say` in the same reply, as `seize` is: an account is
+/// something told, and a silent one would be the game answering for them. It
+/// emits no event, since the host learns of accounts from the player's record.
+fn recount(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    args_object(args, &[], &[])?;
+    if world.spoke_this_turn.as_ref() != Some(actor_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            "tell them what you know in the same turn - an account is what you said, and you \
+             have said nothing",
+        ));
+    }
+    let seated = world.knowledge.seated_for(actor_id);
+    let keys = crate::inquiry::recountable(world, actor_id, seated);
+    if keys.is_empty() {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            "nothing you know bears on a matter anybody here is asking after",
+        ));
+    }
+    crate::inquiry::recount_all(world, actor_id, &keys)
+        .map_err(|reason| ActionError::new(ActionErrorCode::InvalidAction, reason))?;
+    Ok(format!(
+        "{} gives an account for the record",
         world.characters[actor_id].name()
     ))
 }

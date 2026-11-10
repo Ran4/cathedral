@@ -42,6 +42,10 @@ const REPLY_DANCE: &str = concat!(
     r#"gesture {"kind": "dance"}"#,
 );
 
+/// A promise and nothing else. The host has to show it as something said, not
+/// something done (`M4_accounts_inquiries_findings.md`, acceptance 5).
+const REPLY_PROMISE: &str = r#"say {"target": "player", "text": "I will fetch the reeve."}"#;
+
 const REPLY_RAISE_WORD: &str = concat!(
     r#"say {"target": "player", "text": "Is that so. I had not heard it."}"#,
     "\n",
@@ -53,11 +57,13 @@ const REPLY_RAISE_WORD: &str = concat!(
 /// Rules, in order (any parse failure falls through to the no-op):
 /// 1. Ilse, asked her name → she introduces herself.
 /// 2. Ilse, asked to offer her coin → she says so and offers `c0prs`.
-/// 3. anyone **asked a question** who holds something → they say their first
-///    `what_you_know` bullet back, verbatim (`features/knowledge_and_rumor/`).
-/// 4. anyone asked to dance or wave → they say so and do it.
-/// 5. an offered word and the scripted salt assertion → a claim.
-/// 6. anyone else → a no-op turn.
+/// 3. anyone asked `… fetch the reeve?` → they say they will, and do nothing.
+/// 4. anyone **asked a question** who holds something → they say their first
+///    `what_you_know` bullet back, verbatim (`features/knowledge_and_rumor/`),
+///    and `recount` it when the sheet lists that verb.
+/// 5. anyone asked to dance or wave → they say so and do it.
+/// 6. an offered word and the scripted salt assertion → a claim.
+/// 7. anyone else → a no-op turn.
 pub fn fake_reply(prompt: &str) -> String {
     let Some(name) = sheet_name(prompt) else {
         return REPLY_NOOP.to_string();
@@ -70,19 +76,30 @@ pub fn fake_reply(prompt: &str) -> String {
     if name == "Ilse" && history.contains("offer") && history.contains("coin") {
         return REPLY_OFFER_COIN.to_string();
     }
+    // Keyed on the question, mark and all. The promise itself has no question
+    // mark, so somebody who only hears it promised does not promise in turn.
+    if history.contains("fetch the reeve?") {
+        return REPLY_PROMISE.to_string();
+    }
     // A holder who is asked something says the thing they hold, in the exact
     // words the sheet gave them. Read off the *rendered* block, which is the
     // only reason a phrase hook is allowed to exist in this file: a renderer
     // that stops emitting the block breaks the offline knowledge run, and a
     // test says so. Cannot disturb any existing transcript — before M1 no
-    // prompt carried the block, and after M1 only a holder's does.
+    // prompt carried the block, and after M1 only a holder's does. Where the
+    // sheet lists `recount`, the answer is also put on record, which is how an
+    // offline run reaches an account by asking in words.
     if history.contains('?')
         && let Some(word) = known_bullets(prompt).next()
     {
-        return format!(
+        let mut reply = format!(
             r#"say {{"target": "player", "text": {}}}"#,
             serde_json::to_string(word).unwrap_or_else(|_| "\"\"".to_string())
         );
+        if prompt.contains("recount {") {
+            reply.push_str("\nrecount {}");
+        }
+        return reply;
     }
     if history.contains("dance") {
         return REPLY_DANCE.to_string();
@@ -338,6 +355,20 @@ mod tests {
             &["Player said: \"Would you dance?\""],
         ));
         assert!(reply.contains(r#"gesture {"kind": "dance"}"#), "{reply}");
+    }
+
+    #[test]
+    fn asked_to_fetch_the_reeve_they_promise_and_a_hearer_of_the_promise_does_not() {
+        let asked = prompt_with(
+            "Sven",
+            &[r#"Player said to you: "Will you fetch the reeve?""#],
+        );
+        assert_eq!(fake_reply(&asked), REPLY_PROMISE);
+        let heard = prompt_with(
+            "Conny",
+            &[r#"Sven said to Player: "I will fetch the reeve.""#],
+        );
+        assert_eq!(fake_reply(&heard), REPLY_NOOP);
     }
 
     #[test]

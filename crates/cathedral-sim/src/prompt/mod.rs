@@ -836,6 +836,24 @@ fn render_prompt_with_seated(
     // same answer. `custody::kept_by` gives it once, and `in_charge_lines` reads
     // the very same list, so the sheet cannot offer a verb it has no id for.
     let has_custody = crate::custody::keeps_anyone(world, actor_id);
+    // The relevance seats are worked out before the render because the
+    // `recount` row depends on them: it is listed only while one of the seats
+    // the sheet keeps is a matter under inquiry and the player is in earshot,
+    // so a world with no inquiry keeps its exact bytes.
+    let present: Vec<_> = sheet
+        .you_see
+        .people
+        .iter()
+        .map(|person| person.id.clone())
+        .collect();
+    let seated = crate::knowledge::relevance_seated_with_present(
+        world,
+        actor,
+        &sheet.since_your_last_turn,
+        &sheet.recent_history,
+        &present,
+    );
+    let has_recount = !crate::inquiry::recountable(world, actor_id, &seated).is_empty();
     let sheet_md = sheet_markdown(&sheet, &env.strings);
     let emittable_sounds = world.sound_catalog.emittable_sound_ids().join(", ");
 
@@ -860,24 +878,10 @@ fn render_prompt_with_seated(
                 has_chalk_verbs,
                 has_scrub_verb,
                 has_raise_word,
+                has_recount,
             })
         })
-        .map(|prompt| {
-            let present: Vec<_> = sheet
-                .you_see
-                .people
-                .iter()
-                .map(|person| person.id.clone())
-                .collect();
-            let seated = crate::knowledge::relevance_seated_with_present(
-                world,
-                actor,
-                &sheet.since_your_last_turn,
-                &sheet.recent_history,
-                &present,
-            );
-            (prompt, seated)
-        })
+        .map(|prompt| (prompt, seated))
         .map_err(|error| PromptError::new(format!("the turn template did not render: {error}")))
 }
 

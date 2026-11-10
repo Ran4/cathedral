@@ -1006,6 +1006,52 @@ fn the_dev_case_pack_installs_on_the_shipped_cast_and_a_restore_seeds_nothing() 
     }
 }
 
+/// An account is a row on the receipt it was given on, so it is saved with it.
+/// The restored city has the witness's account, and asking her again replaces
+/// it there exactly as it does in the city that never stopped.
+#[test]
+fn an_account_given_before_the_save_is_in_the_restored_notes() {
+    let witness = ActorId::from_raw("b0nll");
+    let beside = assets()
+        .seed
+        .character(&witness)
+        .expect("Noll is in the shipped cast")
+        .position_m
+        + Vec3::new(1.2, 0.0, 0.0);
+    let ask = |request_id: &str| EngineCommand::PlayerAsk {
+        request_id: request_id.to_string(),
+        target_id: witness.clone(),
+        inquiry_id: "dev_barrow".to_string(),
+    };
+    let accounts = |city: &City| {
+        let notes = &city.engine.world().knowledge.player_learned;
+        notes[&FactId::from_raw("dev.barrow")].accounts.clone()
+    };
+
+    let mut a = City::with_dev_cases(Office::Dayspring, beside);
+    let said = a.step(vec![ask("before")]);
+    assert!(said.iter().any(|message| matches!(
+        message,
+        EngineMessage::CommandResult { request_id, success: true, .. } if request_id == "before"
+    )));
+    let given = accounts(&a);
+    assert_eq!(given.len(), 1);
+    assert_eq!(given[0].origin.as_ref(), Some(&witness), "she was there");
+
+    let mut twins = Twins::split(a);
+    assert_eq!(accounts(&twins.c), given);
+    twins.steps(40, |_, poll| {
+        if poll == 20 {
+            vec![ask("after")]
+        } else {
+            Vec::new()
+        }
+    });
+    let again = accounts(&twins.c);
+    assert_eq!(again.len(), 1);
+    assert_ne!(again[0].told, given[0].told, "asked again, her row was replaced");
+}
+
 // ------------------------------------------------------------ conservation
 
 #[test]
