@@ -309,8 +309,17 @@ pub struct EngineConfig {
     /// Extra authored fact packs, as JSON **text** — the sim never touches the
     /// filesystem. Merged over the embedded catalog before seeding, in order; a
     /// duplicate id is a startup diagnostic and the pack is dropped. This is the
-    /// seam a quest uses to plant its own facts without editing a shipped asset.
+    /// soft seam, and only the headless runner fills it: a row naming somebody
+    /// this world lacks is skipped with a diagnostic. The game host plants fact
+    /// rows through [`Self::case_packs`], which refuses such a row instead.
     pub fact_packs: Vec<String>,
+    /// Case packs ([`crate::inquiry`]), as JSON text: fact rows, the retellings
+    /// already abroad and the inquiries about them. [`Engine::new`] installs
+    /// them once, after the catalog; a restore installs nothing, because the
+    /// saved world carries its inquiries (D02). This is the strict seam: a pack
+    /// with a dangling reference fails construction with
+    /// [`EngineInitError::CasePack`].
+    pub case_packs: Vec<String>,
     /// Measurement lever: every salience band and multiplier at 1.0
     /// ([`crate::knowledge::SalienceTable::flat`]). **Not a gameplay switch and
     /// not in `config.ron`** — `cathedral-headless --pollen-flat`, and the identity
@@ -362,6 +371,7 @@ impl Default for EngineConfig {
             marks_decay_scale: 1.0,
             knowledge_enabled: true,
             fact_packs: Vec::new(),
+            case_packs: Vec::new(),
             pollen_flat: false,
             pollen_no_salience: false,
         }
@@ -1621,9 +1631,24 @@ impl Engine {
             // `Arc` is cloned first — a refcount bump, not a copy.
             let catalog = Arc::clone(&world.fact_catalog);
             startup_diagnostics.extend(catalog.seed(&mut world));
+            // Case packs are fresh-world content, so they are installed here
+            // and not in `bind_world`, which a restore runs too (D02).
+            for pack in &config.case_packs {
+                crate::inquiry::install(&mut world, pack).map_err(EngineInitError::CasePack)?;
+            }
+            if !config.case_packs.is_empty() {
+                startup_diagnostics.push(format!(
+                    "[inquiry] case packs installed: {} inquiries in this world",
+                    world.inquiries.len()
+                ));
+            }
             // The salience ears name occupation ids, and this is the one place
             // the lore is in the room to check them (`03_assets.md` §2).
             startup_diagnostics.extend(unknown_salience_occupations(&world));
+        } else if !config.case_packs.is_empty() {
+            startup_diagnostics.push(
+                "[inquiry] the knowledge layer is off, so no case pack was installed".to_string(),
+            );
         }
 
         // The Night Office reads its bedtimes off the seeded round, so it is

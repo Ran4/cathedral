@@ -62,7 +62,7 @@ struct FactsDoc {
 /// name the consequence instead of serde naming the field.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct RawFact {
+pub(crate) struct RawFact {
     id: String,
     topic: String,
     said: String,
@@ -184,6 +184,12 @@ impl FactCatalog {
         let before = self.specs.len();
         self.merge(json)?;
         Ok(self.specs.len() - before)
+    }
+
+    /// Rows a stricter loader has already parsed and checked against a world
+    /// ([`crate::inquiry::install`]), to be seeded like any others.
+    pub(crate) fn from_specs(specs: Vec<FactSpec>) -> Self {
+        Self { specs }
     }
 
     pub fn specs(&self) -> &[FactSpec] {
@@ -372,7 +378,7 @@ impl FactCatalog {
 }
 
 /// Every row of `03_assets.md` §1's validation table, in that order.
-fn parse_fact(raw: &RawFact) -> Result<FactSpec, FactCatalogError> {
+pub(crate) fn parse_fact(raw: &RawFact) -> Result<FactSpec, FactCatalogError> {
     let id = &raw.id;
     // `id_newtype!`'s `Deserialize` is `transparent` and does not validate, which
     // is why this row exists at all.

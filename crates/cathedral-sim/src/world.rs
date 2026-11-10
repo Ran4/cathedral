@@ -234,6 +234,11 @@ pub struct World {
     /// be frozen at mint. Empty in every round-less world, where nobody has a
     /// door at all.
     pub household_doors: Arc<BTreeMap<ActorId, Vec3>>,
+    /// The matters under inquiry ([`crate::inquiry`]), installed from a case
+    /// pack when the world is created and saved with it from then on. World
+    /// state as [`notices`](Self::notices) is, and like them never part of the
+    /// public snapshot. Empty unless a host configured a case pack.
+    pub inquiries: Vec<crate::inquiry::Inquiry>,
     /// Measurement lever, not gameplay: run the pickup roll and the deposit gate
     /// with the salience factor **deleted from the expression**, which is the
     /// baseline `--pollen-flat` has to reproduce. Never in `config.ron`; set only
@@ -301,6 +306,7 @@ impl Default for World {
             knowledge_enabled: true,
             area_adjacency: Arc::new(crate::knowledge::AreaAdjacency::default()),
             household_doors: Arc::new(BTreeMap::new()),
+            inquiries: Vec::new(),
             pollen_no_salience: false,
             events: Vec::new(),
         }

@@ -275,6 +275,15 @@ struct Args {
     #[arg(long, value_name = "FILE")]
     facts: Vec<PathBuf>,
 
+    /// load a case pack (repeatable): --cases assets/world/dev_cases.json
+    ///
+    /// Fact rows, the retellings already abroad and the inquiries about them
+    /// (`cathedral_sim::inquiry`). Unlike `--facts` this seam is strict: a pack
+    /// naming somebody, somewhere or something this world lacks stops the run
+    /// with the reason.
+    #[arg(long, value_name = "FILE")]
+    cases: Vec<PathBuf>,
+
     /// print one line per (holder, fact) after the world loads, each carrying
     /// the sentence that holder reads
     ///
@@ -400,6 +409,17 @@ fn parse_status_flag(spec: &str) -> Result<(String, StatusKind, f64), String> {
     Ok((name.to_string(), kind, value))
 }
 
+/// The text of each `--facts` or `--cases` file, in the order given.
+fn read_packs(flag: &str, paths: &[PathBuf]) -> Result<Vec<String>, String> {
+    paths
+        .iter()
+        .map(|path| {
+            fs::read_to_string(path)
+                .map_err(|error| format!("cannot read {flag} {}: {error}", path.display()))
+        })
+        .collect()
+}
+
 // --------------------------------------------------------------- one-shot mode
 
 /// `kimi.py`: one file in, one raw reply out (llm-headless.md §4).
@@ -489,16 +509,11 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             args.weather
         )
     })?;
-    // A quest's own fact rows (`features/knowledge_and_rumor/`). Read here
-    // because the sim never touches the filesystem — it takes the JSON as text.
-    let fact_packs = args
-        .facts
-        .iter()
-        .map(|path| {
-            std::fs::read_to_string(path)
-                .map_err(|error| format!("cannot read --facts {}: {error}", path.display()))
-        })
-        .collect::<Result<Vec<String>, String>>()?;
+    // A quest's own fact rows (`features/knowledge_and_rumor/`) and case packs.
+    // Read here because the sim never touches the filesystem — it takes the
+    // JSON as text.
+    let fact_packs = read_packs("--facts", &args.facts)?;
+    let case_packs = read_packs("--cases", &args.cases)?;
     let engine = Engine::new(
         EngineConfig {
             player_id: ActorId::from_raw(PLAYER_ID),
@@ -560,6 +575,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             // second flag.
             knowledge_enabled: std::env::var_os("CATHEDRAL_NO_KNOWLEDGE").is_none(),
             fact_packs,
+            case_packs,
             // The two cadence-measurement levers, and the only way to reach them:
             // neither is a `config.ron` key, so the game host cannot run a
             // measurement table by accident (`02_numbers.md` §5).

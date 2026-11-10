@@ -33,6 +33,11 @@ fn seed_pack(world: &mut World, facts: &str) -> Vec<String> {
 /// The demo world through the real `Engine::new`, so the knowledge block of it —
 /// the switch, the packs and the one seeding pass — is the thing under test.
 fn engine_with_config(config: EngineConfig) -> Engine {
+    try_engine_with_config(config).expect("the seeded world has a player")
+}
+
+/// [`engine_with_config`], for a config the engine may refuse.
+fn try_engine_with_config(config: EngineConfig) -> Result<Engine, cathedral_sim::EngineInitError> {
     Engine::new(
         config,
         &cathedral_sim::WorldSeed::from_json_str(&demo_seed()).expect("the demo seed loads"),
@@ -48,7 +53,6 @@ fn engine_with_config(config: EngineConfig) -> Engine {
         0,
         0.0,
     )
-    .expect("the seeded world has a player")
 }
 
 /// T21. The frozen fixtures stay unreachable from the shipped asset **by
@@ -1498,6 +1502,72 @@ fn the_engine_seeds_nothing_when_the_layer_is_off() {
         vec!["[knowledge] 0 facts live, 0 holdings".to_string()],
         "the tracer reports an empty store rather than nothing at all"
     );
+}
+
+/// A case pack for the demo cast: one standing fact and an inquiry about it.
+fn demo_case_pack(reviewer: &str) -> String {
+    json!({
+        "schema_version": 1,
+        "facts": [{
+            "id": "test.case.ledger",
+            "topic": "talk",
+            "said": "the ledger was left open on the counter overnight",
+            "seeded": ["sv3n1"],
+            "decays": false
+        }],
+        "inquiries": [{
+            "id": "test_ledger",
+            "title": "The open ledger",
+            "reviewer": reviewer,
+            "review_office": "waning",
+            "facts": ["test.case.ledger"],
+            "sources_needed": 1,
+            "finding": "Its keeper left it open and nobody else touched it."
+        }]
+    })
+    .to_string()
+}
+
+/// Case packs are the strict seam beside `fact_packs`: `Engine::new` installs
+/// one after the catalog, and a pack naming somebody this world lacks stops the
+/// engine with the field and the id instead of riding out as a diagnostic.
+#[test]
+fn a_case_pack_installs_through_the_engine_or_stops_it() {
+    let engine = engine_with_config(EngineConfig {
+        case_packs: vec![demo_case_pack("cb947")],
+        ..EngineConfig::default()
+    });
+    assert_eq!(engine.world().inquiries.len(), 1);
+    let fact = FactId::from_raw("test.case.ledger");
+    assert!(knowledge::holds(engine.world(), &actor("sv3n1"), &fact).is_some());
+
+    let Err(error) = try_engine_with_config(EngineConfig {
+        case_packs: vec![demo_case_pack("zz999")],
+        ..EngineConfig::default()
+    }) else {
+        panic!("a reviewer who is nobody must stop the engine");
+    };
+    assert_eq!(
+        error.to_string(),
+        "case pack refused: inquiries[0].reviewer 'zz999' is not a person in this world"
+    );
+}
+
+/// With the layer off there is nothing to install a case pack into, and the
+/// run says so once rather than refusing to start.
+#[test]
+fn a_case_pack_is_left_out_when_the_layer_is_off() {
+    let mut engine = engine_with_config(EngineConfig {
+        knowledge_enabled: false,
+        case_packs: vec![demo_case_pack("cb947")],
+        ..EngineConfig::default()
+    });
+    assert!(engine.world().inquiries.is_empty());
+    assert!(engine.world().knowledge.is_empty());
+    let said = engine.poll(0.0, Vec::new());
+    assert!(said.contains(&cathedral_sim::EngineMessage::Diagnostic(
+        "[inquiry] the knowledge layer is off, so no case pack was installed".to_string()
+    )));
 }
 
 /// The offline mouth (step 16). A holder who is asked something says the thing

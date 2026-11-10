@@ -35,10 +35,11 @@ use cathedral_backends::{
 };
 use cathedral_sim::{
     ActorId, AreaMap, Capabilities, Checkpoint, Cognition, CognitionBusy, Engine, EngineCommand,
-    EngineConfig, EngineMessage, FakeCognition, IdleCognitionMode, ItemId, NavData,
+    EngineConfig, EngineMessage, FactId, FakeCognition, IdleCognitionMode, ItemId, NavData,
     NightOfficeConfig, NullSight, NullTranscription, NullTts, Office, PromptEnv, RequestId,
     RestoreError, ShelterMap, SoundCatalog, SpatialActorUpdate, StageConfig, TtsBackendKind,
     Vec3, WeatherConfig, WeatherKind, WeatherMode, WorldClock, WorldSeed, custody::Confinement,
+    knowledge,
 };
 use serde_json::Value;
 
@@ -84,6 +85,8 @@ struct Assets {
     prompts: [String; 3],
     nav: Arc<NavData>,
     shelters: Arc<ShelterMap>,
+    /// The dev case pack: two small disputes among the shipped cast.
+    dev_cases: String,
 }
 
 fn assets() -> &'static Assets {
@@ -114,6 +117,7 @@ fn assets() -> &'static Assets {
             shelters: Arc::new(
                 ShelterMap::from_json_str(&read("world/shelters.json")).expect("shelters"),
             ),
+            dev_cases: read("world/dev_cases.json"),
         }
     })
 }
@@ -150,6 +154,14 @@ fn config(start: Office) -> EngineConfig {
             ..NightOfficeConfig::default()
         },
         ..EngineConfig::default()
+    }
+}
+
+/// [`config`] for a game told to load the dev case pack.
+fn config_with_dev_cases(start: Office) -> EngineConfig {
+    EngineConfig {
+        case_packs: vec![assets().dev_cases.clone()],
+        ..config(start)
     }
 }
 
@@ -190,9 +202,19 @@ impl City {
                 .expect("the generated crowd is valid");
             &crowded
         };
+        Self::build(config(start), seed, player_at)
+    }
+
+    /// The city with the dev case pack installed at its creation.
+    fn with_dev_cases(start: Office, player_at: Vec3) -> Self {
+        Self::build(config_with_dev_cases(start), &assets().seed, player_at)
+    }
+
+    fn build(config: EngineConfig, seed: &WorldSeed, player_at: Vec3) -> Self {
+        let assets = assets();
         let cognition = SharedCognition::default();
         let engine = Engine::new(
-            config(start),
+            config,
             seed,
             assets.areas.clone(),
             assets.catalog.clone(),
@@ -206,7 +228,7 @@ impl City {
             0,
             0.0,
         )
-        .expect("the shipped seed has a player");
+        .expect("the shipped city builds");
         Self {
             engine,
             cognition,
@@ -417,7 +439,7 @@ fn assert_same_world(a: &City, c: &City) {
         event_sequence, sounds_enabled, view_cone_degrees, sound_catalog, current_time,
         current_weather, shelters, nav, places, needle_claim, notices, custody, dogs, marks,
         mark_catalog, marks_enabled, mark_kinds, ward_moods, knowledge, fact_catalog, salience,
-        knowledge_enabled, area_adjacency, household_doors, pollen_no_salience
+        knowledge_enabled, area_adjacency, household_doors, inquiries, pollen_no_salience
     );
     panic!("the restored world differs in {fields:?} (empty: a crate-private field)");
 }
@@ -949,6 +971,39 @@ fn the_weather_turns_while_bell_strokes_are_still_owed() {
     assert!(said.iter().any(
         |message| matches!(message, EngineMessage::Weather(sample) if sample.kind == WeatherKind::Rain)
     ));
+}
+
+// ------------------------------------------------------------------ case packs
+
+#[test]
+fn the_dev_case_pack_installs_on_the_shipped_cast_and_a_restore_seeds_nothing() {
+    let mut a = City::with_dev_cases(Office::Dayspring, FAR_CORNER);
+    // One poll, so the save is of a city that has run and not of its seed.
+    a.step(Vec::new());
+    let world = a.engine.world();
+    let ids: Vec<&str> = world.inquiries.iter().map(|inquiry| inquiry.id.as_str()).collect();
+    assert_eq!(ids, ["dev_scaffold", "dev_barrow"]);
+    // The trap is laid: two people repeat one witness, and one has the day wrong.
+    let barrow = FactId::from_raw("dev.barrow");
+    let told = |who: &str| {
+        let held = knowledge::holds(world, &ActorId::from_raw(who), &barrow)
+            .unwrap_or_else(|| panic!("{who} holds the barrow"));
+        (held.hops, held.from.map(ActorId::into_string), held.view.day_offset)
+    };
+    assert_eq!(told("b0nll"), (0, None, 0));
+    assert_eq!(told("b6clm"), (1, Some("b0nll".to_string()), -1));
+    assert_eq!(told("b5ewk"), (1, Some("b0nll".to_string()), 0));
+
+    // A restore reads the save and never a pack: the inquiries are there in a
+    // run that configures none, and are not installed a second time in a run
+    // that configures the same pack, as the game that saved does.
+    let bytes = a.capture();
+    for restoring in [config(Office::Dayspring), config_with_dev_cases(Office::Dayspring)] {
+        let checkpoint: Checkpoint = serde_json::from_slice(&bytes).expect("decodes");
+        let c = City::restore_under(checkpoint, a.spatial_seq, restoring).expect("restores");
+        assert_eq!(c.engine.world().inquiries, world.inquiries);
+        assert_same_world(&a, &c);
+    }
 }
 
 // ------------------------------------------------------------ conservation

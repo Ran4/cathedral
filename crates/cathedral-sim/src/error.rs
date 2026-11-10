@@ -499,6 +499,9 @@ pub enum EngineInitError {
     MissingPlayer(ActorId),
     /// The player's spawn position could not be applied.
     PlayerSpawn(SpatialUpdateError),
+    /// A configured case pack was refused ([`crate::inquiry::install`]). The
+    /// sentence names the pack's field and the id that does not resolve.
+    CasePack(String),
 }
 
 impl fmt::Display for EngineInitError {
@@ -508,6 +511,7 @@ impl fmt::Display for EngineInitError {
                 write!(f, "world has no stable player character '{actor_id}'")
             }
             Self::PlayerSpawn(error) => write!(f, "player spawn was rejected: {error}"),
+            Self::CasePack(reason) => write!(f, "case pack refused: {reason}"),
         }
     }
 }

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "_doc": "A development case pack (crates/cathedral-sim/src/inquiry.rs), not shipped content: nothing loads it unless a host is told to, e.g. `cathedral-headless --cases assets/world/dev_cases.json`. Two small disputes among people of Coswald's Yard, with the bencher Ewart Toll (bn9et) reviewing both at High Wick. `facts` rows have the facts.json shape and must name people and places of this world; each witness has an `own` line, because a standing fact reaches anybody else's sheet as a dim memory. `retold` puts a fact in the mouth of somebody who was not there: `by` had it from `from`, `day_offset` days out. An inquiry's facts must be standing and authored, and `sources_needed` counts people who were there, however many mouths repeat them. dev_scaffold is cleared by its two independent witnesses. dev_barrow is the correlated-rumour trap: Clemence and Ewart Crake both repeat Noll, and she has the day wrong; Noll's own account settles the day and Dunstan's is the second source. A fact id's segments are the words an asker will use (scaffold, barrow).",
+
+  "facts": [
+    { "id": "dev.scaffold",
+      "topic": "talk",
+      "said": "the scaffold pole that came down behind the lodge had rotted through at the foot, and nobody was near it when it fell",
+      "own": {
+        "b6clm": "I was at the kiln when the scaffold pole came down behind the lodge, rotted through at the foot, with nobody near it",
+        "b5ewk": "I watched the scaffold pole behind the lodge go over from where I sat, and it was the rot at its foot and no hand that did it"
+      },
+      "seeded": ["b6clm", "b5ewk"],
+      "decays": false,
+      "source": "authored" },
+
+    { "id": "dev.barrow",
+      "topic": "talk",
+      "said": "the lime barrow was fetched from the kiln gate by the carter it was promised to, {day}",
+      "own": {
+        "b0nll": "I wheeled the lime barrow to the kiln gate myself and gave it to the carter it was promised to, {day}",
+        "bd7hb": "I saw the carter take the lime barrow from the kiln gate, {day}, and it was his to take"
+      },
+      "seeded": ["b0nll", "bd7hb"],
+      "day": 0,
+      "decays": false,
+      "source": "authored" }
+  ],
+
+  "retold": [
+    { "fact": "dev.barrow", "by": "b6clm", "from": "b0nll", "day_offset": -1 },
+    { "fact": "dev.barrow", "by": "b5ewk", "from": "b0nll", "day_offset": 0 }
+  ],
+
+  "inquiries": [
+    { "id": "dev_scaffold",
+      "title": "The scaffold pole that fell behind the lodge",
+      "reviewer": "bn9et",
+      "review_office": "high_wick",
+      "facts": ["dev.scaffold"],
+      "sources_needed": 2,
+      "finding": "The pole fell by rot and by no hand. Nobody is to answer for it." },
+
+    { "id": "dev_barrow",
+      "title": "The lime barrow gone from the kiln gate",
+      "reviewer": "bn9et",
+      "review_office": "high_wick",
+      "facts": ["dev.barrow"],
+      "sources_needed": 2,
+      "finding": "The barrow was fetched by the carter it was promised to, on the day its two witnesses name. Nothing was stolen." }
+  ]
+}

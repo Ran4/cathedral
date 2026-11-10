@@ -16,7 +16,7 @@ use crate::{areas::AreaMap, clock::Office, engine::EngineState, nav::NavData, we
 
 /// The save format's version. Bumped whenever a saved type changes shape;
 /// there are no migrations, so a save of any other version is refused.
-pub const CHECKPOINT_VERSION: u32 = 1;
+pub const CHECKPOINT_VERSION: u32 = 2;
 
 /// One captured simulation: everything a restored engine needs to continue
 /// exactly where this one was.

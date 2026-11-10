@@ -29,6 +29,7 @@ pub mod floor;
 pub mod gesture;
 mod homes;
 pub mod ids;
+pub mod inquiry;
 pub mod inventory;
 pub mod item;
 pub mod knowledge;
