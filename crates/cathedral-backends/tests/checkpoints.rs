@@ -979,6 +979,91 @@ fn the_weather_turns_while_bell_strokes_are_still_owed() {
     ));
 }
 
+/// A mason is kept talking from Dayspring. The High Wick bell gives him his
+/// one turn to excuse himself, and the save falls there, between the excuse
+/// and the walk. The loaded city still knows the talk began before the bell,
+/// so he sets off home on the same poll as in the city that never stopped. A
+/// restore that forgot it would take High Wick for the hold's first office
+/// and keep him standing; a save before the bell could not tell the two apart.
+#[test]
+fn a_duty_that_comes_due_mid_talk_walks_once_after_the_restore() {
+    const MASON: &str = "b5ewk";
+    let mason = ActorId::from_raw(MASON);
+    // The ladder's own state, which has no accessor, as a checkpoint writes it.
+    let round_entry = |city: &City, pointer: &str| {
+        serde_json::to_value(city.engine.round())
+            .expect("the round encodes")
+            .pointer(pointer)
+            .cloned()
+    };
+
+    let mut a = City::new(Office::Dayspring, FAR_CORNER);
+    // Fed, and under a clear sky: hunger and rain have rungs of their own, and
+    // either would move him before the bell could.
+    a.engine
+        .world_mut()
+        .characters
+        .get_mut(&mason)
+        .expect("the mason is in the shipped cast")
+        .state
+        .needs
+        .hunger = cathedral_sim::HUNGER_MAX;
+    let mut settings = sixty_times(&mut a, 0);
+    settings.push(EngineCommand::SetWeatherOverride {
+        kind: WeatherKind::Clear,
+        intensity: None,
+    });
+    a.step(settings);
+
+    let stood = a.position_of(MASON);
+    let beside = a.stand_beside(MASON);
+    let hail = EngineCommand::PlayerSay {
+        request_id: "hail".to_string(),
+        text: format!(
+            "{}, stay and talk with me.",
+            a.engine.world().characters[&mason].name()
+        ),
+        position_m: stood + Vec3::new(1.2, 0.0, 0.0),
+        spatial_seq: a.spatial_seq,
+    };
+    a.step(vec![beside, hail]);
+    assert_eq!(a.engine.conversation_partner(a.now), Some(&mason));
+
+    let excused = format!("/people/{MASON}/excused");
+    a.step_until(
+        320,
+        "the High Wick bell calling the mason away",
+        none,
+        |city, _| {
+            let time = city.engine.world().current_time;
+            time.is_some_and(|time| time.office == Office::HighWick)
+                && round_entry(city, &excused) == Some(Value::Bool(true))
+        },
+    );
+    assert_eq!(a.position_of(MASON), stood, "excused, and not yet walking");
+
+    let mut twins = Twins::split(a);
+    assert_eq!(
+        round_entry(&twins.c, &format!("/held_since/{MASON}")),
+        Some(Value::from("dayspring")),
+        "the save carries the office the talk began in"
+    );
+    // The ladder comes round again within six seconds of the excuse.
+    twins.steps(140, none);
+    for city in [&twins.a, &twins.c] {
+        assert_eq!(
+            city.engine.conversation_partner(city.now),
+            Some(&mason),
+            "the talk is still warm"
+        );
+        assert_ne!(
+            city.position_of(MASON),
+            stood,
+            "and the bell took him all the same"
+        );
+    }
+}
+
 // ------------------------------------------------------------------ case packs
 
 #[test]

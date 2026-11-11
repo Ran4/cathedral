@@ -54,7 +54,7 @@ use crate::{
     nav::NavData,
     night::{NightGate, NightOffice, NightOfficeConfig, stage_occupied},
     notices,
-    perception::{cap_first, emit_sound, identify},
+    perception::{cap_first, emit_sound, identify, sees},
     prompt::PromptEnv,
     round::{self, Census, Round},
     scheduler::{NpcScheduler, SchedulerEvent, background_turn_order, stage_turn_order},
@@ -804,6 +804,9 @@ pub enum EngineMessage {
         text: String,
         speaker_position_m: Vec3,
         recipient_ids: Vec<ActorId>,
+        /// The recipients who could also see the speaker as the line was said:
+        /// the people a speaker can tell were listening.
+        witness_ids: Vec<ActorId>,
         /// `"You"`, the name, or `"a stranger (id …)"` — resolved here so the
         /// game never decides what the player knows.
         speaker_name_for_player: String,
@@ -4223,6 +4226,17 @@ impl Engine {
         } else {
             identify(&self.world.characters[&self.config.player_id], speaker)
         };
+        let witness_ids: Vec<ActorId> = event
+            .recipient_ids
+            .iter()
+            .filter(|id| {
+                self.world
+                    .characters
+                    .get(*id)
+                    .is_some_and(|listener| sees(listener, speaker, self.world.view_cone_degrees))
+            })
+            .cloned()
+            .collect();
 
         // Player engagement owns continuity. NPC lines can confirm it or make
         // an invitation; a bystander's interjection never transfers ownership.
@@ -4260,6 +4274,7 @@ impl Engine {
             text: text.clone(),
             speaker_position_m: position_m,
             recipient_ids: event.recipient_ids.clone(),
+            witness_ids,
             speaker_name_for_player,
         });
 

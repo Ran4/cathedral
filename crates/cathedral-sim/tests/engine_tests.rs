@@ -1756,6 +1756,51 @@ fn typed_player_say_works_outside_fake_mode_and_nudges_the_nearest_hearer() {
     assert_eq!(code.as_deref(), Some("text_too_long"));
 }
 
+/// A line's message tells who could see it said apart from who merely heard
+/// it. Ilse stands in earshot with her back to the player: she is a recipient
+/// and no witness until she turns round. Conny faces him and is both.
+#[test]
+fn a_listener_facing_away_hears_the_line_and_is_no_witness_to_it() {
+    fn say(harness: &mut Harness, seq: i64, text: &str) -> (Vec<ActorId>, Vec<ActorId>) {
+        let messages = harness.send(EngineCommand::PlayerSay {
+            request_id: format!("say-{seq}"),
+            text: text.into(),
+            position_m: PLAYER_SPAWN,
+            spatial_seq: seq,
+        });
+        let said = speeches(&messages);
+        let EngineMessage::Speech {
+            recipient_ids,
+            witness_ids,
+            ..
+        } = said[0]
+        else {
+            unreachable!()
+        };
+        (recipient_ids.clone(), witness_ids.clone())
+    }
+    let (ilse, conny) = (ActorId::from_raw("k0fb1"), ActorId::from_raw("cb947"));
+    let mut harness = Builder::default().build();
+    harness.ready();
+
+    let (heard, saw) = say(&mut harness, 1, "Good morning!");
+    assert!(heard.contains(&ilse) && heard.contains(&conny));
+    assert!(saw.contains(&conny), "Conny is looking straight at him");
+    assert!(!saw.contains(&ilse), "Ilse hears it over her shoulder");
+
+    // Yaw 0 looks toward -Z, where he stands.
+    harness
+        .engine
+        .world_mut()
+        .characters
+        .get_mut(&ilse)
+        .expect("Ilse is in the demo cast")
+        .state
+        .facing_yaw = 0.0;
+    let (heard, saw) = say(&mut harness, 2, "And to you, pilgrim.");
+    assert!(heard.contains(&ilse) && saw.contains(&ilse));
+}
+
 /// A targeted debug say hands the addressee the next *selection* slot — not an
 /// immediate turn: the inter-turn delay and the floor still govern the timing
 /// (`server.py:1050-1051`).

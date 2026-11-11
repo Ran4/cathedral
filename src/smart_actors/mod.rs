@@ -1549,11 +1549,10 @@ fn process_engine_message(
             text,
             speaker_position_m,
             recipient_ids,
+            witness_ids,
             speaker_name_for_player,
         } => {
             let speaker_id = model::actor_id_from_sim(&speaker_id);
-            let recipients: Vec<model::ActorId> =
-                recipient_ids.iter().map(model::actor_id_from_sim).collect();
             if !valid_ui_text(&speaker_name_for_player, 256)
                 || !valid_ui_text(&text, PLAYER_SPEECH_MAX_CHARS)
                 || mirror.actor(&speaker_id).is_none()
@@ -1561,14 +1560,17 @@ fn process_engine_message(
                 hud.toast("Discarded invalid speech data from the actor engine");
                 return;
             }
-            let player_heard =
-                speaker_id.0 == PLAYER_ID || recipients.iter().any(|id| id.0 == PLAYER_ID);
+            let player_heard = speaker_id.0 == PLAYER_ID
+                || recipient_ids.iter().any(|id| id.as_str() == PLAYER_ID);
             if !player_heard {
                 return;
             }
-            let recipient_count = recipients
+            // Only the listeners who could see the speaker: a speaker cannot
+            // tell who else, behind a back or round a corner, caught the words.
+            let recipient_count = witness_ids
                 .iter()
-                .filter(|recipient| **recipient != speaker_id && mirror.actor(recipient).is_some())
+                .map(model::actor_id_from_sim)
+                .filter(|witness| *witness != speaker_id && mirror.actor(witness).is_some())
                 .count();
             presentation.speech.write(speech::PresentSpeech {
                 event_seq: message_seq,
@@ -5032,7 +5034,7 @@ mod tests {
             app.world()
                 .resource::<hud::SmartActorHudState>()
                 .player_transcript_text(),
-            Some("You: What's your name?  ·  heard by 3 nearby people")
+            Some("You: What's your name?  ·  heard by 2 nearby people")
         );
 
         app.world_mut().write_message(InjectPlayerTranscript {

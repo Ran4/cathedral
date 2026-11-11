@@ -66,6 +66,8 @@ pub struct PresentSpeech {
     pub target_id: Option<ActorId>,
     pub text: String,
     pub speaker_position: Vec3,
+    /// The listeners who could also see the speaker: the player's own caption
+    /// reports it as "heard by N nearby people".
     pub recipient_count: usize,
     pub expect_audio: bool,
 }

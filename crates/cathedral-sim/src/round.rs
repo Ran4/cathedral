@@ -975,11 +975,11 @@ struct Townsperson {
     /// returns the instant untouched at zero, so at `extra_ambient_npcs: 0`
     /// nothing in this file reads a different clock than it did before.
     leg_lag_share: f64,
-    /// A pressing rung (curfew, parched) came due while they were held in a
-    /// conversation, and the pressure has been injected as a `system:` percept:
-    /// they have had their one turn to excuse themselves, and the next pressing
-    /// decision walks them regardless of what they said. Cleared once the
-    /// exchange lapses.
+    /// A pressing rung (curfew, parched, famished) or a duty of the day came
+    /// due while they were held in a conversation, and the pressure has been
+    /// injected as a `system:` percept: they have had their one turn to excuse
+    /// themselves, and the next pressing decision walks them regardless of what
+    /// they said. Cleared once the exchange lapses.
     excused: bool,
 }
 
@@ -1185,6 +1185,13 @@ pub struct Round {
     /// this memory, the nearest counter would refuse them again forever, and
     /// filtering before the first visit would erase the visible refusal scene.
     knowledge_refused_buyers: BTreeSet<ActorId>,
+    /// The office each held person's own day stood in when their conversation
+    /// began ([`Townsperson::leg_time`]), kept while the hold lasts. It is how
+    /// [`run_ladder`] tells a duty whose bell rang mid-talk, which breaks the
+    /// hold, from one that was already owed when the talk began, which waits.
+    /// Saved: a restore that forgot it would take the current office for the
+    /// hold's first and never send them on.
+    held_since: BTreeMap<ActorId, Office>,
     /// A person's next turn at the ward's air, in **game-days** — never real
     /// seconds (`features/knowledge_and_rumor/`, M2).
     ///
@@ -5909,7 +5916,8 @@ pub(crate) fn knowledge_auxiliary_bytes(round: &Round) -> usize {
 /// deferrable rungs skip them and a finished draw does not send them home —
 /// because nobody walks off mid-conversation. The pressing rungs (curfew,
 /// parched) still break the hold, after one turn to excuse themselves
-/// ([`run_ladder`]) — and a `go_to` errand never waits for it at all: leaving
+/// ([`run_ladder`]) — as does a round leg or a lamp beat whose bell rings while
+/// they talk — and a `go_to` errand never waits for it at all: leaving
 /// is the character's own decision, made in the same reply as the goodbye. The
 /// hold ends when the exchange goes cold and the caller stops naming them.
 ///
@@ -7785,6 +7793,15 @@ fn delivery_point(person: &Townsperson, office: Office, weekday: Weekday) -> Vec
 /// is converted into a `system:` percept on the standard self-correction
 /// channel, so the LLM gets one turn to excuse itself; the next one walks them
 /// regardless of what it said.
+///
+/// A duty of the day breaks the hold the same way once its bell rings *during*
+/// the talk: a round leg (9) for anyone who has legs, and the lamp beat (8½).
+/// [`Round::held_since`] remembers the office each hold began in, and a duty
+/// decided in any later office is given [`DUTY_PRESSURE`] and the one excuse
+/// turn. A duty already owed when the talk began — the post they were stopped
+/// on the way to, the taper put down to answer — still waits for the lapse.
+/// The hold set does not say who is talking to the player, so two NPCs deep in
+/// talk part at the bell as well.
 fn run_ladder(
     round: &mut Round,
     world: &mut World,
@@ -7795,6 +7812,10 @@ fn run_ladder(
     nudges: &mut Vec<ActorId>,
 ) {
     let time = clock.at(now);
+    // A lapsed hold forgets its office; the next one begins afresh.
+    round
+        .held_since
+        .retain(|id, _| in_conversation.contains(id));
     // Reuse the scratch allocation across ticks: iterating the cast while the
     // body mutates `round.people`/`world` needs the ids cloned into a buffer,
     // but the buffer's own allocation is reused (drained empty and restored),
@@ -7834,6 +7855,10 @@ fn run_ladder(
             continue;
         }
         let held = in_conversation.contains(&id);
+        if held && !round.held_since.contains_key(&id) {
+            let began = round.people[&id].leg_time(time).office;
+            round.held_since.insert(id.clone(), began);
+        }
         let (phase, epoch, next_decision, excused) = {
             let person = &round.people[&id];
             (
@@ -7901,6 +7926,18 @@ fn run_ladder(
                 nudges,
             );
         }
+
+        // A duty whose bell rang during the talk presses like the rungs above.
+        // One already owed in the office the hold began in is left deferrable.
+        let duty = match decision {
+            Decision::Travel(_) => !round.people[&id].legs.is_empty(),
+            Decision::WalkToLamp(_) | Decision::LightLamp(_) => true,
+            _ => false,
+        };
+        let came_due_mid_talk = held
+            && duty
+            && round.held_since.get(&id) != Some(&round.people[&id].leg_time(time).office);
+        let pressure = pressure.or(came_due_mid_talk.then_some(DUTY_PRESSURE));
 
         // The hold: mid-conversation, the deferrable rungs wait. The cadence is
         // left untouched — exactly like the old player-only skip — so the first
@@ -8020,6 +8057,10 @@ const FAMISHED_PRESSURE: &str =
 /// ([`Round::tick_road_parties`]), never after.
 const ROAD_RETURN_PRESSURE: &str =
     "system: the road party is leaving — you must go to the gate; excuse yourself.";
+/// A round leg or a lamp beat that came due while its owner was held in talk:
+/// the bell of a new office rang mid-conversation ([`run_ladder`]).
+const DUTY_PRESSURE: &str =
+    "system: the bell has rung and your work is waiting — excuse yourself and go.";
 
 /// Minimum rain intensity this actor waits out once they have taken cover.
 /// The threshold is chosen from semantic severity and occupation, while the

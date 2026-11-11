@@ -2224,6 +2224,150 @@ fn curfew_breaks_a_warm_hold_after_one_excuse_turn() {
     );
 }
 
+/// A leg of the day outranks the chat once its bell rings mid-talk, on the
+/// curfew's terms: one `system:` line and a turn to say goodbye, then the
+/// walk. The hold remembers the office it began in and forgets it when the
+/// exchange lapses.
+#[test]
+fn a_leg_that_comes_due_mid_conversation_breaks_the_hold_after_one_excuse_turn() {
+    let nav = nav();
+    // A working day, taken up ten real seconds before the Waning bell calls
+    // the warden from the yard to the lodge: High Wick's three game hours are
+    // 450 s on this clock.
+    let clock = clock_on(Office::HighWick, 1);
+    let waning = 450.0;
+    let id = ActorId::from_raw("b4hst");
+    let mut world = base_world();
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, waning - 10.0, &clock);
+    let lodge = round.people[&id]
+        .legs
+        .iter()
+        .find(|leg| leg.from == Office::Waning)
+        .expect("the warden's afternoon is authored")
+        .at;
+    let hold = warm(&id);
+    let pressed = |world: &World| {
+        world.characters[&id]
+            .inbox()
+            .iter()
+            .any(|line| line == DUTY_PRESSURE)
+    };
+
+    // The talk begins at High Wick, away from the yard he should be working
+    // in. That walk was owed before anybody spoke, so it waits.
+    let due = round.people[&id].next_decision + 0.5;
+    assert_eq!(clock.at(due).office, Office::HighWick);
+    tick(&mut round, &mut world, &nav, &clock, due, &player(), &hold);
+    assert_eq!(round.held_since.get(&id), Some(&Office::HighWick));
+    assert!(!world.characters[&id].is_walking() && !pressed(&world));
+
+    // The bell rings mid-talk. The first cadence after it is the excuse turn.
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        waning + 1.0,
+        &player(),
+        &hold,
+    );
+    assert!(pressed(&world), "the duty lands as a system: percept");
+    assert!(
+        !world.characters[&id].is_walking(),
+        "the excuse turn comes before the walk"
+    );
+
+    // The next one walks him to the lodge, whatever he said.
+    let again = round.people[&id].next_decision + 1.0;
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        again,
+        &player(),
+        &hold,
+    );
+    assert!(
+        world.characters[&id].is_walking(),
+        "the day's round beats chat after the one excuse turn"
+    );
+    assert_eq!(round.people[&id].travel_target, Some(lodge));
+
+    // The exchange lapses, and the hold's office is forgotten with it.
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        again,
+        &player(),
+        &BTreeSet::new(),
+    );
+    assert!(round.held_since.is_empty());
+    assert!(!round.people[&id].excused);
+}
+
+/// The rule is for a bell that rings during the talk. A walk already owed
+/// when it began waits out the exchange, however long that runs inside the
+/// office: finding somebody away from their post is not a way to lose them.
+#[test]
+fn a_leg_already_due_when_the_talk_began_still_waits() {
+    let nav = nav();
+    // High Wick on a working day: the warden has been owed at the yard since
+    // Dayspring.
+    let clock = clock_on(Office::HighWick, 1);
+    let id = ActorId::from_raw("b4hst");
+    let mut world = base_world();
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let hold = warm(&id);
+
+    // A minute of talk, his cadence coming due all the while.
+    let mut now = round.people[&id].next_decision + 1.0;
+    for _ in 0..10 {
+        tick(&mut round, &mut world, &nav, &clock, now, &player(), &hold);
+        now += LADDER_DECISION_MAX_SECONDS;
+    }
+    assert_eq!(round.held_since.get(&id), Some(&Office::HighWick));
+    assert!(
+        !world.characters[&id].is_walking() && !round.people[&id].excused,
+        "a leg owed before the talk began does not break it"
+    );
+    assert!(
+        !world.characters[&id]
+            .inbox()
+            .iter()
+            .any(|line| line.starts_with("system:")),
+        "and nobody is told to excuse themselves"
+    );
+
+    // The exchange goes cold: he sets off on his own.
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        now,
+        &player(),
+        &BTreeSet::new(),
+    );
+    assert!(world.characters[&id].is_walking());
+}
+
 /// Only curfew (5) and parched (2) press hard enough to break a conversation
 /// hold; merely thirsty (6) — and everything below — defers to the exchange.
 #[test]
@@ -4251,6 +4395,78 @@ fn a_conversation_holds_the_taper() {
         }
     }
     assert!(resumed, "the beat resumes once the talk goes cold");
+}
+
+/// The lamp beat is a duty with a bell of its own. A keeper kept talking since
+/// the afternoon is given his one turn when Lamplight rings and then walks his
+/// posts with the exchange still warm: the taper waits for a talk that began
+/// at dusk, as above, and not for one that began before it.
+#[test]
+fn the_lamp_window_opening_mid_talk_gives_one_excuse_then_the_keeper_walks() {
+    let nav = nav();
+    let id = ActorId::from_raw("dtbvl");
+    let mut world = base_world();
+    world.add_character(person(
+        "dtbvl",
+        nav.node_point(nav.nearest_node(-14.0, 249.2).unwrap()),
+        Some("lamplighter"),
+        Significance::Minor,
+    ));
+    let mut round = Round::new();
+    // Ten real seconds before the Lamplight bell: the Waning's three game
+    // hours are 450 s on this clock.
+    let clock = clock_at(Office::Waning);
+    let lamplight = 450.0;
+    round.seed(&mut world, &nav, lamplight - 10.0, &clock);
+    let hold = warm(&id);
+    let lit = |round: &Round| round.lamps().iter().filter(|lamp| lamp.lit).count();
+
+    // The talk begins in the Waning, with no lamp to light yet.
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        lamplight - 9.0,
+        &player(),
+        &hold,
+    );
+    assert_eq!(round.held_since.get(&id), Some(&Office::Waning));
+
+    // Dusk falls mid-talk. The first cadence after the bell is the excuse turn.
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        lamplight + 1.0,
+        &player(),
+        &hold,
+    );
+    assert!(
+        world.characters[&id]
+            .inbox()
+            .iter()
+            .any(|line| line == DUTY_PRESSURE),
+        "the beat lands as a system: percept"
+    );
+    assert!(
+        !world.characters[&id].is_walking() && lit(&round) == 0,
+        "the excuse turn comes before the beat"
+    );
+
+    // Still held, he takes up the taper: two posts, so he has walked between them.
+    let mut now = lamplight + 1.0;
+    let dt = 0.5;
+    while lit(&round) < 2 {
+        now += dt;
+        world.step_movement(dt, &nav, None);
+        tick(&mut round, &mut world, &nav, &clock, now, &player(), &hold);
+        assert!(
+            now < lamplight + 600.0,
+            "the held keeper never took up the beat"
+        );
+    }
 }
 
 /// Wallets and hunger, seeded across the enrolled cast (food & items M2,
