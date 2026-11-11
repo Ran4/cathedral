@@ -65,6 +65,16 @@ fn main() {
     if std::env::var_os("CATHEDRAL_NO_KNOWLEDGE").is_some() {
         config.smart_actors.knowledge.enabled = false;
     }
+    // Case packs for one run: comma-separated paths under `assets/`, in place
+    // of whatever config.ron lists.
+    if let Ok(packs) = std::env::var("CATHEDRAL_CASE_PACKS") {
+        config.smart_actors.knowledge.case_packs = packs
+            .split(',')
+            .map(str::trim)
+            .filter(|path| !path.is_empty())
+            .map(str::to_string)
+            .collect();
+    }
     if std::env::var_os("CATHEDRAL_NO_VERMIN").is_some() {
         config.vermin.enabled = false;
     }

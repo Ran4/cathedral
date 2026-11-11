@@ -1,5 +1,6 @@
 //! The `J` journal: the player's receipts and the standing words supplied by
-//! the sim. Like the inventory, it owns the pointer while the panel is open.
+//! the sim, and on its second tab the matters before them (`case_ui`). Like the
+//! inventory, it owns the pointer while the panel is open.
 
 use bevy::ecs::hierarchy::ChildSpawnerCommands;
 use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
@@ -18,6 +19,7 @@ const SCRIM: Color = Color::srgba(0.01, 0.015, 0.03, 0.55);
 const PANEL_SOLID: Color = Color::srgba(0.025, 0.03, 0.045, 0.96);
 const BUTTON_BG: Color = Color::srgba(0.10, 0.11, 0.15, 1.0);
 const BUTTON_HOVER: Color = Color::srgba(0.19, 0.21, 0.26, 1.0);
+const TAB_SELECTED_LABEL: Color = Color::srgb(0.09, 0.10, 0.12);
 
 /// The player's receipts, projected by one `process_engine_message` arm and
 /// assigned only when they differ. No objectives: future quest-supplied
@@ -36,15 +38,34 @@ pub(super) struct JournalRow {
     pub word: String,
 }
 
+/// The page of the overlay on show. It stays as it was left when the overlay
+/// closes.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum JournalTab {
+    /// What the player has heard.
+    #[default]
+    Words,
+    /// The matters before the player and the accounts given of each.
+    Case,
+}
+
 #[derive(Resource, Debug, Default)]
 pub struct JournalUiState {
     pub open: bool,
+    pub tab: JournalTab,
 }
 
 #[derive(Component)]
 pub(super) struct JournalUiRoot;
 #[derive(Component)]
 pub(super) struct JournalEntriesRoot;
+/// The Case tab's scroll root, filled by `case_ui::refresh_case_tab`.
+#[derive(Component)]
+pub(super) struct CaseEntriesRoot;
+#[derive(Component)]
+pub(super) struct JournalTabButton(JournalTab);
+#[derive(Component)]
+pub(super) struct JournalNoticeText;
 #[derive(Component)]
 pub(super) struct JournalCloseButton;
 
@@ -56,20 +77,7 @@ pub(super) fn row_from_entry(entry: cathedral_sim::JournalEntry) -> JournalRow {
         parts.push(from);
     }
     if let Some(place) = entry.place {
-        let lower = place.to_lowercase();
-        if [
-            "in ", "inside ", "at ", "next to ", "near ", "on ", "beside ", "outside ",
-        ]
-        .iter()
-        .any(|prefix| lower.starts_with(prefix))
-        {
-            let mut letters = place.chars();
-            parts.push(letters.next().map_or_else(String::new, |first| {
-                first.to_lowercase().collect::<String>() + letters.as_str()
-            }));
-        } else {
-            parts.push(format!("at {place}"));
-        }
+        parts.push(locative(&place));
     }
     parts.push(entry.when);
     let register = match entry.hops {
@@ -99,6 +107,25 @@ pub(super) fn row_from_entry(entry: cathedral_sim::JournalEntry) -> JournalRow {
     }
 }
 
+/// A place label as the middle of a sentence: "at the board", "inside the
+/// Lanthorn".
+pub(super) fn locative(place: &str) -> String {
+    let lower = place.to_lowercase();
+    if [
+        "in ", "inside ", "at ", "next to ", "near ", "on ", "beside ", "outside ",
+    ]
+    .iter()
+    .any(|prefix| lower.starts_with(prefix))
+    {
+        let mut letters = place.chars();
+        letters.next().map_or_else(String::new, |first| {
+            first.to_lowercase().collect::<String>() + letters.as_str()
+        })
+    } else {
+        format!("at {place}")
+    }
+}
+
 fn build_rows(journal: &PlayerJournal) -> Vec<JournalRow> {
     journal.entries.clone()
 }
@@ -107,6 +134,10 @@ pub(super) fn spawn_journal_ui(mut commands: Commands, fonts: Option<Res<Cathedr
     let display_font = fonts
         .as_deref()
         .map(CathedralFonts::display)
+        .unwrap_or_default();
+    let body_font = fonts
+        .as_deref()
+        .map(CathedralFonts::body)
         .unwrap_or_default();
     commands
         .spawn((
@@ -152,13 +183,19 @@ pub(super) fn spawn_journal_ui(mut commands: Commands, fonts: Option<Res<Cathedr
                             ..default()
                         })
                         .with_children(|header| {
-                            spawn_text(
-                                header,
-                                "WORDS YOU HAVE HEARD",
-                                &display_font,
-                                19.0,
-                                hud::TEXT,
-                            );
+                            header
+                                .spawn(Node {
+                                    column_gap: px(8),
+                                    ..default()
+                                })
+                                .with_children(|tabs| {
+                                    for (tab, name, label) in [
+                                        (JournalTab::Words, "Words", "WORDS YOU HAVE HEARD"),
+                                        (JournalTab::Case, "Case", "MATTERS BEFORE YOU"),
+                                    ] {
+                                        spawn_tab(tabs, tab, name, label, &display_font);
+                                    }
+                                });
                             header
                                 .spawn((
                                     Name::new("Journal close"),
@@ -194,11 +231,64 @@ pub(super) fn spawn_journal_ui(mut commands: Commands, fonts: Option<Res<Cathedr
                         },
                         ScrollPosition::default(),
                     ));
+                    panel.spawn((
+                        Name::new("Case entries"),
+                        CaseEntriesRoot,
+                        Node {
+                            width: percent(100),
+                            min_height: px(0),
+                            flex_direction: FlexDirection::Column,
+                            row_gap: px(22),
+                            overflow: Overflow::scroll_y(),
+                            display: Display::None,
+                            ..default()
+                        },
+                        ScrollPosition::default(),
+                    ));
+                    // The overlay covers the HUD's toast, so it is repeated here.
+                    panel.spawn((
+                        Name::new("Journal notice"),
+                        JournalNoticeText,
+                        Text::new(""),
+                        TextFont {
+                            font: body_font,
+                            font_size: FontSize::Px(14.5),
+                            ..default()
+                        },
+                        TextColor(hud::MUTED),
+                        Node {
+                            flex_shrink: 0.0,
+                            display: Display::None,
+                            ..default()
+                        },
+                    ));
                 });
         });
 }
 
-fn spawn_text(
+/// A header pill. The drive's `click` finds it by `Journal tab: <name>`.
+fn spawn_tab(
+    tabs: &mut ChildSpawnerCommands,
+    tab: JournalTab,
+    name: &str,
+    label: &str,
+    font: &FontSource,
+) {
+    tabs.spawn((
+        Name::new(format!("Journal tab: {name}")),
+        Button,
+        JournalTabButton(tab),
+        Node {
+            padding: UiRect::axes(px(14), px(6)),
+            border_radius: BorderRadius::all(px(999)),
+            ..default()
+        },
+        BackgroundColor(Color::NONE),
+    ))
+    .with_children(|button| spawn_text(button, label, font, 15.0, hud::MUTED));
+}
+
+pub(super) fn spawn_text(
     parent: &mut ChildSpawnerCommands,
     text: &str,
     font: &FontSource,
@@ -262,22 +352,73 @@ pub(super) fn toggle_journal(
     }
 }
 
-pub(super) fn update_journal_ui(
-    journal: Res<JournalUiState>,
-    mut roots: Query<&mut Node, With<JournalUiRoot>>,
-    mut buttons: Query<(&Interaction, &mut BackgroundColor), With<JournalCloseButton>>,
+/// A press on a header pill turns the page.
+pub(super) fn switch_journal_tab(
+    presses: Query<(&Interaction, &JournalTabButton), Changed<Interaction>>,
+    mut journal: ResMut<JournalUiState>,
 ) {
-    let desired = if journal.open {
-        Display::Flex
-    } else {
-        Display::None
-    };
-    for mut root in &mut roots {
-        if root.display != desired {
-            root.display = desired;
+    for (interaction, tab) in &presses {
+        if *interaction == Interaction::Pressed {
+            journal.tab = tab.0;
         }
     }
-    for (interaction, mut background) in &mut buttons {
+}
+
+/// Lay a node out or leave it out, flagging it only when that changes.
+fn show(node: &mut Mut<Node>, shown: bool) {
+    let desired = if shown { Display::Flex } else { Display::None };
+    if node.display != desired {
+        node.display = desired;
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub(super) fn update_journal_ui(
+    journal: Res<JournalUiState>,
+    hud_state: Res<SmartActorHudState>,
+    mut roots: Query<&mut Node, With<JournalUiRoot>>,
+    mut pages: Query<
+        (&mut Node, Has<CaseEntriesRoot>),
+        (
+            Or<(With<JournalEntriesRoot>, With<CaseEntriesRoot>)>,
+            Without<JournalUiRoot>,
+        ),
+    >,
+    mut notices: Query<
+        (&mut Node, &mut Text),
+        (
+            With<JournalNoticeText>,
+            Without<JournalUiRoot>,
+            Without<JournalEntriesRoot>,
+            Without<CaseEntriesRoot>,
+        ),
+    >,
+    mut close: Query<(&Interaction, &mut BackgroundColor), With<JournalCloseButton>>,
+    mut tabs: Query<
+        (
+            &JournalTabButton,
+            &Interaction,
+            &mut BackgroundColor,
+            &Children,
+        ),
+        Without<JournalCloseButton>,
+    >,
+    mut labels: Query<&mut TextColor>,
+) {
+    for mut root in &mut roots {
+        show(&mut root, journal.open);
+    }
+    for (mut page, is_case) in &mut pages {
+        show(&mut page, is_case == (journal.tab == JournalTab::Case));
+    }
+    for (mut node, mut text) in &mut notices {
+        let line = hud_state.transient_text().unwrap_or_default();
+        if text.0 != line {
+            text.0 = line.to_string();
+        }
+        show(&mut node, !line.is_empty());
+    }
+    for (interaction, mut background) in &mut close {
         let desired = if *interaction == Interaction::None {
             BUTTON_BG
         } else {
@@ -285,6 +426,25 @@ pub(super) fn update_journal_ui(
         };
         if background.0 != desired {
             background.0 = desired;
+        }
+    }
+    for (tab, interaction, mut background, children) in &mut tabs {
+        let (desired, label) = if tab.0 == journal.tab {
+            (hud::TEXT, TAB_SELECTED_LABEL)
+        } else if *interaction == Interaction::None {
+            (Color::NONE, hud::MUTED)
+        } else {
+            (BUTTON_HOVER, hud::TEXT)
+        };
+        if background.0 != desired {
+            background.0 = desired;
+        }
+        for child in children {
+            if let Ok(mut color) = labels.get_mut(*child)
+                && color.0 != label
+            {
+                color.0 = label;
+            }
         }
     }
 }
@@ -344,10 +504,15 @@ pub(super) fn refresh_journal_ui(
     *cached = next;
 }
 
+/// The wheel moves the page on show, so each tab keeps its own place.
+#[allow(clippy::type_complexity)]
 pub(super) fn scroll_journal(
     journal: Res<JournalUiState>,
     wheel: Option<Res<AccumulatedMouseScroll>>,
-    mut roots: Query<(&ComputedNode, &mut ScrollPosition), With<JournalEntriesRoot>>,
+    mut roots: Query<
+        (&ComputedNode, &mut ScrollPosition, Has<CaseEntriesRoot>),
+        Or<(With<JournalEntriesRoot>, With<CaseEntriesRoot>)>,
+    >,
 ) {
     if !journal.open {
         return;
@@ -360,7 +525,10 @@ pub(super) fn scroll_journal(
         MouseScrollUnit::Line => 36.0,
         MouseScrollUnit::Pixel => 1.0,
     };
-    for (node, mut position) in &mut roots {
+    for (node, mut position, is_case) in &mut roots {
+        if is_case != (journal.tab == JournalTab::Case) {
+            continue;
+        }
         let max = ((node.content_size.y - node.size.y) * node.inverse_scale_factor).max(0.0);
         let y = (position.y - wheel.delta.y * step).clamp(0.0, max);
         if position.y != y {
@@ -449,19 +617,22 @@ mod tests {
     #[test]
     fn a_full_journal_keeps_all_rows_and_scrolls_to_both_ends() {
         let mut app = App::new();
-        app.insert_resource(JournalUiState { open: true })
-            .insert_resource(PlayerJournal {
-                entries: (0..24)
-                    .map(|i| JournalRow {
-                        attribution: format!("Mouth {i}, today — at one remove:"),
-                        word: format!("“Sentence {i}.”"),
-                    })
-                    .collect(),
-                standing: Vec::new(),
-            })
-            .init_resource::<AccumulatedMouseScroll>()
-            .add_systems(Startup, spawn_journal_ui)
-            .add_systems(Update, (refresh_journal_ui, scroll_journal).chain());
+        app.insert_resource(JournalUiState {
+            open: true,
+            tab: JournalTab::Words,
+        })
+        .insert_resource(PlayerJournal {
+            entries: (0..24)
+                .map(|i| JournalRow {
+                    attribution: format!("Mouth {i}, today — at one remove:"),
+                    word: format!("“Sentence {i}.”"),
+                })
+                .collect(),
+            standing: Vec::new(),
+        })
+        .init_resource::<AccumulatedMouseScroll>()
+        .add_systems(Startup, spawn_journal_ui)
+        .add_systems(Update, (refresh_journal_ui, scroll_journal).chain());
         app.update();
         let entries = {
             let world = app.world_mut();
@@ -507,5 +678,45 @@ mod tests {
             .y = -100.0;
         app.update();
         assert_eq!(app.world().get::<ScrollPosition>(entries).unwrap().y, 0.0);
+    }
+
+    #[test]
+    fn the_wheel_moves_only_the_page_on_show() {
+        let mut app = App::new();
+        app.insert_resource(JournalUiState {
+            open: true,
+            tab: JournalTab::Case,
+        })
+        .init_resource::<AccumulatedMouseScroll>()
+        .add_systems(Startup, spawn_journal_ui)
+        .add_systems(Update, scroll_journal);
+        app.update();
+        let world = app.world_mut();
+        let words = world
+            .query_filtered::<Entity, With<JournalEntriesRoot>>()
+            .single(world)
+            .unwrap();
+        let case = world
+            .query_filtered::<Entity, With<CaseEntriesRoot>>()
+            .single(world)
+            .unwrap();
+        for page in [words, case] {
+            world.entity_mut(page).insert(ComputedNode {
+                content_size: Vec2::new(700.0, 2400.0),
+                size: Vec2::new(700.0, 600.0),
+                inverse_scale_factor: 1.0,
+                ..default()
+            });
+        }
+        let scrolled = |app: &App, page| app.world().get::<ScrollPosition>(page).unwrap().y;
+        app.world_mut()
+            .resource_mut::<AccumulatedMouseScroll>()
+            .delta
+            .y = -1.0;
+        app.update();
+        assert_eq!((scrolled(&app, words), scrolled(&app, case)), (0.0, 36.0));
+        app.world_mut().resource_mut::<JournalUiState>().tab = JournalTab::Words;
+        app.update();
+        assert_eq!((scrolled(&app, words), scrolled(&app, case)), (36.0, 36.0));
     }
 }

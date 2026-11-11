@@ -627,6 +627,12 @@ fn build(
         &read("prompts/strings.toml")?,
     )
     .map_err(|error| format!("invalid prompt assets: {error}"))?;
+    let case_packs = config
+        .knowledge
+        .case_packs
+        .iter()
+        .map(|path| read(path))
+        .collect::<Result<Vec<_>, _>>()?;
 
     let options = BackendsOptions {
         uv_binary: config.uv_binary.clone(),
@@ -708,11 +714,13 @@ fn build(
             ward_sign: config.marks.ward_sign,
         },
         marks_decay_scale: config.marks.decay_scale,
-        // What the city knows (`features/knowledge_and_rumor/`). No packs from
-        // the game host: a quest plants its own rows through
-        // `EngineConfig::fact_packs`, which only the headless runner fills today.
+        // What the city knows (`features/knowledge_and_rumor/`). Case packs
+        // are the game host's one route for extra fact rows, because their
+        // loader refuses a row this world cannot honour; the lenient
+        // `fact_packs` seam stays the headless runner's.
         knowledge_enabled: config.knowledge.enabled,
         fact_packs: Vec::new(),
+        case_packs,
         clock: WorldClock::new(
             config.clock.seconds_per_day,
             Office::from_config_name(&config.clock.start_office).unwrap_or_else(|| {

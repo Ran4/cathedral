@@ -17,6 +17,7 @@ pub mod saving;
 
 mod actor_sheet;
 mod area_debug;
+mod case_ui;
 mod chat;
 mod clock;
 mod config_menu;
@@ -155,7 +156,7 @@ impl Default for MarksSettings {
 }
 
 /// What the city knows: the one ablation switch
-/// (`features/knowledge_and_rumor/`, D49).
+/// (`features/knowledge_and_rumor/`, D49), and the case packs laid over it.
 #[derive(Resource, Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct KnowledgeSettings {
@@ -163,11 +164,19 @@ pub struct KnowledgeSettings {
     /// It gates **readers and writers both**, so a run with it off is a city
     /// with no knowledge layer rather than one accumulating state nobody reads.
     pub enabled: bool,
+    /// Case packs a fresh world starts with (`cathedral_sim::inquiry`), as
+    /// paths under `assets/`: `["world/dev_cases.json"]`. A pack the loader
+    /// refuses leaves the cast offline with the loader's reason on the HUD.
+    /// `CATHEDRAL_CASE_PACKS=a.json,b.json` replaces the list for one run.
+    pub case_packs: Vec<String>,
 }
 
 impl Default for KnowledgeSettings {
     fn default() -> Self {
-        Self { enabled: true }
+        Self {
+            enabled: true,
+            case_packs: Vec::new(),
+        }
     }
 }
 
@@ -599,13 +608,16 @@ impl Plugin for SmartActorsPlugin {
         // Receipts remain readable when the actor engine is disabled.
         app.init_resource::<journal_ui::JournalUiState>()
             .init_resource::<journal_ui::PlayerJournal>()
+            .init_resource::<case_ui::PlayerCase>()
             .init_resource::<crate::map::WardHeatState>()
             .add_systems(Startup, journal_ui::spawn_journal_ui)
             .add_systems(
                 Update,
                 (
                     journal_ui::toggle_journal,
+                    journal_ui::switch_journal_tab,
                     journal_ui::refresh_journal_ui,
+                    case_ui::refresh_case_tab,
                     journal_ui::scroll_journal,
                     journal_ui::update_journal_ui,
                 )
@@ -1034,6 +1046,7 @@ struct HotChannels<'w, 's> {
     /// because it changes with every step taken near a door.
     chalk: ResMut<'w, crate::city::ChalkStanding>,
     journal: ResMut<'w, journal_ui::PlayerJournal>,
+    case: ResMut<'w, case_ui::PlayerCase>,
     ward_heat: ResMut<'w, crate::map::WardHeatState>,
     time: Res<'w, Time>,
     drain_timer: Local<'s, DrainTimer>,
@@ -1201,6 +1214,7 @@ fn drain_bridge_messages(
                     &mut hot.law,
                     &mut hot.chalk,
                     &mut hot.journal,
+                    &mut hot.case,
                     &mut hot.ward_heat,
                     hot.time.elapsed_secs_f64(),
                 );
@@ -1246,12 +1260,14 @@ fn drain_bridge_messages(
                 );
                 hud.clear_world_transients();
                 // Each is republished by the new engine's first poll, except
-                // an empty journal, which is simply never sent.
+                // an empty journal and a city with no inquiries, which are
+                // simply never sent.
                 hot.movement.0.clear();
                 hot.dogs.0.clear();
                 *hot.weather = WorldWeatherState::default();
                 *hot.chalk = default();
                 *hot.journal = default();
+                *hot.case = default();
                 *hot.ward_heat = default();
                 *world_clock = default();
                 *presentation.grips = default();
@@ -1385,6 +1401,7 @@ fn process_engine_message(
     // what is within reach moves and not merely when a message arrives.
     chalk: &mut ResMut<crate::city::ChalkStanding>,
     journal: &mut ResMut<journal_ui::PlayerJournal>,
+    case: &mut ResMut<case_ui::PlayerCase>,
     ward_heat: &mut ResMut<crate::map::WardHeatState>,
     received_at_seconds: f64,
 ) {
@@ -1853,6 +1870,13 @@ fn process_engine_message(
                 **journal = next;
             }
         }
+        EngineMessage::Case { inquiries } => {
+            // Prose the sim has already resolved through the player, and two
+            // handles the host only ever hands back: there is nothing to check.
+            if case.inquiries != inquiries {
+                case.inquiries = inquiries;
+            }
+        }
         EngineMessage::WardHeat { wards } => {
             if ward_heat.wards != wards {
                 ward_heat.wards = wards;
@@ -1974,12 +1998,9 @@ fn process_engine_message(
                 hud.toast("Discarded invalid NPC voice failure data");
             }
         }
-        // The first two are the host's business and never reach the ECS:
-        // `local_engine` writes the prompt archive and the session log itself.
-        // Nothing reads the player's record of an inquiry yet.
-        EngineMessage::PromptExchange { .. }
-        | EngineMessage::Diagnostic(_)
-        | EngineMessage::Case { .. } => {}
+        // Both are the host's business and never reach the ECS: `local_engine`
+        // writes the prompt archive and the session log itself.
+        EngineMessage::PromptExchange { .. } | EngineMessage::Diagnostic(_) => {}
     }
 }
 
@@ -3381,6 +3402,12 @@ mod tests {
     }
 
     fn ready_fake_plugin_app_saving_to(saves: std::path::PathBuf) -> App {
+        ready(fake_plugin_app(saves, &[]))
+    }
+
+    /// The same city with case packs laid over it, not yet pumped: a pack the
+    /// loader refuses never comes online.
+    fn fake_plugin_app(saves: std::path::PathBuf, case_packs: &[&str]) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
             .init_asset::<Mesh>()
@@ -3418,6 +3445,10 @@ mod tests {
                 uv_binary: "uv".into(),
                 tts_backend: "local".into(),
                 pause_microphone_during_npc_voice: true,
+                knowledge: KnowledgeSettings {
+                    case_packs: case_packs.iter().map(|path| path.to_string()).collect(),
+                    ..default()
+                },
                 ..SmartActorsConfig::default()
             })
             .with_saves_dir(saves),
@@ -3430,7 +3461,10 @@ mod tests {
         app.world_mut()
             .resource_mut::<interaction::MicrophoneInputState>()
             .enabled = false;
+        app
+    }
 
+    fn ready(mut app: App) -> App {
         let deadline = std::time::Instant::now() + Duration::from_secs(8);
         while std::time::Instant::now() < deadline
             && !app.world().resource::<SmartActorRuntime>().ready
@@ -3844,6 +3878,250 @@ mod tests {
         let mut texts = world.query::<&Text>();
         assert!(texts.iter(world).any(|text| text.0 == row.attribution));
         assert!(texts.iter(world).any(|text| text.0 == row.word));
+    }
+
+    /// The city with the development case pack laid over it: two matters, both
+    /// reviewed by the bencher bn9et.
+    fn ready_dev_case_app_saving_to(saves: std::path::PathBuf) -> App {
+        ready(fake_plugin_app(saves, &["world/dev_cases.json"]))
+    }
+
+    fn matters(app: &App) -> Vec<cathedral_sim::CaseInquiry> {
+        app.world()
+            .resource::<case_ui::PlayerCase>()
+            .inquiries
+            .clone()
+    }
+
+    fn texts(app: &mut App) -> Vec<String> {
+        let world = app.world_mut();
+        let mut texts = world.query::<&Text>();
+        texts.iter(world).map(|text| text.0.clone()).collect()
+    }
+
+    /// Press a button by its `Name`, as the drive's `click` does.
+    fn click(app: &mut App, name: &str) {
+        let world = app.world_mut();
+        let mut buttons = world.query::<(&Name, &mut Interaction)>();
+        let (_, mut interaction) = buttons
+            .iter_mut(world)
+            .find(|(button, _)| button.as_str() == name)
+            .unwrap_or_else(|| panic!("no button is named {name}"));
+        *interaction = Interaction::Pressed;
+        app.update();
+    }
+
+    /// Stand the player at `witness`'s shoulder as somebody who knows them, and
+    /// have the witness recount `fact`. Returns the witness's name and the
+    /// stamp of the telling.
+    fn stage_account(app: &mut App, witness: &str, fact: &str) -> (String, String) {
+        let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+        let sim = engine.world_mut().expect("the engine is live");
+        let witness = cathedral_sim::ActorId::from_raw(witness);
+        let player = sim.player_id().expect("one player").clone();
+        let beside =
+            sim.characters[&witness].position_m() + cathedral_sim::Vec3::new(1.2, 0.0, 0.0);
+        let me = &mut sim.characters.get_mut(&player).unwrap().state;
+        me.position_m = beside;
+        me.knows.insert(witness.clone());
+        let key = sim
+            .knowledge
+            .key_of(&cathedral_sim::FactId::from_raw(fact))
+            .expect("the pack's fact");
+        cathedral_sim::knowledge::recount(sim, &witness, key).expect("a witness in earshot");
+        let now = sim.current_time.expect("the clock runs");
+        (
+            sim.characters[&witness].sheet.name.clone(),
+            format!("{}, day {}", now.office.label(), now.day),
+        )
+    }
+
+    /// Put a partial finding on the first matter, as a review held now would.
+    /// Returns the stamp it was held at.
+    fn stage_finding(app: &mut App) -> String {
+        let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+        let sim = engine.world_mut().expect("the engine is live");
+        let held = sim.current_time.expect("the clock runs");
+        sim.inquiries[0].finding = Some(cathedral_sim::inquiry::Finding {
+            held,
+            accounts: 1,
+            sources: 1,
+            missing: vec![cathedral_sim::inquiry::Support::IndependentSource],
+        });
+        format!("{}, day {}", held.office.label(), held.day)
+    }
+
+    /// M4 acceptance 6, at the screen: what the player was told stays on the
+    /// Case tab. The tab opens from its pill and lists every matter; an account
+    /// appears under its matter with who gave it, when, and what it rests on;
+    /// and a review's finding is reported there.
+    #[test]
+    fn the_case_tab_lists_each_matter_with_its_accounts_and_its_finding() {
+        let mut app = ready_dev_case_app_saving_to(test_saves_dir());
+        update_until(&mut app, "the matters", |app| matters(app).len() == 2);
+        tap_overlay_key(&mut app, journal_key());
+        assert_eq!(
+            app.world().resource::<JournalUiState>().tab,
+            journal_ui::JournalTab::Words
+        );
+        click(&mut app, "Journal tab: Case");
+        assert_eq!(
+            app.world().resource::<JournalUiState>().tab,
+            journal_ui::JournalTab::Case
+        );
+        {
+            let world = app.world_mut();
+            let mut case = world.query_filtered::<&Node, With<journal_ui::CaseEntriesRoot>>();
+            assert_eq!(case.single(world).unwrap().display, Display::Flex);
+            let mut words = world.query_filtered::<&Node, With<journal_ui::JournalEntriesRoot>>();
+            assert_eq!(words.single(world).unwrap().display, Display::None);
+        }
+        let reviewer = matters(&app)[0].reviewer.clone();
+        let nothing_lodged = format!("Reviewer: {reviewer} — nothing lodged yet");
+        let shown = texts(&mut app);
+        for line in [
+            "The scaffold pole that fell behind the lodge",
+            "The lime barrow gone from the kiln gate",
+        ] {
+            assert!(shown.iter().any(|text| text == line), "{line}: {shown:?}");
+        }
+        assert_eq!(
+            shown.iter().filter(|text| **text == nothing_lodged).count(),
+            2,
+            "{shown:?}"
+        );
+
+        let (name, told) = stage_account(&mut app, "b6clm", "dev.scaffold");
+        let row = format!("{name} — {told}");
+        update_until(&mut app, "the account on the Case tab", |app| {
+            texts(app).iter().any(|text| text.starts_with(&row))
+        });
+        let shown = texts(&mut app);
+        let line = shown.iter().find(|text| text.starts_with(&row)).unwrap();
+        assert!(line.ends_with(" — saw it themselves"), "{line}");
+        let word = format!("“{}”", matters(&app)[0].accounts[0].word);
+        assert!(word.contains("scaffold pole"), "{word}");
+        assert!(shown.contains(&word), "{shown:?}");
+
+        let held = stage_finding(&mut app);
+        let finding = format!(
+            "Reviewed at {held}: Not established. 1 account read, from 1 source. Still \
+             wanting: a further account that does not trace back to the same person."
+        );
+        update_until(&mut app, "the finding on the Case tab", |app| {
+            texts(app).contains(&finding)
+        });
+        let shown = texts(&mut app);
+        assert!(
+            shown.contains(&format!("Reviewer: {reviewer}")),
+            "{shown:?}"
+        );
+        assert!(shown.iter().any(|text| text.starts_with(&row)), "{shown:?}");
+    }
+
+    /// A load puts the saved city's record on the Case tab (D06): what the
+    /// replaced city went on to find is gone and the account given before the
+    /// save is back. A slot from a city with no matters before the player
+    /// sends no record at all, and the old one does not stay on show.
+    #[test]
+    fn a_load_replaces_the_case_record_with_the_saved_citys() {
+        fn save(app: &mut App, slot: &str) {
+            app.world_mut()
+                .write_message(saving::SaveRequest { slot: slot.into() });
+            update_until(app, "the save", |app| {
+                toast(app).is_some_and(|text| text == format!("Saved to slot {slot}"))
+            });
+        }
+        fn load(app: &mut App, slot: &str) {
+            app.world_mut()
+                .write_message(saving::LoadRequest { slot: slot.into() });
+            update_until(app, "the load", |app| {
+                toast(app).is_some_and(|text| text.starts_with(&format!("Loaded slot {slot}")))
+            });
+        }
+
+        let saves = test_saves_dir();
+        let mut app = ready_dev_case_app_saving_to(saves.clone());
+        let (name, _) = stage_account(&mut app, "b6clm", "dev.scaffold");
+        update_until(&mut app, "the account", |app| {
+            matters(app)
+                .first()
+                .is_some_and(|matter| !matter.accounts.is_empty())
+        });
+        save(&mut app, "asked");
+        stage_finding(&mut app);
+        update_until(&mut app, "the finding", |app| {
+            matters(app)[0].finding.is_some()
+        });
+
+        load(&mut app, "asked");
+        update_until(&mut app, "the saved record", |app| matters(app).len() == 2);
+        let record = matters(&app);
+        assert!(
+            record[0].finding.is_none(),
+            "found in the city that was replaced"
+        );
+        assert_eq!(record[0].accounts.len(), 1);
+        assert_eq!(record[0].accounts[0].speaker_name, name);
+        assert!(record[1].accounts.is_empty());
+
+        // A slot saved before any case pack was configured holds no inquiries.
+        app.world_mut()
+            .non_send_mut::<local_engine::LocalEngine>()
+            .world_mut()
+            .expect("the engine is live")
+            .inquiries
+            .clear();
+        save(&mut app, "quiet");
+        assert_eq!(
+            matters(&app).len(),
+            2,
+            "nothing is published for no matters"
+        );
+        load(&mut app, "quiet");
+        assert!(matters(&app).is_empty());
+        for _ in 0..5 {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+        assert!(matters(&app).is_empty());
+        let _ = std::fs::remove_dir_all(&saves);
+    }
+
+    /// M4 acceptance 8, at the screen: a case pack naming somebody this city
+    /// lacks is refused before the cast comes online, and the HUD gives the
+    /// loader's own reason.
+    #[test]
+    fn a_refused_case_pack_leaves_the_cast_offline_with_the_loaders_reason() {
+        let dir = test_saves_dir();
+        std::fs::create_dir_all(&dir).expect("writable");
+        let pack = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/world/dev_cases.json"
+        ))
+        .expect("the dev pack")
+        .replace("bn9et", "zz999");
+        // An absolute path stands in for one under `assets/`: joined to the
+        // asset directory it is still itself.
+        let path = dir.join("unknown_reviewer.json");
+        std::fs::write(&path, pack).expect("writable");
+        let mut app = fake_plugin_app(dir.clone(), &[path.to_str().expect("a utf-8 path")]);
+        update_until(&mut app, "the refusal", |app| {
+            app.world().resource::<hud::SmartActorHudState>().connection
+                == hud::ConnectionUiState::Offline
+        });
+        app.update();
+        assert!(!app.world().resource::<SmartActorRuntime>().ready);
+        let world = app.world_mut();
+        let mut lines = world.query_filtered::<&Text, With<hud::ConnectionDetailText>>();
+        let detail = &lines.single(world).expect("the HUD's status line").0;
+        assert!(
+            detail.contains(
+                "case pack refused: inquiries[0].reviewer 'zz999' is not a person in this world"
+            ),
+            "{detail}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
