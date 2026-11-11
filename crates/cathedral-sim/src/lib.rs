@@ -84,8 +84,9 @@ pub use checkpoint::{
     CHECKPOINT_VERSION, Checkpoint, CheckpointLabel, RestoreError, geometry_fingerprint,
 };
 pub use engine::{
-    ActorMotion, Capabilities, CivicRope, Engine, EngineCommand, EngineConfig, EngineMessage,
-    EngineParts, EngineState, JournalEntry, WardHeatRow,
+    ActorMotion, Capabilities, CaseAccount, CaseFinding, CaseInquiry, CivicRope, Engine,
+    EngineCommand, EngineConfig, EngineMessage, EngineParts, EngineState, JournalEntry,
+    WardHeatRow,
 };
 pub use error::{
     ActionError, ActionErrorCode, CommandError, CommandErrorCode, EngineInitError, PromptError,

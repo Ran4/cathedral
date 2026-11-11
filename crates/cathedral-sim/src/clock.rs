@@ -318,6 +318,22 @@ impl WorldTime {
         )
     }
 
+    /// The absolute game-days at which `office` next rings after this instant:
+    /// today's bell while it is still ahead, tomorrow's once it has rung. Like
+    /// [`next_bell`](Self::next_bell) the answer is always in the future, so it
+    /// is safe to hand to something dated by a named office
+    /// (`M4_accounts_inquiries_findings.md`: a review is held at its reviewer's
+    /// office).
+    pub fn next_ringing(&self, office: Office) -> f64 {
+        let start = office.start_fraction();
+        let day = if start > self.fraction + BOUNDARY_EPSILON {
+            self.day
+        } else {
+            self.day + 1
+        };
+        day as f64 + start
+    }
+
     /// Clock hour and minute, for a HUD readout.
     pub fn hour_minute(&self) -> (u32, u32) {
         // Round to the minute; a bell rings on the hour, so keep 07:00 at 07:00
@@ -759,6 +775,22 @@ mod tests {
             assert_eq!(inside, office, "{office:?} ends before its own bell");
             assert_ne!(after, office, "{office:?} runs past the next bell");
         }
+    }
+
+    #[test]
+    fn an_office_next_rings_today_while_it_is_ahead_and_tomorrow_once_it_has_rung() {
+        // 07:00 on day 3.
+        let clock = WorldClock::new(DAY, Office::Dayspring, 3, 0.05);
+        let morning = clock.at(0.0);
+        approx(morning.next_ringing(Office::HighWick), 3.0 + 12.0 / 24.0);
+        // Its own bell has just rung, and the Kindling rang two hours ago.
+        approx(morning.next_ringing(Office::Dayspring), 4.0 + 7.0 / 24.0);
+        approx(morning.next_ringing(Office::Kindling), 4.0 + 5.0 / 24.0);
+        // A second short of noon the bell is still today's; on the stroke it
+        // is tomorrow's.
+        let to_noon = 5.0 * 3600.0;
+        approx(clock.at(to_noon - 1.0).next_ringing(Office::HighWick), 3.5);
+        approx(clock.at(to_noon).next_ringing(Office::HighWick), 4.5);
     }
 
     #[test]

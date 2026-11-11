@@ -75,10 +75,29 @@ pub struct Finding {
 }
 
 /// A kind of support a bundle can lack.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Support {
+    /// Fewer people who were there stand behind the bundle than the matter
+    /// needs.
     IndependentSource,
+    /// Accounts of one fact disagree, and none is from somebody who was there.
     SettlingWord,
+}
+
+impl Support {
+    /// What a bundle lacking this is still wanting. The words come from the
+    /// kind alone, so they cannot name a person or anything the reviewer was
+    /// not given (D04).
+    pub fn wanting(self) -> &'static str {
+        match self {
+            Support::IndependentSource => {
+                "a further account that does not trace back to the same person"
+            }
+            Support::SettlingWord => {
+                "the word of someone who was there, to settle accounts that disagree"
+            }
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -463,12 +482,240 @@ pub fn ask(world: &mut World, target: &ActorId, inquiry_id: &str) -> Result<Stri
     Ok(format!("{name} tells you: \"{}\"", words.join("\" and \"")))
 }
 
+/// The player's lodge control: hand accounts out of their notes to the
+/// reviewer of one inquiry, to be read at the next ringing of the reviewer's
+/// office.
+///
+/// Each of `picks` names an account by its fact and its speaker. It is copied
+/// as it stands, so the review reads what was handed over and nothing its
+/// speaker says afterwards. Everything is checked before anything is lodged: a
+/// refusal names its own reason and leaves the world as it was. An account the
+/// reviewer already has is passed over, and a bundle with nothing new in it is
+/// refused.
+///
+/// A bundle already awaiting its review keeps its date. Lodging after a
+/// finding sets a new date, and the whole bundle is read again.
+pub fn lodge(
+    world: &mut World,
+    inquiry_id: &str,
+    picks: &[(FactId, ActorId)],
+) -> Result<String, ActionError> {
+    let refuse = |code, message: &str| Err(ActionError::new(code, message));
+    let Some(index) = world.inquiries.iter().position(|i| i.id == inquiry_id) else {
+        return refuse(
+            ActionErrorCode::InvalidAction,
+            "nobody is looking into any such matter",
+        );
+    };
+    let inquiry = &world.inquiries[index];
+    if picks.is_empty() {
+        return refuse(
+            ActionErrorCode::InvalidArguments,
+            "pick at least one account to lodge",
+        );
+    }
+    let (Some(player), Some(them)) = (world.player_id(), world.characters.get(&inquiry.reviewer))
+    else {
+        return refuse(ActionErrorCode::UnknownTarget, "there is nobody to take it");
+    };
+    let reviewer = cap_first(&identify(&world.characters[player], them));
+    if knowledge::player_in_earshot(world, &inquiry.reviewer).is_none() {
+        return refuse(
+            ActionErrorCode::OutOfRange,
+            &format!("{reviewer} is not here to take it"),
+        );
+    }
+    let mut new: Vec<Lodged> = Vec::new();
+    for (fact, speaker) in picks {
+        if !inquiry.facts.contains(fact) {
+            return refuse(
+                ActionErrorCode::InvalidAction,
+                "that account is about another matter",
+            );
+        }
+        let Some(account) = world
+            .knowledge
+            .player_learned
+            .get(fact)
+            .and_then(|receipt| receipt.accounts.iter().find(|a| a.speaker == *speaker))
+        else {
+            return refuse(
+                ActionErrorCode::InvalidArguments,
+                "there is no such account in your notes",
+            );
+        };
+        let same = |lodged: &Lodged| lodged.fact == *fact && lodged.speaker == *speaker;
+        if !inquiry.lodged.iter().chain(&new).any(same) {
+            new.push(Lodged {
+                fact: fact.clone(),
+                speaker: speaker.clone(),
+                origin: account.origin.clone(),
+                view: account.view.clone(),
+            });
+        }
+    }
+    if new.is_empty() {
+        return refuse(
+            ActionErrorCode::InvalidAction,
+            &format!("{reviewer} already has those"),
+        );
+    }
+    let Some(time) = world.current_time else {
+        return refuse(
+            ActionErrorCode::InvalidAction,
+            "there is no clock to set a review by",
+        );
+    };
+    let taken = counted(new.len(), "account");
+    let office = inquiry.review_office.label();
+    let lodged = format!(
+        "{} lodged {taken} with you about \"{}\". You will review what you have been given at \
+         {office}.",
+        cap_first(&identify(them, &world.characters[player])),
+        inquiry.title
+    );
+
+    let inquiry = &mut world.inquiries[index];
+    inquiry.lodged.extend(new);
+    if inquiry.review_due.is_none() {
+        inquiry.review_due = Some(time.next_ringing(inquiry.review_office));
+    }
+    world
+        .characters
+        .get_mut(&inquiry.reviewer)
+        .expect("the reviewer was found above")
+        .notify_percept(lodged);
+    Ok(format!(
+        "{reviewer} takes {taken}; the review is at {office}"
+    ))
+}
+
+/// What a review held at `held` makes of an inquiry's bundle. It reads the
+/// lodged copies and the inquiry's own rule and nothing else, so an account
+/// still in the player's notes, or anything its speaker has heard since, has
+/// no bearing on it.
+///
+/// A source is somebody who was there and whom a lodged account traces to: its
+/// speaker, or the one person they had it from. Two people repeating one
+/// witness are one source, and an account nobody can trace is none. Accounts
+/// of one fact that tell it differently want settling by a first-hand one.
+pub fn evaluate(inquiry: &Inquiry, held: WorldTime) -> Finding {
+    let sources: BTreeSet<&ActorId> = inquiry
+        .lodged
+        .iter()
+        .filter_map(|lodged| lodged.origin.as_ref())
+        .collect();
+    let unsettled = inquiry.facts.iter().any(|fact| {
+        let of_fact: Vec<&Lodged> = inquiry
+            .lodged
+            .iter()
+            .filter(|lodged| lodged.fact == *fact)
+            .collect();
+        let disagree = of_fact.iter().any(|lodged| lodged.view != of_fact[0].view);
+        let first_hand = of_fact
+            .iter()
+            .any(|lodged| lodged.origin.as_ref() == Some(&lodged.speaker));
+        disagree && !first_hand
+    });
+    let mut missing = Vec::new();
+    if sources.len() < usize::from(inquiry.sources_needed) {
+        missing.push(Support::IndependentSource);
+    }
+    if unsettled {
+        missing.push(Support::SettlingWord);
+    }
+    let count = |n: usize| u8::try_from(n).unwrap_or(u8::MAX);
+    Finding {
+        held,
+        accounts: count(inquiry.lodged.len()),
+        sources: count(sources.len()),
+        missing,
+    }
+}
+
+/// Hold every review that has come due: read the bundle, record the finding
+/// and tell the reviewer. Returns one diagnostic line for each review held.
+///
+/// The engine calls this on every poll. A review's date is a position on the
+/// calendar, saved with its inquiry and cleared here, and that is the whole of
+/// the once-only guard: neither a change of clock rate nor a restore can hold
+/// a review twice or pass one by. Nobody has to be anywhere for it to happen.
+pub fn hold_reviews(world: &mut World) -> Vec<String> {
+    if world.inquiries.is_empty() {
+        return Vec::new();
+    }
+    let Some(time) = world.current_time else {
+        return Vec::new();
+    };
+    let now = time.game_days();
+    let mut lines = Vec::new();
+    for inquiry in &mut world.inquiries {
+        if !inquiry.review_due.is_some_and(|due| due <= now) {
+            continue;
+        }
+        let finding = evaluate(inquiry, time);
+        let text = finding_text(inquiry, &finding);
+        inquiry.review_due = None;
+        inquiry.finding = Some(finding);
+        lines.push(format!(
+            "[inquiry] review of '{}' held at {}: {text}",
+            inquiry.id,
+            stamp(time.office, time.day)
+        ));
+        if let Some(reviewer) = world.characters.get_mut(&inquiry.reviewer) {
+            reviewer.notify_percept(format!(
+                "You have reviewed the accounts lodged with you about \"{}\". Your finding: \
+                 {text}",
+                inquiry.title
+            ));
+        }
+    }
+    lines
+}
+
+/// A finding in words: the inquiry's authored one when the bundle lacked
+/// nothing, and otherwise what was read and which kinds of support are still
+/// wanting. Both the player's record and the reviewer's own memory of the
+/// review say it this way.
+pub fn finding_text(inquiry: &Inquiry, finding: &Finding) -> String {
+    if finding.missing.is_empty() {
+        return inquiry.full_finding.clone();
+    }
+    let wanting: Vec<&str> = finding
+        .missing
+        .iter()
+        .map(|support| support.wanting())
+        .collect();
+    format!(
+        "Not established. {} read, from {}. Still wanting: {}.",
+        counted(finding.accounts.into(), "account"),
+        counted(finding.sources.into(), "source"),
+        wanting.join("; ")
+    )
+}
+
+/// A date as the city says it, for anything the player reads: "High Wick,
+/// day 3".
+pub(crate) fn stamp(office: Office, day: i64) -> String {
+    format!("{}, day {day}", office.label())
+}
+
+/// "no sources", "1 account", "2 accounts".
+fn counted(n: usize, noun: &str) -> String {
+    match n {
+        0 => format!("no {noun}s"),
+        1 => format!("1 {noun}"),
+        _ => format!("{n} {noun}s"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::{Value, json};
 
     use super::*;
     use crate::character::{Character, CharacterSheet, Control, EconomicClass, Presence};
+    use crate::clock::WorldClock;
     use crate::math::Vec3;
 
     fn actor(id: &str) -> ActorId {
@@ -857,6 +1104,319 @@ mod tests {
             )
         );
         assert_eq!(world, before);
+    }
+
+    /// 07:00 on day 0, with a game day to the real hour.
+    fn clock() -> WorldClock {
+        WorldClock::new(3_600.0, Office::Dayspring, 0, 0.05)
+    }
+
+    /// A clocked world to lodge in: [`asked_world`]'s people, with `dan`, who
+    /// also had the cart from `ada` and has the day right, and a second matter
+    /// before the same reviewer.
+    fn lodging_world() -> World {
+        let mut world = world();
+        world.add_character(body("dan", Control::Llm));
+        world.add_character(body("player", Control::Player));
+        let mut pack = pack();
+        let mut add = |section: &str, row: Value| {
+            pack[section].as_array_mut().expect("rows").push(row);
+        };
+        add(
+            "facts",
+            json!({
+                "id": "test.wheel",
+                "topic": "talk",
+                "said": "the off wheel was cracked before the cart set out",
+                "seeded": ["bem"],
+                "decays": false
+            }),
+        );
+        add(
+            "retold",
+            json!({"fact": "test.cart", "by": "dan", "from": "ada", "day_offset": 0}),
+        );
+        add(
+            "inquiries",
+            json!({
+                "id": "test_wheel",
+                "title": "The cracked wheel",
+                "reviewer": "rev",
+                "review_office": "high_wick",
+                "facts": ["test.wheel"],
+                "sources_needed": 1,
+                "finding": "The wheel was cracked when it left the yard."
+            }),
+        );
+        install(&mut world, &pack.to_string()).expect("the pack installs");
+        world.current_time = Some(clock().at(0.0));
+        world
+    }
+
+    /// The handle of `speaker`'s account of the cart.
+    fn cart(speaker: &str) -> (FactId, ActorId) {
+        (FactId::from_raw("test.cart"), actor(speaker))
+    }
+
+    /// Ask each of `speakers` about the cart, then lodge those accounts.
+    fn lodge_cart(world: &mut World, speakers: &[&str]) -> String {
+        let picks: Vec<(FactId, ActorId)> = speakers
+            .iter()
+            .map(|speaker| {
+                ask(world, &actor(speaker), "test_cart").expect("they hold it");
+                cart(speaker)
+            })
+            .collect();
+        lodge(world, "test_cart", &picks).expect("the reviewer is here to take them")
+    }
+
+    /// What a review of the cart held this instant would find.
+    fn reviewed(world: &World) -> Finding {
+        evaluate(
+            &world.inquiries[0],
+            world.current_time.expect("a clocked world"),
+        )
+    }
+
+    /// Acceptance 2, in full. The reviewer is told, the review is dated to the
+    /// next ringing of their office, and the bundle lacks nothing.
+    #[test]
+    fn both_witnesses_lodged_get_the_authored_finding() {
+        let mut world = lodging_world();
+        let taken = lodge_cart(&mut world, &["ada", "bem"]);
+        assert_eq!(
+            taken,
+            "A stranger (id rev) takes 2 accounts; the review is at High Wick"
+        );
+        assert_eq!(world.inquiries[0].review_due, Some(0.5));
+        assert_eq!(world.inquiries[0].finding, None);
+        let told = "A stranger (id player) lodged 2 accounts with you about \"The cart at the \
+                    ford\". You will review what you have been given at High Wick.";
+        assert_eq!(world.characters[&actor("rev")].inbox(), [told]);
+
+        let finding = reviewed(&world);
+        assert_eq!((finding.accounts, finding.sources), (2, 2));
+        assert!(finding.missing.is_empty());
+        assert_eq!(
+            finding_text(&world.inquiries[0], &finding),
+            "The cart went over by itself."
+        );
+    }
+
+    /// Acceptance 2, in part. The review reads the bundle: the second witness
+    /// has given an account too, but it was left in the notes, so it does not
+    /// count and the finding names the one kind of support that is wanting.
+    #[test]
+    fn one_witness_lodged_wants_another_source_whatever_else_is_in_the_notes() {
+        let mut world = lodging_world();
+        ask(&mut world, &actor("bem"), "test_cart").expect("bem holds it");
+        let taken = lodge_cart(&mut world, &["ada"]);
+        assert_eq!(
+            taken,
+            "A stranger (id rev) takes 1 account; the review is at High Wick"
+        );
+        let notes = &world.knowledge.player_learned[&FactId::from_raw("test.cart")];
+        assert_eq!(notes.accounts.len(), 2);
+
+        let finding = reviewed(&world);
+        assert_eq!((finding.accounts, finding.sources), (1, 1));
+        assert_eq!(finding.missing, [Support::IndependentSource]);
+        assert_eq!(
+            finding_text(&world.inquiries[0], &finding),
+            "Not established. 1 account read, from 1 source. Still wanting: a further account \
+             that does not trace back to the same person."
+        );
+    }
+
+    /// Acceptance 3 and the trap. Two people who both had it from one witness
+    /// are one source, and as they tell the day differently with nobody who
+    /// was there among them, their accounts want settling too. The witness's
+    /// own account settles the day and is no new source; the second witness
+    /// completes the bundle.
+    #[test]
+    fn two_retellings_of_one_witness_are_one_source_and_want_settling_where_they_disagree() {
+        let mut world = lodging_world();
+        lodge_cart(&mut world, &["cob", "dan"]);
+        let finding = reviewed(&world);
+        assert_eq!((finding.accounts, finding.sources), (2, 1));
+        assert_eq!(
+            finding.missing,
+            [Support::IndependentSource, Support::SettlingWord]
+        );
+        assert_eq!(
+            finding_text(&world.inquiries[0], &finding),
+            "Not established. 2 accounts read, from 1 source. Still wanting: a further account \
+             that does not trace back to the same person; the word of someone who was there, to \
+             settle accounts that disagree."
+        );
+
+        lodge_cart(&mut world, &["ada"]);
+        let finding = reviewed(&world);
+        assert_eq!((finding.accounts, finding.sources), (3, 1));
+        assert_eq!(finding.missing, [Support::IndependentSource]);
+
+        lodge_cart(&mut world, &["bem"]);
+        let finding = reviewed(&world);
+        assert_eq!((finding.accounts, finding.sources), (4, 2));
+        assert!(finding.missing.is_empty());
+    }
+
+    /// Each refusal has its own sentence, and one bad pick refuses the good
+    /// ones beside it: nothing is lodged and no review is set.
+    #[test]
+    fn a_refused_lodging_says_why_and_lodges_nothing() {
+        let mut world = lodging_world();
+        ask(&mut world, &actor("ada"), "test_cart").expect("ada holds the cart");
+        ask(&mut world, &actor("bem"), "test_wheel").expect("bem holds the wheel");
+        let wheel = (FactId::from_raw("test.wheel"), actor("bem"));
+        let refused = |world: &mut World, inquiry: &str, picks: &[(FactId, ActorId)]| {
+            let before = world.clone();
+            let error = lodge(world, inquiry, picks).expect_err("the lodging is refused");
+            assert_eq!(*world, before, "a refused lodging leaves the world alone");
+            (error.code, error.message)
+        };
+
+        assert_eq!(
+            refused(&mut world, "test_axle", &[cart("ada")]),
+            (
+                ActionErrorCode::InvalidAction,
+                "nobody is looking into any such matter".to_string()
+            )
+        );
+        assert_eq!(
+            refused(&mut world, "test_cart", &[]),
+            (
+                ActionErrorCode::InvalidArguments,
+                "pick at least one account to lodge".to_string()
+            )
+        );
+        assert_eq!(
+            refused(&mut world, "test_cart", &[cart("ada"), wheel]),
+            (
+                ActionErrorCode::InvalidAction,
+                "that account is about another matter".to_string()
+            )
+        );
+        // `cob` holds the cart and was never asked, so there is no account.
+        assert_eq!(
+            refused(&mut world, "test_cart", &[cart("ada"), cart("cob")]),
+            (
+                ActionErrorCode::InvalidArguments,
+                "there is no such account in your notes".to_string()
+            )
+        );
+
+        step_away(&mut world, "rev");
+        assert_eq!(
+            refused(&mut world, "test_cart", &[cart("ada")]),
+            (
+                ActionErrorCode::OutOfRange,
+                "A stranger (id rev) is not here to take it".to_string()
+            )
+        );
+        world
+            .characters
+            .get_mut(&actor("rev"))
+            .expect("the reviewer")
+            .state
+            .position_m
+            .x = 0.0;
+
+        let clock = world.current_time.take();
+        assert_eq!(
+            refused(&mut world, "test_cart", &[cart("ada")]),
+            (
+                ActionErrorCode::InvalidAction,
+                "there is no clock to set a review by".to_string()
+            )
+        );
+        world.current_time = clock;
+
+        lodge(&mut world, "test_cart", &[cart("ada")]).expect("now it is taken");
+        assert_eq!(
+            refused(&mut world, "test_cart", &[cart("ada")]),
+            (
+                ActionErrorCode::InvalidAction,
+                "A stranger (id rev) already has those".to_string()
+            )
+        );
+    }
+
+    /// Acceptance 7's guard, without the save. The review's date is a place on
+    /// the calendar, so the T key changing the clock's rate on the way there
+    /// neither loses it nor holds it twice, and once held it is not held again
+    /// on any later day until something new is lodged.
+    #[test]
+    fn a_review_is_held_once_across_a_change_of_rate_and_again_only_after_a_new_lodging() {
+        /// `polls` engine polls `step` real seconds apart: the clock is read
+        /// onto the world, then the reviews are held.
+        fn polled(
+            world: &mut World,
+            clock: WorldClock,
+            now: &mut f64,
+            step: f64,
+            polls: usize,
+        ) -> Vec<String> {
+            let mut held = Vec::new();
+            for _ in 0..polls {
+                *now += step;
+                world.current_time = Some(clock.at(*now));
+                held.extend(hold_reviews(world));
+            }
+            held
+        }
+        let partial = "Not established. 1 account read, from 1 source. Still wanting: a further \
+                       account that does not trace back to the same person.";
+
+        let mut world = lodging_world();
+        lodge_cart(&mut world, &["ada"]);
+        let mut now = 0.0;
+
+        // A game hour at the ordinary rate, to 08:00: not yet.
+        let slow = clock();
+        assert!(polled(&mut world, slow, &mut now, 1.0, 150).is_empty());
+        assert_eq!(world.inquiries[0].finding, None);
+
+        // Sixty times faster, through noon to 12:48.
+        let fast = slow.with_scale(now, 60.0);
+        assert_eq!(
+            polled(&mut world, fast, &mut now, 0.05, 240),
+            [format!(
+                "[inquiry] review of 'test_cart' held at High Wick, day 0: {partial}"
+            )]
+        );
+        let inquiry = &world.inquiries[0];
+        assert_eq!(inquiry.review_due, None);
+        let finding = inquiry.finding.as_ref().expect("the review was held");
+        assert_eq!(
+            (
+                finding.held.day,
+                finding.held.office,
+                finding.missing.as_slice()
+            ),
+            (0, Office::HighWick, [Support::IndependentSource].as_slice())
+        );
+        assert_eq!(
+            world.characters[&actor("rev")].inbox().last(),
+            Some(&format!(
+                "You have reviewed the accounts lodged with you about \"The cart at the ford\". \
+                 Your finding: {partial}"
+            ))
+        );
+
+        // On through the next day's noon, to 14:48 on day 1: nothing is due.
+        assert!(polled(&mut world, fast, &mut now, 0.05, 1_300).is_empty());
+
+        // The second witness is lodged, and the whole bundle is read again at
+        // the next ringing, which is the day after's.
+        lodge_cart(&mut world, &["bem"]);
+        assert_eq!(world.inquiries[0].review_due, Some(2.5));
+        let full = "[inquiry] review of 'test_cart' held at High Wick, day 2: The cart went over \
+                    by itself.";
+        assert_eq!(polled(&mut world, fast, &mut now, 0.05, 1_300), [full]);
+        let finding = world.inquiries[0].finding.as_ref().expect("held again");
+        assert_eq!((finding.accounts, finding.sources), (2, 2));
+        assert!(finding.missing.is_empty());
     }
 
     #[test]

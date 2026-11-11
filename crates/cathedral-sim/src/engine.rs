@@ -47,7 +47,7 @@ use crate::{
     event::{DomainEvent, EventType},
     floor::ConversationFloor,
     gesture::{self, GestureKind},
-    ids::{ActorId, ItemId, SpeechEventId},
+    ids::{ActorId, FactId, ItemId, SpeechEventId},
     inventory::StockSpec,
     item::{CONDITION_METADATA_KEY, CONDITION_POOPSTAINED, POOP_KIND},
     math::Vec3,
@@ -613,6 +613,16 @@ pub enum EngineCommand {
         target_id: ActorId,
         inquiry_id: String,
     },
+    /// The player's lodge control (`M4_accounts_inquiries_findings.md`): hand
+    /// accounts out of their notes to an inquiry's reviewer, who reads the
+    /// bundle at the next ringing of their office. Each of `accounts` is the
+    /// fact and the speaker of one [`CaseAccount`], handed back as they came.
+    /// Like [`Self::PlayerAsk`] it carries no position.
+    PlayerLodge {
+        request_id: String,
+        inquiry_id: String,
+        accounts: Vec<(FactId, ActorId)>,
+    },
     /// CATHEDRAL_DRIVE `commit` (`law_and_order.md` M5): finish the escort at
     /// the Stone House, so a scripted run can look at the inside of the gaol —
     /// the booking, the posted fee, the bell, and what walking out costs.
@@ -931,8 +941,65 @@ pub enum EngineMessage {
         /// Everything within [`crate::actions::CHALK_REACH_M`], nearest first.
         anchors: Vec<ChalkableHere>,
     },
+    /// The matters under inquiry as the player's record has them
+    /// (`M4_accounts_inquiries_findings.md`): each one's reviewer, the review
+    /// it awaits or the finding it was given, and every account in the
+    /// player's notes that bears on it. Hot and deduplicated like
+    /// [`Self::Journal`], and never sent by a world with no inquiries. None of
+    /// it enters the public snapshot or the journal.
+    Case {
+        inquiries: Vec<CaseInquiry>,
+    },
     /// A former `[smart actors] …` stderr line; the host logs it.
     Diagnostic(String),
+}
+
+/// One matter under inquiry, as the player's record shows it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CaseInquiry {
+    /// The handle [`EngineCommand::PlayerAsk`] and
+    /// [`EngineCommand::PlayerLodge`] name it by.
+    pub id: String,
+    pub title: String,
+    /// Who takes the accounts, as the player knows them.
+    pub reviewer: String,
+    /// When the lodged bundle will be read, while one awaits its review.
+    pub review_at: Option<String>,
+    /// What the last review found. It stands beside a new `review_at` when
+    /// more has been lodged since.
+    pub finding: Option<CaseFinding>,
+    /// Every account in the player's notes of a fact this matter is about,
+    /// lodged or not, in the order they were given.
+    pub accounts: Vec<CaseAccount>,
+}
+
+/// A review's finding, in words.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CaseFinding {
+    /// The bundle lacked nothing, and `text` is the inquiry's own finding.
+    /// Otherwise `text` says what was read and what kind of support is wanting.
+    pub full: bool,
+    pub text: String,
+    pub held: String,
+}
+
+/// One account somebody gave the player of a fact under inquiry.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CaseAccount {
+    /// With `speaker`, the handle [`EngineCommand::PlayerLodge`] takes. Both
+    /// are opaque to the host, which only ever hands them back.
+    pub fact: FactId,
+    pub speaker: ActorId,
+    pub speaker_name: String,
+    /// The speaker's version, which is what differs when two accounts disagree.
+    pub word: String,
+    pub when: String,
+    pub place: Option<String>,
+    /// What the account rests on, which is what a review counts: the speaker's
+    /// own eyes, the one person they had it from, or nobody they could name.
+    pub register: String,
+    /// Already with the reviewer.
+    pub lodged: bool,
 }
 
 /// One thing the player is standing close enough to chalk.
@@ -1157,6 +1224,9 @@ pub struct Engine {
     last_journal: Option<EngineMessage>,
     last_journal_receipts: u64,
     last_journal_at: f64,
+    /// The last [`EngineMessage::Case`] published, so it is resent exactly
+    /// when the player's record of an inquiry changes.
+    last_case: Option<EngineMessage>,
 }
 
 /// The part of an [`Engine`] a checkpoint carries: its fields minus the
@@ -1246,6 +1316,7 @@ impl Engine {
             last_journal: _,
             last_journal_receipts: _,
             last_journal_at: _,
+            last_case: _,
         } = self;
         let time = clock.at(now);
         let area = world
@@ -1439,6 +1510,7 @@ impl Engine {
             last_journal: None,
             last_journal_receipts: 0,
             last_journal_at: f64::NEG_INFINITY,
+            last_case: None,
         }
     }
 
@@ -1750,6 +1822,7 @@ impl Engine {
             last_journal: None,
             last_journal_receipts: 0,
             last_journal_at: f64::NEG_INFINITY,
+            last_case: None,
         })
     }
 
@@ -1818,6 +1891,13 @@ impl Engine {
         // nothing else was ever tracked.
         self.issue_warrants(now);
         notices::confront(&mut self.world);
+        // A bell also dates a review (`M4_accounts_inquiries_findings.md`): a
+        // lodged bundle is read at its reviewer's office, whoever is or is not
+        // there to see it. A single `is_empty` check in a world with no
+        // inquiries.
+        for line in crate::inquiry::hold_reviews(&mut self.world) {
+            out.push(EngineMessage::Diagnostic(line));
+        }
         // …and the ward's other hand (`features/implemented/chalking_the_walls.md` M1):
         // a cross on the door of anyone who owes and has not paid. Gated to
         // one beat a game day inside, so all but one of the ~60 polls a second
@@ -2169,6 +2249,7 @@ impl Engine {
         self.publish_law_standing(&mut out);
         self.publish_chalk_standing(&mut out);
         self.publish_journal(now, &mut out);
+        self.publish_case(&mut out);
         self.publish_ward_heat(&mut out);
         out
     }
@@ -2805,6 +2886,16 @@ impl Engine {
                 inquiry_id,
             } => {
                 let result = crate::inquiry::ask(&mut self.world, &target_id, &inquiry_id)
+                    .map_err(CommandError::from);
+                self.finish_player_action(now, &request_id, result, out);
+            }
+
+            EngineCommand::PlayerLodge {
+                request_id,
+                inquiry_id,
+                accounts,
+            } => {
+                let result = crate::inquiry::lodge(&mut self.world, &inquiry_id, &accounts)
                     .map_err(CommandError::from);
                 self.finish_player_action(now, &request_id, result, out);
             }
@@ -5303,6 +5394,93 @@ impl Engine {
                 out.push(message.clone());
             }
             self.last_journal = Some(message);
+        }
+    }
+
+    /// The player's record of each matter under inquiry
+    /// ([`EngineMessage::Case`]): rebuilt every poll and sent only when it
+    /// differs from the last one sent, the [`Self::publish_law_standing`]
+    /// shape. A world with no inquiries builds and sends nothing.
+    fn publish_case(&mut self, out: &mut Vec<EngineMessage>) {
+        let world = &self.world;
+        if world.inquiries.is_empty() {
+            return;
+        }
+        let player = &self.config.player_id;
+        // The unknown-people rule, guarded as the journal guards it.
+        let name = |id: &ActorId| {
+            if world.characters.contains_key(player) && world.characters.contains_key(id) {
+                crate::perception::identify_ids(world, player, id)
+            } else {
+                "a stranger".to_string()
+            }
+        };
+        let told = |account: &crate::knowledge::Account| {
+            account
+                .told
+                .map_or(f64::NEG_INFINITY, |time| time.game_days())
+        };
+        let inquiries = world
+            .inquiries
+            .iter()
+            .map(|inquiry| {
+                let mut accounts: Vec<(&FactId, &crate::knowledge::Account)> = inquiry
+                    .facts
+                    .iter()
+                    .filter_map(|fact| Some((fact, world.knowledge.player_learned.get(fact)?)))
+                    .flat_map(|(fact, receipt)| receipt.accounts.iter().map(move |a| (fact, a)))
+                    .collect();
+                accounts.sort_by(|l, r| {
+                    told(l.1)
+                        .total_cmp(&told(r.1))
+                        .then_with(|| l.1.speaker.cmp(&r.1.speaker))
+                });
+                CaseInquiry {
+                    id: inquiry.id.clone(),
+                    title: inquiry.title.clone(),
+                    reviewer: name(&inquiry.reviewer),
+                    review_at: inquiry.review_due.map(|due| {
+                        crate::inquiry::stamp(inquiry.review_office, due.floor() as i64)
+                    }),
+                    finding: inquiry.finding.as_ref().map(|finding| CaseFinding {
+                        full: finding.missing.is_empty(),
+                        text: crate::inquiry::finding_text(inquiry, finding),
+                        held: crate::inquiry::stamp(finding.held.office, finding.held.day),
+                    }),
+                    accounts: accounts
+                        .into_iter()
+                        .map(|(fact, account)| CaseAccount {
+                            fact: fact.clone(),
+                            speaker: account.speaker.clone(),
+                            speaker_name: name(&account.speaker),
+                            word: account.word.clone(),
+                            when: account.told.map_or_else(
+                                || crate::knowledge::when_phrase(None, None),
+                                |time| crate::inquiry::stamp(time.office, time.day),
+                            ),
+                            place: account
+                                .place
+                                .and_then(|key| world.area_map.label_of_key(key))
+                                .map(str::to_string),
+                            register: match &account.origin {
+                                Some(origin) if *origin == account.speaker => {
+                                    "saw it themselves".to_string()
+                                }
+                                Some(origin) => format!("had it from {}", name(origin)),
+                                None => "at second hand or worse".to_string(),
+                            },
+                            lodged: inquiry.lodged.iter().any(|lodged| {
+                                lodged.fact == *fact && lodged.speaker == account.speaker
+                            }),
+                        })
+                        .collect(),
+                }
+            })
+            .collect();
+        let message = EngineMessage::Case { inquiries };
+        if self.last_case.as_ref() != Some(&message) {
+            self.last_case = Some(message.clone());
+            out.push(message);
         }
     }
 

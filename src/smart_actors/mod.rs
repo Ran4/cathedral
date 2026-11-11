@@ -1972,9 +1972,12 @@ fn process_engine_message(
                 hud.toast("Discarded invalid NPC voice failure data");
             }
         }
-        // Both are the host's business and never reach the ECS: `local_engine`
-        // writes the prompt archive and the session log itself.
-        EngineMessage::PromptExchange { .. } | EngineMessage::Diagnostic(_) => {}
+        // The first two are the host's business and never reach the ECS:
+        // `local_engine` writes the prompt archive and the session log itself.
+        // Nothing reads the player's record of an inquiry yet.
+        EngineMessage::PromptExchange { .. }
+        | EngineMessage::Diagnostic(_)
+        | EngineMessage::Case { .. } => {}
     }
 }
 

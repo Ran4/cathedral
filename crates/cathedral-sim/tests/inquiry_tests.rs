@@ -6,18 +6,21 @@
 //! at all. Both have to leave the same account, so these drive both against
 //! [`Engine`] on the demo cast, with an inline case pack and the provider
 //! scripted from the rendered prompt.
+//!
+//! What the player's record of the matter then says, from the first account
+//! to the finding, is the `Case` message, and it is followed here too.
 
 mod prompt_support;
 
 use std::{cell::RefCell, fs, rc::Rc};
 
 use cathedral_sim::fake::sheet_name;
-use cathedral_sim::knowledge::Account;
+use cathedral_sim::knowledge::{self, Account, FactView, Telling};
 use cathedral_sim::{
-    ActorId, Capabilities, Cognition, CognitionBusy, Completion, Engine, EngineCommand,
-    EngineConfig, EngineMessage, FactId, NullSight, NullTranscription, NullTts, RequestId,
-    SpatialActorUpdate, TtsBackendKind, Vec3, World, WorldSeed, fake_reply, inquiry,
-    prompt::render_prompt,
+    ActorId, Capabilities, CaseAccount, CaseFinding, CaseInquiry, Cognition, CognitionBusy,
+    Completion, Engine, EngineCommand, EngineConfig, EngineMessage, FactId, NullSight,
+    NullTranscription, NullTts, RequestId, SpatialActorUpdate, TtsBackendKind, Vec3, World,
+    WorldSeed, fake_reply, inquiry, prompt::render_prompt,
 };
 use prompt_support::{actor, areas, catalog, demo_seed, fixtures_dir, prompt_env, seed_world};
 use serde_json::json;
@@ -199,6 +202,30 @@ impl Harness {
             target_id: actor(target),
             inquiry_id: inquiry_id.to_string(),
         }]);
+    }
+
+    /// The lodge control: the ledger accounts of `speakers`, to the reviewer.
+    fn lodge(&mut self, request_id: &str, speakers: &[&str]) {
+        self.pump(vec![EngineCommand::PlayerLodge {
+            request_id: request_id.to_string(),
+            inquiry_id: INQUIRY.to_string(),
+            accounts: speakers
+                .iter()
+                .map(|speaker| (FactId::from_raw("test.ledger"), actor(speaker)))
+                .collect(),
+        }]);
+    }
+
+    /// The player's record of the ledger matter each time it was sent, oldest
+    /// first. The pack has the one inquiry.
+    fn cases(&self) -> Vec<&CaseInquiry> {
+        self.messages
+            .iter()
+            .filter_map(|message| match message {
+                EngineMessage::Case { inquiries } => Some(&inquiries[0]),
+                _ => None,
+            })
+            .collect()
     }
 
     /// What `speaker` has said aloud, oldest first.
@@ -441,4 +468,186 @@ fn asked_to_fetch_the_reeve_the_addressee_promises_once_and_recounts_nothing() {
     assert_eq!(harness.said(SVEN), [PROMISE]);
     assert!(harness.said(CONNY).is_empty() && harness.said(ILSE).is_empty());
     assert!(accounts(harness.engine.world()).is_empty());
+}
+
+/// Seventy tellings that have nothing to do with the ledger, each of them a
+/// receipt in the player's notes: more than the notes hold.
+fn hear_seventy_other_things(world: &mut World) {
+    let ids: Vec<String> = (0..70).map(|n| format!("test.other{n:02}")).collect();
+    let facts: Vec<_> = ids
+        .iter()
+        .map(|id| {
+            json!({
+                "id": id,
+                "topic": "talk",
+                "said": "the well rope wants splicing",
+                "seeded": [ILSE]
+            })
+        })
+        .collect();
+    inquiry::install(
+        world,
+        &json!({"schema_version": 1, "facts": facts}).to_string(),
+    )
+    .expect("a plain fact pack installs");
+    let days = world.current_time.map(|time| time.game_days());
+    for id in ids {
+        let key = world
+            .knowledge
+            .key_of(&FactId::from_raw(id))
+            .expect("just installed");
+        let telling = Telling {
+            hops: 1,
+            from: Some(actor(ILSE)),
+            heat: 1.0,
+            view: FactView::default(),
+        };
+        knowledge::learn(world, &actor(PLAYER), key, telling, days);
+    }
+}
+
+/// The player's record of a matter, from nothing asked to the finding. Each
+/// account is there with who gave it, when and where, and whose eyes it rests
+/// on. The record is sent when it changes and not otherwise, and a full
+/// turnover of the player's ordinary notes changes nothing in it. The review
+/// is held with nobody doing anything, and what it found arrives on the same
+/// record.
+#[test]
+fn the_case_message_follows_a_matter_from_its_accounts_to_its_finding() {
+    let mut harness = Harness::new();
+    assert_eq!(
+        harness.cases(),
+        [&CaseInquiry {
+            id: INQUIRY.to_string(),
+            title: "The open ledger".to_string(),
+            reviewer: "Ilse".to_string(),
+            review_at: None,
+            finding: None,
+            accounts: Vec::new(),
+        }]
+    );
+
+    // Sven first and Conny a moment later, so the order is the order of
+    // telling and not of their ids.
+    harness.ask("sven", SVEN, INQUIRY);
+    harness.now += CLOCK_STEP_SECONDS;
+    harness.ask("conny", CONNY, INQUIRY);
+    let here = harness
+        .engine
+        .world()
+        .area_map
+        .containing_area(PLAYER_SPAWN)
+        .map(|area| area.label.clone());
+    assert!(here.is_some(), "the player stands in a named place");
+    let overnight = "the ledger was left open on the counter overnight";
+    let account =
+        |speaker: &str, name: &str, day: &str, register: &str, lodged: bool| CaseAccount {
+            fact: FactId::from_raw("test.ledger"),
+            speaker: actor(speaker),
+            speaker_name: name.to_string(),
+            word: format!("{overnight}, {day}"),
+            when: "Dayspring, day 0".to_string(),
+            place: here.clone(),
+            register: register.to_string(),
+            lodged,
+        };
+    let rows = |lodged: bool| {
+        vec![
+            account(SVEN, "Sven", "today", "saw it themselves", lodged),
+            account(CONNY, "Conny", "yesterday", "had it from Sven", lodged),
+        ]
+    };
+    assert_eq!(
+        harness.cases().len(),
+        3,
+        "at the start, then once an account"
+    );
+    assert_eq!(harness.cases()[2].accounts, rows(false));
+
+    hear_seventy_other_things(harness.engine.world_mut());
+    for _ in 0..6 {
+        harness.now += CLOCK_STEP_SECONDS;
+        harness.pump(Vec::new());
+    }
+    let notes = &harness.engine.world().knowledge.player_learned;
+    assert_eq!(notes.len(), knowledge::PLAYER_RECEIPTS_MAX);
+    assert_eq!(harness.cases().len(), 3, "nothing in the record changed");
+
+    harness.lodge("lodge", &[SVEN, CONNY]);
+    assert_eq!(
+        harness.command_result("lodge"),
+        (
+            true,
+            None,
+            "Ilse takes 2 accounts; the review is at the Waning"
+        )
+    );
+    assert_eq!(harness.cases().len(), 4);
+    let awaiting = harness.cases()[3];
+    assert_eq!(awaiting.review_at.as_deref(), Some("the Waning, day 0"));
+    assert_eq!(awaiting.finding, None);
+    assert_eq!(awaiting.accounts, rows(true), "both outlived the turnover");
+
+    // Sixty times faster through the afternoon. Nobody does anything.
+    harness.pump(vec![
+        EngineCommand::CycleTimeScale,
+        EngineCommand::CycleTimeScale,
+    ]);
+    harness.pump_until("the review", |harness| {
+        harness
+            .cases()
+            .last()
+            .is_some_and(|case| case.finding.is_some())
+    });
+    for _ in 0..20 {
+        harness.now += CLOCK_STEP_SECONDS;
+        harness.pump(Vec::new());
+    }
+    let found = "Its keeper left it open and nobody else touched it.";
+    assert_eq!(harness.cases().len(), 5, "the finding, sent once");
+    let reviewed = harness.cases()[4];
+    assert_eq!(reviewed.review_at, None);
+    assert_eq!(
+        reviewed.finding,
+        Some(CaseFinding {
+            full: true,
+            text: found.to_string(),
+            held: "the Waning, day 0".to_string(),
+        })
+    );
+    assert_eq!(reviewed.accounts, rows(true));
+    assert!(harness.has_diagnostic(&format!(
+        "[inquiry] review of '{INQUIRY}' held at the Waning, day 0: {found}"
+    )));
+}
+
+/// A refused lodging comes back through the command's own result, with its
+/// code and its sentence, and the record does not change.
+#[test]
+fn a_refused_lodging_reports_its_reason_and_the_record_does_not_change() {
+    let mut harness = Harness::new();
+    harness.ask("sven", SVEN, INQUIRY);
+    let sent = harness.cases().len();
+
+    harness.lodge("never-asked", &[CONNY]);
+    harness.pump(vec![EngineCommand::SpatialUpdate {
+        spatial_seq: 1,
+        updates: vec![SpatialActorUpdate::new(actor(PLAYER), OUT_OF_EARSHOT, None)],
+    }]);
+    harness.lodge("too-far", &[SVEN]);
+
+    assert_eq!(
+        harness.command_result("never-asked"),
+        (
+            false,
+            Some("invalid_arguments"),
+            "there is no such account in your notes"
+        )
+    );
+    assert_eq!(
+        harness.command_result("too-far"),
+        (false, Some("out_of_range"), "Ilse is not here to take it")
+    );
+    assert_eq!(harness.cases().len(), sent);
+    assert!(harness.engine.world().inquiries[0].lodged.is_empty());
 }

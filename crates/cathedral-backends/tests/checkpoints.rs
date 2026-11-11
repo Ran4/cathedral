@@ -311,16 +311,21 @@ impl City {
     /// The player keeps at Ilse's shoulder, as a player walking with her
     /// would: a fresh spatial update every poll.
     fn follow_ilse(&mut self) -> (EngineCommand, i64) {
+        let command = self.stand_beside(ILSE);
+        (command, self.spatial_seq)
+    }
+
+    /// The spatial update that puts the player at `actor`'s shoulder.
+    fn stand_beside(&mut self, actor: &str) -> EngineCommand {
         self.spatial_seq += 1;
-        let command = EngineCommand::SpatialUpdate {
+        EngineCommand::SpatialUpdate {
             spatial_seq: self.spatial_seq,
             updates: vec![SpatialActorUpdate::new(
                 ActorId::from_raw(PLAYER),
-                self.position_of(ILSE) + Vec3::new(1.2, 0.0, 0.0),
+                self.position_of(actor) + Vec3::new(1.2, 0.0, 0.0),
                 None,
             )],
-        };
-        (command, self.spatial_seq)
+        }
     }
 
     /// Step until `until` holds, failing after `limit` polls.
@@ -454,6 +459,7 @@ fn republished(message: &EngineMessage) -> bool {
             | EngineMessage::ChalkStanding { .. }
             | EngineMessage::WardHeat { .. }
             | EngineMessage::ResidentStates { .. }
+            | EngineMessage::Case { .. }
     )
 }
 
@@ -1050,6 +1056,86 @@ fn an_account_given_before_the_save_is_in_the_restored_notes() {
     let again = accounts(&twins.c);
     assert_eq!(again.len(), 1);
     assert_ne!(again[0].told, given[0].told, "asked again, her row was replaced");
+}
+
+/// Acceptance 7. Two witnesses are asked and their accounts lodged in the
+/// morning, and the save falls before the review at High Wick. The loaded
+/// city holds that review on the same poll as the city that never stopped,
+/// finds the same thing, and neither holds it a second time.
+#[test]
+fn a_lodged_bundle_is_reviewed_once_after_the_restore() {
+    let (witnesses, reviewer) = (["b6clm", "b5ewk"], "bn9et");
+    let scaffold = FactId::from_raw("dev.scaffold");
+    let succeeded = |said: &[EngineMessage], id: &str| {
+        said.iter().any(|message| {
+            matches!(
+                message,
+                EngineMessage::CommandResult { request_id, success: true, .. } if request_id == id
+            )
+        })
+    };
+
+    let mut a = City::with_dev_cases(Office::Dayspring, FAR_CORNER);
+    for witness in witnesses {
+        let beside = a.stand_beside(witness);
+        let ask = EngineCommand::PlayerAsk {
+            request_id: witness.to_string(),
+            target_id: ActorId::from_raw(witness),
+            inquiry_id: "dev_scaffold".to_string(),
+        };
+        let said = a.step(vec![beside, ask]);
+        assert!(succeeded(&said, witness), "{witness} gives an account");
+    }
+    let beside = a.stand_beside(reviewer);
+    let lodge = EngineCommand::PlayerLodge {
+        request_id: "lodge".to_string(),
+        inquiry_id: "dev_scaffold".to_string(),
+        accounts: witnesses
+            .map(|witness| (scaffold.clone(), ActorId::from_raw(witness)))
+            .to_vec(),
+    };
+    let said = a.step(vec![beside, lodge]);
+    assert!(succeeded(&said, "lodge"), "the reviewer takes both");
+    let inquiry = &a.engine.world().inquiries[0];
+    assert_eq!(inquiry.id, "dev_scaffold");
+    assert!(
+        inquiry.review_due.is_some() && inquiry.finding.is_none(),
+        "lodged, and not yet reviewed"
+    );
+
+    let reviews = |said: &[EngineMessage]| {
+        let held = "[inquiry] review of 'dev_scaffold' held at High Wick, day 0: ";
+        said.iter()
+            .filter(|message| {
+                matches!(message, EngineMessage::Diagnostic(line) if line.starts_with(held))
+            })
+            .count()
+    };
+    let findings = |said: &[EngineMessage]| {
+        said.iter()
+            .filter(|message| {
+                matches!(
+                    message,
+                    EngineMessage::Case { inquiries }
+                        if inquiries[0].finding.as_ref().is_some_and(|finding| finding.full)
+                )
+            })
+            .count()
+    };
+    let found = |city: &City| city.engine.world().inquiries[0].finding.clone();
+
+    let mut twins = Twins::split(a);
+    // Dayspring to High Wick is five game hours: 250 polls at sixty times.
+    let mut said = twins.steps(270, sixty_times);
+    assert_eq!((reviews(&said), findings(&said)), (1, 1));
+    let finding = found(&twins.c).expect("the restored city held the review");
+    assert_eq!(Some(&finding), found(&twins.a).as_ref());
+    assert_eq!((finding.accounts, finding.sources), (2, 2));
+    assert!(finding.missing.is_empty(), "two people who were there");
+
+    said.extend(twins.steps(200, none));
+    assert_eq!((reviews(&said), findings(&said)), (1, 1), "held once, told once");
+    assert_eq!(found(&twins.c), Some(finding));
 }
 
 // ------------------------------------------------------------ conservation
