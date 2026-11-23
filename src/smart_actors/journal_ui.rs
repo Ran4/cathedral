@@ -17,8 +17,8 @@ use super::inventory_ui::InventoryUiState;
 
 const SCRIM: Color = Color::srgba(0.01, 0.015, 0.03, 0.55);
 const PANEL_SOLID: Color = Color::srgba(0.025, 0.03, 0.045, 0.96);
-const BUTTON_BG: Color = Color::srgba(0.10, 0.11, 0.15, 1.0);
-const BUTTON_HOVER: Color = Color::srgba(0.19, 0.21, 0.26, 1.0);
+pub(super) const BUTTON_BG: Color = Color::srgba(0.10, 0.11, 0.15, 1.0);
+pub(super) const BUTTON_HOVER: Color = Color::srgba(0.19, 0.21, 0.26, 1.0);
 const TAB_SELECTED_LABEL: Color = Color::srgb(0.09, 0.10, 0.12);
 
 /// The player's receipts, projected by one `process_engine_message` arm and

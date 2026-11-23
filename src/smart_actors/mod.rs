@@ -618,6 +618,7 @@ impl Plugin for SmartActorsPlugin {
                     journal_ui::switch_journal_tab,
                     journal_ui::refresh_journal_ui,
                     case_ui::refresh_case_tab,
+                    case_ui::tint_case_buttons,
                     journal_ui::scroll_journal,
                     journal_ui::update_journal_ui,
                 )
@@ -703,6 +704,14 @@ impl Plugin for SmartActorsPlugin {
                 inventory_ui::handle_inventory_actions
                     .after(inventory_ui::handle_inventory_tile_clicks)
                     .before(inventory_ui::refresh_inventory_ui),
+            )
+            // Likewise the Case tab's buttons, which put asks and lodgings to
+            // the engine; the page itself is drawn by the always-on block.
+            .add_systems(
+                Update,
+                case_ui::case_buttons
+                    .after(journal_ui::switch_journal_tab)
+                    .before(case_ui::refresh_case_tab),
             )
             .add_systems(
                 PostUpdate,
@@ -1946,6 +1955,14 @@ fn process_engine_message(
             if known && !success {
                 let code = truncate_owned(error_code.unwrap_or_else(|| "error".into()), 64);
                 hud.toast(format!("{code}: {}", truncate_owned(message, 260)));
+            } else if case.awaits(&request_id) {
+                // An ask or a lodging from the Case tab. A refusal is the
+                // city's own reason in its own words, so it is shown as it
+                // came; what was granted shows on the tab itself.
+                if !success {
+                    hud.toast(message.clone());
+                }
+                case.settle(&request_id, success, message);
             }
         }
         EngineMessage::Status(status) => apply_status(status, mirror, runtime, hud),
@@ -3911,29 +3928,71 @@ mod tests {
         app.update();
     }
 
+    /// Put the player `metres` from `actor`, as somebody who knows them, where
+    /// the sim measures earshot from. This app's player never moves, so no
+    /// position report of the host's comes to say otherwise. Returns the
+    /// actor's name.
+    fn stand_from(app: &mut App, actor: &str, metres: f64) -> String {
+        let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+        let sim = engine.world_mut().expect("the engine is live");
+        let actor = cathedral_sim::ActorId::from_raw(actor);
+        let player = sim.player_id().expect("one player").clone();
+        let at = sim.characters[&actor].position_m() + cathedral_sim::Vec3::new(metres, 0.0, 0.0);
+        let me = &mut sim.characters.get_mut(&player).unwrap().state;
+        me.position_m = at;
+        me.knows.insert(actor.clone());
+        sim.characters[&actor].sheet.name.clone()
+    }
+
     /// Stand the player at `witness`'s shoulder as somebody who knows them, and
     /// have the witness recount `fact`. Returns the witness's name and the
     /// stamp of the telling.
     fn stage_account(app: &mut App, witness: &str, fact: &str) -> (String, String) {
+        let name = stand_from(app, witness, 1.2);
         let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
         let sim = engine.world_mut().expect("the engine is live");
-        let witness = cathedral_sim::ActorId::from_raw(witness);
-        let player = sim.player_id().expect("one player").clone();
-        let beside =
-            sim.characters[&witness].position_m() + cathedral_sim::Vec3::new(1.2, 0.0, 0.0);
-        let me = &mut sim.characters.get_mut(&player).unwrap().state;
-        me.position_m = beside;
-        me.knows.insert(witness.clone());
         let key = sim
             .knowledge
             .key_of(&cathedral_sim::FactId::from_raw(fact))
             .expect("the pack's fact");
-        cathedral_sim::knowledge::recount(sim, &witness, key).expect("a witness in earshot");
+        cathedral_sim::knowledge::recount(sim, &cathedral_sim::ActorId::from_raw(witness), key)
+            .expect("a witness in earshot");
         let now = sim.current_time.expect("the clock runs");
-        (
-            sim.characters[&witness].sheet.name.clone(),
-            format!("{}, day {}", now.office.label(), now.day),
-        )
+        (name, format!("{}, day {}", now.office.label(), now.day))
+    }
+
+    /// Rest the crosshair on `actor`, or on nobody. The focus pass runs after
+    /// the page's buttons and aims from this app's fixed camera, so this holds
+    /// for the next frame only.
+    fn face(app: &mut App, actor: Option<&str>) {
+        app.world_mut().resource_mut::<ActorFocus>().actor =
+            actor.map(|id| targeting::FocusedActor {
+                actor_id: model::ActorId(id.into()),
+                entity: Entity::PLACEHOLDER,
+                ray_distance_m: 1.2,
+                body_distance_m: 1.2,
+            });
+    }
+
+    fn picks(app: &App) -> usize {
+        app.world().resource::<case_ui::PlayerCase>().picked.len()
+    }
+
+    /// How many lines on screen end with `mark`.
+    fn marked(app: &mut App, mark: &str) -> usize {
+        texts(app)
+            .iter()
+            .filter(|text| text.ends_with(mark))
+            .count()
+    }
+
+    /// The overlay's own notice line, while it is on show.
+    fn overlay_notice(app: &mut App) -> Option<String> {
+        let world = app.world_mut();
+        let mut notices =
+            world.query_filtered::<(&Text, &Node), With<journal_ui::JournalNoticeText>>();
+        let (text, node) = notices.single(world).expect("the overlay's notice line");
+        (node.display == Display::Flex).then(|| text.0.clone())
     }
 
     /// Put a partial finding on the first matter, as a review held now would.
@@ -4017,6 +4076,233 @@ mod tests {
             "{shown:?}"
         );
         assert!(shown.iter().any(|text| text.starts_with(&row)), "{shown:?}");
+    }
+
+    /// M4 acceptance 1, by the control: with a witness under the crosshair and
+    /// in earshot, the Case tab's ask button puts their account under the
+    /// matter and their answer in the request list, and nobody has to speak.
+    /// With nobody faced it says what it needs and asks nothing.
+    #[test]
+    fn the_ask_control_records_the_account_of_whoever_the_player_faces() {
+        let mut app = ready_dev_case_app_saving_to(test_saves_dir());
+        update_until(&mut app, "the matters", |app| matters(app).len() == 2);
+        tap_overlay_key(&mut app, journal_key());
+        click(&mut app, "Journal tab: Case");
+
+        let name = stand_from(&mut app, "b6clm", 1.2);
+        // The control names her as the projection does when it is pressed.
+        let as_faced = app
+            .world()
+            .resource::<model::WorldMirror>()
+            .actor(&model::ActorId("b6clm".into()))
+            .expect("she is in the city")
+            .name_for_player
+            .clone();
+        face(&mut app, Some("b6clm"));
+        click(&mut app, "Case ask: dev_scaffold");
+        let shown = texts(&mut app);
+        for line in [
+            format!("Ask {as_faced} about this"),
+            format!(
+                "PENDING — Asking {as_faced} about “The scaffold pole that fell behind the lodge”"
+            ),
+        ] {
+            assert!(shown.contains(&line), "{line}: {shown:?}");
+        }
+
+        update_until(&mut app, "her account", |app| {
+            !matters(app)[0].accounts.is_empty()
+        });
+        let account = matters(&app)[0].accounts[0].clone();
+        assert_eq!(account.speaker_name, name);
+        assert!(account.word.contains("scaffold pole"), "{account:?}");
+        let answer = format!("DONE — {name} tells you: \"{}\"", account.word);
+        update_until(&mut app, "her answer in the request list", |app| {
+            texts(app).contains(&answer)
+        });
+        let shown = texts(&mut app);
+        let row = format!("{name} — ");
+        assert!(
+            shown
+                .iter()
+                .any(|text| text.starts_with(&row) && text.ends_with(" — saw it themselves")),
+            "{shown:?}"
+        );
+        assert!(shown.contains(&format!("“{}”", account.word)), "{shown:?}");
+        assert!(
+            !shown.iter().any(|text| text.starts_with("PENDING")),
+            "{shown:?}"
+        );
+        assert!(
+            !toast(&app).is_some_and(|text| text.contains("tells you")),
+            "an answer is on the tab, not in a toast"
+        );
+
+        face(&mut app, None);
+        click(&mut app, "Case ask: dev_barrow");
+        assert_eq!(toast(&app).as_deref(), Some("Face someone to ask them"));
+        assert_eq!(
+            app.world().resource::<case_ui::PlayerCase>().requests.len(),
+            1
+        );
+    }
+
+    /// M4 acceptance 2, at the lodge control, and the draft it keeps. Picked
+    /// accounts are marked and counted; a lodging the reviewer is not there to
+    /// take is refused in the city's own words, on the HUD and in the overlay,
+    /// and the picks outlive it, the overlay closing and a turn of the page.
+    /// Beside the reviewer the same picks are taken, a review is dated and the
+    /// draft is spent.
+    #[test]
+    fn a_refused_lodging_keeps_the_picks_and_the_reviewer_takes_them_when_there() {
+        let mut app = ready_dev_case_app_saving_to(test_saves_dir());
+        stage_account(&mut app, "b6clm", "dev.scaffold");
+        stage_account(&mut app, "b5ewk", "dev.scaffold");
+        update_until(&mut app, "both accounts", |app| {
+            matters(app)
+                .first()
+                .is_some_and(|matter| matter.accounts.len() == 2)
+        });
+        tap_overlay_key(&mut app, journal_key());
+        click(&mut app, "Journal tab: Case");
+
+        click(&mut app, "Case lodge: dev_scaffold");
+        assert_eq!(
+            toast(&app).as_deref(),
+            Some("Pick the accounts to lodge first")
+        );
+        click(&mut app, "Case account: dev.scaffold b6clm");
+        click(&mut app, "Case account: dev.scaffold b5ewk");
+        assert_eq!(picks(&app), 2);
+        assert_eq!(marked(&mut app, " — PICKED"), 2);
+
+        // Sixty metres from the reviewer.
+        let reviewer = stand_from(&mut app, "bn9et", 60.0);
+        update_until(&mut app, "the reviewer by name", |app| {
+            matters(app)[0].reviewer == reviewer
+        });
+        let lodge = format!("Lodge 2 with {reviewer}");
+        update_until(&mut app, "the count on the lodge control", |app| {
+            texts(app).contains(&lodge)
+        });
+        stand_from(&mut app, "bn9et", 60.0);
+        click(&mut app, "Case lodge: dev_scaffold");
+        let pending = format!(
+            "PENDING — Lodging 2 with {reviewer} about “The scaffold pole that fell behind the \
+             lodge”"
+        );
+        let shown = texts(&mut app);
+        assert!(shown.contains(&pending), "{shown:?}");
+        let refusal = format!("{reviewer} is not here to take it");
+        update_until(&mut app, "the refusal in the overlay", |app| {
+            overlay_notice(app).as_deref() == Some(refusal.as_str())
+        });
+        assert_eq!(toast(&app).as_deref(), Some(refusal.as_str()));
+        let broken_off = format!("BROKEN OFF — {refusal}");
+        let shown = texts(&mut app);
+        assert!(shown.contains(&broken_off), "{shown:?}");
+        assert_eq!(picks(&app), 2, "a refusal keeps the draft");
+        assert!(matters(&app)[0].review_at.is_none());
+
+        // Close the journal, open it again, turn to the other page and back.
+        tap_overlay_key(&mut app, journal_key());
+        assert!(!app.world().resource::<JournalUiState>().open);
+        tap_overlay_key(&mut app, journal_key());
+        click(&mut app, "Journal tab: Words");
+        click(&mut app, "Case account: dev.scaffold b6clm");
+        assert_eq!(
+            picks(&app),
+            2,
+            "the page that is not on show takes no presses"
+        );
+        click(&mut app, "Journal tab: Case");
+        assert_eq!(picks(&app), 2);
+        assert_eq!(marked(&mut app, " — PICKED"), 2);
+
+        // At the reviewer's shoulder.
+        stand_from(&mut app, "bn9et", 1.2);
+        click(&mut app, "Case lodge: dev_scaffold");
+        let review = format!("Reviewer: {reviewer} — review at High Wick, day ");
+        update_until(&mut app, "the dated review", |app| {
+            texts(app).iter().any(|text| text.starts_with(&review))
+        });
+        update_until(&mut app, "the draft spent", |app| picks(app) == 0);
+        app.update();
+        let shown = texts(&mut app);
+        assert_eq!(marked(&mut app, " — LODGED"), 2, "{shown:?}");
+        assert_eq!(marked(&mut app, " — PICKED"), 0, "{shown:?}");
+        assert!(
+            shown.contains(&format!("Lodge 0 with {reviewer}")),
+            "{shown:?}"
+        );
+        assert!(shown.contains(&broken_off), "{shown:?}");
+        assert!(
+            !shown.iter().any(|text| text.starts_with("PENDING")),
+            "{shown:?}"
+        );
+    }
+
+    /// M4 acceptance 3 and 4, at the screen. Two people repeating one witness
+    /// are lodged from the Case tab, and the review comes round while the
+    /// player has the journal open on the other page: the sim does not wait,
+    /// and the Case tab then reports a partial finding that counts the two
+    /// accounts as one source.
+    #[test]
+    fn a_review_held_while_the_words_page_is_open_is_on_the_case_tab_afterwards() {
+        let mut app = ready_dev_case_app_saving_to(test_saves_dir());
+        stage_account(&mut app, "b6clm", "dev.barrow");
+        stage_account(&mut app, "b5ewk", "dev.barrow");
+        update_until(&mut app, "both retellings", |app| {
+            matters(app)
+                .get(1)
+                .is_some_and(|matter| matter.accounts.len() == 2)
+        });
+        tap_overlay_key(&mut app, journal_key());
+        click(&mut app, "Journal tab: Case");
+        click(&mut app, "Case account: dev.barrow b6clm");
+        click(&mut app, "Case account: dev.barrow b5ewk");
+        let reviewer = stand_from(&mut app, "bn9et", 1.2);
+        click(&mut app, "Case lodge: dev_barrow");
+        update_until(&mut app, "the dated review", |app| {
+            matters(app)[1].review_at.is_some()
+        });
+
+        click(&mut app, "Journal tab: Words");
+        {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let sim = engine.world_mut().expect("the engine is live");
+            let now = sim.current_time.expect("the clock runs").game_days();
+            sim.inquiries[1].review_due = Some(now + 1e-6);
+        }
+        update_until(&mut app, "the review", |app| {
+            matters(app)[1].finding.is_some()
+        });
+        let journal = app.world().resource::<JournalUiState>();
+        assert!(journal.open && journal.tab == journal_ui::JournalTab::Words);
+
+        click(&mut app, "Journal tab: Case");
+        let finding = matters(&app)[1]
+            .finding
+            .clone()
+            .expect("the review was held");
+        assert!(!finding.full);
+        assert_eq!(
+            finding.text,
+            "Not established. 2 accounts read, from 1 source. Still wanting: a further account \
+             that does not trace back to the same person; the word of someone who was there, to \
+             settle accounts that disagree."
+        );
+        let shown = texts(&mut app);
+        for line in [
+            format!("Reviewed at {}: {}", finding.held, finding.text),
+            format!("Reviewer: {reviewer}"),
+        ] {
+            assert!(shown.contains(&line), "{line}: {shown:?}");
+        }
+        assert_eq!(marked(&mut app, " — LODGED"), 2, "{shown:?}");
+        let world = app.world_mut();
+        let mut page = world.query_filtered::<&Node, With<journal_ui::CaseEntriesRoot>>();
+        assert_eq!(page.single(world).unwrap().display, Display::Flex);
     }
 
     /// A load puts the saved city's record on the Case tab (D06): what the

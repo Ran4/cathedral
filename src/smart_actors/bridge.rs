@@ -189,6 +189,22 @@ pub enum BridgeCommand {
         request_id: String,
         item_id: ItemId,
     },
+    /// The Case tab's ask control: whoever the player is facing gives their
+    /// account of one matter, and nothing is said aloud. It carries no
+    /// position; the engine reads where the last spatial update left the player.
+    PlayerAsk {
+        request_id: String,
+        target_id: ActorId,
+        inquiry_id: String,
+    },
+    /// The Case tab's lodge control: hand picked accounts to a matter's
+    /// reviewer. Each of `accounts` is the fact and the speaker of one
+    /// [`cathedral_sim::CaseAccount`], carried back untouched.
+    PlayerLodge {
+        request_id: String,
+        inquiry_id: String,
+        accounts: Vec<(cathedral_sim::FactId, cathedral_sim::ActorId)>,
+    },
     /// Fire-and-forget deliberate player noise (the F key). No request_id and
     /// no command_result: there is no failure the player can act on, and
     /// rate-limited sounds are dropped silently at the engine.

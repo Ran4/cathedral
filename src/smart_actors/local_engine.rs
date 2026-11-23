@@ -1501,6 +1501,24 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             request_id,
             item_id: SimItemId::from_raw(item_id.0),
         },
+        BridgeCommand::PlayerAsk {
+            request_id,
+            target_id,
+            inquiry_id,
+        } => EngineCommand::PlayerAsk {
+            request_id,
+            target_id: SimActorId::from_raw(target_id.0),
+            inquiry_id,
+        },
+        BridgeCommand::PlayerLodge {
+            request_id,
+            inquiry_id,
+            accounts,
+        } => EngineCommand::PlayerLodge {
+            request_id,
+            inquiry_id,
+            accounts,
+        },
         BridgeCommand::PlayerSound { sound_id } => EngineCommand::PlayerSound { sound_id },
         BridgeCommand::PlayerGrabbed { holder_id } => EngineCommand::PlayerGrabbed {
             holder_id: SimActorId::from_raw(holder_id.0),
