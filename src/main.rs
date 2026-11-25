@@ -65,16 +65,6 @@ fn main() {
     if std::env::var_os("CATHEDRAL_NO_KNOWLEDGE").is_some() {
         config.smart_actors.knowledge.enabled = false;
     }
-    // Case packs for one run: comma-separated paths under `assets/`, in place
-    // of whatever config.ron lists.
-    if let Ok(packs) = std::env::var("CATHEDRAL_CASE_PACKS") {
-        config.smart_actors.knowledge.case_packs = packs
-            .split(',')
-            .map(str::trim)
-            .filter(|path| !path.is_empty())
-            .map(str::to_string)
-            .collect();
-    }
     if std::env::var_os("CATHEDRAL_NO_VERMIN").is_some() {
         config.vermin.enabled = false;
     }
@@ -90,10 +80,12 @@ fn main() {
             ),
         }
     }
-    let smart_actors = config.smart_actors.clone();
+    let (smart_actors, persisted) = for_this_run(
+        &config,
+        std::env::var("CATHEDRAL_CASE_PACKS").ok().as_deref(),
+    );
     let weather = config.weather.clone();
     let vermin = config.vermin.clone();
-    let persisted = PersistedConfig(config.clone());
     let drive = drive::DrivePlugin::from_env();
     // A headless run renders, drives and screenshots exactly as usual — the
     // window is simply never mapped, so nothing appears on screen and nothing
@@ -218,6 +210,29 @@ fn main() {
     app.run();
 }
 
+/// The actors plugin's settings for this run, beside the configuration a
+/// backend switch writes back to `config.ron`.
+///
+/// `case_packs` is `CATHEDRAL_CASE_PACKS`: comma-separated paths under
+/// `assets/`, in place of whatever config.ron lists. It goes into the plugin's
+/// copy alone, so a pack laid on for one run is not in the file after the next
+/// change of voice or transcription backend rewrites it.
+fn for_this_run(
+    config: &config::AppConfig,
+    case_packs: Option<&str>,
+) -> (smart_actors::SmartActorsConfig, PersistedConfig) {
+    let mut smart_actors = config.smart_actors.clone();
+    if let Some(packs) = case_packs {
+        smart_actors.knowledge.case_packs = packs
+            .split(',')
+            .map(str::trim)
+            .filter(|path| !path.is_empty())
+            .map(str::to_string)
+            .collect();
+    }
+    (smart_actors, PersistedConfig(config.clone()))
+}
+
 /// How many threads the ECS scheduler gets.
 ///
 /// Bevy's default takes the whole machine — here 12 compute threads plus 4
@@ -274,5 +289,26 @@ mod tests {
             window_mode(AppConfig::default().fullscreen),
             WindowMode::BorderlessFullscreen(_)
         ));
+    }
+
+    /// A pack laid on for one run reaches the plugin and stays out of what a
+    /// backend switch saves, and with no override the file's own list stands.
+    #[test]
+    fn a_one_run_case_pack_reaches_the_plugin_and_not_config_ron() {
+        let mut config = AppConfig::default();
+        config.smart_actors.knowledge.case_packs = vec!["world/kept.json".to_string()];
+
+        let (actors, persisted) = for_this_run(&config, Some("world/dev_cases.json, ,b.json"));
+        assert_eq!(
+            actors.knowledge.case_packs,
+            ["world/dev_cases.json", "b.json"]
+        );
+        assert_eq!(
+            persisted.0.smart_actors.knowledge.case_packs,
+            ["world/kept.json"]
+        );
+
+        let (actors, _) = for_this_run(&config, None);
+        assert_eq!(actors.knowledge.case_packs, ["world/kept.json"]);
     }
 }

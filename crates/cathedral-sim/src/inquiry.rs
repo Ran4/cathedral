@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::clock::{Office, WorldTime};
 use crate::error::{ActionError, ActionErrorCode};
 use crate::ids::{ActorId, FactId, FactKey};
-use crate::knowledge::catalog::{RawFact, parse_fact};
+use crate::knowledge::catalog::{FactSourceSpec, RawFact, parse_fact};
 use crate::knowledge::{
     self, DAY_OFFSET_MAX, FactCatalog, FactSpec, FactView, KNOWN_SHEET_MAX, Telling,
 };
@@ -181,6 +181,15 @@ pub fn install(world: &mut World, json: &str) -> Result<(), String> {
                 world,
                 format_args!("facts[{index}].subject"),
                 actor.as_str(),
+            )?;
+        }
+        // The other bindings need no pass here: an item nobody holds comes
+        // back from `seed` below, and a quest phase names nobody.
+        if let FactSourceSpec::Custody(who) = &spec.source {
+            person(
+                world,
+                format_args!("facts[{index}].source.custody"),
+                who.as_str(),
             )?;
         }
         if let Some(place) = &spec.place
@@ -351,7 +360,8 @@ pub fn install(world: &mut World, json: &str) -> Result<(), String> {
 
     let catalog = FactCatalog::from_specs(specs);
     // Everything `seed` would skip was refused above, so a diagnostic here is
-    // the store being full or a source bound to nothing, and both are refusals.
+    // the store being full or an item source in nobody's hands, and both are
+    // refusals.
     if let Some(line) = catalog.seed(world).into_iter().next() {
         return Err(line);
     }
@@ -361,10 +371,16 @@ pub fn install(world: &mut World, json: &str) -> Result<(), String> {
             .knowledge
             .key_of(id)
             .ok_or_else(|| format!("fact '{id}' was not installed"))?;
-        // No clock on the telling: a retelling the world begins with never
-        // cools, so it is the last thing ordinary gossip crowds out of its
-        // holder.
-        knowledge::learn(world, &by, key, telling, None);
+        // The telling takes its witnesses' clock. A standing fact has none, so
+        // its retelling never cools and is the last thing ordinary gossip
+        // crowds out of its holder. News cools from the fact's mint stamp;
+        // without it the holder would repeat it at full heat for the whole run.
+        let learned_on = world
+            .knowledge
+            .fact(key)
+            .filter(|fact| fact.decays)
+            .and_then(|fact| fact.minted_game_days);
+        knowledge::learn(world, &by, key, telling, learned_on);
     }
     world.inquiries.extend(inquiries);
     Ok(())
@@ -901,6 +917,49 @@ mod tests {
         );
     }
 
+    /// A custody binding is a reference like the others. Bound to the keeping
+    /// of nobody, the fact would install and then be dropped as no longer so.
+    #[test]
+    fn a_custody_source_naming_nobody_is_refused() {
+        let error = refused(|pack| pack["facts"][0]["source"] = json!({"custody": "zz999"}));
+        assert_eq!(
+            error,
+            "facts[0].source.custody 'zz999' is not a person in this world"
+        );
+    }
+
+    /// News somebody was told cools as it does for the one who was there. With
+    /// no clock on the retelling its holder would repeat it at full heat for
+    /// the whole run.
+    #[test]
+    fn a_retelling_of_news_cools_with_its_witness() {
+        let mut world = world();
+        world.current_time = Some(clock().at(0.0));
+        let pack = json!({
+            "schema_version": 1,
+            "facts": [{
+                "id": "test.ford",
+                "topic": "talk",
+                "said": "the ford is running high",
+                "seeded": ["ada"]
+            }],
+            "retold": [{"fact": "test.ford", "by": "cob", "from": "ada", "day_offset": 0}]
+        });
+        install(&mut world, &pack.to_string()).expect("a plain fact pack installs");
+
+        let fact = FactId::from_raw("test.ford");
+        let heat = |who: &str, game_days: f64| {
+            knowledge::holds(&world, &actor(who), &fact)
+                .expect("they hold the news")
+                .heat(Some(game_days))
+        };
+        let minted = world.current_time.expect("clocked above").game_days();
+        assert_eq!(heat("cob", minted), 1.0);
+        let next_day = minted + 1.0;
+        assert!(heat("cob", next_day) < 1.0, "the retelling cools");
+        assert_eq!(heat("cob", next_day), heat("ada", next_day));
+    }
+
     #[test]
     fn a_retelling_from_somebody_who_does_not_hold_the_fact_is_refused() {
         let error = refused(|pack| pack["retold"][0]["from"] = "rev".into());
@@ -1044,7 +1103,7 @@ mod tests {
     fn asking_records_the_targets_account_and_tells_them_so() {
         let mut world = asked_world();
         let told = ask(&mut world, &actor("cob"), "test_cart").expect("cob holds it");
-        let word = "the cart went over at the ford at some point with nobody on the box";
+        let word = "the cart went over at the ford on day -1 with nobody on the box";
         assert_eq!(told, format!("A stranger (id cob) tells you: \"{word}\""));
 
         let accounts = &world.knowledge.player_learned[&FactId::from_raw("test.cart")].accounts;
@@ -1053,11 +1112,10 @@ mod tests {
             (
                 accounts[0].speaker.as_str(),
                 accounts[0].origin.as_ref().map(ActorId::as_str),
-                accounts[0].hops,
                 accounts[0].view.day_offset,
                 accounts[0].word.as_str()
             ),
-            ("cob", Some("ada"), 1, -1, word)
+            ("cob", Some("ada"), -1, word)
         );
         let asked = "A stranger (id player) asked you about \"The cart at the ford\", and you told \
                      them what you know of it.";
@@ -1259,6 +1317,43 @@ mod tests {
         let finding = reviewed(&world);
         assert_eq!((finding.accounts, finding.sources), (4, 2));
         assert!(finding.missing.is_empty());
+    }
+
+    /// Two rules of the count that no pack-built bundle above reaches. An
+    /// account nobody can trace is read and is no source, not even its own
+    /// speaker. And two people repeating one witness want another source, but
+    /// while they tell it alike there is nothing between them to settle.
+    #[test]
+    fn an_untraceable_account_is_no_source_and_agreeing_retellings_want_no_settling() {
+        let mut world = lodging_world();
+        let held = world.current_time.expect("a clocked world");
+        let lodged = |speaker: &str, origin: Option<&str>| Lodged {
+            fact: FactId::from_raw("test.cart"),
+            speaker: actor(speaker),
+            origin: origin.map(actor),
+            view: FactView::default(),
+        };
+        let wanting_a_source = "Still wanting: a further account that does not trace back to the \
+                                same person.";
+
+        let inquiry = &mut world.inquiries[0];
+        inquiry.lodged = vec![lodged("cob", None), lodged("dan", None)];
+        let finding = evaluate(inquiry, held);
+        assert_eq!((finding.accounts, finding.sources), (2, 0));
+        assert_eq!(finding.missing, [Support::IndependentSource]);
+        assert_eq!(
+            finding_text(inquiry, &finding),
+            format!("Not established. 2 accounts read, from no sources. {wanting_a_source}")
+        );
+
+        inquiry.lodged = vec![lodged("cob", Some("ada")), lodged("dan", Some("ada"))];
+        let finding = evaluate(inquiry, held);
+        assert_eq!((finding.accounts, finding.sources), (2, 1));
+        assert_eq!(finding.missing, [Support::IndependentSource]);
+        assert_eq!(
+            finding_text(inquiry, &finding),
+            format!("Not established. 2 accounts read, from 1 source. {wanting_a_source}")
+        );
     }
 
     /// Each refusal has its own sentence, and one bad pick refuses the good

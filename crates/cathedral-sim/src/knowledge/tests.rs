@@ -2044,6 +2044,9 @@ fn accounts<'a>(world: &'a World, fact: &str) -> &'a [Account] {
 
 /// Each speaker's account is their own version of it, a second speaker adds a
 /// second row, and asking somebody again replaces their row where it stands.
+/// The day an account names is written as a date, so the witness asked again
+/// a day later says the same sentence, and it never reads like the version
+/// that has the day wrong.
 #[test]
 fn each_speaker_gives_one_account_and_a_re_ask_replaces_it_in_place() {
     let mut world = account_world(&["ada", "cob"]);
@@ -2051,9 +2054,9 @@ fn each_speaker_gives_one_account_and_a_re_ask_replaces_it_in_place() {
     retold(&mut world, "cob", key, 1, Some("ada"), -1);
 
     let witness = recount(&mut world, &actor("ada"), key).expect("ada was there");
-    assert_eq!(witness, "the cart went over at the ford, today");
+    assert_eq!(witness, "the cart went over at the ford, on day 0");
     let reteller = recount(&mut world, &actor("cob"), key).expect("cob was told");
-    assert_eq!(reteller, "the cart went over at the ford, yesterday");
+    assert_eq!(reteller, "the cart went over at the ford, on day -1");
 
     let first_asked = world.current_time;
     let place = world.knowledge.player_learned[&FactId::from_raw("test.cart")].place;
@@ -2063,7 +2066,6 @@ fn each_speaker_gives_one_account_and_a_re_ask_replaces_it_in_place() {
             Account {
                 speaker: actor("ada"),
                 origin: Some(actor("ada")),
-                hops: 0,
                 view: FactView::default(),
                 word: witness,
                 told: first_asked,
@@ -2072,7 +2074,6 @@ fn each_speaker_gives_one_account_and_a_re_ask_replaces_it_in_place() {
             Account {
                 speaker: actor("cob"),
                 origin: Some(actor("ada")),
-                hops: 1,
                 view: FactView {
                     day_offset: -1,
                     ..FactView::default()
@@ -2096,13 +2097,21 @@ fn each_speaker_gives_one_account_and_a_re_ask_replaces_it_in_place() {
         ),
         (
             "ada",
-            "the cart went over at the ford, yesterday",
+            "the cart went over at the ford, on day 0",
             world.current_time
         )
     );
     assert_eq!(
-        (rows[1].speaker.as_str(), rows[1].told),
-        ("cob", first_asked)
+        (
+            rows[1].speaker.as_str(),
+            rows[1].word.as_str(),
+            rows[1].told
+        ),
+        (
+            "cob",
+            "the cart went over at the ford, on day -1",
+            first_asked
+        )
     );
 }
 

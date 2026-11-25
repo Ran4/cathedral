@@ -8058,9 +8058,10 @@ const FAMISHED_PRESSURE: &str =
 const ROAD_RETURN_PRESSURE: &str =
     "system: the road party is leaving — you must go to the gate; excuse yourself.";
 /// A round leg or a lamp beat that came due while its owner was held in talk:
-/// the bell of a new office rang mid-conversation ([`run_ladder`]).
+/// the bell of a new office rang mid-conversation ([`run_ladder`]). It names no
+/// destination, because the leg that came due may be the walk home to dinner.
 const DUTY_PRESSURE: &str =
-    "system: the bell has rung and your work is waiting — excuse yourself and go.";
+    "system: the bell has rung and you are due elsewhere — excuse yourself and go.";
 
 /// Minimum rain intensity this actor waits out once they have taken cover.
 /// The threshold is chosen from semantic severity and occupation, while the

@@ -239,15 +239,18 @@ impl SmartActorHudState {
         self.set_player_transcript(format!("You: {transcript}"));
     }
 
-    pub fn show_player_transcript_delivery(&mut self, transcript: &str, recipients: usize) {
+    /// `witnesses` are the listeners who could see the player speak. Somebody
+    /// with their back turned hears and may answer and is not counted, so the
+    /// caption never says that nobody heard.
+    pub fn show_player_transcript_delivery(&mut self, transcript: &str, witnesses: usize) {
         let transcript = transcript.trim();
         if transcript.is_empty() {
             return;
         }
-        let delivery = match recipients {
-            0 => "nobody nearby".to_string(),
-            1 => "heard by 1 nearby person".to_string(),
-            count => format!("heard by {count} nearby people"),
+        let delivery = match witnesses {
+            0 => "nobody looking your way".to_string(),
+            1 => "heard by 1 person looking your way".to_string(),
+            count => format!("heard by {count} people looking your way"),
         };
         self.set_player_transcript(format!("You: {transcript}  ·  {delivery}"));
     }
@@ -1108,10 +1111,17 @@ mod tests {
             Some("Another event happened")
         );
 
+        // Nobody counted is nobody who saw it said. A listener facing away
+        // still heard, so the caption must not deny them.
         state.show_player_transcript_delivery("Hello?", 0);
         assert_eq!(
             state.player_transcript_text(),
-            Some("You: Hello?  ·  nobody nearby")
+            Some("You: Hello?  ·  nobody looking your way")
+        );
+        state.show_player_transcript_delivery("Hello?", 1);
+        assert_eq!(
+            state.player_transcript_text(),
+            Some("You: Hello?  ·  heard by 1 person looking your way")
         );
     }
 

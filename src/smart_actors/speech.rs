@@ -67,7 +67,7 @@ pub struct PresentSpeech {
     pub text: String,
     pub speaker_position: Vec3,
     /// The listeners who could also see the speaker: the player's own caption
-    /// reports it as "heard by N nearby people".
+    /// reports it as "heard by N people looking your way".
     pub recipient_count: usize,
     pub expect_audio: bool,
 }
@@ -1779,7 +1779,7 @@ mod tests {
             app.world()
                 .resource::<SmartActorHudState>()
                 .player_transcript_text(),
-            Some("You: Can anyone hear me?  ·  heard by 3 nearby people")
+            Some("You: Can anyone hear me?  ·  heard by 3 people looking your way")
         );
     }
 

@@ -283,8 +283,8 @@ impl Harness {
 fn a_typed_question_and_the_ask_control_record_the_same_account() {
     let overnight = "the ledger was left open on the counter overnight";
     for (speaker, name, word) in [
-        (SVEN, "Sven", format!("{overnight}, today")),
-        (CONNY, "Conny", format!("{overnight}, yesterday")),
+        (SVEN, "Sven", format!("{overnight}, on day 0")),
+        (CONNY, "Conny", format!("{overnight}, on day -1")),
     ] {
         let mut typed = Harness::new();
         typed.say(&format!("{name}, what of the ledger?"), PLAYER_SPAWN);
@@ -510,8 +510,8 @@ fn hear_seventy_other_things(world: &mut World) {
 /// account is there with who gave it, when and where, and whose eyes it rests
 /// on. The record is sent when it changes and not otherwise, and a full
 /// turnover of the player's ordinary notes changes nothing in it. The review
-/// is held with nobody doing anything, and what it found arrives on the same
-/// record.
+/// is held with nobody doing anything and the player gone out of the
+/// reviewer's earshot, and what it found arrives on the same record.
 #[test]
 fn the_case_message_follows_a_matter_from_its_accounts_to_its_finding() {
     let mut harness = Harness::new();
@@ -553,8 +553,8 @@ fn the_case_message_follows_a_matter_from_its_accounts_to_its_finding() {
         };
     let rows = |lodged: bool| {
         vec![
-            account(SVEN, "Sven", "today", "saw it themselves", lodged),
-            account(CONNY, "Conny", "yesterday", "had it from Sven", lodged),
+            account(SVEN, "Sven", "on day 0", "saw it themselves", lodged),
+            account(CONNY, "Conny", "on day -1", "had it from Sven", lodged),
         ]
     };
     assert_eq!(
@@ -588,8 +588,14 @@ fn the_case_message_follows_a_matter_from_its_accounts_to_its_finding() {
     assert_eq!(awaiting.finding, None);
     assert_eq!(awaiting.accounts, rows(true), "both outlived the turnover");
 
-    // Sixty times faster through the afternoon. Nobody does anything.
+    // Sixty times faster through the afternoon. Nobody does anything, and the
+    // player has walked off: lodging needed the reviewer's ear, the review
+    // does not need the player's.
     harness.pump(vec![
+        EngineCommand::SpatialUpdate {
+            spatial_seq: 1,
+            updates: vec![SpatialActorUpdate::new(actor(PLAYER), OUT_OF_EARSHOT, None)],
+        },
         EngineCommand::CycleTimeScale,
         EngineCommand::CycleTimeScale,
     ]);
@@ -599,6 +605,14 @@ fn the_case_message_follows_a_matter_from_its_accounts_to_its_finding() {
             .last()
             .is_some_and(|case| case.finding.is_some())
     });
+    let people = &harness.engine.world().characters;
+    let apart = people[&actor(PLAYER)]
+        .position_m()
+        .distance(people[&actor(ILSE)].position_m());
+    assert!(
+        apart > cathedral_sim::HEARING_RADIUS_M,
+        "the review was held with the player {apart:.1} m from the reviewer"
+    );
     for _ in 0..20 {
         harness.now += CLOCK_STEP_SECONDS;
         harness.pump(Vec::new());
@@ -619,6 +633,58 @@ fn the_case_message_follows_a_matter_from_its_accounts_to_its_finding() {
     assert!(harness.has_diagnostic(&format!(
         "[inquiry] review of '{INQUIRY}' held at the Waning, day 0: {found}"
     )));
+}
+
+/// Somebody who cannot say whose eyes their version rests on gives an account
+/// all the same. The record shows it resting on nobody, and a review reads it
+/// and counts no source from it.
+#[test]
+fn an_account_nobody_can_trace_is_recorded_as_such_and_is_no_source() {
+    let mut harness = Harness::new();
+    let world = harness.engine.world_mut();
+    let key = world
+        .knowledge
+        .key_of(&FactId::from_raw("test.ledger"))
+        .expect("the pack's fact");
+    // Ilse had it at two removes, from Conny.
+    let telling = Telling {
+        hops: 2,
+        from: Some(actor(CONNY)),
+        heat: 1.0,
+        view: FactView::default(),
+    };
+    knowledge::learn(world, &actor(ILSE), key, telling, None);
+
+    harness.ask("ilse", ILSE, INQUIRY);
+    let record = harness.cases().last().copied();
+    let rows = &record.expect("the record was sent").accounts;
+    assert_eq!(rows.len(), 1);
+    assert_eq!(
+        (rows[0].speaker_name.as_str(), rows[0].register.as_str()),
+        ("Ilse", "at second hand or worse")
+    );
+
+    harness.lodge("lodge", &[ILSE]);
+    harness.pump(vec![
+        EngineCommand::CycleTimeScale,
+        EngineCommand::CycleTimeScale,
+    ]);
+    harness.pump_until("the review", |harness| {
+        harness
+            .cases()
+            .last()
+            .is_some_and(|case| case.finding.is_some())
+    });
+    let finding = harness.cases().last().and_then(|case| case.finding.clone());
+    assert_eq!(
+        finding.map(|finding| (finding.full, finding.text)),
+        Some((
+            false,
+            "Not established. 1 account read, from no sources. Still wanting: a further account \
+             that does not trace back to the same person."
+                .to_string()
+        ))
+    );
 }
 
 /// A refused lodging comes back through the command's own result, with its

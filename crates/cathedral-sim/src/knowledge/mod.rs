@@ -727,10 +727,11 @@ pub struct Account {
     /// Whose eyes it rests on, as far as the speaker can say: their own when
     /// they were there, whoever told them at one remove, and nobody's beyond.
     pub origin: Option<ActorId>,
-    /// How far the speaker stands from the event.
-    pub hops: u8,
     /// The speaker's version, which is what differs when two accounts disagree.
     pub view: FactView,
+    /// That version in words. Its day is a date ("on day 3") and not a count
+    /// back from the telling, so accounts taken on different days read alike
+    /// exactly when they name the same day.
     pub word: String,
     pub told: Option<WorldTime>,
     pub place: Option<AreaKey>,
@@ -2363,6 +2364,20 @@ pub fn render_plain(
     held: &Held,
     game_days: Option<f64>,
 ) -> Option<String> {
+    render_dated(world, reader, key, held, |named| {
+        when_phrase(named.map(|day| day as f64), game_days)
+    })
+}
+
+/// [`render_plain`] with `{day}` left to the caller, who is handed the day
+/// this version names when the fact carries one.
+fn render_dated(
+    world: &World,
+    reader: &ActorId,
+    key: FactKey,
+    held: &Held,
+    day: impl FnOnce(Option<i64>) -> String,
+) -> Option<String> {
     if !world.knowledge_enabled {
         return None;
     }
@@ -2390,11 +2405,9 @@ pub fn render_plain(
         .or(fact.place)
         .and_then(|p| world.area_map.label_of_key(p))
         .unwrap_or("somewhere in the city");
-    let day = when_phrase(
-        fact.day
-            .map(|d| d.saturating_add(i64::from(held.view.day_offset)) as f64),
-        game_days,
-    );
+    let day = day(fact
+        .day
+        .map(|d| d.saturating_add(i64::from(held.view.day_offset))));
     Some(substitute(template, subject.as_deref(), place, &day))
 }
 
@@ -2604,9 +2617,16 @@ pub fn recount(world: &mut World, speaker: &ActorId, key: FactKey) -> Result<Str
         return Err("there is nobody within earshot to give your account to");
     };
     let days = world.current_time.map(|time| time.game_days());
-    // The speaker's version, in the words the player would read it in. None
-    // when the fact is about the player, who is never told about themselves.
-    let Some(word) = render_plain(world, &player, key, &held, days) else {
+    // The speaker's version, in the words the player would read it in, with
+    // the day it names as a date. A day counted back from the telling is read
+    // on the record days later, beside accounts taken on other days, where two
+    // that agree would differ and two that differ could match. None when the
+    // fact is about the player, who is never told about themselves.
+    let word = render_dated(world, &player, key, &held, |named| match named {
+        Some(day) => format!("on day {day}"),
+        None => when_phrase(None, None),
+    });
+    let Some(word) = word else {
         return Err("there is no account to give of that");
     };
     if let Some(receipt) = world.knowledge.player_learned.get(&id)
@@ -2635,7 +2655,6 @@ pub fn recount(world: &mut World, speaker: &ActorId, key: FactKey) -> Result<Str
             1 => held.from,
             _ => None,
         },
-        hops: held.hops,
         view: held.view,
         word: word.clone(),
         told: world.current_time,

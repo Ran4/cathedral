@@ -248,7 +248,9 @@ An **account** is a row on the player's own receipt
 (`knowledge.player_learned[fact].accounts`), one per speaker, and
 `knowledge::recount` is its only writer. The `recount {}` verb after a typed or
 spoken question and `EngineCommand::PlayerAsk` (the Case tab's control, where
-nobody speaks) both end there. A receipt with accounts is never evicted.
+nobody speaks) both end there. A receipt with accounts is never evicted. An
+account's sentence names its day as a date (`on day 3`), so two taken on
+different days read alike exactly when they agree.
 
 `EngineCommand::PlayerLodge` copies picked accounts to the inquiry's reviewer,
 who must be within earshot, and dates a review at the next ringing of the

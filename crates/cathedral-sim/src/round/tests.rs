@@ -2279,6 +2279,9 @@ fn a_leg_that_comes_due_mid_conversation_breaks_the_hold_after_one_excuse_turn()
         &hold,
     );
     assert!(pressed(&world), "the duty lands as a system: percept");
+    // The same line is given when the leg that came due is the walk home to
+    // dinner or to bed, so it must not say that work is waiting.
+    assert!(!DUTY_PRESSURE.contains("work"), "{DUTY_PRESSURE}");
     assert!(
         !world.characters[&id].is_walking(),
         "the excuse turn comes before the walk"

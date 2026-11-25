@@ -5733,7 +5733,7 @@ mod tests {
             app.world()
                 .resource::<hud::SmartActorHudState>()
                 .player_transcript_text(),
-            Some("You: What's your name?  ·  heard by 2 nearby people")
+            Some("You: What's your name?  ·  heard by 2 people looking your way")
         );
 
         app.world_mut().write_message(InjectPlayerTranscript {
