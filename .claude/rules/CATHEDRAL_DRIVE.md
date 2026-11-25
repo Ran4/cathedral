@@ -23,7 +23,10 @@ What headless changes, and why:
   `Unable to grab cursor: … not viewable` ERROR at startup (and one per menu
   that recaptures) is that refusal, and is the mechanism working — the game's
   own `grab_mode` stays `Locked`, so `Enter`, `E` and the menus gate on input
-  exactly as they do windowed.
+  exactly as they do windowed. That lasts until an overlay has been open: the
+  journal releases the cursor, the recapture on closing it is refused, and
+  bevy_winit then leaves `grab_mode` released, so `Enter` no longer opens the
+  chat box. A headless script does its typing before it opens the journal.
 - Winit's X11 backend reports *raw* mouse motion to unfocused clients too, so
   `mouse_look` ignores motion while the window is hidden. Without that, the
   camera would be swung around by whatever the real mouse is doing in another
@@ -252,6 +255,44 @@ show `A WORD OF YOURS IS GOING ROUND` and the named way to answer it.
 probabilistic look: player curiosity is 0.35 per stir, and at 60× it shows
 pickups within a ward rather than travel across the city. Each new run moves
 `logs/latest_session`, so earlier shots stay under their own session directory.
+
+The journal's second page is the Case tab: the matters before the player, the
+accounts people have given of each, and a REQUESTS list. A fresh city has
+matters only if a case pack is laid over it. `CATHEDRAL_CASE_PACKS` takes
+comma-separated paths under `assets/` and replaces `config.ron:
+smart_actors.knowledge.case_packs` for one run. `world/dev_cases.json` is the
+development pack: two matters, `dev_scaffold` and `dev_barrow`, which Ewart
+Toll (`bn9et`) reviews at High Wick, with Clemence Limeburn (`b6clm`) and Ewart
+Crake (`b5ewk`) to ask. A pack the loader refuses leaves the cast offline with
+its reason on the HUD. The page's buttons:
+
+- `click Journal tab: Case` / `click Journal tab: Words` — turn the page. The
+  Case page takes presses only while it is the one on show.
+- `click Case ask: <inquiry id>` — ask whoever the crosshair rests on about the
+  matter. Nobody speaks; their account appears under it. `frame <id> 3` first
+  and ask within a second or two, because the cast walks.
+- `click Case account: <fact id> <speaker id>` — pick an account for lodging,
+  or put it back, e.g. `click Case account: dev.scaffold b6clm`.
+- `click Case lodge: <inquiry id>` — lodge that matter's picks with its
+  reviewer, who must be within earshot (`frame bn9et 3`). The review is held at
+  the reviewer's next bell whether or not the player is there.
+
+A typed question records the same account as the ask button; the fake only
+answers a line that has a question mark. `type Will you fetch the reeve?` gets
+a promise, which REQUESTS lists as `SAID — words only`, beside `PENDING`,
+`ACCEPTED`, `DONE` and `BROKEN OFF` rows for what was asked of the city. The
+page is long, so a tall `CATHEDRAL_DRIVE_RES` gets all of it into one shot:
+
+```sh
+# Ask by typing and by the button, lodge both accounts, read the finding after the bell.
+CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE_TIMEOUT=300 \
+  CATHEDRAL_CASE_PACKS=world/dev_cases.json CATHEDRAL_DRIVE_RES=1280x1800 \
+  CATHEDRAL_DRIVE='wait-online; frame b6clm 3; key Enter; type What happened to the scaffold?; key Enter; sleep-sim 12; key Enter; type Will you fetch the reeve?; key Enter; sleep-sim 12; key KeyJ; click Journal tab: Case; sleep 1; frame b5ewk 3; sleep 1; click Case ask: dev_scaffold; sleep 1; shot accounts; frame bn9et 3; sleep 1; click Case account: dev.scaffold b6clm; click Case account: dev.scaffold b5ewk; click Case lodge: dev_scaffold; sleep 1; shot lodged; key KeyT; key KeyT; sleep-sim 13; key KeyT; sleep 1; shot finding; quit' cargo run
+```
+
+`sleep-sim 13` at 60× carries a Dayspring start past High Wick. The fake
+backend also transcribes whatever the room's microphone picks up as `What's
+your name?`, so a stray question from the player can appear in such a run.
 
 Example — open the settings menu, switch the STT pill, close it, exit:
 

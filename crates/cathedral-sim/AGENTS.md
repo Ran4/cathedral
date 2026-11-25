@@ -207,6 +207,12 @@ like `"fish"` is an error, never a fallback.
   earshot a way you hold: the id is written into *their* `places_known` (the
   sheet is the model's memory) and one inbox line tells them. Targeted, never
   broadcast; eavesdroppers learn nothing.
+- `recount {}` — put what you just told the player about a matter on record as
+  your account of it (see Inquiries below). It takes no arguments: it records
+  the inquiry facts seated on this turn's sheet, so a reply cannot recount what
+  its speaker does not hold. The row is listed only for a holder who is asked
+  within the player's earshot, and the verb is refused without a `say` in the
+  same reply.
 - `remember` / `forget` / `set_goal` — the durable state. `set_goal
   {"goal": null}` clears it back to the `"None"` sentinel.
 - `wait {}` — deliberately take no world action when speaking would only repeat
@@ -228,6 +234,38 @@ it — because past 20 m neither party *can* answer an offer that accept and
 decline both need 4 m for, and the units stay committed against eating or
 selling until something resolves it. Broadcast offers never lapse: they name
 nobody to drift from.
+
+## Inquiries (`inquiry.rs`)
+
+A **case pack** (`EngineConfig.case_packs`; `cathedral-headless --cases FILE`)
+lays facts, retellings and inquiries over a fresh world. `inquiry::install`
+checks every cross-reference before it touches anything, and a refusal stops
+`Engine::new` with a sentence naming the field and the id. A restore installs
+nothing: the rules an inquiry is judged by are saved with it. The development
+pack is `assets/world/dev_cases.json`; nothing loads it by default.
+
+An **account** is a row on the player's own receipt
+(`knowledge.player_learned[fact].accounts`), one per speaker, and
+`knowledge::recount` is its only writer. The `recount {}` verb after a typed or
+spoken question and `EngineCommand::PlayerAsk` (the Case tab's control, where
+nobody speaks) both end there. A receipt with accounts is never evicted.
+
+`EngineCommand::PlayerLodge` copies picked accounts to the inquiry's reviewer,
+who must be within earshot, and dates a review at the next ringing of the
+reviewer's office. `inquiry::hold_reviews` runs every poll and holds a due
+review once, whether or not the player is there; clearing the saved date is the
+guard, so neither a rate change nor a restore repeats or skips it. `evaluate`
+reads only the lodged copies. Distinct traceable origins are sources, so two
+retellings of one witness count once, and accounts of one fact that disagree
+need a first-hand one to settle them. Dated observations and identified objects
+are not evaluated yet. `EngineMessage::Case` carries the whole record to the
+host whenever it changes.
+
+**A bell breaks a talk.** A round leg or the lamp beat that comes due while its
+owner is held in conversation gets one `system:` excuse-yourself line, and the
+body walks on the next cadence (`Round.held_since`, saved with the round). A
+duty already owed when the talk began still waits. Stock visits and production
+stay paused by talk on purpose.
 
 ## Data, not code
 

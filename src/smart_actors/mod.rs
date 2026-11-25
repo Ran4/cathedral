@@ -1591,6 +1591,11 @@ fn process_engine_message(
             if !player_heard {
                 return;
             }
+            // Somebody's "I will…" is listed as words, apart from anything
+            // asked of the city or done in it.
+            if speaker_id.0 != PLAYER_ID && case_ui::sounds_like_a_promise(&text) {
+                case.note_speech(&speaker_name_for_player, &text);
+            }
             // Only the listeners who could see the speaker: a speaker cannot
             // tell who else, behind a back or round a corner, caught the words.
             let recipient_count = witness_ids
@@ -1883,7 +1888,17 @@ fn process_engine_message(
             // Prose the sim has already resolved through the player, and two
             // handles the host only ever hands back: there is nothing to check.
             if case.inquiries != inquiries {
+                // The toast holds one line, so the last of them stands; the
+                // overlay's notice line repeats it over whichever page is open.
+                if case.synced {
+                    for notice in case_ui::notices(&case.inquiries, &inquiries) {
+                        hud.toast(notice);
+                    }
+                }
                 case.inquiries = inquiries;
+            }
+            if !case.synced {
+                case.synced = true;
             }
         }
         EngineMessage::WardHeat { wards } => {
@@ -3978,6 +3993,13 @@ mod tests {
         app.world().resource::<case_ui::PlayerCase>().picked.len()
     }
 
+    fn requests(app: &App) -> Vec<case_ui::RequestRow> {
+        app.world()
+            .resource::<case_ui::PlayerCase>()
+            .requests
+            .clone()
+    }
+
     /// How many lines on screen end with `mark`.
     fn marked(app: &mut App, mark: &str) -> usize {
         texts(app)
@@ -4081,7 +4103,8 @@ mod tests {
     /// M4 acceptance 1, by the control: with a witness under the crosshair and
     /// in earshot, the Case tab's ask button puts their account under the
     /// matter and their answer in the request list, and nobody has to speak.
-    /// With nobody faced it says what it needs and asks nothing.
+    /// The one notice it raises is for the new account. With nobody faced it
+    /// says what it needs and asks nothing.
     #[test]
     fn the_ask_control_records_the_account_of_whoever_the_player_faces() {
         let mut app = ready_dev_case_app_saving_to(test_saves_dir());
@@ -4133,9 +4156,12 @@ mod tests {
             !shown.iter().any(|text| text.starts_with("PENDING")),
             "{shown:?}"
         );
-        assert!(
-            !toast(&app).is_some_and(|text| text.contains("tells you")),
-            "an answer is on the tab, not in a toast"
+        assert_eq!(
+            toast(&app),
+            Some(format!(
+                "New account: {name} on The scaffold pole that fell behind the lodge"
+            )),
+            "the account is announced; the answer is on the tab, not in a toast"
         );
 
         face(&mut app, None);
@@ -4243,12 +4269,14 @@ mod tests {
     }
 
     /// M4 acceptance 3 and 4, at the screen. Two people repeating one witness
-    /// are lodged from the Case tab, and the review comes round while the
-    /// player has the journal open on the other page: the sim does not wait,
-    /// and the Case tab then reports a partial finding that counts the two
-    /// accounts as one source.
+    /// are lodged from the Case tab, and the bundle is listed as accepted. The
+    /// review comes round while the player has the journal open on the other
+    /// page: the sim does not wait, the overlay says over that page that it
+    /// was held, and the Case tab then reports a partial finding that counts
+    /// the two accounts as one source, with the review listed as done.
     #[test]
     fn a_review_held_while_the_words_page_is_open_is_on_the_case_tab_afterwards() {
+        let title = "The lime barrow gone from the kiln gate";
         let mut app = ready_dev_case_app_saving_to(test_saves_dir());
         stage_account(&mut app, "b6clm", "dev.barrow");
         stage_account(&mut app, "b5ewk", "dev.barrow");
@@ -4266,6 +4294,20 @@ mod tests {
         update_until(&mut app, "the dated review", |app| {
             matters(app)[1].review_at.is_some()
         });
+        let accepted = format!(
+            "ACCEPTED — {title}: lodged with {reviewer}, review at {}",
+            matters(&app)[1].review_at.as_deref().unwrap()
+        );
+        update_until(&mut app, "the bundle listed as accepted", |app| {
+            texts(app).contains(&accepted)
+        });
+        let shown = texts(&mut app);
+        assert!(
+            !shown
+                .iter()
+                .any(|text| text.starts_with("PENDING") || text.starts_with("DONE")),
+            "{shown:?}"
+        );
 
         click(&mut app, "Journal tab: Words");
         {
@@ -4276,6 +4318,10 @@ mod tests {
         }
         update_until(&mut app, "the review", |app| {
             matters(app)[1].finding.is_some()
+        });
+        let notice = format!("The review of {title} was held");
+        update_until(&mut app, "the notice over the Words page", |app| {
+            overlay_notice(app).as_deref() == Some(notice.as_str())
         });
         let journal = app.world().resource::<JournalUiState>();
         assert!(journal.open && journal.tab == journal_ui::JournalTab::Words);
@@ -4296,19 +4342,82 @@ mod tests {
         for line in [
             format!("Reviewed at {}: {}", finding.held, finding.text),
             format!("Reviewer: {reviewer}"),
+            format!("DONE — {title}: review held at {}", finding.held),
         ] {
             assert!(shown.contains(&line), "{line}: {shown:?}");
         }
+        assert!(
+            !shown.iter().any(|text| text.starts_with("ACCEPTED")),
+            "{shown:?}"
+        );
         assert_eq!(marked(&mut app, " — LODGED"), 2, "{shown:?}");
         let world = app.world_mut();
         let mut page = world.query_filtered::<&Node, With<journal_ui::CaseEntriesRoot>>();
         assert_eq!(page.single(world).unwrap().display, Display::Flex);
     }
 
+    /// M4 acceptance 5, at the screen: somebody who says they will do a thing
+    /// has done nothing yet, and the request list says so. Asked to fetch the
+    /// reeve, Ilse promises; her words are listed once, as said, and nothing
+    /// in the list reads as asked of the city or done.
+    #[test]
+    fn a_promise_is_listed_as_words_and_not_as_something_done() {
+        let mut app = ready_fake_plugin_app();
+        let ilse = model::ActorId("k0fb1".into());
+        let promise = format!(
+            "{}: “I will fetch the reeve.”",
+            app.world()
+                .resource::<model::WorldMirror>()
+                .actor(&ilse)
+                .expect("she is in the city")
+                .name_for_player
+        );
+        app.world_mut().write_message(InjectPlayerTranscript {
+            text: "Will you fetch the reeve?".into(),
+            target_id: Some(ilse),
+        });
+        update_until(&mut app, "her promise", |app| {
+            requests(app).iter().any(|row| row.text == promise)
+        });
+        // Anybody else who overheard the question and promised too has a row
+        // of their own.
+        for _ in 0..30 {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+        let rows = requests(&app);
+        assert_eq!(
+            rows.iter().filter(|row| row.text == promise).count(),
+            1,
+            "{rows:?}"
+        );
+        assert!(
+            rows.iter()
+                .all(|row| row.state == case_ui::RequestState::Said),
+            "{rows:?}"
+        );
+
+        tap_overlay_key(&mut app, journal_key());
+        click(&mut app, "Journal tab: Case");
+        let shown = texts(&mut app);
+        assert!(
+            shown.contains(&format!("SAID — words only — {promise}")),
+            "{shown:?}"
+        );
+        assert!(
+            !shown
+                .iter()
+                .any(|text| text.starts_with("DONE") || text.starts_with("PENDING")),
+            "{shown:?}"
+        );
+    }
+
     /// A load puts the saved city's record on the Case tab (D06): what the
     /// replaced city went on to find is gone and the account given before the
-    /// save is back. A slot from a city with no matters before the player
-    /// sends no record at all, and the old one does not stay on show.
+    /// save is back, unannounced, since none of it is news. The picks and the
+    /// requests made in the replaced city go with it. A slot from a city with
+    /// no matters before the player sends no record at all, and the old one
+    /// does not stay on show.
     #[test]
     fn a_load_replaces_the_case_record_with_the_saved_citys() {
         fn save(app: &mut App, slot: &str) {
@@ -4335,10 +4444,24 @@ mod tests {
                 .is_some_and(|matter| !matter.accounts.is_empty())
         });
         save(&mut app, "asked");
+        // What the player goes on to do in the city about to be replaced: a
+        // pick, an ask, and a review sat through.
+        tap_overlay_key(&mut app, journal_key());
+        click(&mut app, "Journal tab: Case");
+        click(&mut app, "Case account: dev.scaffold b6clm");
+        stand_from(&mut app, "b6clm", 1.2);
+        face(&mut app, Some("b6clm"));
+        click(&mut app, "Case ask: dev_scaffold");
+        update_until(&mut app, "her answer", |app| {
+            requests(app)
+                .iter()
+                .any(|row| row.state == case_ui::RequestState::Done)
+        });
         stage_finding(&mut app);
         update_until(&mut app, "the finding", |app| {
             matters(app)[0].finding.is_some()
         });
+        assert_eq!(picks(&app), 1);
 
         load(&mut app, "asked");
         update_until(&mut app, "the saved record", |app| matters(app).len() == 2);
@@ -4350,6 +4473,18 @@ mod tests {
         assert_eq!(record[0].accounts.len(), 1);
         assert_eq!(record[0].accounts[0].speaker_name, name);
         assert!(record[1].accounts.is_empty());
+        assert_eq!(picks(&app), 0);
+        assert!(requests(&app).is_empty());
+        app.update();
+        let shown = texts(&mut app);
+        assert!(!shown.contains(&"REQUESTS".to_string()), "{shown:?}");
+        assert!(
+            !toast(&app).is_some_and(|text| {
+                text.starts_with("New account") || text.starts_with("The review")
+            }),
+            "the saved account is no news: {:?}",
+            toast(&app)
+        );
 
         // A slot saved before any case pack was configured holds no inquiries.
         app.world_mut()

@@ -1,6 +1,7 @@
 //! The journal's Case tab: every matter before the player, where its review
-//! stands, the accounts people have given of it, and the controls that ask for
-//! an account and lodge the picked ones.
+//! stands, the accounts people have given of it, the controls that ask for an
+//! account and lodge the picked ones, and one list that tells what was only
+//! said from what was asked, taken up, done or broken off.
 
 use std::collections::BTreeSet;
 
@@ -41,15 +42,22 @@ pub(super) struct PlayerCase {
     /// closing and a refused lodging, and an account leaves it only by being
     /// unpicked or taken by a reviewer.
     pub picked: BTreeSet<Pick>,
-    /// What the player has asked of the city from this tab, oldest first.
+    /// What the player has asked of the city from this tab and what people
+    /// have said they will do, oldest first.
     pub requests: Vec<RequestRow>,
+    /// Whether this city's record has arrived once. What the first message
+    /// after a start or a load lists was already so, and is no news.
+    pub synced: bool,
 }
 
-/// One ask or lodging put to the engine, and what came of it.
+/// One ask or lodging put to the engine and what came of it, or something
+/// somebody said they would do.
 #[derive(Debug, Clone, PartialEq)]
 pub(super) struct RequestRow {
+    /// The engine's handle for an ask or a lodging. Empty for words heard,
+    /// which the engine owes no answer.
     pub request_id: String,
-    /// The picks a lodging handed over. Empty for an ask.
+    /// The picks a lodging handed over. Empty for anything else.
     pub sent: Vec<Pick>,
     pub state: RequestState,
     /// What was asked for while it is pending, then the engine's own sentence.
@@ -58,7 +66,12 @@ pub(super) struct RequestRow {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RequestState {
+    /// Somebody said they would. Nothing was asked of the city and nothing
+    /// has been done.
+    Said,
     Pending,
+    /// A reviewer has taken a bundle and its review is dated.
+    Accepted,
     Done,
     BrokenOff,
 }
@@ -66,7 +79,9 @@ pub(super) enum RequestState {
 impl RequestState {
     fn label(self) -> &'static str {
         match self {
+            Self::Said => "SAID — words only",
             Self::Pending => "PENDING",
+            Self::Accepted => "ACCEPTED",
             Self::Done => "DONE",
             Self::BrokenOff => "BROKEN OFF",
         }
@@ -74,11 +89,78 @@ impl RequestState {
 
     fn color(self) -> Color {
         match self {
-            Self::Pending => hud::MUTED,
+            Self::Said | Self::Pending => hud::MUTED,
+            Self::Accepted => hud::TEXT,
             Self::Done => hud::ONLINE,
             Self::BrokenOff => hud::DEGRADED,
         }
     }
+}
+
+/// Whether a spoken line reads as an undertaking: "I will fetch the reeve".
+pub(super) fn sounds_like_a_promise(text: &str) -> bool {
+    let text = text.to_lowercase();
+    ["i will ", "i'll ", "i shall "]
+        .iter()
+        .any(|promise| text.contains(promise))
+}
+
+/// What a newly published record adds to the one on show, a line each: the
+/// accounts first and the reviews after them, so that where only the last line
+/// fits it is a review's.
+pub(super) fn notices(before: &[CaseInquiry], after: &[CaseInquiry]) -> Vec<String> {
+    let earlier = |inquiry: &CaseInquiry| before.iter().find(|known| known.id == inquiry.id);
+    let mut lines = Vec::new();
+    for inquiry in after {
+        let known = earlier(inquiry);
+        for account in &inquiry.accounts {
+            // A re-ask replaces a row in place and is not a new account.
+            let had = known.is_some_and(|known| {
+                known
+                    .accounts
+                    .iter()
+                    .any(|old| old.fact == account.fact && old.speaker == account.speaker)
+            });
+            if !had {
+                lines.push(format!(
+                    "New account: {} on {}",
+                    account.speaker_name, inquiry.title
+                ));
+            }
+        }
+    }
+    for inquiry in after {
+        if inquiry.finding.is_some()
+            && earlier(inquiry).is_none_or(|known| known.finding != inquiry.finding)
+        {
+            lines.push(format!("The review of {} was held", inquiry.title));
+        }
+    }
+    lines
+}
+
+/// The rows the matters themselves add to the request list: each review that
+/// was held, and each bundle a reviewer has taken that waits for its review.
+fn review_rows(inquiries: &[CaseInquiry]) -> Vec<(RequestState, String)> {
+    let mut rows = Vec::new();
+    for inquiry in inquiries {
+        if let Some(finding) = &inquiry.finding {
+            rows.push((
+                RequestState::Done,
+                format!("{}: review held at {}", inquiry.title, finding.held),
+            ));
+        }
+        if let Some(at) = &inquiry.review_at {
+            rows.push((
+                RequestState::Accepted,
+                format!(
+                    "{}: lodged with {}, review at {at}",
+                    inquiry.title, inquiry.reviewer
+                ),
+            ));
+        }
+    }
+    rows
 }
 
 impl PlayerCase {
@@ -105,6 +187,20 @@ impl PlayerCase {
             hud.toast(error);
             return;
         }
+        self.list(row);
+    }
+
+    /// List what somebody said they would do, as words and nothing more.
+    pub fn note_speech(&mut self, speaker: &str, text: &str) {
+        self.list(RequestRow {
+            request_id: String::new(),
+            sent: Vec::new(),
+            state: RequestState::Said,
+            text: format!("{speaker}: “{text}”"),
+        });
+    }
+
+    fn list(&mut self, row: RequestRow) {
         if self.requests.len() >= REQUESTS_MAX {
             let oldest_finished = self
                 .requests
@@ -126,9 +222,9 @@ impl PlayerCase {
     /// The engine's answer to a request this tab [`awaits`](Self::awaits).
     ///
     /// An ask keeps its row, now carrying what was said. A lodging that was
-    /// taken leaves the list, since its matter's own review line reports it,
-    /// and what it handed over leaves the picks. A refusal keeps the row with
-    /// the reason, and the picks stay for another try.
+    /// taken leaves the list, since its matter's dated review is listed in its
+    /// place, and what it handed over leaves the picks. A refusal keeps the
+    /// row with the reason, and the picks stay for another try.
     pub fn settle(&mut self, request_id: &str, success: bool, message: String) {
         let Some(index) = self
             .requests
@@ -466,7 +562,13 @@ pub(super) fn refresh_case_tab(
                         });
                 });
             }
-            if !case.requests.is_empty() {
+            let rows: Vec<(RequestState, String)> = case
+                .requests
+                .iter()
+                .map(|row| (row.state, row.text.clone()))
+                .chain(review_rows(&case.inquiries))
+                .collect();
+            if !rows.is_empty() {
                 root.spawn(Node {
                     width: percent(100),
                     flex_direction: FlexDirection::Column,
@@ -476,13 +578,13 @@ pub(super) fn refresh_case_tab(
                 })
                 .with_children(|list| {
                     spawn_text(list, "REQUESTS", &font, 14.0, hud::MUTED);
-                    for row in &case.requests {
+                    for (state, text) in &rows {
                         spawn_text(
                             list,
-                            &format!("{} — {}", row.state.label(), row.text),
+                            &format!("{} — {text}", state.label()),
                             &font,
                             15.0,
-                            row.state.color(),
+                            state.color(),
                         );
                     }
                 });
@@ -613,6 +715,9 @@ mod tests {
                 "“The barrow was fetched.”",
                 "Ask about this",
                 "Lodge 0 with Ewart Toll",
+                "REQUESTS",
+                "DONE — The lime barrow: review held at High Wick, day 2",
+                "ACCEPTED — The lime barrow: lodged with Ewart Toll, review at High Wick, day 3",
             ]
         );
 
@@ -622,12 +727,14 @@ mod tests {
         assert_eq!(lines(&mut app)[5], "Reviewer: Ewart Toll");
 
         // A pick is marked on its row and counted on its matter's lodge
-        // control alone; a request is listed under the matters; and the ask
-        // control names whoever the crosshair rests on.
+        // control alone; a request and a promise are listed under the matters,
+        // ahead of the reviews; and the ask control names whoever the
+        // crosshair rests on.
         {
             let mut case = app.world_mut().resource_mut::<PlayerCase>();
             case.picked.insert(pick("Clemence"));
             case.requests.push(pending("rust-1", Vec::new()));
+            case.note_speech("Clemence", "I will fetch the reeve.");
         }
         app.insert_resource(ActorFocus {
             actor: Some(FocusedActor {
@@ -659,13 +766,83 @@ mod tests {
             2
         );
         assert_eq!(
-            shown[shown.len() - 2..],
-            ["REQUESTS", "PENDING — Request rust-1"]
+            shown[shown.len() - 4..],
+            [
+                "REQUESTS",
+                "PENDING — Request rust-1",
+                "SAID — words only — Clemence: “I will fetch the reeve.”",
+                "DONE — The lime barrow: review held at High Wick, day 2",
+            ]
         );
 
         app.world_mut().resource_mut::<JournalUiState>().open = false;
         app.update();
         assert!(lines(&mut app).is_empty());
+    }
+
+    #[test]
+    fn a_promise_is_heard_in_i_will_ill_and_i_shall() {
+        for line in [
+            "I will fetch the reeve.",
+            "Wait here, I'll see to it.",
+            "That I SHALL not do.",
+        ] {
+            assert!(sounds_like_a_promise(line), "{line}");
+        }
+        for line in ["The reeve will hear of it.", "Will you fetch the reeve?"] {
+            assert!(!sounds_like_a_promise(line), "{line}");
+        }
+    }
+
+    #[test]
+    fn only_a_new_account_and_a_new_review_are_news_and_the_review_comes_last() {
+        let matter = |id: &str, title: &str| CaseInquiry {
+            id: id.into(),
+            title: title.into(),
+            reviewer: "Ewart Toll".into(),
+            review_at: None,
+            finding: None,
+            accounts: vec![account("Noll", "saw it themselves", false)],
+        };
+        let before = vec![
+            matter("dev_scaffold", "The scaffold pole"),
+            matter("dev_barrow", "The lime barrow"),
+        ];
+        let mut after = before.clone();
+        assert!(notices(&before, &after).is_empty());
+
+        // Asked again, lodged and awaiting review: the same account still.
+        after[0].accounts[0].when = "Lamplight, day 2".into();
+        after[0].accounts[0].lodged = true;
+        after[0].review_at = Some("High Wick, day 3".into());
+        assert!(notices(&before, &after).is_empty());
+
+        let held = |day: u32| CaseFinding {
+            full: false,
+            text: "Not established.".into(),
+            held: format!("High Wick, day {day}"),
+        };
+        after[0].finding = Some(held(3));
+        after[1]
+            .accounts
+            .push(account("Clemence", "had it from Noll", false));
+        assert_eq!(
+            notices(&before, &after),
+            [
+                "New account: Clemence on The lime barrow",
+                "The review of The scaffold pole was held",
+            ]
+        );
+
+        // A second review of the same matter is news again.
+        let before = after.clone();
+        after[0].finding = Some(held(4));
+        assert_eq!(
+            notices(&before, &after),
+            ["The review of The scaffold pole was held"]
+        );
+        // And to a record that had nothing, everything is.
+        assert_eq!(notices(&[], &after).len(), 4);
     }
 
     #[test]
